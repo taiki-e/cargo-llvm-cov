@@ -1,0 +1,15 @@
+name: PR
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  # This only affects PRs created by Dependabot.
+  dependabot:
+    if: startsWith(github.head_ref, 'dependabot/') && github.repository_owner == 'taiki-e'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/github-actions/update-dependabot-pr@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

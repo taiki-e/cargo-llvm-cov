@@ -1,0 +1,6 @@
+target
+Cargo.lock
+
+# For platform and editor specific settings, it is recommended to add to
+# a global .gitignore file.
+# Refs: https://docs.github.com/en/free-pro-team@latest/github/using-git/ignoring-files#configuring-ignored-files-for-all-repositories-on-your-computer
