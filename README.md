@@ -11,7 +11,7 @@ A wrapper for [source based code coverage (-Zinstrument-coverage)][source-based-
 ## Installation
 
 ```sh
-cargo install cargo-llvm-cov
+cargo install cargo-llvm-cov --version 0.1.0-alpha.1
 
 cargo install cargo-binutils
 
