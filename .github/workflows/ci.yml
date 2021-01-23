@@ -65,6 +65,12 @@ jobs:
           component: rustfmt
       - run: cargo fmt --all -- --check
 
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: shellcheck **/*.sh
+
   # This job doesn't actually test anything, but they're used to tell bors the
   # build completed, as there is no practical way to detect when a workflow is
   # successful listening to webhooks only.
@@ -78,6 +84,7 @@ jobs:
       - test
       - clippy
       - rustfmt
+      - shellcheck
     runs-on: ubuntu-latest
     steps:
       - name: Mark the job as a success

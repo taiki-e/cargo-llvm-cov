@@ -1,12 +1,13 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 authors = ["Taiki Endo <te316e89@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
-keywords = ["cargo", "subcommand"]
+keywords = ["cargo", "subcommand", "testing"]
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
+exclude = ["/.*", "/scripts"]
 description = """
 A wrapper for source based code coverage (-Zinstrument-coverage).
 """
