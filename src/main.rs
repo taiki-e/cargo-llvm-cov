@@ -15,23 +15,22 @@ use structopt::{clap::AppSettings, StructOpt};
 use crate::process::ProcessBuilder;
 
 #[derive(StructOpt)]
-#[structopt(bin_name = "cargo")]
+#[structopt(
+    bin_name = "cargo",
+    rename_all = "kebab-case",
+    setting = AppSettings::DeriveDisplayOrder,
+    setting = AppSettings::UnifiedHelpMessage,
+)]
 enum Opts {
     /// A wrapper for source based code coverage (-Zinstrument-coverage).
-    #[structopt(
-        name = "llvm-cov",
-        setting = AppSettings::UnifiedHelpMessage,
-        setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::DontCollapseArgsInUsage
-    )]
     LlvmCov(Args),
 }
 
 #[derive(StructOpt)]
 #[structopt(
-    setting = AppSettings::UnifiedHelpMessage,
-    setting = AppSettings::DeriveDisplayOrder,
     rename_all = "kebab-case",
+    setting = AppSettings::DeriveDisplayOrder,
+    setting = AppSettings::UnifiedHelpMessage,
 )]
 struct Args {
     #[structopt(long)]
