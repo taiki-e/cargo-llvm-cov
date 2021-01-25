@@ -40,12 +40,16 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: ${{ matrix.rust }}
+      - run: cargo install cargo-hack
+        if: startsWith(matrix.rust, 'nightly') && matrix.target == ''
       - run: cargo install cross
         if: matrix.target != ''
       - run: cross test --target ${{ matrix.target }}
         if: matrix.target != ''
       - run: cargo test --all
         if: matrix.target == ''
+      - run: scripts/check-minimal-versions.sh
+        if: startsWith(matrix.rust, 'nightly') && matrix.target == ''
 
   clippy:
     runs-on: ubuntu-latest
