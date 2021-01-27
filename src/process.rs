@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::{
     collections::BTreeMap,
     ffi::{OsStr, OsString},
@@ -6,6 +5,8 @@ use std::{
     process::Output,
     str,
 };
+
+use anyhow::Result;
 
 // Refs:
 // - https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs

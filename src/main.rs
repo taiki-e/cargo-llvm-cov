@@ -7,9 +7,10 @@
 mod fs;
 mod process;
 
+use std::{env, ffi::OsString, path::Path};
+
 use anyhow::Result;
 use serde::Deserialize;
-use std::{env, ffi::OsString, path::Path};
 use structopt::{clap::AppSettings, StructOpt};
 
 use crate::process::ProcessBuilder;
