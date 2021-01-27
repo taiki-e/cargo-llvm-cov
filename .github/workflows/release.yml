@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - v*
 
 env:
   CARGO_INCREMENTAL: 0

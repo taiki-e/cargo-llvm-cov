@@ -2,8 +2,13 @@
 
 # Automate the local side release step.
 #
-# Note: This script does not intend to use with projects that have multiple
-# public packages with different version numbers in the workspace, like crossbeam.
+# Usage:
+#    ./scripts/publish.sh <version> [--dry-run]
+#
+# Note:
+# - This script does not intend to use with projects that have multiple public
+#   packages with different version numbers in the workspace, like crossbeam.
+# - This script requires parse-changelog <https://github.com/taiki-e/parse-changelog>
 
 set -euo pipefail
 IFS=$'\n\t'
