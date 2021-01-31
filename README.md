@@ -1,10 +1,10 @@
 # cargo-llvm-cov
 
-[![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov.svg?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
-[![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg?style=flat-square)](#license)
-[![rustc](https://img.shields.io/badge/rustc-stable-blue.svg?style=flat-square)](https://www.rust-lang.org)
-[![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square)](https://github.com/taiki-e/cargo-llvm-cov/actions?query=workflow%3ACI+branch%3Amain)
-![maintenance-status](https://img.shields.io/badge/maintenance-experimental-blue.svg?style=flat-square)
+[![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
+[![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
+[![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
+![maintenance-status](https://img.shields.io/badge/maintenance-experimental-blue?style=flat-square)
 
 **\[EXPERIMENTAL\]**
 A wrapper for [source based code coverage (-Zinstrument-coverage)][source-based-code-coverage].
