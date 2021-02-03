@@ -25,7 +25,10 @@ jobs:
         with:
           toolchain: stable
       - run: cargo package
-      - uses: taiki-e/github-actions/create-release@main
+      - uses: taiki-e/create-gh-release-action@v1
+        with:
+          changelog: CHANGELOG.md
+          title: $version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo publish
