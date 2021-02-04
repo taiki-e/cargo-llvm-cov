@@ -56,7 +56,7 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: stable
-      - uses: taiki-e/github-actions/upload-rust-binary@main
+      - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: cargo-llvm-cov
           target: ${{ matrix.target }}
