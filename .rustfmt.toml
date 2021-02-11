@@ -15,8 +15,8 @@ use_small_heuristics = "Max"
 # See https://github.com/rust-dev-tools/fmt-rfcs/issues/149.
 # This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3370)
 overflow_delimited_expr = true
-# This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3362).
-merge_imports = true
+# This is unstable (tracking issue: none).
+imports_granularity = "Crate"
 # This is unstable (tracking issue: none).
 group_imports = "StdExternalCrate"
 
