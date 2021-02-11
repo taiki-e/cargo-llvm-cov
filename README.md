@@ -58,6 +58,12 @@ With json report:
 cargo llvm-cov --json
 ```
 
+With plain text report (for use in online code coverage services like codecov.io):
+
+```sh
+cargo llvm-cov --text
+```
+
 [source-based-code-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html
 
 ## License
