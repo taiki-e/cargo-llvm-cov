@@ -14,7 +14,6 @@ set -euo pipefail
 IFS=$'\n\t'
 
 # A list of paths to the crate to be published.
-# It will be published in the order listed.
 MEMBERS=(
   "."
 )
