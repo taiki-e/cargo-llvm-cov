@@ -37,6 +37,8 @@ struct Args {
     #[structopt(long)]
     json: bool,
     #[structopt(long, conflicts_with = "json")]
+    text: bool,
+    #[structopt(long, conflicts_with_all = &["json", "text"])]
     html: bool,
     #[structopt(long, requires = "html")]
     open: bool,
@@ -197,6 +199,21 @@ fn main() -> Result<()> {
                 &format!("-instr-profile={}", profdata_file.display()),
                 "-format=text",
                 "-summary-only",
+                "-ignore-filename-regex",
+                r".cargo/registry|.rustup/toolchains|test(s)?/",
+                "-Xdemangler=rustfilt",
+            ])
+            .args(files.iter().flat_map(|f| vec!["-object", f]))
+            .run()?;
+    } else if args.text {
+        cargo
+            .args_replace(&[
+                "cov",
+                "--",
+                "show",
+                &format!("-instr-profile={}", profdata_file.display()),
+                "-show-line-counts-or-regions",
+                "-show-instantiations",
                 "-ignore-filename-regex",
                 r".cargo/registry|.rustup/toolchains|test(s)?/",
                 "-Xdemangler=rustfilt",
