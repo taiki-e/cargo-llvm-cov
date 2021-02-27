@@ -15,6 +15,5 @@ trim_trailing_whitespace = true
 indent_size = 2
 
 [*.sh]
-indent_size = 2
 binary_next_line = true
 switch_case_indent = true

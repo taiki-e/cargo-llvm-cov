@@ -15,12 +15,12 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-function error {
-  if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-    echo "::error::$*"
-  else
-    echo "error: $*" >&2
-  fi
+error() {
+    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        echo "::error::$*"
+    else
+        echo "error: $*" >&2
+    fi
 }
 
 cd "$(cd "$(dirname "${0}")" && pwd)"/..
@@ -28,23 +28,23 @@ cd "$(cd "$(dirname "${0}")" && pwd)"/..
 # Decide Rust toolchain.
 # Nightly is used by default if the `CI` environment variable is unset.
 if [[ "${1:-}" == "+"* ]]; then
-  toolchain="${1}"
-  shift
+    toolchain="${1}"
+    shift
 elif [[ -z "${CI:-}" ]]; then
-  toolchain="+nightly"
+    toolchain="+nightly"
 fi
 # Make sure toolchain is installed.
 cargo ${toolchain:-} -V >/dev/null
 if [[ "${toolchain:-+nightly}" != "+nightly"* ]] || ! cargo hack -V &>/dev/null; then
-  error "this script requires nightly toolchain and cargo-hack"
-  exit 1
+    error "this script requires nightly toolchain and cargo-hack"
+    exit 1
 fi
 
 # Decide subcommand.
 subcmd="check"
 if [[ "${1:-}" =~ ^(check|test)$ ]]; then
-  subcmd="${1}"
-  shift
+    subcmd="${1}"
+    shift
 fi
 
 # This script modifies Cargo.toml, so make sure there are no unstaged changes
@@ -55,18 +55,18 @@ git diff --exit-code $(git ls-files "*Cargo.toml")
 trap 'git checkout $(git ls-files "*Cargo.toml")' EXIT
 
 if [[ "${subcmd}" == "check" ]]; then
-  # Remove dev-dependencies from Cargo.toml to prevent the next `cargo update`
-  # from determining minimal versions based on dev-dependencies.
-  (
-    set -x
-    cargo hack --remove-dev-deps --workspace
-  )
+    # Remove dev-dependencies from Cargo.toml to prevent the next `cargo update`
+    # from determining minimal versions based on dev-dependencies.
+    (
+        set -x
+        cargo hack --remove-dev-deps --workspace
+    )
 fi
 
 (
-  set -x
-  # Update Cargo.lock to minimal version dependencies.
-  cargo ${toolchain:-} update -Z minimal-versions
-  # Run check for all public members of the workspace.
-  cargo ${toolchain:-} hack "${subcmd}" --workspace --all-features --ignore-private "$@"
+    set -x
+    # Update Cargo.lock to minimal version dependencies.
+    cargo ${toolchain:-} update -Z minimal-versions
+    # Run check for all public members of the workspace.
+    cargo ${toolchain:-} hack "${subcmd}" --workspace --all-features --ignore-private "$@"
 )
