@@ -100,9 +100,7 @@ fn main() -> Result<()> {
     let target_dir = &metadata.target_directory.join("llvm-cov-target");
 
     if target_dir.exists() {
-        for path in
-            glob::glob(&target_dir.join("*.profraw").to_string_lossy())?.filter_map(Result::ok)
-        {
+        for path in glob::glob(target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
             fs::remove_file(path)?;
         }
     }
@@ -115,7 +113,7 @@ fn main() -> Result<()> {
         fs::create_dir(doctests_dir)?;
     }
 
-    let package_name = metadata.workspace_root.file_stem().unwrap().to_string_lossy();
+    let package_name = metadata.workspace_root.file_stem().unwrap();
     let profdata_file = &target_dir.join(format!("{}.profdata", package_name));
     fs::remove_file(profdata_file)?;
     let llvm_profile_file = target_dir.join(format!("{}-%m.profraw", package_name));
@@ -125,17 +123,15 @@ fn main() -> Result<()> {
         Err(_) => String::new(),
     };
     // --remap-path-prefix for Sometimes macros are displayed with abs path
-    *rustflags += &format!(
-        " -Zinstrument-coverage --remap-path-prefix {}/=",
-        metadata.workspace_root.to_string_lossy()
-    );
+    *rustflags +=
+        &format!(" -Zinstrument-coverage --remap-path-prefix {}/=", metadata.workspace_root);
 
     let rustdocflags = &mut env::var("RUSTDOCFLAGS").ok();
     if args.doctests {
         let flags = rustdocflags.get_or_insert_with(String::new);
         *flags += &format!(
             " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
-            doctests_dir.display()
+            doctests_dir
         );
     }
 
@@ -149,7 +145,7 @@ fn main() -> Result<()> {
     cargo.dir(&metadata.workspace_root);
 
     cargo.env("RUSTFLAGS", rustflags.trim());
-    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file.to_string_lossy());
+    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
     if let Some(rustdocflags) = rustdocflags {
         cargo.env("RUSTDOCFLAGS", rustdocflags.trim());
     }
@@ -170,9 +166,7 @@ fn main() -> Result<()> {
         }
     }
     if args.doctests {
-        for f in
-            glob::glob(&doctests_dir.join("*/rust_out").to_string_lossy())?.filter_map(Result::ok)
-        {
+        for f in glob::glob(doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok) {
             if is_executable::is_executable(&f) {
                 files.push(f.to_string_lossy().into_owned())
             }
@@ -183,7 +177,7 @@ fn main() -> Result<()> {
     cargo
         .args_replace(&["profdata", "--", "merge", "-sparse"])
         .args(
-            glob::glob(&target_dir.join(format!("{}-*.profraw", package_name)).to_string_lossy())?
+            glob::glob(target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
                 .filter_map(Result::ok),
         )
         .arg("-o")
@@ -196,7 +190,7 @@ fn main() -> Result<()> {
                 "cov",
                 "--",
                 "export",
-                &format!("-instr-profile={}", profdata_file.display()),
+                &format!("-instr-profile={}", profdata_file),
                 "-format=text",
                 "-summary-only",
                 "-ignore-filename-regex",
@@ -211,7 +205,7 @@ fn main() -> Result<()> {
                 "cov",
                 "--",
                 "show",
-                &format!("-instr-profile={}", profdata_file.display()),
+                &format!("-instr-profile={}", profdata_file),
                 "-show-line-counts-or-regions",
                 "-show-instantiations",
                 "-ignore-filename-regex",
@@ -226,7 +220,7 @@ fn main() -> Result<()> {
                 "cov",
                 "--",
                 "report",
-                &format!("-instr-profile={}", profdata_file.display()),
+                &format!("-instr-profile={}", profdata_file),
                 "-ignore-filename-regex",
                 r".cargo/registry|.rustup/toolchains|test(s)?/",
                 "-Xdemangler=rustfilt",
@@ -241,9 +235,9 @@ fn main() -> Result<()> {
                 "cov",
                 "--",
                 "show",
-                &format!("-instr-profile={}", profdata_file.display()),
+                &format!("-instr-profile={}", profdata_file),
                 "-format=html",
-                &format!("-output-dir={}", cov_dir.display()),
+                &format!("-output-dir={}", cov_dir),
                 "-show-expansions",
                 "-show-instantiations",
                 "-show-line-counts-or-regions",
