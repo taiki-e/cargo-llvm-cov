@@ -7,7 +7,7 @@ license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "subcommand", "testing"]
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
-exclude = ["/.*", "/scripts"]
+exclude = ["/.*", "/tools"]
 description = """
 A wrapper for source based code coverage (-Zinstrument-coverage).
 """

@@ -3,7 +3,7 @@
 # Automate the local side release step.
 #
 # Usage:
-#    ./scripts/publish.sh <version> [--dry-run]
+#    ./tools/publish.sh <version> [--dry-run]
 #
 # Note:
 # - This script does not intend to use with projects that have multiple public

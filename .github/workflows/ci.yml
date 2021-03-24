@@ -48,7 +48,7 @@ jobs:
         if: matrix.target != ''
       - run: cargo test --all
         if: matrix.target == ''
-      - run: scripts/check-minimal-versions.sh
+      - run: tools/check-minimal-versions.sh
         if: startsWith(matrix.rust, 'nightly') && matrix.target == ''
 
   clippy:
