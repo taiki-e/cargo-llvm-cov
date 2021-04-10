@@ -16,6 +16,7 @@ A wrapper for source based code coverage (-Zinstrument-coverage).
 targets = ["x86_64-unknown-linux-gnu"]
 
 [workspace]
+resolver = "2"
 
 [dependencies]
 anyhow = "1.0.34"
