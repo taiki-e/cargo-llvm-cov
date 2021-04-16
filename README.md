@@ -48,7 +48,7 @@ open target/llvm-cov/index.html
 or
 
 ```sh
-cargo llvm-cov --html --open
+cargo llvm-cov --open
 ```
 
 With json report:

@@ -40,7 +40,7 @@ struct Args {
     text: bool,
     #[structopt(long, conflicts_with_all = &["json", "text"])]
     html: bool,
-    #[structopt(long, requires = "html")]
+    #[structopt(long, conflicts_with_all = &["json", "text"])]
     open: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html#including-doc-tests
@@ -88,7 +88,8 @@ fn args() -> Args {
 }
 
 fn main() -> Result<()> {
-    let args = args();
+    let mut args = args();
+    args.html |= args.open;
 
     let metadata = metadata(None)?;
     fs::create_dir(&metadata.target_directory)?;
