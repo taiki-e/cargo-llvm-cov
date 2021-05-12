@@ -20,7 +20,7 @@ jobs:
     if: github.repository_owner == 'taiki-e'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: stable
@@ -52,7 +52,7 @@ jobs:
           - target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2.3.4
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: stable
