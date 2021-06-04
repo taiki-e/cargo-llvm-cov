@@ -25,32 +25,68 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - rust: stable
-          - rust: beta
-          - rust: nightly
-          - rust: nightly
-            os: macos-latest
+          - os: ubuntu-latest
+          - os: macos-latest
           # TODO: does -Zinstrument-coverage supports windows?
-          # - rust: nightly
-          #   os: windows-latest
-          - rust: nightly
+          # - os: windows-latest
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: taiki-e/github-actions/install-rust@main
+        with:
+          component: llvm-tools-preview
+      - run: cargo install cargo-hack
+      - run: cargo install cargo-binutils
+      - run: cargo install rustfilt
+      - run: cargo install cross
+        if: matrix.target != ''
+      - run: cross test --target ${{ matrix.target }}
+        if: matrix.target != ''
+      - run: cargo test
+        if: matrix.target == ''
+      - name: test
+        run: |
+          set -x
+          if [[ -z "${{ matrix.target }}" ]]; then
+            cargo install --path .
+          else
+            cargo install --path . --target ${{ matrix.target }}
+          fi
+          git clone https://github.com/taiki-e/easytime.git
+          cd easytime
+          # llvm-cov report
+          cargo llvm-cov
+          cargo clean
+          # llvm-cov export -format=text
+          cargo llvm-cov --json
+          cargo clean
+          # llvm-cov export -format=lcov
+          cargo llvm-cov --lcov
+          cargo clean
+          # llvm-cov show -format=text
+          cargo llvm-cov --text
+          cargo clean
+          # llvm-cov show -format=html
+          cargo llvm-cov --html
+          cargo clean
+      - run: tools/check-minimal-versions.sh
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+          - stable
+          - beta
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: ${{ matrix.rust }}
-      - run: cargo install cargo-hack
-        if: startsWith(matrix.rust, 'nightly') && matrix.target == ''
-      - run: cargo install cross
-        if: matrix.target != ''
-      - run: cross test --target ${{ matrix.target }}
-        if: matrix.target != ''
-      - run: cargo test --all
-        if: matrix.target == ''
-      - run: tools/check-minimal-versions.sh
-        if: startsWith(matrix.rust, 'nightly') && matrix.target == ''
+      - run: cargo build
 
   clippy:
     runs-on: ubuntu-latest
