@@ -13,7 +13,7 @@ A wrapper for source based code coverage ([-Zinstrument-coverage][instrument-cov
 cargo-llvm-cov currently requires llvm-tools-preview and [rustfilt](https://github.com/luser/rustfilt).
 
 ```sh
-cargo install cargo-llvm-cov --version 0.1.0-alpha.2
+cargo install cargo-llvm-cov --version 0.1.0-alpha.3
 
 cargo install rustfilt
 
@@ -66,13 +66,13 @@ OPTIONS:
 
             This internally calls `llvm-cov show -format=html`. See <https://llvm.org/docs/CommandGuide/llvm-
             cov.html#llvm-cov-show> for more.
+        --open
+            Generate coverage reports in "html" format and open them in a browser after the operation
+
         --output-dir <output-dir>
             Specify a directory to write coverage reports into (default to `target/llvm-cov`).
 
             This flag can only be used together with --text, --html, or --open.
-        --open
-            Generate coverage reports in "html" format and open them in a browser after the operation
-
         --doctests
             Including doc tests (unstable)
 
