@@ -8,9 +8,10 @@
 mod fs;
 mod process;
 
-use std::{env, ffi::OsString, path::Path};
+use std::{env, ffi::OsString};
 
 use anyhow::Result;
+use camino::Utf8Path;
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
 
@@ -35,20 +36,52 @@ enum Opts {
     setting = AppSettings::UnifiedHelpMessage,
 )]
 struct Args {
+    /// Export coverage data in "json" format (the report will be printed to stdout).
+    ///
+    /// This internally calls `llvm-cov export -format=text`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     #[structopt(long)]
     json: bool,
+    /// Export coverage data in "lcov" format (the report will be printed to stdout).
+    ///
+    /// This internally calls `llvm-cov export -format=lcov`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     #[structopt(long, conflicts_with = "json")]
-    text: bool,
-    #[structopt(long, conflicts_with_all = &["json", "text"])]
-    html: bool,
-    #[structopt(long, conflicts_with_all = &["json", "text"])]
-    open: bool,
+    lcov: bool,
+    /// Export only summary information for each file in the coverage data.
+    ///
+    /// This flag can only be used together with either --json or --lcov.
+    #[structopt(long)]
+    summary_only: bool,
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html#including-doc-tests
+    /// Generate coverage reports in “text” format (the report will be printed to stdout).
+    ///
+    /// This internally calls `llvm-cov show -format=text`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+    #[structopt(long, conflicts_with_all = &["json", "lcov"])]
+    text: bool,
+    /// Generate coverage reports in "html" format (the report will be generated in `target/llvm-cov` directory).
+    ///
+    /// This internally calls `llvm-cov show -format=html`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
+    html: bool,
+    /// Generate coverage reports in "html" format and open them in a browser after the operation.
+    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
+    open: bool,
+    /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
+    ///
+    /// This flag can only be used together with --text, --html, or --open.
+    #[structopt(long)]
+    output_dir: Option<String>,
+
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
     #[structopt(long)]
     doctests: bool,
 
+    // ======================
+    // Mapping cargo commands
     // FIXME: --package doesn't work properly, use --manifest-path instead for now.
     // /// Package to run tests for
     // #[structopt(short, long, value_name = "SPEC")]
@@ -83,16 +116,39 @@ struct Args {
     args: Vec<OsString>,
 }
 
+impl Args {
+    fn export(&self) -> bool {
+        self.json || self.lcov
+    }
+    fn show(&self) -> bool {
+        self.text || self.html
+    }
+}
+
 fn main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::from_args();
     args.html |= args.open;
+    if args.summary_only && !args.export() {
+        eprintln!("--summary-only can only be used together with either --json or --lcov");
+        std::process::exit(1);
+    }
+    if args.output_dir.is_some() && !args.show() {
+        eprintln!("--output-dir can only be used together with --text, --html, or --open");
+        std::process::exit(1);
+    }
 
-    let metadata = metadata(None)?;
+    let metadata = metadata(args.manifest_path.as_deref())?;
     fs::create_dir(&metadata.target_directory)?;
 
-    let cov_dir = &metadata.target_directory.join("llvm-cov");
-    fs::remove_dir_all(cov_dir)?;
-    fs::create_dir(cov_dir)?;
+    let output_dir = match &args.output_dir {
+        None if args.html => Some(metadata.target_directory.join("llvm-cov")),
+        None => None,
+        Some(output_dir) => Some(output_dir.into()),
+    };
+    if let Some(output_dir) = &output_dir {
+        fs::remove_dir_all(output_dir)?;
+        fs::create_dir_all(output_dir)?;
+    }
 
     let target_dir = &metadata.target_directory.join("llvm-cov-target");
 
@@ -103,7 +159,7 @@ fn main() -> Result<()> {
     }
     fs::create_dir(target_dir)?;
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html#including-doc-tests
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     let doctests_dir = &target_dir.join("doctestbins");
     if args.doctests {
         fs::remove_dir_all(doctests_dir)?;
@@ -181,76 +237,104 @@ fn main() -> Result<()> {
         .arg(profdata_file)
         .run()?;
 
-    if args.json {
-        cargo
-            .args_replace(&[
-                "cov",
-                "--",
-                "export",
-                &format!("-instr-profile={}", profdata_file),
-                "-format=text",
-                "-summary-only",
-                "-ignore-filename-regex",
-                r".cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()?;
-    } else if args.text {
-        cargo
-            .args_replace(&[
-                "cov",
-                "--",
-                "show",
-                &format!("-instr-profile={}", profdata_file),
-                "-show-line-counts-or-regions",
-                "-show-instantiations",
-                "-ignore-filename-regex",
-                r".cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()?;
-    } else {
-        cargo
-            .args_replace(&[
-                "cov",
-                "--",
-                "report",
-                &format!("-instr-profile={}", profdata_file),
-                "-ignore-filename-regex",
-                r".cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()?;
-    }
+    let format = Format::from_args(&args);
+    format.run(&mut cargo, output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
 
-    if args.html {
-        cargo
-            .args_replace(&[
-                "cov",
-                "--",
-                "show",
-                &format!("-instr-profile={}", profdata_file),
-                "-format=html",
-                &format!("-output-dir={}", cov_dir),
-                "-show-expansions",
-                "-show-instantiations",
-                "-show-line-counts-or-regions",
-                "-ignore-filename-regex",
-                r".cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()?;
+    if format == Format::Html {
+        Format::None.run(
+            &mut cargo,
+            output_dir.as_deref(),
+            args.summary_only,
+            profdata_file,
+            &files,
+        )?;
 
         if args.open {
-            open::that(cov_dir.join("index.html"))?;
+            open::that(output_dir.as_ref().unwrap().join("index.html"))?;
         }
     }
 
     Ok(())
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Format {
+    /// `llvm-cov report`
+    None,
+    /// `llvm-cov export -format=text`
+    Json,
+    /// `llvm-cov export -format=lcov`
+    LCov,
+    /// `llvm-cov show -format=text`
+    Text,
+    /// `llvm-cov show -format=html`
+    Html,
+}
+
+impl Format {
+    fn from_args(args: &Args) -> Self {
+        if args.json {
+            Self::Json
+        } else if args.lcov {
+            Self::LCov
+        } else if args.text {
+            Self::Text
+        } else if args.html {
+            Self::Html
+        } else {
+            Self::None
+        }
+    }
+
+    fn llvm_cov_args(&self) -> &'static [&'static str] {
+        match self {
+            Self::None => &["report"],
+            Self::Json => &["export", "-format=text"],
+            Self::LCov => &["export", "-format=lcov"],
+            Self::Text => &["show", "-format=text"],
+            Self::Html => &["show", "-format=html"],
+        }
+    }
+
+    fn run(
+        self,
+        cargo: &mut ProcessBuilder,
+        output_dir: Option<&Utf8Path>,
+        summary_only: bool,
+        profdata_file: &Utf8Path,
+        files: &[String],
+    ) -> Result<()> {
+        cargo.args_replace(&["cov", "--"]).args(self.llvm_cov_args());
+
+        match self {
+            Self::Text | Self::Html => {
+                cargo.args(&[
+                    "-show-instantiations",
+                    "-show-line-counts-or-regions",
+                    "-show-expansions",
+                ]);
+                if let Some(output_dir) = output_dir {
+                    cargo.arg(&format!("-output-dir={}", output_dir));
+                }
+            }
+            Self::Json | Self::LCov => {
+                if summary_only {
+                    cargo.arg("-summary-only");
+                }
+            }
+            Self::None => {}
+        }
+
+        cargo
+            .args(&[
+                &format!("-instr-profile={}", profdata_file),
+                "-ignore-filename-regex",
+                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
+                "-Xdemangler=rustfilt",
+            ])
+            .args(files.iter().flat_map(|f| vec!["-object", f]))
+            .run()
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -265,7 +349,7 @@ struct Profile {
     test: bool,
 }
 
-fn metadata(manifest_path: Option<&Path>) -> Result<cargo_metadata::Metadata> {
+fn metadata(manifest_path: Option<&str>) -> Result<cargo_metadata::Metadata> {
     let mut cmd = cargo_metadata::MetadataCommand::new();
     if let Some(path) = manifest_path {
         cmd.manifest_path(path);
