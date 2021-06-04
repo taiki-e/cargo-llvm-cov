@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Enable `--html` flag automatically when `--open` flag is passed.](https://github.com/taiki-e/cargo-llvm-cov/pull/5)
 
+- [Fix bug in cargo version detection](https://github.com/taiki-e/cargo-llvm-cov/pull/7)
+
 ## [0.1.0-alpha.2] - 2021-02-12
 
 - [Add `--text` option to output full report in plain text.](https://github.com/taiki-e/cargo-llvm-cov/pull/3)

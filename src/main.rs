@@ -137,7 +137,7 @@ fn main() -> Result<()> {
     let version = String::from_utf8(cargo.arg("--version").run_with_output()?.stdout)?;
     if !version.contains("-nightly") && !version.contains("-dev") {
         cargo = ProcessBuilder::new("cargo");
-        cargo.arg("+nightly");
+        cargo.base_arg("+nightly");
     }
     cargo.dir(&metadata.workspace_root);
 
