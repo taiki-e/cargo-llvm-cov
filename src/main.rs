@@ -4,14 +4,19 @@
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
+// - https://llvm.org/docs/CommandGuide/llvm-profdata.html
+// - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
 mod fs;
 mod process;
 
-use std::{env, ffi::OsString};
+use std::{
+    env::{self, consts::EXE_SUFFIX},
+    ffi::OsString,
+};
 
-use anyhow::Result;
-use camino::Utf8Path;
+use anyhow::{format_err, Result};
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
 
@@ -188,7 +193,7 @@ fn main() -> Result<()> {
         ));
     }
 
-    let cargo = cargo_binary();
+    let cargo = cargo();
     let mut cargo = ProcessBuilder::new(cargo);
     let version = String::from_utf8(cargo.arg("--version").run_with_output()?.stdout)?;
     if !version.contains("-nightly") && !version.contains("-dev") {
@@ -227,8 +232,8 @@ fn main() -> Result<()> {
     }
 
     // Convert raw profile data.
-    cargo
-        .args_replace(&["profdata", "--", "merge", "-sparse"])
+    ProcessBuilder::new(llvm_tool("llvm-profdata")?)
+        .args(&["merge", "-sparse"])
         .args(
             glob::glob(target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
                 .filter_map(Result::ok),
@@ -238,16 +243,10 @@ fn main() -> Result<()> {
         .run()?;
 
     let format = Format::from_args(&args);
-    format.run(&mut cargo, output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
+    format.run(output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
 
     if format == Format::Html {
-        Format::None.run(
-            &mut cargo,
-            output_dir.as_deref(),
-            args.summary_only,
-            profdata_file,
-            &files,
-        )?;
+        Format::None.run(output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
 
         if args.open {
             open::that(output_dir.as_ref().unwrap().join("index.html"))?;
@@ -298,42 +297,41 @@ impl Format {
 
     fn run(
         self,
-        cargo: &mut ProcessBuilder,
         output_dir: Option<&Utf8Path>,
         summary_only: bool,
         profdata_file: &Utf8Path,
         files: &[String],
     ) -> Result<()> {
-        cargo.args_replace(&["cov", "--"]).args(self.llvm_cov_args());
+        let mut cmd = ProcessBuilder::new(llvm_tool("llvm-cov")?);
+        cmd.args(self.llvm_cov_args());
 
         match self {
             Self::Text | Self::Html => {
-                cargo.args(&[
+                cmd.args(&[
                     "-show-instantiations",
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                 ]);
                 if let Some(output_dir) = output_dir {
-                    cargo.arg(&format!("-output-dir={}", output_dir));
+                    cmd.arg(&format!("-output-dir={}", output_dir));
                 }
             }
             Self::Json | Self::LCov => {
                 if summary_only {
-                    cargo.arg("-summary-only");
+                    cmd.arg("-summary-only");
                 }
             }
             Self::None => {}
         }
 
-        cargo
-            .args(&[
-                &format!("-instr-profile={}", profdata_file),
-                "-ignore-filename-regex",
-                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()
+        cmd.args(&[
+            &format!("-instr-profile={}", profdata_file),
+            "-ignore-filename-regex",
+            r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
+            "-Xdemangler=rustfilt",
+        ])
+        .args(files.iter().flat_map(|f| vec!["-object", f]))
+        .run()
     }
 }
 
@@ -400,6 +398,41 @@ fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata:
     }
 }
 
-fn cargo_binary() -> OsString {
+// https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
+fn llvm_tool(name: &str) -> Result<Utf8PathBuf> {
+    let mut path = sysroot().map(Utf8PathBuf::from)?;
+    path.push("lib");
+    path.push("rustlib");
+    path.push(host()?);
+    path.push("bin");
+    path.push(format!("{}{}", name, EXE_SUFFIX));
+    Ok(path)
+}
+
+fn sysroot() -> Result<String> {
+    Ok(duct::cmd!(rustc(), "--print", "sysroot").stdout_capture().read()?.trim().to_string())
+}
+
+fn host() -> Result<String> {
+    let rustc = &rustc();
+    let output = duct::cmd!(rustc, "--version", "--verbose").stdout_capture().read()?;
+    output
+        .lines()
+        .find_map(|line| line.strip_prefix("host: "))
+        .ok_or_else(|| {
+            format_err!(
+                "could not find host from output of `{} --version --verbose`: {}",
+                rustc.to_string_lossy(),
+                output
+            )
+        })
+        .map(ToString::to_string)
+}
+
+fn rustc() -> OsString {
+    env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"))
+}
+
+fn cargo() -> OsString {
     env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
 }
