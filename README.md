@@ -10,12 +10,10 @@ A wrapper for source based code coverage ([-Zinstrument-coverage][instrument-cov
 
 ## Installation
 
-cargo-llvm-cov currently depends on llvm-tools-preview, [cargo-binutils](https://github.com/rust-embedded/cargo-binutils), and [rustfilt](https://github.com/luser/rustfilt).
+cargo-llvm-cov currently requires llvm-tools-preview and [rustfilt](https://github.com/luser/rustfilt).
 
 ```sh
 cargo install cargo-llvm-cov --version 0.1.0-alpha.2
-
-cargo install cargo-binutils
 
 cargo install rustfilt
 

@@ -38,7 +38,6 @@ jobs:
         with:
           component: llvm-tools-preview
       - run: cargo install cargo-hack
-      - run: cargo install cargo-binutils
       - run: cargo install rustfilt
       - run: cargo install cross
         if: matrix.target != ''
