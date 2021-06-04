@@ -3,7 +3,7 @@
 #![warn(clippy::default_trait_access, clippy::wildcard_imports)]
 
 // Refs:
-// - https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/source-based-code-coverage.html
+// - https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
 
 mod fs;
 mod process;
@@ -83,13 +83,8 @@ struct Args {
     args: Vec<OsString>,
 }
 
-fn args() -> Args {
-    let Opts::LlvmCov(args) = Opts::from_args();
-    args
-}
-
 fn main() -> Result<()> {
-    let mut args = args();
+    let Opts::LlvmCov(mut args) = Opts::from_args();
     args.html |= args.open;
 
     let metadata = metadata(None)?;
@@ -120,24 +115,24 @@ fn main() -> Result<()> {
     fs::remove_file(profdata_file)?;
     let llvm_profile_file = target_dir.join(format!("{}-%m.profraw", package_name));
 
-    let rustflags = &mut match env::var("RUSTFLAGS") {
-        Ok(rustflags) => rustflags,
-        Err(_) => String::new(),
+    let rustflags = &mut match env::var_os("RUSTFLAGS") {
+        Some(rustflags) => rustflags,
+        None => OsString::new(),
     };
     // --remap-path-prefix for Sometimes macros are displayed with abs path
-    *rustflags +=
-        &format!(" -Zinstrument-coverage --remap-path-prefix {}/=", metadata.workspace_root);
+    rustflags
+        .push(format!(" -Zinstrument-coverage --remap-path-prefix {}/=", metadata.workspace_root));
 
-    let rustdocflags = &mut env::var("RUSTDOCFLAGS").ok();
+    let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
     if args.doctests {
-        let flags = rustdocflags.get_or_insert_with(String::new);
-        *flags += &format!(
+        let flags = rustdocflags.get_or_insert_with(OsString::new);
+        flags.push(format!(
             " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
             doctests_dir
-        );
+        ));
     }
 
-    let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let cargo = cargo_binary();
     let mut cargo = ProcessBuilder::new(cargo);
     let version = String::from_utf8(cargo.arg("--version").run_with_output()?.stdout)?;
     if !version.contains("-nightly") && !version.contains("-dev") {
@@ -146,10 +141,10 @@ fn main() -> Result<()> {
     }
     cargo.dir(&metadata.workspace_root);
 
-    cargo.env("RUSTFLAGS", rustflags.trim());
+    cargo.env("RUSTFLAGS", rustflags);
     cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
     if let Some(rustdocflags) = rustdocflags {
-        cargo.env("RUSTDOCFLAGS", rustdocflags.trim());
+        cargo.env("RUSTDOCFLAGS", rustdocflags);
     }
 
     cargo.args_replace(&["test", "--target-dir"]).arg(target_dir);
@@ -319,4 +314,8 @@ fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata:
         cmd.arg("--");
         cmd.args(&args.args);
     }
+}
+
+fn cargo_binary() -> OsString {
+    env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
 }
