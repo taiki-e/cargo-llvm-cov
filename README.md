@@ -31,7 +31,7 @@ nightly anyway.
 ## Usage
 
 <details>
-<summary>A complete list of options</summary>
+<summary>Click to show a complete list of options</summary>
 
 ```console
 $ cargo llvm-cov --help
@@ -154,6 +154,39 @@ With lcov report (the report will be printed to stdout):
 cargo llvm-cov --lcov
 ```
 
+### Continuous Integration
+
+Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
+
+```yaml
+name: Coverage
+
+on: [pull_request, push]
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust nightly and llvm-tools-preview
+        run: rustup toolchain install nightly --component llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.3/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+      - name: Install rustfilt
+        run: cargo install rustfilt
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov > lcov.info
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: lcov.info
+          fail_ci_if_error: true
+```
+
+Note: Currently, only line coverage is available on Codecov. This is because -Zinstrument-coverage does not support branch coverage and Codecov does not support region coverage. See also [#8] and [#12].
+
 ## Known limitations
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
@@ -166,6 +199,8 @@ See also [the coverage-related issues reported in rust-lang/rust](https://github
 [#1]: https://github.com/taiki-e/cargo-llvm-cov/issues/1
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
+[#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
+[codecov]: https://codecov.io
 [instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
 [rust-lang/rust#79121]: https://github.com/rust-lang/rust/issues/79121
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
