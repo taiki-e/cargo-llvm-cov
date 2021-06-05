@@ -100,6 +100,9 @@ OPTIONS:
         --manifest-path <PATH>
             Path to Cargo.toml
 
+        --color <WHEN>
+            Coloring: auto, always, never
+
     -h, --help
             Prints help information
 
