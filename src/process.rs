@@ -20,8 +20,6 @@ pub(crate) struct ProcessBuilder {
     program: OsString,
     /// A list of arguments to pass to the program.
     args: Vec<OsString>,
-    /// The length of arguments that is not replaced by `args_replace`.
-    base_args: usize,
     /// The environment variables in the expression's environment.
     env: BTreeMap<String, Option<OsString>>,
     /// The working directory where the expression will execute.
@@ -36,18 +34,10 @@ impl ProcessBuilder {
         Self {
             program: program.into(),
             args: Vec::new(),
-            base_args: 0,
             env: BTreeMap::new(),
             dir: None,
             stdout_to_stderr: false,
         }
-    }
-
-    /// (chainable) Adds `arg` to the args list.
-    pub(crate) fn base_arg(&mut self, arg: impl Into<OsString>) -> &mut Self {
-        self.args.insert(self.base_args, arg.into());
-        self.base_args += 1;
-        self
     }
 
     /// (chainable) Adds `arg` to the args list.
@@ -58,16 +48,6 @@ impl ProcessBuilder {
 
     /// (chainable) Adds multiple `args` to the args list.
     pub(crate) fn args(&mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) -> &mut Self {
-        self.args.extend(args.into_iter().map(|t| t.as_ref().to_os_string()));
-        self
-    }
-
-    /// (chainable) Replaces the args list with the given `args`.
-    pub(crate) fn args_replace(
-        &mut self,
-        args: impl IntoIterator<Item = impl AsRef<OsStr>>,
-    ) -> &mut Self {
-        self.args.truncate(self.base_args);
         self.args.extend(args.into_iter().map(|t| t.as_ref().to_os_string()));
         self
     }
