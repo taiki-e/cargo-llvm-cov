@@ -13,9 +13,10 @@ mod process;
 use std::{
     env::{self, consts::EXE_SUFFIX},
     ffi::OsString,
+    str::FromStr,
 };
 
-use anyhow::{format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
@@ -103,18 +104,23 @@ struct Args {
     /// Space or comma separated list of features to activate
     #[structopt(long, value_name = "FEATURES")]
     features: Vec<String>,
-    /// Activate all available features
+    /// Activate all available features.
     #[structopt(long)]
     all_features: bool,
-    /// Do not activate the `default` feature
+    /// Do not activate the `default` feature.
     #[structopt(long)]
     no_default_features: bool,
-    /// Build for the target triple
+    /// Build for the target triple.
     #[structopt(long, value_name = "TRIPLE")]
     target: Option<String>,
-    /// Path to Cargo.toml
+    /// Path to Cargo.toml.
     #[structopt(long, value_name = "PATH")]
     manifest_path: Option<String>,
+
+    /// Coloring: auto, always, never.
+    // This flag will be propagated to both cargo and llvm-cov.
+    #[structopt(long, value_name = "WHEN")]
+    color: Option<Coloring>,
 
     /// Arguments for the test binary
     #[structopt(last = true, parse(from_os_str))]
@@ -130,6 +136,36 @@ impl Args {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum Coloring {
+    Auto,
+    Always,
+    Never,
+}
+
+impl Coloring {
+    fn cargo_color(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Always => "always",
+            Self::Never => "never",
+        }
+    }
+}
+
+impl FromStr for Coloring {
+    type Err = Error;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name {
+            "auto" => Ok(Coloring::Auto),
+            "always" => Ok(Coloring::Always),
+            "never" => Ok(Coloring::Never),
+            other => bail!("must be auto, always, or never, but found `{}`", other),
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::from_args();
     args.html |= args.open;
@@ -140,6 +176,10 @@ fn main() -> Result<()> {
     if args.output_dir.is_some() && !args.show() {
         eprintln!("--output-dir can only be used together with --text, --html, or --open");
         std::process::exit(1);
+    }
+    if args.color.is_none() {
+        // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
+        args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
     }
 
     let metadata = metadata(args.manifest_path.as_deref())?;
@@ -243,10 +283,10 @@ fn main() -> Result<()> {
         .run()?;
 
     let format = Format::from_args(&args);
-    format.run(output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
+    format.run(&args, output_dir.as_deref(), profdata_file, &files)?;
 
     if format == Format::Html {
-        Format::None.run(output_dir.as_deref(), args.summary_only, profdata_file, &files)?;
+        Format::None.run(&args, output_dir.as_deref(), profdata_file, &files)?;
 
         if args.open {
             open::that(output_dir.as_ref().unwrap().join("index.html"))?;
@@ -256,7 +296,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Format {
     /// `llvm-cov report`
     None,
@@ -295,10 +335,23 @@ impl Format {
         }
     }
 
+    fn use_color(&self, color: Option<Coloring>) -> Option<&'static str> {
+        if matches!(self, Self::Json | Self::LCov) {
+            // `llvm-cov export` doesn't have `-use-color` flag.
+            // https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export
+            return None;
+        }
+        match color {
+            Some(Coloring::Auto) | None => None,
+            Some(Coloring::Always) => Some("-use-color=1"),
+            Some(Coloring::Never) => Some("-use-color=0"),
+        }
+    }
+
     fn run(
         self,
+        args: &Args,
         output_dir: Option<&Utf8Path>,
-        summary_only: bool,
         profdata_file: &Utf8Path,
         files: &[String],
     ) -> Result<()> {
@@ -317,32 +370,33 @@ impl Format {
                 }
             }
             Self::Json | Self::LCov => {
-                if summary_only {
+                if args.summary_only {
                     cmd.arg("-summary-only");
                 }
             }
             Self::None => {}
         }
 
-        cmd.args(&[
-            &format!("-instr-profile={}", profdata_file),
-            "-ignore-filename-regex",
-            r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
-            "-Xdemangler=rustfilt",
-        ])
-        .args(files.iter().flat_map(|f| vec!["-object", f]))
-        .run()
+        cmd.args(self.use_color(args.color))
+            .args(&[
+                &format!("-instr-profile={}", profdata_file),
+                "-ignore-filename-regex",
+                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
+                "-Xdemangler=rustfilt",
+            ])
+            .args(files.iter().flat_map(|f| vec!["-object", f]))
+            .run()
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 struct Artifact {
     profile: Option<Profile>,
     #[serde(default)]
     filenames: Vec<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug, Deserialize)]
 struct Profile {
     test: bool,
 }
@@ -390,6 +444,11 @@ fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata:
             cmd.arg("--manifest-path");
             cmd.arg(&metadata[root].manifest_path);
         }
+    }
+
+    if let Some(color) = args.color {
+        cmd.arg("--color");
+        cmd.arg(color.cargo_color());
     }
 
     if !args.args.is_empty() {
