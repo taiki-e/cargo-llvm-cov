@@ -76,6 +76,9 @@ OPTIONS:
         --doctests
             Including doc tests (unstable)
 
+        --no-fail-fast
+            Run all tests regardless of failure
+
         --workspace
             Test all packages in the workspace [aliases: all]
 
@@ -102,6 +105,15 @@ OPTIONS:
 
         --color <WHEN>
             Coloring: auto, always, never
+
+        --frozen
+            Require Cargo.lock and cache are up to date
+
+        --locked
+            Require Cargo.lock is up to date
+
+    -Z <FLAG>...
+            Unstable (nightly-only) flags to Cargo
 
     -h, --help
             Prints help information
