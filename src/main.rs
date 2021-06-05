@@ -86,9 +86,13 @@ struct Args {
     #[structopt(long)]
     doctests: bool,
 
-    // ======================
-    // Mapping cargo commands
-    // FIXME: --package doesn't work properly, use --manifest-path instead for now.
+    // =========================================================================
+    // `cargo test` options
+    // https://doc.rust-lang.org/cargo/commands/cargo-test.html
+    /// Run all tests regardless of failure
+    #[structopt(long)]
+    no_fail_fast: bool,
+    // TODO: --package doesn't work properly, use --manifest-path instead for now.
     // /// Package to run tests for
     // #[structopt(short, long, value_name = "SPEC")]
     // package: Vec<String>,
@@ -98,29 +102,49 @@ struct Args {
     /// Exclude packages from the test
     #[structopt(long, value_name = "SPEC")]
     exclude: Vec<String>,
+    // TODO: Should this only work for cargo's --jobs? Or should it also work
+    //       for llvm-cov's -num-threads?
+    // /// Number of parallel jobs, defaults to # of CPUs
+    // #[structopt(short, long, value_name = "N")]
+    // jobs: Option<u64>,
     /// Build artifacts in release mode, with optimizations
     #[structopt(long)]
     release: bool,
     /// Space or comma separated list of features to activate
     #[structopt(long, value_name = "FEATURES")]
     features: Vec<String>,
-    /// Activate all available features.
+    /// Activate all available features
     #[structopt(long)]
     all_features: bool,
-    /// Do not activate the `default` feature.
+    /// Do not activate the `default` feature
     #[structopt(long)]
     no_default_features: bool,
-    /// Build for the target triple.
+    /// Build for the target triple
     #[structopt(long, value_name = "TRIPLE")]
     target: Option<String>,
-    /// Path to Cargo.toml.
+    // TODO: Currently, we are using a subdirectory of the target directory as
+    //       the actual target directory. What effect should this option have
+    //       on its behavior?
+    // /// Directory for all generated artifacts
+    // #[structopt(long, value_name = "DIRECTORY", parse(from_os_str))]
+    // target_dir: Option<PathBuf>,
+    /// Path to Cargo.toml
     #[structopt(long, value_name = "PATH")]
     manifest_path: Option<String>,
-
-    /// Coloring: auto, always, never.
+    /// Coloring: auto, always, never
     // This flag will be propagated to both cargo and llvm-cov.
     #[structopt(long, value_name = "WHEN")]
     color: Option<Coloring>,
+    /// Require Cargo.lock and cache are up to date
+    #[structopt(long)]
+    frozen: bool,
+    /// Require Cargo.lock is up to date
+    #[structopt(long)]
+    locked: bool,
+
+    /// Unstable (nightly-only) flags to Cargo
+    #[structopt(short = "Z", value_name = "FLAG")]
+    unstable_flags: Vec<String>,
 
     /// Arguments for the test binary
     #[structopt(last = true, parse(from_os_str))]
@@ -131,8 +155,26 @@ impl Args {
     fn export(&self) -> bool {
         self.json || self.lcov
     }
+
     fn show(&self) -> bool {
         self.text || self.html
+    }
+
+    fn check_and_update(&mut self) -> Result<()> {
+        self.html |= self.open;
+        if self.summary_only && !self.export() {
+            eprintln!("--summary-only can only be used together with either --json or --lcov");
+            std::process::exit(1);
+        }
+        if self.output_dir.is_some() && !self.show() {
+            eprintln!("--output-dir can only be used together with --text, --html, or --open");
+            std::process::exit(1);
+        }
+        if self.color.is_none() {
+            // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
+            self.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
+        }
+        Ok(())
     }
 }
 
@@ -158,9 +200,9 @@ impl FromStr for Coloring {
 
     fn from_str(name: &str) -> Result<Self, Self::Err> {
         match name {
-            "auto" => Ok(Coloring::Auto),
-            "always" => Ok(Coloring::Always),
-            "never" => Ok(Coloring::Never),
+            "auto" => Ok(Self::Auto),
+            "always" => Ok(Self::Always),
+            "never" => Ok(Self::Never),
             other => bail!("must be auto, always, or never, but found `{}`", other),
         }
     }
@@ -168,25 +210,14 @@ impl FromStr for Coloring {
 
 fn main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::from_args();
-    args.html |= args.open;
-    if args.summary_only && !args.export() {
-        eprintln!("--summary-only can only be used together with either --json or --lcov");
-        std::process::exit(1);
-    }
-    if args.output_dir.is_some() && !args.show() {
-        eprintln!("--output-dir can only be used together with --text, --html, or --open");
-        std::process::exit(1);
-    }
-    if args.color.is_none() {
-        // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
-        args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
-    }
+    args.check_and_update()?;
 
     let metadata = metadata(args.manifest_path.as_deref())?;
-    fs::create_dir(&metadata.target_directory)?;
+    let cargo_target_dir = &metadata.target_directory;
+    fs::create_dir_all(&cargo_target_dir)?;
 
     let output_dir = match &args.output_dir {
-        None if args.html => Some(metadata.target_directory.join("llvm-cov")),
+        None if args.html => Some(cargo_target_dir.join("llvm-cov")),
         None => None,
         Some(output_dir) => Some(output_dir.into()),
     };
@@ -195,7 +226,9 @@ fn main() -> Result<()> {
         fs::create_dir_all(output_dir)?;
     }
 
-    let target_dir = &metadata.target_directory.join("llvm-cov-target");
+    // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
+    // use a subdirectory of the target directory as the actual target directory.
+    let target_dir = &cargo_target_dir.join("llvm-cov-target");
 
     if target_dir.exists() {
         for path in glob::glob(target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
@@ -325,7 +358,7 @@ impl Format {
         }
     }
 
-    fn llvm_cov_args(&self) -> &'static [&'static str] {
+    fn llvm_cov_args(self) -> &'static [&'static str] {
         match self {
             Self::None => &["report"],
             Self::Json => &["export", "-format=text"],
@@ -335,7 +368,7 @@ impl Format {
         }
     }
 
-    fn use_color(&self, color: Option<Coloring>) -> Option<&'static str> {
+    fn use_color(self, color: Option<Coloring>) -> Option<&'static str> {
         if matches!(self, Self::Json | Self::LCov) {
             // `llvm-cov export` doesn't have `-use-color` flag.
             // https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export
@@ -410,12 +443,15 @@ fn metadata(manifest_path: Option<&str>) -> Result<cargo_metadata::Metadata> {
 }
 
 fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata::Metadata) {
-    for exclude in &args.exclude {
-        cmd.arg("--exclude");
-        cmd.arg(exclude);
+    if args.no_fail_fast {
+        cmd.arg("--no-fail-fast");
     }
     if args.workspace {
         cmd.arg("--workspace");
+    }
+    for exclude in &args.exclude {
+        cmd.arg("--exclude");
+        cmd.arg(exclude);
     }
     if args.release {
         cmd.arg("--release");
@@ -434,21 +470,29 @@ fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata:
         cmd.arg("--target");
         cmd.arg(target);
     }
+
     if let Some(manifest_path) = &args.manifest_path {
         cmd.arg("--manifest-path");
         cmd.arg(manifest_path);
-    }
-
-    if !args.workspace && args.manifest_path.is_none() {
-        if let Some(root) = &metadata.resolve.as_ref().unwrap().root {
-            cmd.arg("--manifest-path");
-            cmd.arg(&metadata[root].manifest_path);
-        }
+    } else if let Some(root) = &metadata.resolve.as_ref().unwrap().root {
+        cmd.arg("--manifest-path");
+        cmd.arg(&metadata[root].manifest_path);
     }
 
     if let Some(color) = args.color {
         cmd.arg("--color");
         cmd.arg(color.cargo_color());
+    }
+    if args.frozen {
+        cmd.arg("--frozen");
+    }
+    if args.locked {
+        cmd.arg("--locked");
+    }
+
+    for unstable_flag in &args.unstable_flags {
+        cmd.arg("-Z");
+        cmd.arg(unstable_flag);
     }
 
     if !args.args.is_empty() {
