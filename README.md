@@ -10,23 +10,36 @@ A wrapper for source based code coverage ([-Zinstrument-coverage][instrument-cov
 
 ## Installation
 
-cargo-llvm-cov currently requires llvm-tools-preview and [rustfilt](https://github.com/luser/rustfilt).
+### Prerequisites
+
+cargo-llvm-cov requires nightly
+toolchain and llvm-tools-preview:
 
 ```sh
-cargo install cargo-llvm-cov --version 0.1.0-alpha.3
-
-cargo install rustfilt
-
 rustup component add llvm-tools-preview
 ```
 
-Alternatively, download compiled binaries from [GitHub Releases](https://github.com/taiki-e/cargo-llvm-cov/releases).
+If you use the `--html`, `--open`, or `--text` flag, [rustfilt](https://github.com/luser/rustfilt) is also required:
+
+```sh
+cargo install rustfilt
+```
+
+### From source
+
+```sh
+cargo install cargo-llvm-cov --version 0.1.0-alpha.3
+```
 
 cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
 toolchain to be installed, though does not require nightly to be the default
 toolchain or the one with which cargo-llvm-cov itself is executed. If the default
 toolchain is one other than nightly, running `cargo llvm-cov` will find and use
 nightly anyway.
+
+### From binaries
+
+You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
 
 ## Usage
 
@@ -185,8 +198,6 @@ jobs:
         run: rustup toolchain install nightly --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.3/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
-      - name: Install rustfilt
-        run: cargo install rustfilt
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov > lcov.info
       - name: Upload coverage to Codecov

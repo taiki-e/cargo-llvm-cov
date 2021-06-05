@@ -13,11 +13,14 @@ mod process;
 use std::{
     env::{self, consts::EXE_SUFFIX},
     ffi::OsString,
+    ops,
+    path::Path,
     str::FromStr,
 };
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context as _, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use duct::cmd;
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
 
@@ -209,56 +212,41 @@ impl FromStr for Coloring {
 }
 
 fn main() -> Result<()> {
-    let Opts::LlvmCov(mut args) = Opts::from_args();
-    args.check_and_update()?;
+    let cx = &Context::new()?;
 
-    let metadata = metadata(args.manifest_path.as_deref())?;
-    let cargo_target_dir = &metadata.target_directory;
-    fs::create_dir_all(&cargo_target_dir)?;
-
-    let output_dir = match &args.output_dir {
-        None if args.html => Some(cargo_target_dir.join("llvm-cov")),
-        None => None,
-        Some(output_dir) => Some(output_dir.into()),
-    };
-    if let Some(output_dir) = &output_dir {
+    fs::create_dir_all(&cx.target_dir)?;
+    if let Some(output_dir) = &cx.output_dir {
         fs::remove_dir_all(output_dir)?;
         fs::create_dir_all(output_dir)?;
     }
-
-    // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
-    // use a subdirectory of the target directory as the actual target directory.
-    let target_dir = &cargo_target_dir.join("llvm-cov-target");
-
-    if target_dir.exists() {
-        for path in glob::glob(target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
-            fs::remove_file(path)?;
-        }
+    for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
+        fs::remove_file(path)?;
     }
-    fs::create_dir(target_dir)?;
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-    let doctests_dir = &target_dir.join("doctestbins");
-    if args.doctests {
+    let doctests_dir = &cx.target_dir.join("doctestbins");
+    if cx.doctests {
         fs::remove_dir_all(doctests_dir)?;
         fs::create_dir(doctests_dir)?;
     }
 
-    let package_name = metadata.workspace_root.file_stem().unwrap();
-    let profdata_file = &target_dir.join(format!("{}.profdata", package_name));
+    let package_name = cx.metadata.workspace_root.file_stem().unwrap();
+    let profdata_file = &cx.target_dir.join(format!("{}.profdata", package_name));
     fs::remove_file(profdata_file)?;
-    let llvm_profile_file = target_dir.join(format!("{}-%m.profraw", package_name));
+    let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", package_name));
 
     let rustflags = &mut match env::var_os("RUSTFLAGS") {
         Some(rustflags) => rustflags,
         None => OsString::new(),
     };
     // --remap-path-prefix for Sometimes macros are displayed with abs path
-    rustflags
-        .push(format!(" -Zinstrument-coverage --remap-path-prefix {}/=", metadata.workspace_root));
+    rustflags.push(format!(
+        " -Zinstrument-coverage --remap-path-prefix {}/=",
+        cx.metadata.workspace_root
+    ));
 
     let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
-    if args.doctests {
+    if cx.doctests {
         let flags = rustdocflags.get_or_insert_with(OsString::new);
         flags.push(format!(
             " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
@@ -266,14 +254,11 @@ fn main() -> Result<()> {
         ));
     }
 
-    let cargo = cargo();
-    let mut cargo = ProcessBuilder::new(cargo);
-    let version = String::from_utf8(cargo.arg("--version").run_with_output()?.stdout)?;
-    if !version.contains("-nightly") && !version.contains("-dev") {
-        cargo = ProcessBuilder::new("cargo");
-        cargo.base_arg("+nightly");
+    let mut cargo = ProcessBuilder::new(&cx.cargo);
+    if !cx.nightly {
+        cargo.arg("+nightly");
     }
-    cargo.dir(&metadata.workspace_root);
+    cargo.dir(&cx.metadata.workspace_root);
 
     cargo.env("RUSTFLAGS", rustflags);
     cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
@@ -281,8 +266,8 @@ fn main() -> Result<()> {
         cargo.env("RUSTDOCFLAGS", rustdocflags);
     }
 
-    cargo.args_replace(&["test", "--target-dir"]).arg(target_dir);
-    append_args(&mut cargo, &args, &metadata);
+    cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
+    append_args(cx, &mut cargo);
     cargo.stdout_to_stderr = true;
     cargo.run()?;
     cargo.stdout_to_stderr = false;
@@ -296,7 +281,7 @@ fn main() -> Result<()> {
             files.extend(ar.filenames.into_iter().filter(|s| !s.ends_with("dSYM")));
         }
     }
-    if args.doctests {
+    if cx.doctests {
         for f in glob::glob(doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok) {
             if is_executable::is_executable(&f) {
                 files.push(f.to_string_lossy().into_owned())
@@ -305,24 +290,24 @@ fn main() -> Result<()> {
     }
 
     // Convert raw profile data.
-    ProcessBuilder::new(llvm_tool("llvm-profdata")?)
+    ProcessBuilder::new(&cx.llvm_profdata)
         .args(&["merge", "-sparse"])
         .args(
-            glob::glob(target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
+            glob::glob(cx.target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
                 .filter_map(Result::ok),
         )
         .arg("-o")
         .arg(profdata_file)
         .run()?;
 
-    let format = Format::from_args(&args);
-    format.run(&args, output_dir.as_deref(), profdata_file, &files)?;
+    let format = Format::from_args(cx);
+    format.run(cx, profdata_file, &files)?;
 
     if format == Format::Html {
-        Format::None.run(&args, output_dir.as_deref(), profdata_file, &files)?;
+        Format::None.run(cx, profdata_file, &files)?;
 
-        if args.open {
-            open::that(output_dir.as_ref().unwrap().join("index.html"))?;
+        if cx.open {
+            open::that(Path::new(cx.output_dir.as_ref().unwrap()).join("index.html"))?;
         }
     }
 
@@ -381,14 +366,8 @@ impl Format {
         }
     }
 
-    fn run(
-        self,
-        args: &Args,
-        output_dir: Option<&Utf8Path>,
-        profdata_file: &Utf8Path,
-        files: &[String],
-    ) -> Result<()> {
-        let mut cmd = ProcessBuilder::new(llvm_tool("llvm-cov")?);
+    fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[String]) -> Result<()> {
+        let mut cmd = ProcessBuilder::new(&cx.llvm_cov);
         cmd.args(self.llvm_cov_args());
 
         match self {
@@ -397,25 +376,25 @@ impl Format {
                     "-show-instantiations",
                     "-show-line-counts-or-regions",
                     "-show-expansions",
+                    "-Xdemangler=rustfilt",
                 ]);
-                if let Some(output_dir) = output_dir {
+                if let Some(output_dir) = &cx.output_dir {
                     cmd.arg(&format!("-output-dir={}", output_dir));
                 }
             }
             Self::Json | Self::LCov => {
-                if args.summary_only {
+                if cx.summary_only {
                     cmd.arg("-summary-only");
                 }
             }
             Self::None => {}
         }
 
-        cmd.args(self.use_color(args.color))
+        cmd.args(self.use_color(cx.color))
             .args(&[
                 &format!("-instr-profile={}", profdata_file),
                 "-ignore-filename-regex",
                 r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
-                "-Xdemangler=rustfilt",
             ])
             .args(files.iter().flat_map(|f| vec!["-object", f]))
             .run()
@@ -434,100 +413,86 @@ struct Profile {
     test: bool,
 }
 
-fn metadata(manifest_path: Option<&str>) -> Result<cargo_metadata::Metadata> {
-    let mut cmd = cargo_metadata::MetadataCommand::new();
-    if let Some(path) = manifest_path {
-        cmd.manifest_path(path);
-    }
-    Ok(cmd.exec()?)
+struct Context {
+    args: Args,
+    metadata: cargo_metadata::Metadata,
+    target_dir: Utf8PathBuf,
+    llvm_cov: Utf8PathBuf,
+    llvm_profdata: Utf8PathBuf,
+    cargo: OsString,
+    nightly: bool,
 }
 
-fn append_args(cmd: &mut ProcessBuilder, args: &Args, metadata: &cargo_metadata::Metadata) {
-    if args.no_fail_fast {
-        cmd.arg("--no-fail-fast");
-    }
-    if args.workspace {
-        cmd.arg("--workspace");
-    }
-    for exclude in &args.exclude {
-        cmd.arg("--exclude");
-        cmd.arg(exclude);
-    }
-    if args.release {
-        cmd.arg("--release");
-    }
-    for features in &args.features {
-        cmd.arg("--features");
-        cmd.arg(features);
-    }
-    if args.all_features {
-        cmd.arg("--all-features");
-    }
-    if args.no_default_features {
-        cmd.arg("--no-default-features");
-    }
-    if let Some(target) = &args.target {
-        cmd.arg("--target");
-        cmd.arg(target);
-    }
+impl Context {
+    fn new() -> Result<Self> {
+        let Opts::LlvmCov(mut args) = Opts::from_args();
+        args.check_and_update()?;
 
-    if let Some(manifest_path) = &args.manifest_path {
-        cmd.arg("--manifest-path");
-        cmd.arg(manifest_path);
-    } else if let Some(root) = &metadata.resolve.as_ref().unwrap().root {
-        cmd.arg("--manifest-path");
-        cmd.arg(&metadata[root].manifest_path);
-    }
+        let metadata = metadata(args.manifest_path.as_deref())?;
+        let cargo_target_dir = &metadata.target_directory;
 
-    if let Some(color) = args.color {
-        cmd.arg("--color");
-        cmd.arg(color.cargo_color());
-    }
-    if args.frozen {
-        cmd.arg("--frozen");
-    }
-    if args.locked {
-        cmd.arg("--locked");
-    }
+        if args.output_dir.is_none() && args.html {
+            args.output_dir = Some(cargo_target_dir.join("llvm-cov").into());
+        }
 
-    for unstable_flag in &args.unstable_flags {
-        cmd.arg("-Z");
-        cmd.arg(unstable_flag);
-    }
+        // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
+        // use a subdirectory of the target directory as the actual target directory.
+        let target_dir = cargo_target_dir.join("llvm-cov-target");
 
-    if !args.args.is_empty() {
-        cmd.arg("--");
-        cmd.args(&args.args);
+        let sysroot: Utf8PathBuf = sysroot().context("failed to find sysroot")?.into();
+        // https://github.com/rust-lang/rust/issues/85658
+        // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
+        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host()?));
+        let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", EXE_SUFFIX));
+        let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", EXE_SUFFIX));
+
+        let mut cargo = cargo();
+        let version = cmd!(&cargo, "version").stdout_capture().read()?;
+        let nightly = version.contains("-nightly") || version.contains("-dev");
+        if !nightly {
+            cargo = "cargo".into();
+        }
+
+        // Check if required tools are installed.
+        if !llvm_cov.exists() || !llvm_profdata.exists() {
+            bail!(
+                "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
+                if !nightly { " --toolchain nightly" } else { "" }
+            );
+        }
+        if args.show() {
+            cmd!("rustfilt", "-V").stdout_capture().run().with_context(|| {
+                format!(
+                    "{} flag requires rustfilt, please install rustfilt with `cargo install rustfilt`",
+                    if args.html { "--html" } else { "--text" }
+                )
+            })?;
+        }
+
+        Ok(Self { args, metadata, target_dir, llvm_cov, llvm_profdata, cargo, nightly })
     }
 }
 
-// https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
-fn llvm_tool(name: &str) -> Result<Utf8PathBuf> {
-    let mut path = sysroot().map(Utf8PathBuf::from)?;
-    path.push("lib");
-    path.push("rustlib");
-    path.push(host()?);
-    path.push("bin");
-    path.push(format!("{}{}", name, EXE_SUFFIX));
-    Ok(path)
+impl ops::Deref for Context {
+    type Target = Args;
+
+    fn deref(&self) -> &Self::Target {
+        &self.args
+    }
 }
 
 fn sysroot() -> Result<String> {
-    Ok(duct::cmd!(rustc(), "--print", "sysroot").stdout_capture().read()?.trim().to_string())
+    Ok(cmd!(rustc(), "--print", "sysroot").stdout_capture().read()?.trim().to_string())
 }
 
 fn host() -> Result<String> {
     let rustc = &rustc();
-    let output = duct::cmd!(rustc, "--version", "--verbose").stdout_capture().read()?;
+    let output = cmd!(rustc, "--version", "--verbose").stdout_capture().read()?;
     output
         .lines()
         .find_map(|line| line.strip_prefix("host: "))
         .ok_or_else(|| {
-            format_err!(
-                "could not find host from output of `{} --version --verbose`: {}",
-                rustc.to_string_lossy(),
-                output
-            )
+            format_err!("unexpected version output from `{}`: {}", rustc.to_string_lossy(), output)
         })
         .map(ToString::to_string)
 }
@@ -538,4 +503,71 @@ fn rustc() -> OsString {
 
 fn cargo() -> OsString {
     env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
+}
+
+fn metadata(manifest_path: Option<&str>) -> Result<cargo_metadata::Metadata> {
+    let mut cmd = cargo_metadata::MetadataCommand::new();
+    if let Some(path) = manifest_path {
+        cmd.manifest_path(path);
+    }
+    Ok(cmd.exec()?)
+}
+
+fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
+    if cx.no_fail_fast {
+        cmd.arg("--no-fail-fast");
+    }
+    if cx.workspace {
+        cmd.arg("--workspace");
+    }
+    for exclude in &cx.exclude {
+        cmd.arg("--exclude");
+        cmd.arg(exclude);
+    }
+    if cx.release {
+        cmd.arg("--release");
+    }
+    for features in &cx.features {
+        cmd.arg("--features");
+        cmd.arg(features);
+    }
+    if cx.all_features {
+        cmd.arg("--all-features");
+    }
+    if cx.no_default_features {
+        cmd.arg("--no-default-features");
+    }
+    if let Some(target) = &cx.target {
+        cmd.arg("--target");
+        cmd.arg(target);
+    }
+
+    if let Some(manifest_path) = &cx.manifest_path {
+        cmd.arg("--manifest-path");
+        cmd.arg(manifest_path);
+    } else if let Some(root) = &cx.metadata.resolve.as_ref().unwrap().root {
+        cmd.arg("--manifest-path");
+        cmd.arg(&cx.metadata[root].manifest_path);
+    }
+
+    if let Some(color) = cx.color {
+        cmd.arg("--color");
+        cmd.arg(color.cargo_color());
+    }
+    if cx.frozen {
+        cmd.arg("--frozen");
+    }
+    if cx.locked {
+        cmd.arg("--locked");
+    }
+
+    for unstable_flag in &cx.unstable_flags {
+        cmd.arg("-Z");
+        cmd.arg(unstable_flag);
+    }
+
+    if !cx.args.args.is_empty() {
+        cmd.arg("--");
+        cmd.args(&cx.args.args);
+    }
 }
