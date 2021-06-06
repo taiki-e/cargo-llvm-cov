@@ -2,7 +2,6 @@ use std::{
     collections::BTreeMap,
     ffi::{OsStr, OsString},
     path::PathBuf,
-    process::Output,
     str,
 };
 
@@ -24,20 +23,12 @@ pub(crate) struct ProcessBuilder {
     env: BTreeMap<String, Option<OsString>>,
     /// The working directory where the expression will execute.
     dir: Option<PathBuf>,
-    /// Join the standard output of an expression to its standard error pipe, similar to `1>&2` in the shell.
-    pub(crate) stdout_to_stderr: bool,
 }
 
 impl ProcessBuilder {
     /// Creates a new `ProcessBuilder`.
     pub(crate) fn new(program: impl Into<OsString>) -> Self {
-        Self {
-            program: program.into(),
-            args: Vec::new(),
-            env: BTreeMap::new(),
-            dir: None,
-            stdout_to_stderr: false,
-        }
+        Self { program: program.into(), args: Vec::new(), env: BTreeMap::new(), dir: None }
     }
 
     /// (chainable) Adds `arg` to the args list.
@@ -76,12 +67,6 @@ impl ProcessBuilder {
         Ok(())
     }
 
-    /// Execute an expression, wait for it to complete, returning the stdio output.
-    pub(crate) fn run_with_output(&mut self) -> Result<Output> {
-        let output = self.build().stdout_capture().stderr_capture().run()?;
-        Ok(output)
-    }
-
     pub(crate) fn build(&self) -> duct::Expression {
         let mut cmd = duct::cmd(&*self.program, &self.args);
 
@@ -96,9 +81,6 @@ impl ProcessBuilder {
             }
         }
 
-        if self.stdout_to_stderr {
-            cmd = cmd.stdout_to_stderr();
-        }
         if let Some(path) = &self.dir {
             cmd = cmd.dir(path);
         }

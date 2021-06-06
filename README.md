@@ -16,7 +16,7 @@ cargo-llvm-cov requires nightly
 toolchain and llvm-tools-preview:
 
 ```sh
-rustup component add llvm-tools-preview
+rustup component add llvm-tools-preview --toolchain nightly
 ```
 
 If you use the `--html`, `--open`, or `--text` flag, [rustfilt](https://github.com/luser/rustfilt) is also required:
@@ -56,36 +56,48 @@ USAGE:
 
 OPTIONS:
         --json
-            Export coverage data in "json" format (the report will be printed to stdout).
+            Export coverage data in "json" format
+
+            If --output-path is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov export -format=text`. See <https://llvm.org/docs/CommandGuide/llvm-
             cov.html#llvm-cov-export> for more.
         --lcov
-            Export coverage data in "lcov" format (the report will be printed to stdout).
+            Export coverage data in "lcov" format.
+
+            If --output-path is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov export -format=lcov`. See <https://llvm.org/docs/CommandGuide/llvm-
             cov.html#llvm-cov-export> for more.
-        --summary-only
-            Export only summary information for each file in the coverage data.
-
-            This flag can only be used together with either --json or --lcov.
         --text
-            Generate coverage reports in “text” format (the report will be printed to stdout).
+            Generate coverage reports in “text” format.
+
+            If --output-path or --output-dir is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov show -format=text`. See <https://llvm.org/docs/CommandGuide/llvm-
             cov.html#llvm-cov-show> for more.
         --html
-            Generate coverage reports in "html" format (the report will be generated in `target/llvm-cov` directory).
+            Generate coverage reports in "html" format. If --output-dir is not specified, the report will be generated
+            in `target/llvm-cov` directory.
 
             This internally calls `llvm-cov show -format=html`. See <https://llvm.org/docs/CommandGuide/llvm-
             cov.html#llvm-cov-show> for more.
         --open
-            Generate coverage reports in "html" format and open them in a browser after the operation
+            Generate coverage reports in "html" format and open them in a browser after the operation.
 
-        --output-dir <output-dir>
+            See --html for more.
+        --summary-only
+            Export only summary information for each file in the coverage data.
+
+            This flag can only be used together with either --json or --lcov.
+        --output-path <PATH>
+            Specify a file to write coverage data into.
+
+            This flag can only be used together with --json, --lcov, or --text. See --output-dir for --html and --open.
+        --output-dir <DIRECTORY>
             Specify a directory to write coverage reports into (default to `target/llvm-cov`).
 
-            This flag can only be used together with --text, --html, or --open.
+            This flag can only be used together with --text, --html, or --open. See also --output-path.
         --doctests
             Including doc tests (unstable)
 
@@ -142,7 +154,7 @@ ARGS:
 
 </details>
 
-By default, only the summary is displayed in the terminal.
+By default, only the summary is printed to stdout.
 
 ```sh
 cargo llvm-cov
@@ -161,22 +173,22 @@ or
 cargo llvm-cov --open
 ```
 
-With plain text report (the report will be printed to stdout):
+With plain text report (if --output-path is not specified, the report will be printed to stdout):
 
 ```sh
 cargo llvm-cov --text | less -R
 ```
 
-With json report (the report will be printed to stdout):
+With json report (if --output-path is not specified, the report will be printed to stdout):
 
 ```sh
-cargo llvm-cov --json
+cargo llvm-cov --json --output-path cov.json
 ```
 
-With lcov report (the report will be printed to stdout):
+With lcov report (if --output-path is not specified, the report will be printed to stdout):
 
 ```sh
-cargo llvm-cov --lcov
+cargo llvm-cov --lcov --output-path lcov.info
 ```
 
 ### Continuous Integration
@@ -199,7 +211,7 @@ jobs:
       - name: Install cargo-llvm-cov
         run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.3/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
       - name: Generate code coverage
-        run: cargo llvm-cov --all-features --workspace --lcov > lcov.info
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v1
         with:

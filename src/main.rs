@@ -10,11 +10,14 @@
 mod fs;
 mod process;
 
+#[cfg(test)]
+mod tests;
+
 use std::{
-    env::{self, consts::EXE_SUFFIX},
+    env,
     ffi::OsString,
     ops,
-    path::Path,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -26,7 +29,7 @@ use structopt::{clap::AppSettings, StructOpt};
 
 use crate::process::ProcessBuilder;
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 #[structopt(
     bin_name = "cargo",
     rename_all = "kebab-case",
@@ -38,51 +41,71 @@ enum Opts {
     LlvmCov(Args),
 }
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 #[structopt(
     rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
 struct Args {
-    /// Export coverage data in "json" format (the report will be printed to stdout).
+    /// Export coverage data in "json" format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
     ///
     /// This internally calls `llvm-cov export -format=text`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     #[structopt(long)]
     json: bool,
-    /// Export coverage data in "lcov" format (the report will be printed to stdout).
+    /// Export coverage data in "lcov" format.
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
     ///
     /// This internally calls `llvm-cov export -format=lcov`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     #[structopt(long, conflicts_with = "json")]
     lcov: bool,
-    /// Export only summary information for each file in the coverage data.
-    ///
-    /// This flag can only be used together with either --json or --lcov.
-    #[structopt(long)]
-    summary_only: bool,
 
-    /// Generate coverage reports in “text” format (the report will be printed to stdout).
+    /// Generate coverage reports in “text” format.
+    ///
+    /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
     ///
     /// This internally calls `llvm-cov show -format=text`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
     #[structopt(long, conflicts_with_all = &["json", "lcov"])]
     text: bool,
-    /// Generate coverage reports in "html" format (the report will be generated in `target/llvm-cov` directory).
+    /// Generate coverage reports in "html" format.
+    ////
+    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov` directory.
     ///
     /// This internally calls `llvm-cov show -format=html`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
     #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
     html: bool,
     /// Generate coverage reports in "html" format and open them in a browser after the operation.
+    ///
+    /// See --html for more.
     #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
     open: bool,
+
+    /// Export only summary information for each file in the coverage data.
+    ///
+    /// This flag can only be used together with either --json or --lcov.
+    // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
+    #[structopt(long, conflicts_with_all = &["text", "html", "open"])]
+    summary_only: bool,
+    /// Specify a file to write coverage data into.
+    ///
+    /// This flag can only be used together with --json, --lcov, or --text.
+    /// See --output-dir for --html and --open.
+    #[structopt(long, value_name = "PATH", conflicts_with_all = &["html", "open"])]
+    output_path: Option<PathBuf>,
     /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
     ///
     /// This flag can only be used together with --text, --html, or --open.
-    #[structopt(long)]
-    output_dir: Option<String>,
+    /// See also --output-path.
+    // If the format flag is not specified, this flag is no-op.
+    #[structopt(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
+    output_dir: Option<PathBuf>,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
@@ -132,8 +155,8 @@ struct Args {
     // #[structopt(long, value_name = "DIRECTORY", parse(from_os_str))]
     // target_dir: Option<PathBuf>,
     /// Path to Cargo.toml
-    #[structopt(long, value_name = "PATH")]
-    manifest_path: Option<String>,
+    #[structopt(long, value_name = "PATH", parse(from_os_str))]
+    manifest_path: Option<PathBuf>,
     /// Coloring: auto, always, never
     // This flag will be propagated to both cargo and llvm-cov.
     #[structopt(long, value_name = "WHEN")]
@@ -155,29 +178,8 @@ struct Args {
 }
 
 impl Args {
-    fn export(&self) -> bool {
-        self.json || self.lcov
-    }
-
     fn show(&self) -> bool {
         self.text || self.html
-    }
-
-    fn check_and_update(&mut self) -> Result<()> {
-        self.html |= self.open;
-        if self.summary_only && !self.export() {
-            eprintln!("--summary-only can only be used together with either --json or --lcov");
-            std::process::exit(1);
-        }
-        if self.output_dir.is_some() && !self.show() {
-            eprintln!("--output-dir can only be used together with --text, --html, or --open");
-            std::process::exit(1);
-        }
-        if self.color.is_none() {
-            // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
-            self.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
-        }
-        Ok(())
     }
 }
 
@@ -212,7 +214,11 @@ impl FromStr for Coloring {
 }
 
 fn main() -> Result<()> {
-    let cx = &Context::new()?;
+    run(Opts::from_args())
+}
+
+fn run(opts: Opts) -> Result<()> {
+    let cx = &Context::new(opts)?;
 
     fs::create_dir_all(&cx.target_dir)?;
     if let Some(output_dir) = &cx.output_dir {
@@ -268,14 +274,17 @@ fn main() -> Result<()> {
 
     cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
     append_args(cx, &mut cargo);
-    cargo.stdout_to_stderr = true;
-    cargo.run()?;
-    cargo.stdout_to_stderr = false;
+    cargo.build().stdout_to_stderr().run()?;
 
-    let output = cargo.arg("--no-run").arg("--message-format=json").run_with_output()?;
-    let stdout = String::from_utf8(output.stdout)?;
+    let output = cargo
+        .arg("--no-run")
+        .arg("--message-format=json")
+        .build()
+        .stdout_capture()
+        .stderr_capture()
+        .read()?;
     let mut files = vec![];
-    for (_, s) in stdout.lines().filter(|s| !s.is_empty()).enumerate() {
+    for (_, s) in output.lines().filter(|s| !s.is_empty()).enumerate() {
         let ar = serde_json::from_str::<Artifact>(s)?;
         if ar.profile.map_or(false, |p| p.test) {
             files.extend(ar.filenames.into_iter().filter(|s| !s.ends_with("dSYM")));
@@ -291,6 +300,7 @@ fn main() -> Result<()> {
 
     // Convert raw profile data.
     ProcessBuilder::new(&cx.llvm_profdata)
+        .dir(&cx.metadata.workspace_root)
         .args(&["merge", "-sparse"])
         .args(
             glob::glob(cx.target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
@@ -368,7 +378,15 @@ impl Format {
 
     fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[String]) -> Result<()> {
         let mut cmd = ProcessBuilder::new(&cx.llvm_cov);
-        cmd.args(self.llvm_cov_args());
+        cmd.dir(&cx.metadata.workspace_root)
+            .args(self.llvm_cov_args())
+            .args(self.use_color(cx.color))
+            .args(&[
+                &format!("-instr-profile={}", profdata_file),
+                "-ignore-filename-regex",
+                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
+            ])
+            .args(files.iter().flat_map(|f| vec!["-object", f]));
 
         match self {
             Self::Text | Self::Html => {
@@ -379,7 +397,7 @@ impl Format {
                     "-Xdemangler=rustfilt",
                 ]);
                 if let Some(output_dir) = &cx.output_dir {
-                    cmd.arg(&format!("-output-dir={}", output_dir));
+                    cmd.arg(&format!("-output-dir={}", output_dir.display()));
                 }
             }
             Self::Json | Self::LCov => {
@@ -390,14 +408,13 @@ impl Format {
             Self::None => {}
         }
 
-        cmd.args(self.use_color(cx.color))
-            .args(&[
-                &format!("-instr-profile={}", profdata_file),
-                "-ignore-filename-regex",
-                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
-            ])
-            .args(files.iter().flat_map(|f| vec!["-object", f]))
-            .run()
+        if let Some(output_path) = &cx.output_path {
+            let out = cmd.build().stdout_capture().read()?;
+            fs::write(output_path, out)?;
+            return Ok(());
+        }
+
+        cmd.run()
     }
 }
 
@@ -416,6 +433,7 @@ struct Profile {
 struct Context {
     args: Args,
     metadata: cargo_metadata::Metadata,
+    manifest_path: PathBuf,
     target_dir: Utf8PathBuf,
     llvm_cov: Utf8PathBuf,
     llvm_profdata: Utf8PathBuf,
@@ -424,11 +442,29 @@ struct Context {
 }
 
 impl Context {
-    fn new() -> Result<Self> {
-        let Opts::LlvmCov(mut args) = Opts::from_args();
-        args.check_and_update()?;
+    fn new(opts: Opts) -> Result<Self> {
+        let Opts::LlvmCov(mut args) = opts;
+        args.html |= args.open;
+        if args.output_dir.is_some() && !args.show() {
+            // If the format flag is not specified, this flag is no-op.
+            args.output_dir = None;
+        }
+        if args.color.is_none() {
+            // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
+            args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
+        }
 
-        let metadata = metadata(args.manifest_path.as_deref())?;
+        let manifest_path = if let Some(manifest_path) = &args.manifest_path {
+            manifest_path.clone()
+        } else {
+            cmd!("cargo", "locate-project", "--message-format", "plain")
+                .stdout_capture()
+                .read()?
+                .into()
+        };
+
+        let metadata =
+            cargo_metadata::MetadataCommand::new().manifest_path(&manifest_path).exec()?;
         let cargo_target_dir = &metadata.target_directory;
 
         if args.output_dir.is_none() && args.html {
@@ -443,8 +479,8 @@ impl Context {
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
         let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host()?));
-        let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", EXE_SUFFIX));
-        let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", EXE_SUFFIX));
+        let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
+        let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
 
         let mut cargo = cargo();
         let version = cmd!(&cargo, "version").stdout_capture().read()?;
@@ -469,7 +505,16 @@ impl Context {
             })?;
         }
 
-        Ok(Self { args, metadata, target_dir, llvm_cov, llvm_profdata, cargo, nightly })
+        Ok(Self {
+            args,
+            metadata,
+            manifest_path,
+            target_dir,
+            llvm_cov,
+            llvm_profdata,
+            cargo,
+            nightly,
+        })
     }
 }
 
@@ -505,14 +550,6 @@ fn cargo() -> OsString {
     env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
 }
 
-fn metadata(manifest_path: Option<&str>) -> Result<cargo_metadata::Metadata> {
-    let mut cmd = cargo_metadata::MetadataCommand::new();
-    if let Some(path) = manifest_path {
-        cmd.manifest_path(path);
-    }
-    Ok(cmd.exec()?)
-}
-
 fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.no_fail_fast {
         cmd.arg("--no-fail-fast");
@@ -542,13 +579,8 @@ fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.arg(target);
     }
 
-    if let Some(manifest_path) = &cx.manifest_path {
-        cmd.arg("--manifest-path");
-        cmd.arg(manifest_path);
-    } else if let Some(root) = &cx.metadata.resolve.as_ref().unwrap().root {
-        cmd.arg("--manifest-path");
-        cmd.arg(&cx.metadata[root].manifest_path);
-    }
+    cmd.arg("--manifest-path");
+    cmd.arg(&cx.manifest_path);
 
     if let Some(color) = cx.color {
         cmd.arg("--color");

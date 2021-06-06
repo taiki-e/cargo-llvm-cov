@@ -20,3 +20,9 @@ quote_type = single
 [*.sh]
 binary_next_line = true
 switch_case_indent = true
+
+[**/coverage-reports/**]
+indent_size = unset
+indent_style = unset
+insert_final_newline = false
+trim_trailing_spaces = false
