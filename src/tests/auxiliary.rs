@@ -5,13 +5,11 @@ use std::{
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
-use duct::cmd;
 use once_cell::sync::Lazy;
-use structopt::StructOpt;
 use tempfile::{Builder, TempDir};
 use walkdir::WalkDir;
 
-use crate::{fs, Opts};
+use crate::fs;
 
 static FIXTURES_PATH: Lazy<Utf8PathBuf> =
     Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
@@ -40,10 +38,9 @@ pub(crate) fn cargo_llvm_cov<'a>(
         output_path.as_str(),
     ];
     v.extend(args.as_ref().iter());
-    let opts = Opts::from_iter_safe(v)?;
-    crate::run(opts)?;
+    crate::run(v)?;
     if env::var_os("CI").is_some() {
-        cmd!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
+        process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
     }
     Ok(())
 }

@@ -98,6 +98,9 @@ OPTIONS:
             Specify a directory to write coverage reports into (default to `target/llvm-cov`).
 
             This flag can only be used together with --text, --html, or --open. See also --output-path.
+        --ignore-filename-regex <PATTERN>
+            Skip source code files with file paths that match the given regular expression
+
         --doctests
             Including doc tests (unstable)
 
@@ -127,6 +130,9 @@ OPTIONS:
 
         --manifest-path <PATH>
             Path to Cargo.toml
+
+    -v, --verbose
+            Use verbose output (-vv very verbose/build.rs output)
 
         --color <WHEN>
             Coloring: auto, always, never

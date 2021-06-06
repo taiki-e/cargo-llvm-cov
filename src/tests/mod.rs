@@ -20,3 +20,7 @@ fn test() {
     set("real1", "workspace_root");
     set("virtual1", "workspace_root");
 }
+
+// TODO:
+// - add tests for non-crates.io dependencies
+// - add tests for --exclude
