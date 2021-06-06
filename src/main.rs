@@ -7,8 +7,13 @@
 // - https://llvm.org/docs/CommandGuide/llvm-profdata.html
 // - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
-mod fs;
+#[macro_use]
+mod trace;
+
+#[macro_use]
 mod process;
+
+mod fs;
 
 #[cfg(test)]
 mod tests;
@@ -23,7 +28,6 @@ use std::{
 
 use anyhow::{bail, format_err, Context as _, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use duct::cmd;
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
 
@@ -107,6 +111,13 @@ struct Args {
     #[structopt(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
     output_dir: Option<PathBuf>,
 
+    /// Skip source code files with file paths that match the given regular expression.
+    #[structopt(long, value_name = "PATTERN")]
+    ignore_filename_regex: Option<String>,
+    // For debugging (unstable)
+    #[structopt(long, hidden = true)]
+    disable_default_ignore_filename_regex: bool,
+
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
     #[structopt(long)]
@@ -157,6 +168,9 @@ struct Args {
     /// Path to Cargo.toml
     #[structopt(long, value_name = "PATH", parse(from_os_str))]
     manifest_path: Option<PathBuf>,
+    /// Use verbose output (-vv very verbose/build.rs output)
+    #[structopt(short, long, parse(from_occurrences))]
+    verbose: u8,
     /// Coloring: auto, always, never
     // This flag will be propagated to both cargo and llvm-cov.
     #[structopt(long, value_name = "WHEN")]
@@ -203,8 +217,8 @@ impl Coloring {
 impl FromStr for Coloring {
     type Err = Error;
 
-    fn from_str(name: &str) -> Result<Self, Self::Err> {
-        match name {
+    fn from_str(color: &str) -> Result<Self, Self::Err> {
+        match color {
             "auto" => Ok(Self::Auto),
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
@@ -214,11 +228,13 @@ impl FromStr for Coloring {
 }
 
 fn main() -> Result<()> {
-    run(Opts::from_args())
+    trace::init();
+
+    run(env::args_os())
 }
 
-fn run(opts: Opts) -> Result<()> {
-    let cx = &Context::new(opts)?;
+fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()> {
+    let cx = &Context::new(args)?;
 
     fs::create_dir_all(&cx.target_dir)?;
     if let Some(output_dir) = &cx.output_dir {
@@ -245,6 +261,7 @@ fn run(opts: Opts) -> Result<()> {
         Some(rustflags) => rustflags,
         None => OsString::new(),
     };
+    debug!(RUSTFLAGS = ?rustflags);
     // --remap-path-prefix for Sometimes macros are displayed with abs path
     rustflags.push(format!(
         " -Zinstrument-coverage --remap-path-prefix {}/=",
@@ -252,6 +269,7 @@ fn run(opts: Opts) -> Result<()> {
     ));
 
     let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
+    debug!(RUSTDOCFLAGS = ?rustdocflags);
     if cx.doctests {
         let flags = rustdocflags.get_or_insert_with(OsString::new);
         flags.push(format!(
@@ -260,11 +278,10 @@ fn run(opts: Opts) -> Result<()> {
         ));
     }
 
-    let mut cargo = ProcessBuilder::new(&cx.cargo);
+    let mut cargo = cx.process(&cx.cargo);
     if !cx.nightly {
         cargo.arg("+nightly");
     }
-    cargo.dir(&cx.metadata.workspace_root);
 
     cargo.env("RUSTFLAGS", rustflags);
     cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
@@ -274,12 +291,15 @@ fn run(opts: Opts) -> Result<()> {
 
     cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
     append_args(cx, &mut cargo);
-    cargo.build().stdout_to_stderr().run()?;
+    cargo.stdout_to_stderr().run()?;
+    cargo.stdout_to_stderr = false;
 
+    if let Some(verbose) = &cx.verbose {
+        cargo.args.remove(cargo.args.iter().position(|arg| *arg == **verbose).unwrap());
+    }
     let output = cargo
         .arg("--no-run")
         .arg("--message-format=json")
-        .build()
         .stdout_capture()
         .stderr_capture()
         .read()?;
@@ -297,10 +317,10 @@ fn run(opts: Opts) -> Result<()> {
             }
         }
     }
+    trace!(objects = ?files);
 
     // Convert raw profile data.
-    ProcessBuilder::new(&cx.llvm_profdata)
-        .dir(&cx.metadata.workspace_root)
+    cx.process(&cx.llvm_profdata)
         .args(&["merge", "-sparse"])
         .args(
             glob::glob(cx.target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
@@ -377,16 +397,32 @@ impl Format {
     }
 
     fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[String]) -> Result<()> {
-        let mut cmd = ProcessBuilder::new(&cx.llvm_cov);
-        cmd.dir(&cx.metadata.workspace_root)
-            .args(self.llvm_cov_args())
+        const DEFAULT_IGNORE_FILENAME_REGEX: &str =
+            r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|target/llvm-cov-target/";
+
+        let mut cmd = cx.process(&cx.llvm_cov);
+
+        cmd.args(self.llvm_cov_args())
             .args(self.use_color(cx.color))
-            .args(&[
-                &format!("-instr-profile={}", profdata_file),
-                "-ignore-filename-regex",
-                r"rustc/|.cargo/registry|.rustup/toolchains|test(s)?/",
-            ])
+            .arg(format!("-instr-profile={}", profdata_file))
             .args(files.iter().flat_map(|f| vec!["-object", f]));
+
+        // TODO: Currently, there is a problem that excluded crates are
+        // incorrectly shown in the coverage report if they are path
+        // dependencies of other crates.
+        if cx.disable_default_ignore_filename_regex {
+            if let Some(ignore_filename_regex) = &cx.ignore_filename_regex {
+                cmd.arg("-ignore-filename-regex");
+                cmd.arg(ignore_filename_regex);
+            }
+        } else {
+            cmd.arg("-ignore-filename-regex");
+            if let Some(ignore_filename_regex) = &cx.ignore_filename_regex {
+                cmd.arg(format!("{}|{}", ignore_filename_regex, DEFAULT_IGNORE_FILENAME_REGEX));
+            } else {
+                cmd.arg(DEFAULT_IGNORE_FILENAME_REGEX);
+            }
+        }
 
         match self {
             Self::Text | Self::Html => {
@@ -409,12 +445,13 @@ impl Format {
         }
 
         if let Some(output_path) = &cx.output_path {
-            let out = cmd.build().stdout_capture().read()?;
+            let out = cmd.stdout_capture().read()?;
             fs::write(output_path, out)?;
             return Ok(());
         }
 
-        cmd.run()
+        cmd.run()?;
+        Ok(())
     }
 }
 
@@ -432,6 +469,7 @@ struct Profile {
 
 struct Context {
     args: Args,
+    verbose: Option<String>,
     metadata: cargo_metadata::Metadata,
     manifest_path: PathBuf,
     target_dir: Utf8PathBuf,
@@ -442,8 +480,15 @@ struct Context {
 }
 
 impl Context {
-    fn new(opts: Opts) -> Result<Self> {
-        let Opts::LlvmCov(mut args) = opts;
+    fn new(args_raw: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<Self> {
+        let matches = Opts::clap().get_matches_from(args_raw);
+        let Opts::LlvmCov(mut args) = StructOpt::from_clap(&matches);
+        let verbose = if args.verbose == 0 {
+            None
+        } else {
+            Some(format!("-{}", "v".repeat(args.verbose as _)))
+        };
+        debug!(?args);
         args.html |= args.open;
         if args.output_dir.is_some() && !args.show() {
             // If the format flag is not specified, this flag is no-op.
@@ -452,20 +497,22 @@ impl Context {
         if args.color.is_none() {
             // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
             args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
+            debug!(?args.color);
         }
 
-        let manifest_path = if let Some(manifest_path) = &args.manifest_path {
+        let package_root = if let Some(manifest_path) = &args.manifest_path {
             manifest_path.clone()
         } else {
-            cmd!("cargo", "locate-project", "--message-format", "plain")
+            process!("cargo", "locate-project", "--message-format", "plain")
                 .stdout_capture()
                 .read()?
                 .into()
         };
 
         let metadata =
-            cargo_metadata::MetadataCommand::new().manifest_path(&manifest_path).exec()?;
+            cargo_metadata::MetadataCommand::new().manifest_path(&package_root).exec()?;
         let cargo_target_dir = &metadata.target_directory;
+        debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
 
         if args.output_dir.is_none() && args.html {
             args.output_dir = Some(cargo_target_dir.join("llvm-cov").into());
@@ -475,19 +522,22 @@ impl Context {
         // use a subdirectory of the target directory as the actual target directory.
         let target_dir = cargo_target_dir.join("llvm-cov-target");
 
-        let sysroot: Utf8PathBuf = sysroot().context("failed to find sysroot")?.into();
+        let mut cargo = cargo();
+        let version =
+            process!(&cargo, "version").dir(&metadata.workspace_root).stdout_capture().read()?;
+        let nightly = version.contains("-nightly") || version.contains("-dev");
+        if !nightly {
+            cargo = "cargo".into();
+        }
+
+        let sysroot: Utf8PathBuf = sysroot(nightly)?.into();
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
         let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host()?));
         let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
         let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
 
-        let mut cargo = cargo();
-        let version = cmd!(&cargo, "version").stdout_capture().read()?;
-        let nightly = version.contains("-nightly") || version.contains("-dev");
-        if !nightly {
-            cargo = "cargo".into();
-        }
+        debug!(?llvm_cov, ?llvm_profdata, ?cargo, ?nightly);
 
         // Check if required tools are installed.
         if !llvm_cov.exists() || !llvm_profdata.exists() {
@@ -497,7 +547,7 @@ impl Context {
             );
         }
         if args.show() {
-            cmd!("rustfilt", "-V").stdout_capture().run().with_context(|| {
+            process!("rustfilt", "-V").stdout_capture().run().with_context(|| {
                 format!(
                     "{} flag requires rustfilt, please install rustfilt with `cargo install rustfilt`",
                     if args.html { "--html" } else { "--text" }
@@ -507,14 +557,24 @@ impl Context {
 
         Ok(Self {
             args,
+            verbose,
             metadata,
-            manifest_path,
+            manifest_path: package_root,
             target_dir,
             llvm_cov,
             llvm_profdata,
             cargo,
             nightly,
         })
+    }
+
+    fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
+        let mut cmd = process!(program);
+        cmd.dir(&self.metadata.workspace_root);
+        if self.verbose.is_some() {
+            cmd.display_env_vars();
+        }
+        cmd
     }
 }
 
@@ -526,13 +586,22 @@ impl ops::Deref for Context {
     }
 }
 
-fn sysroot() -> Result<String> {
-    Ok(cmd!(rustc(), "--print", "sysroot").stdout_capture().read()?.trim().to_string())
+fn sysroot(nightly: bool) -> Result<String> {
+    Ok(if nightly {
+        process!(rustc(), "--print", "sysroot")
+    } else {
+        process!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
+    }
+    .stdout_capture()
+    .read()
+    .context("failed to find sysroot")?
+    .trim()
+    .into())
 }
 
 fn host() -> Result<String> {
     let rustc = &rustc();
-    let output = cmd!(rustc, "--version", "--verbose").stdout_capture().read()?;
+    let output = process!(rustc, "--version", "--verbose").stdout_capture().read()?;
     output
         .lines()
         .find_map(|line| line.strip_prefix("host: "))
@@ -591,6 +660,10 @@ fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     }
     if cx.locked {
         cmd.arg("--locked");
+    }
+
+    if let Some(verbose) = &cx.verbose {
+        cmd.arg(verbose);
     }
 
     for unstable_flag in &cx.unstable_flags {
