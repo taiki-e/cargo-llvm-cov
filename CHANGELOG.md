@@ -10,13 +10,15 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- If you don't use the `--html`, `--open`, or `--text` flag, cargo-llvm-cov no longer requires rustfilt.
+- [If you don't use the `--html`, `--open`, or `--text` flag, cargo-llvm-cov no longer requires rustfilt.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
+
+- [Add `--output-path` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/18)
 
 - [Add `--color` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/15)
 
 - [Add `--no-fail-fast`, `--frozen`, and `--locked` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/16)
 
-- Improve diagnostics when the required tools are not installed.
+- [Improve diagnostics when the required tools are not installed.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
 
 ## [0.1.0-alpha.3] - 2021-06-04
 
