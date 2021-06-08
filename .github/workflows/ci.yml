@@ -25,11 +25,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
           - os: macos-latest
           # TODO: does -Zinstrument-coverage supports windows?
           # - os: windows-latest
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
     steps:
@@ -79,7 +79,7 @@ jobs:
         rust:
           - stable
           - beta
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - uses: taiki-e/github-actions/install-rust@main
@@ -88,7 +88,7 @@ jobs:
       - run: cargo build
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - uses: taiki-e/github-actions/install-rust@main
@@ -97,7 +97,7 @@ jobs:
       - run: cargo clippy --all --all-features --all-targets
 
   fmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - uses: taiki-e/github-actions/install-rust@main
@@ -106,7 +106,7 @@ jobs:
       - run: cargo fmt --all -- --check
 
   shellcheck:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - run: shellcheck **/*.sh
@@ -125,7 +125,7 @@ jobs:
       - clippy
       - fmt
       - shellcheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     steps:
       - name: Mark the job as a success
         run: exit 0
