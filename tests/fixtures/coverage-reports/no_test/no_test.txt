@@ -1,0 +1,5 @@
+    1|      1|mod module;mod module;
+    2|       |pub use module::*;
+    3|       |
+    4|      1|#[test]
+    5|      1|fn f() {}
