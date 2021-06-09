@@ -181,19 +181,19 @@ or
 cargo llvm-cov --open
 ```
 
-With plain text report (if --output-path is not specified, the report will be printed to stdout):
+With plain text report (if `--output-path` is not specified, the report will be printed to stdout):
 
 ```sh
 cargo llvm-cov --text | less -R
 ```
 
-With json report (if --output-path is not specified, the report will be printed to stdout):
+With json report (if `--output-path` is not specified, the report will be printed to stdout):
 
 ```sh
 cargo llvm-cov --json --output-path cov.json
 ```
 
-With lcov report (if --output-path is not specified, the report will be printed to stdout):
+With lcov report (if `--output-path` is not specified, the report will be printed to stdout):
 
 ```sh
 cargo llvm-cov --lcov --output-path lcov.info
@@ -228,10 +228,11 @@ jobs:
           fail_ci_if_error: true
 ```
 
-Note: Currently, only line coverage is available on Codecov. This is because -Zinstrument-coverage does not support branch coverage and Codecov does not support region coverage. See also [#8] and [#12].
+Note: Currently, only line coverage is available on Codecov. This is because `-Zinstrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
 
 ## Known limitations
 
+- Due to a bug of `-Zinstrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
 - Procedural macros are not supported yet.
@@ -242,11 +243,14 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
+[#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
+[#26]: https://github.com/taiki-e/cargo-llvm-cov/issues/26
 [codecov]: https://codecov.io
 [instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
 [rust-lang/rust#79121]: https://github.com/rust-lang/rust/issues/79121
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
+[rust-lang/rust#86177]: https://github.com/rust-lang/rust/issues/86177
 
 ## License
 
