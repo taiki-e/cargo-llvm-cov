@@ -31,6 +31,7 @@ use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tracing::warn;
+use walkdir::WalkDir;
 
 use crate::{
     cli::{Args, Coloring, Opts},
@@ -147,25 +148,10 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     if let Some(target) = &cx.target {
         build_dir.push(target);
     }
-    for f in fs::read_dir(build_dir.as_str())?.filter_map(Result::ok) {
+    for f in WalkDir::new(build_dir.as_str()).into_iter().filter_map(Result::ok) {
         let f = f.path();
         if is_executable::is_executable(&f) {
-            files.push(f.into_os_string())
-        }
-    }
-    for f in fs::read_dir(build_dir.join("deps").as_str())?.filter_map(Result::ok) {
-        let f = f.path();
-        if is_executable::is_executable(&f) {
-            files.push(f.into_os_string())
-        }
-    }
-    let example_dir = build_dir.join("examples");
-    if example_dir.is_dir() {
-        for f in fs::read_dir(example_dir.as_str())?.filter_map(Result::ok) {
-            let f = f.path();
-            if is_executable::is_executable(&f) {
-                files.push(f.into_os_string())
-            }
+            files.push(f.to_owned().into_os_string())
         }
     }
     if cx.doctests {
@@ -232,8 +218,7 @@ impl Format {
     }
 
     fn run(self, cx: &Context, files: &[OsString]) -> Result<()> {
-        const DEFAULT_IGNORE_FILENAME_REGEX: &str =
-            r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|target/llvm-cov-target/";
+        const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
 
         let mut cmd = cx.process(&cx.llvm_cov);
 
