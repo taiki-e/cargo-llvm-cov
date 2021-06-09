@@ -93,3 +93,13 @@ pub(crate) fn write(path: impl AsRef<Path>, contents: impl AsRef<[u8]>) -> Resul
     trace!(track_caller: ?res, ?path, "write");
     res.with_context(|| format!("failed to write to file `{}`", path.display()))
 }
+
+/// Returns an iterator over the entries within a directory.
+/// This is a wrapper for [`std::fs::read_dir`].
+#[track_caller]
+pub(crate) fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
+    let path = path.as_ref();
+    let res = std::fs::read_dir(path);
+    trace!(track_caller: ?res, ?path, "read_dir");
+    res.with_context(|| format!("failed to read directory `{}`", path.display()))
+}

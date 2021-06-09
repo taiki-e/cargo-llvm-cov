@@ -20,7 +20,7 @@ mod tests;
 
 use std::{
     env,
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     ops,
     path::{Path, PathBuf},
     str::FromStr,
@@ -245,11 +245,9 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
         fs::remove_file(path)?;
     }
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-    let doctests_dir = &cx.target_dir.join("doctestbins");
     if cx.doctests {
-        fs::remove_dir_all(doctests_dir)?;
-        fs::create_dir(doctests_dir)?;
+        fs::remove_dir_all(&cx.doctests_dir)?;
+        fs::create_dir(&cx.doctests_dir)?;
     }
 
     let package_name = cx.metadata.workspace_root.file_stem().unwrap();
@@ -268,13 +266,14 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
         cx.metadata.workspace_root
     ));
 
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
     debug!(RUSTDOCFLAGS = ?rustdocflags);
     if cx.doctests {
         let flags = rustdocflags.get_or_insert_with(OsString::new);
         flags.push(format!(
             " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
-            doctests_dir
+            cx.doctests_dir
         ));
     }
 
@@ -297,27 +296,8 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
     if let Some(verbose) = &cx.verbose {
         cargo.args.remove(cargo.args.iter().position(|arg| *arg == **verbose).unwrap());
     }
-    let output = cargo
-        .arg("--no-run")
-        .arg("--message-format=json")
-        .stdout_capture()
-        .stderr_capture()
-        .read()?;
-    let mut files = vec![];
-    for (_, s) in output.lines().filter(|s| !s.is_empty()).enumerate() {
-        let ar = serde_json::from_str::<Artifact>(s)?;
-        if ar.profile.map_or(false, |p| p.test) {
-            files.extend(ar.filenames.into_iter().filter(|s| !s.ends_with("dSYM")));
-        }
-    }
-    if cx.doctests {
-        for f in glob::glob(doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok) {
-            if is_executable::is_executable(&f) {
-                files.push(f.to_string_lossy().into_owned())
-            }
-        }
-    }
-    trace!(objects = ?files);
+
+    let object_files = object_files(cx)?;
 
     // Convert raw profile data.
     cx.process(&cx.llvm_profdata)
@@ -331,10 +311,10 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
         .run()?;
 
     let format = Format::from_args(cx);
-    format.run(cx, profdata_file, &files)?;
+    format.run(cx, profdata_file, &object_files)?;
 
     if format == Format::Html {
-        Format::None.run(cx, profdata_file, &files)?;
+        Format::None.run(cx, profdata_file, &object_files)?;
 
         if cx.open {
             open::that(Path::new(cx.output_dir.as_ref().unwrap()).join("index.html"))?;
@@ -342,6 +322,48 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
     }
 
     Ok(())
+}
+
+fn object_files(cx: &Context) -> Result<Vec<OsString>> {
+    let mut files = vec![];
+    // To support testing binary crate like tests that use the CARGO_BIN_EXE
+    // environment variable, pass all compiled executables.
+    // This is not the ideal way, but the way unstable book says it is cannot support them.
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#tips-for-listing-the-binaries-automatically
+    let mut build_dir = cx.target_dir.join(if cx.release { "release" } else { "debug" });
+    if let Some(target) = &cx.target {
+        build_dir.push(target);
+    }
+    for f in fs::read_dir(build_dir.as_str())?.filter_map(Result::ok) {
+        let f = f.path();
+        if is_executable::is_executable(&f) {
+            files.push(f.into_os_string())
+        }
+    }
+    for f in fs::read_dir(build_dir.join("deps").as_str())?.filter_map(Result::ok) {
+        let f = f.path();
+        if is_executable::is_executable(&f) {
+            files.push(f.into_os_string())
+        }
+    }
+    let example_dir = build_dir.join("examples");
+    if example_dir.is_dir() {
+        for f in fs::read_dir(example_dir.as_str())?.filter_map(Result::ok) {
+            let f = f.path();
+            if is_executable::is_executable(&f) {
+                files.push(f.into_os_string())
+            }
+        }
+    }
+    if cx.doctests {
+        for f in glob::glob(cx.doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok) {
+            if is_executable::is_executable(&f) {
+                files.push(f.into_os_string())
+            }
+        }
+    }
+    trace!(object_files = ?files);
+    Ok(files)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -396,7 +418,7 @@ impl Format {
         }
     }
 
-    fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[String]) -> Result<()> {
+    fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[OsString]) -> Result<()> {
         const DEFAULT_IGNORE_FILENAME_REGEX: &str =
             r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|target/llvm-cov-target/";
 
@@ -405,7 +427,8 @@ impl Format {
         cmd.args(self.llvm_cov_args())
             .args(self.use_color(cx.color))
             .arg(format!("-instr-profile={}", profdata_file))
-            .args(files.iter().flat_map(|f| vec!["-object", f]));
+            // TODO: remove `vec!`, once Rust 1.53 stable
+            .args(files.iter().flat_map(|f| vec![OsStr::new("-object"), f]));
 
         // TODO: Currently, there is a problem that excluded crates are
         // incorrectly shown in the coverage report if they are path
@@ -473,6 +496,7 @@ struct Context {
     metadata: cargo_metadata::Metadata,
     manifest_path: PathBuf,
     target_dir: Utf8PathBuf,
+    doctests_dir: Utf8PathBuf,
     llvm_cov: Utf8PathBuf,
     llvm_profdata: Utf8PathBuf,
     cargo: OsString,
@@ -521,6 +545,7 @@ impl Context {
         // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
         // use a subdirectory of the target directory as the actual target directory.
         let target_dir = cargo_target_dir.join("llvm-cov-target");
+        let doctests_dir = target_dir.join("doctestbins");
 
         let mut cargo = cargo();
         let version =
@@ -561,6 +586,7 @@ impl Context {
             metadata,
             manifest_path: package_root,
             target_dir,
+            doctests_dir,
             llvm_cov,
             llvm_profdata,
             cargo,
