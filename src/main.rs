@@ -13,6 +13,7 @@ mod trace;
 #[macro_use]
 mod process;
 
+mod cli;
 mod fs;
 
 #[cfg(test)]
@@ -23,215 +24,18 @@ use std::{
     ffi::{OsStr, OsString},
     ops,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 
-use anyhow::{bail, format_err, Context as _, Error, Result};
+use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
-use structopt::{clap::AppSettings, StructOpt};
+use structopt::StructOpt;
 use tracing::warn;
 
-use crate::process::ProcessBuilder;
-
-#[derive(Debug, StructOpt)]
-#[structopt(
-    bin_name = "cargo",
-    rename_all = "kebab-case",
-    setting = AppSettings::DeriveDisplayOrder,
-    setting = AppSettings::UnifiedHelpMessage,
-)]
-enum Opts {
-    /// A wrapper for source based code coverage (-Zinstrument-coverage).
-    ///
-    /// Use -h for short descriptions and --help for more details.
-    LlvmCov(Args),
-}
-
-#[derive(Debug, StructOpt)]
-#[structopt(
-    rename_all = "kebab-case",
-    setting = AppSettings::DeriveDisplayOrder,
-    setting = AppSettings::UnifiedHelpMessage,
-)]
-struct Args {
-    /// Export coverage data in "json" format
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=text`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    #[structopt(long)]
-    json: bool,
-    /// Export coverage data in "lcov" format.
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=lcov`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    #[structopt(long, conflicts_with = "json")]
-    lcov: bool,
-
-    /// Generate coverage reports in “text” format.
-    ///
-    /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov show -format=text`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov"])]
-    text: bool,
-    /// Generate coverage reports in "html" format.
-    ////
-    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov` directory.
-    ///
-    /// This internally calls `llvm-cov show -format=html`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
-    html: bool,
-    /// Generate coverage reports in "html" format and open them in a browser after the operation.
-    ///
-    /// See --html for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
-    open: bool,
-
-    /// Export only summary information for each file in the coverage data.
-    ///
-    /// This flag can only be used together with either --json or --lcov.
-    // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
-    #[structopt(long, conflicts_with_all = &["text", "html", "open"])]
-    summary_only: bool,
-    /// Specify a file to write coverage data into.
-    ///
-    /// This flag can only be used together with --json, --lcov, or --text.
-    /// See --output-dir for --html and --open.
-    #[structopt(long, value_name = "PATH", conflicts_with_all = &["html", "open"])]
-    output_path: Option<PathBuf>,
-    /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
-    ///
-    /// This flag can only be used together with --text, --html, or --open.
-    /// See also --output-path.
-    // If the format flag is not specified, this flag is no-op.
-    #[structopt(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
-    output_dir: Option<PathBuf>,
-
-    /// Skip source code files with file paths that match the given regular expression.
-    #[structopt(long, value_name = "PATTERN")]
-    ignore_filename_regex: Option<String>,
-    // For debugging (unstable)
-    #[structopt(long, hidden = true)]
-    disable_default_ignore_filename_regex: bool,
-
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-    /// Including doc tests (unstable)
-    #[structopt(long)]
-    doctests: bool,
-
-    // =========================================================================
-    // `cargo test` options
-    // https://doc.rust-lang.org/cargo/commands/cargo-test.html
-    /// Compile, but don't run tests (unstable)
-    #[structopt(long, hidden = true)]
-    no_run: bool,
-    /// Run all tests regardless of failure
-    #[structopt(long)]
-    no_fail_fast: bool,
-    // TODO: --package doesn't work properly, use --manifest-path instead for now.
-    // /// Package to run tests for
-    // #[structopt(short, long, value_name = "SPEC")]
-    // package: Vec<String>,
-    /// Test all packages in the workspace
-    #[structopt(long, visible_alias = "all")]
-    workspace: bool,
-    /// Exclude packages from the test
-    #[structopt(long, value_name = "SPEC")]
-    exclude: Vec<String>,
-    // TODO: Should this only work for cargo's --jobs? Or should it also work
-    //       for llvm-cov's -num-threads?
-    // /// Number of parallel jobs, defaults to # of CPUs
-    // #[structopt(short, long, value_name = "N")]
-    // jobs: Option<u64>,
-    /// Build artifacts in release mode, with optimizations
-    #[structopt(long)]
-    release: bool,
-    /// Space or comma separated list of features to activate
-    #[structopt(long, value_name = "FEATURES")]
-    features: Vec<String>,
-    /// Activate all available features
-    #[structopt(long)]
-    all_features: bool,
-    /// Do not activate the `default` feature
-    #[structopt(long)]
-    no_default_features: bool,
-    /// Build for the target triple
-    #[structopt(long, value_name = "TRIPLE")]
-    target: Option<String>,
-    // TODO: Currently, we are using a subdirectory of the target directory as
-    //       the actual target directory. What effect should this option have
-    //       on its behavior?
-    // /// Directory for all generated artifacts
-    // #[structopt(long, value_name = "DIRECTORY", parse(from_os_str))]
-    // target_dir: Option<PathBuf>,
-    /// Path to Cargo.toml
-    #[structopt(long, value_name = "PATH", parse(from_os_str))]
-    manifest_path: Option<PathBuf>,
-    /// Use verbose output (-vv very verbose/build.rs output)
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: u8,
-    /// Coloring: auto, always, never
-    // This flag will be propagated to both cargo and llvm-cov.
-    #[structopt(long, value_name = "WHEN")]
-    color: Option<Coloring>,
-    /// Require Cargo.lock and cache are up to date
-    #[structopt(long)]
-    frozen: bool,
-    /// Require Cargo.lock is up to date
-    #[structopt(long)]
-    locked: bool,
-
-    /// Unstable (nightly-only) flags to Cargo
-    #[structopt(short = "Z", value_name = "FLAG")]
-    unstable_flags: Vec<String>,
-
-    /// Arguments for the test binary
-    #[structopt(last = true, parse(from_os_str))]
-    args: Vec<OsString>,
-}
-
-impl Args {
-    fn show(&self) -> bool {
-        self.text || self.html
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Coloring {
-    Auto,
-    Always,
-    Never,
-}
-
-impl Coloring {
-    fn cargo_color(self) -> &'static str {
-        match self {
-            Self::Auto => "auto",
-            Self::Always => "always",
-            Self::Never => "never",
-        }
-    }
-}
-
-impl FromStr for Coloring {
-    type Err = Error;
-
-    fn from_str(color: &str) -> Result<Self, Self::Err> {
-        match color {
-            "auto" => Ok(Self::Auto),
-            "always" => Ok(Self::Always),
-            "never" => Ok(Self::Never),
-            other => bail!("must be auto, always, or never, but found `{}`", other),
-        }
-    }
-}
+use crate::{
+    cli::{Args, Coloring, Opts},
+    process::ProcessBuilder,
+};
 
 fn main() -> Result<()> {
     trace::init();
