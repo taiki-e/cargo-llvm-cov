@@ -234,10 +234,9 @@ Note: Currently, only line coverage is available on Codecov. This is because -Zi
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
-- Binary crates (`cargo run`) are not supported yet. See [#1] for more.
 - Procedural macros are not supported yet.
 
-See also [the coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
+See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
 [#1]: https://github.com/taiki-e/cargo-llvm-cov/issues/1
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
