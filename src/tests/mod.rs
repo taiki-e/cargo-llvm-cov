@@ -16,29 +16,17 @@ fn run(model: &str, name: &str) {
 // It seems rustup is not installed in the docker image provided by cross.
 #[cfg_attr(target_env = "musl", ignore)]
 #[test]
-fn real1_workspace_root() {
+fn test() {
     run("real1", "workspace_root");
-}
 
-// It seems rustup is not installed in the docker image provided by cross.
-#[cfg_attr(target_env = "musl", ignore)]
-#[test]
-fn virtual1_workspace_root() {
     run("virtual1", "workspace_root");
-}
 
-// TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
-// It seems rustup is not installed in the docker image provided by cross.
-#[cfg_attr(target_env = "musl", ignore)]
-#[test]
-fn no_test() {
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .with_test_writer()
-        .init();
+    // TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
     run("no_test", "no_test");
-}
 
-// TODO:
-// - add tests for non-crates.io dependencies
-// - add tests for --exclude
+    run("bin_crate", "bin_crate");
+
+    // TODO:
+    // - add tests for non-crates.io dependencies
+    // - add tests for --exclude
+}
