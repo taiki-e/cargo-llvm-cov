@@ -30,6 +30,7 @@ use anyhow::{bail, format_err, Context as _, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 use structopt::{clap::AppSettings, StructOpt};
+use tracing::warn;
 
 use crate::process::ProcessBuilder;
 
@@ -42,6 +43,8 @@ use crate::process::ProcessBuilder;
 )]
 enum Opts {
     /// A wrapper for source based code coverage (-Zinstrument-coverage).
+    ///
+    /// Use -h for short descriptions and --help for more details.
     LlvmCov(Args),
 }
 
@@ -126,6 +129,9 @@ struct Args {
     // =========================================================================
     // `cargo test` options
     // https://doc.rust-lang.org/cargo/commands/cargo-test.html
+    /// Compile, but don't run tests (unstable)
+    #[structopt(long, hidden = true)]
+    no_run: bool,
     /// Run all tests regardless of failure
     #[structopt(long)]
     no_fail_fast: bool,
@@ -236,79 +242,72 @@ fn main() -> Result<()> {
 fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()> {
     let cx = &Context::new(args)?;
 
-    fs::create_dir_all(&cx.target_dir)?;
-    if let Some(output_dir) = &cx.output_dir {
-        fs::remove_dir_all(output_dir)?;
-        fs::create_dir_all(output_dir)?;
-    }
-    for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
-        fs::remove_file(path)?;
-    }
-
-    if cx.doctests {
-        fs::remove_dir_all(&cx.doctests_dir)?;
-        fs::create_dir(&cx.doctests_dir)?;
-    }
-
     let package_name = cx.metadata.workspace_root.file_stem().unwrap();
     let profdata_file = &cx.target_dir.join(format!("{}.profdata", package_name));
-    fs::remove_file(profdata_file)?;
-    let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", package_name));
 
-    let rustflags = &mut match env::var_os("RUSTFLAGS") {
-        Some(rustflags) => rustflags,
-        None => OsString::new(),
-    };
-    debug!(RUSTFLAGS = ?rustflags);
-    // --remap-path-prefix for Sometimes macros are displayed with abs path
-    rustflags.push(format!(
-        " -Zinstrument-coverage --remap-path-prefix {}/=",
-        cx.metadata.workspace_root
-    ));
+    fs::create_dir_all(&cx.target_dir)?;
+    if let Some(output_dir) = &cx.output_dir {
+        if !cx.no_run {
+            fs::remove_dir_all(output_dir)?;
+        }
+        fs::create_dir_all(output_dir)?;
+    }
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-    let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
-    debug!(RUSTDOCFLAGS = ?rustdocflags);
-    if cx.doctests {
-        let flags = rustdocflags.get_or_insert_with(OsString::new);
-        flags.push(format!(
-            " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
-            cx.doctests_dir
+    if !cx.no_run {
+        for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
+            fs::remove_file(path)?;
+        }
+
+        if cx.doctests {
+            fs::remove_dir_all(&cx.doctests_dir)?;
+            fs::create_dir(&cx.doctests_dir)?;
+        }
+
+        fs::remove_file(profdata_file)?;
+        let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", package_name));
+
+        let rustflags = &mut match env::var_os("RUSTFLAGS") {
+            Some(rustflags) => rustflags,
+            None => OsString::new(),
+        };
+        debug!(RUSTFLAGS = ?rustflags);
+        // --remap-path-prefix for Sometimes macros are displayed with abs path
+        rustflags.push(format!(
+            " -Zinstrument-coverage --remap-path-prefix {}/=",
+            cx.metadata.workspace_root
         ));
-    }
 
-    let mut cargo = cx.process(&cx.cargo);
-    if !cx.nightly {
-        cargo.arg("+nightly");
-    }
+        // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
+        let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
+        debug!(RUSTDOCFLAGS = ?rustdocflags);
+        if cx.doctests {
+            let flags = rustdocflags.get_or_insert_with(OsString::new);
+            flags.push(format!(
+                " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
+                cx.doctests_dir
+            ));
+        }
 
-    cargo.env("RUSTFLAGS", rustflags);
-    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
-    if let Some(rustdocflags) = rustdocflags {
-        cargo.env("RUSTDOCFLAGS", rustdocflags);
-    }
+        let mut cargo = cx.process(&cx.cargo);
+        if !cx.nightly {
+            cargo.arg("+nightly");
+        }
 
-    cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
-    append_args(cx, &mut cargo);
-    cargo.stdout_to_stderr().run()?;
-    cargo.stdout_to_stderr = false;
+        cargo.env("RUSTFLAGS", &rustflags);
+        cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
+        if let Some(rustdocflags) = rustdocflags {
+            cargo.env("RUSTDOCFLAGS", &rustdocflags);
+        }
 
-    if let Some(verbose) = &cx.verbose {
-        cargo.args.remove(cargo.args.iter().position(|arg| *arg == **verbose).unwrap());
+        cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
+        append_args(cx, &mut cargo);
+
+        cargo.stdout_to_stderr().run()?;
     }
 
     let object_files = object_files(cx)?;
 
-    // Convert raw profile data.
-    cx.process(&cx.llvm_profdata)
-        .args(&["merge", "-sparse"])
-        .args(
-            glob::glob(cx.target_dir.join(format!("{}-*.profraw", package_name)).as_str())?
-                .filter_map(Result::ok),
-        )
-        .arg("-o")
-        .arg(profdata_file)
-        .run()?;
+    merge_profraw(cx)?;
 
     let format = Format::from_args(cx);
     format.run(cx, profdata_file, &object_files)?;
@@ -321,6 +320,20 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
         }
     }
 
+    Ok(())
+}
+
+fn merge_profraw(cx: &Context) -> Result<()> {
+    // Convert raw profile data.
+    cx.process(&cx.llvm_profdata)
+        .args(&["merge", "-sparse"])
+        .args(
+            glob::glob(cx.target_dir.join(format!("{}-*.profraw", cx.package_name)).as_str())?
+                .filter_map(Result::ok),
+        )
+        .arg("-o")
+        .arg(&cx.profdata_file)
+        .run()?;
     Ok(())
 }
 
@@ -497,6 +510,8 @@ struct Context {
     manifest_path: PathBuf,
     target_dir: Utf8PathBuf,
     doctests_dir: Utf8PathBuf,
+    package_name: String,
+    profdata_file: Utf8PathBuf,
     llvm_cov: Utf8PathBuf,
     llvm_profdata: Utf8PathBuf,
     cargo: OsString,
@@ -522,6 +537,15 @@ impl Context {
             // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
             args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
             debug!(?args.color);
+        }
+        if args.disable_default_ignore_filename_regex {
+            warn!("--disable-default-ignore-filename-regex is unstable");
+        }
+        if args.doctests {
+            warn!("--doctests is unstable");
+        }
+        if args.no_run {
+            warn!("--no-run is unstable");
         }
 
         let package_root = if let Some(manifest_path) = &args.manifest_path {
@@ -580,6 +604,9 @@ impl Context {
             })?;
         }
 
+        let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
+        let profdata_file = target_dir.join(format!("{}.profdata", package_name));
+
         Ok(Self {
             args,
             verbose,
@@ -587,6 +614,8 @@ impl Context {
             manifest_path: package_root,
             target_dir,
             doctests_dir,
+            package_name,
+            profdata_file,
             llvm_cov,
             llvm_profdata,
             cargo,

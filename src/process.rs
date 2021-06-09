@@ -2,15 +2,7 @@
 // - https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 // - https://docs.rs/duct
 
-use std::{
-    cell::Cell,
-    collections::BTreeMap,
-    ffi::{OsStr, OsString},
-    fmt,
-    path::PathBuf,
-    process::Output,
-    str,
-};
+use std::{cell::Cell, collections::BTreeMap, ffi::OsString, fmt, path::PathBuf, process::Output};
 
 use anyhow::Result;
 use shell_escape::escape;
@@ -68,20 +60,23 @@ impl ProcessBuilder {
     }
 
     /// Adds multiple `args` to the args list.
-    pub(crate) fn args(&mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) -> &mut Self {
-        self.args.extend(args.into_iter().map(|t| t.as_ref().to_os_string()));
+    pub(crate) fn args(
+        &mut self,
+        args: impl IntoIterator<Item = impl Into<OsString>>,
+    ) -> &mut Self {
+        self.args.extend(args.into_iter().map(Into::into));
         self
     }
 
     /// Set a variable in the expression's environment.
-    pub(crate) fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut Self {
-        self.env.insert(key.to_string(), Some(val.as_ref().to_os_string()));
+    pub(crate) fn env(&mut self, key: impl Into<String>, val: impl Into<OsString>) -> &mut Self {
+        self.env.insert(key.into(), Some(val.into()));
         self
     }
 
     // /// Remove a variable from the expression's environment.
-    // pub(crate) fn env_remove(&mut self, key: &str) -> &mut Self {
-    //     self.env.insert(key.to_string(), None);
+    // pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
+    //     self.env.insert(key.into(), None);
     //     self
     // }
 

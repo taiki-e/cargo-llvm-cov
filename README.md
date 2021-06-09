@@ -37,7 +37,7 @@ toolchain or the one with which cargo-llvm-cov itself is executed. If the defaul
 toolchain is one other than nightly, running `cargo llvm-cov` will find and use
 nightly anyway.
 
-### From binaries
+### From prebuilt binaries
 
 You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
 
@@ -49,7 +49,9 @@ You can download prebuilt binaries from the [Release page](https://github.com/ta
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-A wrapper for source based code coverage (-Zinstrument-coverage)
+A wrapper for source based code coverage (-Zinstrument-coverage).
+
+Use -h for short descriptions and --help for more details.
 
 USAGE:
     cargo llvm-cov [OPTIONS] [-- <args>...]
