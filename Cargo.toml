@@ -33,10 +33,10 @@ shell-escape = "0.1.5"
 structopt = "0.3"
 tracing = { version = "0.1.21", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.2.16", default-features = false, features = ["ansi", "env-filter"] }
+walkdir = "2"
 
 # This is needed for -Zminimal-versions.
 lazy_static = "1.4"
 
 [dev-dependencies]
 once_cell = "1"
-walkdir = "2"
