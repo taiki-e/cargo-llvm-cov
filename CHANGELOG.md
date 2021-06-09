@@ -14,15 +14,19 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Add `--output-path` option to specify a file to write coverage data into.](https://github.com/taiki-e/cargo-llvm-cov/pull/18)
 
-- Add `--ignore-filename-regex` option to skip specified source code files from coverage report.
+- [Add `--ignore-filename-regex` option to skip specified source code files from coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
 
 - [Add `--color` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/15)
 
 - [Add `--no-fail-fast`, `--frozen`, and `--locked` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/16)
 
-- Add `--verbose` flag.
+- [Add `--verbose` flag.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
 
-- Fix an issue where git dependencies were displayed in the coverage report.
+- [Fix support of testing binary crate](https://github.com/taiki-e/cargo-llvm-cov/pull/23)
+
+- [Fix an issue where git dependencies were displayed in the coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
+
+- [Fix an issue where path dependencies that not included in the workspace were displayed in coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/25)
 
 - Fix several bugs.
 
