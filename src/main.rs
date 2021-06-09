@@ -27,8 +27,8 @@ use std::{
 };
 
 use anyhow::{bail, format_err, Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use serde::Deserialize;
+use camino::Utf8PathBuf;
+use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tracing::warn;
 
@@ -46,10 +46,6 @@ fn main() -> Result<()> {
 fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()> {
     let cx = &Context::new(args)?;
 
-    let package_name = cx.metadata.workspace_root.file_stem().unwrap();
-    let profdata_file = &cx.target_dir.join(format!("{}.profdata", package_name));
-
-    fs::create_dir_all(&cx.target_dir)?;
     if let Some(output_dir) = &cx.output_dir {
         if !cx.no_run {
             fs::remove_dir_all(output_dir)?;
@@ -67,8 +63,8 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
             fs::create_dir(&cx.doctests_dir)?;
         }
 
-        fs::remove_file(profdata_file)?;
-        let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", package_name));
+        fs::remove_file(&cx.profdata_file)?;
+        let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
         let rustflags = &mut match env::var_os("RUSTFLAGS") {
             Some(rustflags) => rustflags,
@@ -114,10 +110,10 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
     merge_profraw(cx)?;
 
     let format = Format::from_args(cx);
-    format.run(cx, profdata_file, &object_files)?;
+    format.run(cx, &object_files)?;
 
     if format == Format::Html {
-        Format::None.run(cx, profdata_file, &object_files)?;
+        Format::None.run(cx, &object_files)?;
 
         if cx.open {
             open::that(Path::new(cx.output_dir.as_ref().unwrap()).join("index.html"))?;
@@ -235,7 +231,7 @@ impl Format {
         }
     }
 
-    fn run(self, cx: &Context, profdata_file: &Utf8Path, files: &[OsString]) -> Result<()> {
+    fn run(self, cx: &Context, files: &[OsString]) -> Result<()> {
         const DEFAULT_IGNORE_FILENAME_REGEX: &str =
             r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|target/llvm-cov-target/";
 
@@ -243,7 +239,7 @@ impl Format {
 
         cmd.args(self.llvm_cov_args())
             .args(self.use_color(cx.color))
-            .arg(format!("-instr-profile={}", profdata_file))
+            .arg(format!("-instr-profile={}", cx.profdata_file))
             // TODO: remove `vec!`, once Rust 1.53 stable
             .args(files.iter().flat_map(|f| vec![OsStr::new("-object"), f]));
 
@@ -417,6 +413,31 @@ impl Context {
         let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
 
+        let current_info = CargoLlvmCovInfo::new();
+        debug!(?current_info);
+        let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
+        let mut clean_target_dir = true;
+        if info_file.is_file() {
+            match serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?) {
+                Ok(prev_info) => {
+                    debug!(?prev_info);
+                    if prev_info == current_info {
+                        clean_target_dir = false;
+                    }
+                }
+                Err(e) => {
+                    debug!(?e);
+                }
+            };
+        }
+        if clean_target_dir {
+            fs::remove_dir_all(&target_dir)?;
+            fs::create_dir_all(&target_dir)?;
+            fs::write(info_file, serde_json::to_string(&current_info)?)?;
+            // TODO: emit info! or warn! if --no-run specified
+            args.no_run = false;
+        }
+
         Ok(Self {
             args,
             verbose,
@@ -448,6 +469,18 @@ impl ops::Deref for Context {
 
     fn deref(&self) -> &Self::Target {
         &self.args
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CargoLlvmCovInfo {
+    version: String,
+}
+
+impl CargoLlvmCovInfo {
+    fn new() -> Self {
+        Self { version: env!("CARGO_PKG_VERSION").into() }
     }
 }
 

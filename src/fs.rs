@@ -103,3 +103,12 @@ pub(crate) fn read_dir(path: impl AsRef<Path>) -> Result<std::fs::ReadDir> {
     trace!(track_caller: ?res, ?path, "read_dir");
     res.with_context(|| format!("failed to read directory `{}`", path.display()))
 }
+
+/// Read the entire contents of a file into a string.
+/// This is a wrapper for [`std::fs::read_to_string`].
+pub(crate) fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
+    let path = path.as_ref();
+    let res = std::fs::read_to_string(path);
+    trace!(track_caller: ?res, ?path, "read_to_string");
+    res.with_context(|| format!("failed to read from file `{}`", path.display()))
+}
