@@ -251,17 +251,23 @@ impl Format {
         // incorrectly shown in the coverage report if they are path
         // dependencies of other crates.
         if cx.disable_default_ignore_filename_regex {
-            if let Some(ignore_filename_regex) = &cx.ignore_filename_regex {
+            if let Some(ignore_filename) = &cx.ignore_filename_regex {
                 cmd.arg("-ignore-filename-regex");
-                cmd.arg(ignore_filename_regex);
+                cmd.arg(ignore_filename);
             }
         } else {
             cmd.arg("-ignore-filename-regex");
-            if let Some(ignore_filename_regex) = &cx.ignore_filename_regex {
-                cmd.arg(format!("{}|{}", ignore_filename_regex, DEFAULT_IGNORE_FILENAME_REGEX));
-            } else {
-                cmd.arg(DEFAULT_IGNORE_FILENAME_REGEX);
+            let mut ignore_filename = DEFAULT_IGNORE_FILENAME_REGEX.to_string();
+            if let Some(ignore) = &cx.ignore_filename_regex {
+                ignore_filename.push('|');
+                ignore_filename.push_str(ignore);
             }
+            if let Some(home) = dirs_next::home_dir() {
+                ignore_filename.push('|');
+                ignore_filename.push_str(&home.display().to_string());
+                ignore_filename.push('/');
+            }
+            cmd.arg(ignore_filename);
         }
 
         match self {

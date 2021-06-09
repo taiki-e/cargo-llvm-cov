@@ -24,6 +24,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - Fix an issue where git dependencies were displayed in the coverage report.
 
+- Fix an issue where path dependencies were displayed in the coverage report.
+
 - Fix several bugs.
 
 - [Improve diagnostics when the required tools are not installed.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
