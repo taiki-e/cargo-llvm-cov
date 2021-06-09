@@ -74,7 +74,7 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
         debug!(RUSTFLAGS = ?rustflags);
         // --remap-path-prefix for Sometimes macros are displayed with abs path
         rustflags.push(format!(
-            " -Zinstrument-coverage -Clink-dead-code --remap-path-prefix {}/=",
+            " -Zinstrument-coverage --remap-path-prefix {}/=",
             cx.metadata.workspace_root
         ));
 
