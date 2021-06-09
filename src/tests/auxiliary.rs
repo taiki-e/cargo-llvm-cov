@@ -1,12 +1,11 @@
 use std::{
     env,
-    sync::atomic::{AtomicUsize, Ordering::Relaxed},
+    path::{Path, PathBuf},
 };
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use once_cell::sync::Lazy;
-use tempfile::{Builder, TempDir};
 use walkdir::WalkDir;
 
 use crate::fs;
@@ -22,11 +21,11 @@ pub(crate) fn cargo_llvm_cov<'a>(
     extension: &str,
     args: impl AsRef<[&'a str]>,
 ) -> Result<()> {
-    let test_project = test_project(&Utf8Path::new("coverage").join(model))?;
-    let manifest_path = test_project.path().join("Cargo.toml").display().to_string();
-    let output_path = FIXTURES_PATH.join("coverage-reports").join(model);
-    fs::create_dir_all(&output_path)?;
-    let output_path = output_path.join(name).with_extension(extension);
+    let workspace_root = test_project(model, name)?;
+    let manifest_path = workspace_root.join("Cargo.toml").display().to_string();
+    let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
+    fs::create_dir_all(&output_dir)?;
+    let output_path = output_dir.join(name).with_extension(extension);
     let mut v = vec![
         "cargo",
         "llvm-cov",
@@ -45,24 +44,24 @@ pub(crate) fn cargo_llvm_cov<'a>(
     Ok(())
 }
 
-fn test_project(model_path: &Utf8Path) -> Result<TempDir> {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+fn test_project(model: &str, name: &str) -> Result<PathBuf> {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("cargo-llvm-cov-tests")
+        .join(&format!("{}-{}", model, name));
+    let model_path = FIXTURES_PATH.join("coverage").join(model);
 
-    let tmpdir = Builder::new()
-        .prefix(&format!("test_project{}", COUNTER.fetch_add(1, Relaxed)))
-        .tempdir()?;
-    let workspace_root = tmpdir.path();
-    let model_path = FIXTURES_PATH.join(model_path);
-
+    fs::remove_dir_all(&workspace_root)?;
+    fs::create_dir_all(&workspace_root)?;
     for entry in WalkDir::new(&model_path).into_iter().filter_map(Result::ok) {
-        let path = entry.path();
-        let tmppath = &workspace_root.join(path.strip_prefix(&model_path)?);
-        if path.is_dir() {
-            fs::create_dir(tmppath)?;
+        let from = entry.path();
+        let to = &workspace_root.join(from.strip_prefix(&model_path)?);
+        if from.is_dir() {
+            fs::create_dir(to)?;
         } else {
-            fs::copy(path, tmppath)?;
+            fs::copy(from, to)?;
         }
     }
 
-    Ok(tmpdir)
+    Ok(workspace_root)
 }
