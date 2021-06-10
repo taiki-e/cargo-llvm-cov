@@ -123,17 +123,19 @@ impl ProcessBuilder {
     /// Execute an expression, wait for it to complete.
     #[track_caller]
     pub(crate) fn run(&mut self) -> Result<Output> {
-        trace!(track_caller: command = ?self, "run");
+        debug!(track_caller: command = ?self, "run");
         let res = self.build().run();
-        trace!(track_caller: ?res, "run");
+        trace!(track_caller: command = ?self, result = ?res, "run");
         Ok(res?)
     }
 
+    /// Execute an expression, capture its standard output, and return the
+    /// captured output as a `String`.
     #[track_caller]
     pub(crate) fn read(&mut self) -> Result<String> {
-        trace!(track_caller: command = ?self, "read");
+        debug!(track_caller: command = ?self, "read");
         let res = self.build().read();
-        trace!(track_caller: ?res, "read");
+        trace!(track_caller: command = ?self, result = ?res, "read");
         Ok(res?)
     }
 

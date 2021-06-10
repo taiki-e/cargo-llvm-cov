@@ -4,3 +4,6 @@ version = "0.0.0"
 
 [lib]
 doctest = false
+
+[dependencies]
+member2 = { path = "../member2" }

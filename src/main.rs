@@ -39,13 +39,7 @@ use crate::{
 fn main() -> Result<()> {
     trace::init();
 
-    run(env::args_os())
-}
-
-fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()> {
-    let matches = Opts::clap().get_matches_from(args);
-    let Opts::LlvmCov(args) = StructOpt::from_clap(&matches);
-
+    let Opts::LlvmCov(args) = Opts::from_args();
     if let Some(Subcommand::Demangle) = &args.subcommand {
         demangler::run()?;
         return Ok(());
@@ -102,6 +96,7 @@ fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()
 
         cargo.env("RUSTFLAGS", &rustflags);
         cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
+        cargo.env("CARGO_INCREMENTAL", "0");
         if let Some(rustdocflags) = rustdocflags {
             cargo.env("RUSTDOCFLAGS", &rustdocflags);
         }
@@ -154,6 +149,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     if let Some(target) = &cx.target {
         build_dir.push(target);
     }
+    fs::remove_dir_all(build_dir.join("incremental"))?;
     for f in WalkDir::new(build_dir.as_str()).into_iter().filter_map(Result::ok) {
         let f = f.path();
         if is_executable::is_executable(&f) {
@@ -167,6 +163,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
     }
+    // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
+    files.sort_unstable();
     trace!(object_files = ?files);
     Ok(files)
 }
@@ -224,8 +222,6 @@ impl Format {
     }
 
     fn run(self, cx: &Context, files: &[OsString]) -> Result<()> {
-        const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
-
         let mut cmd = cx.process(&cx.llvm_cov);
 
         cmd.args(self.llvm_cov_args())
@@ -234,25 +230,7 @@ impl Format {
             // TODO: remove `vec!`, once Rust 1.53 stable
             .args(files.iter().flat_map(|f| vec![OsStr::new("-object"), f]));
 
-        // TODO: Currently, there is a problem that excluded crates are
-        // incorrectly shown in the coverage report if they are path
-        // dependencies of other crates.
-        if cx.disable_default_ignore_filename_regex {
-            if let Some(ignore_filename) = &cx.ignore_filename_regex {
-                cmd.arg("-ignore-filename-regex");
-                cmd.arg(ignore_filename);
-            }
-        } else {
-            let mut ignore_filename = DEFAULT_IGNORE_FILENAME_REGEX.to_string();
-            if let Some(ignore) = &cx.ignore_filename_regex {
-                ignore_filename.push('|');
-                ignore_filename.push_str(ignore);
-            }
-            if let Some(home) = dirs_next::home_dir() {
-                ignore_filename.push('|');
-                ignore_filename.push_str(&home.display().to_string());
-                ignore_filename.push('/');
-            }
+        if let Some(ignore_filename) = ignore_filename_regex(cx) {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename);
         }
@@ -288,6 +266,53 @@ impl Format {
         cmd.run()?;
         Ok(())
     }
+}
+
+fn ignore_filename_regex(cx: &Context) -> Option<String> {
+    const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
+
+    let mut out = String::new();
+
+    if cx.disable_default_ignore_filename_regex {
+        if let Some(ignore_filename) = &cx.ignore_filename_regex {
+            out.push_str(ignore_filename);
+        }
+    } else {
+        out.push_str(DEFAULT_IGNORE_FILENAME_REGEX);
+        if let Some(ignore) = &cx.ignore_filename_regex {
+            out.push('|');
+            out.push_str(ignore);
+        }
+        if let Some(home) = dirs_next::home_dir() {
+            out.push('|');
+            out.push_str(&home.display().to_string());
+            out.push('/');
+        }
+    }
+
+    for spec in &cx.exclude {
+        if !cx.metadata.workspace_members.iter().any(|id| cx.metadata[id].name == *spec) {
+            warn!(
+                "excluded package(s) `{}` not found in workspace `{}`",
+                spec, cx.metadata.workspace_root
+            );
+        }
+    }
+
+    for id in
+        cx.metadata.workspace_members.iter().filter(|id| cx.exclude.contains(&cx.metadata[id].name))
+    {
+        let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
+        let package_path =
+            manifest_dir.strip_prefix(&cx.metadata.workspace_root).unwrap_or(manifest_dir);
+        if !out.is_empty() {
+            out.push('|');
+        }
+        // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
+        out.push_str(package_path.as_str())
+    }
+
+    if out.is_empty() { None } else { Some(out) }
 }
 
 #[derive(Debug, Deserialize)]
@@ -412,7 +437,7 @@ impl Context {
                 Err(e) => {
                     debug!(?e);
                 }
-            };
+            }
         }
         if clean_target_dir {
             fs::remove_dir_all(&target_dir)?;

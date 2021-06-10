@@ -1,0 +1,6 @@
+[package]
+name = "member2"
+version = "0.0.0"
+
+[lib]
+doctest = false
