@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(dead_code))]
+
 // Refs:
 // - https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 // - https://docs.rs/duct
@@ -9,7 +11,7 @@ use shell_escape::escape;
 
 macro_rules! process {
     ($program:expr $(, $arg:expr)* $(,)?) => {{
-        let mut _cmd = crate::process::ProcessBuilder::new($program);
+        let mut _cmd = process::ProcessBuilder::new($program);
         $(
             _cmd.arg($arg);
         )*
@@ -74,11 +76,12 @@ impl ProcessBuilder {
         self
     }
 
-    // /// Remove a variable from the expression's environment.
-    // pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
-    //     self.env.insert(key.into(), None);
-    //     self
-    // }
+    /// Remove a variable from the expression's environment.
+    #[cfg(test)]
+    pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
+        self.env.insert(key.into(), None);
+        self
+    }
 
     /// Set the working directory where the expression will execute.
     pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
@@ -92,11 +95,12 @@ impl ProcessBuilder {
         self
     }
 
-    // /// Enables [`duct::Expression::stderr_capture`].
-    // pub(crate) fn stderr_capture(&mut self) -> &mut Self {
-    //     self.stderr_capture = true;
-    //     self
-    // }
+    /// Enables [`duct::Expression::stderr_capture`].
+    #[cfg(test)]
+    pub(crate) fn stderr_capture(&mut self) -> &mut Self {
+        self.stderr_capture = true;
+        self
+    }
 
     /// Enables [`duct::Expression::stdout_to_stderr`].
     pub(crate) fn stdout_to_stderr(&mut self) -> &mut Self {

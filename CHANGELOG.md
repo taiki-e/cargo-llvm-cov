@@ -10,7 +10,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- [If you don't use the `--html`, `--open`, or `--text` flag, cargo-llvm-cov no longer requires rustfilt.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
+- [cargo-llvm-cov no longer requires rustfilt.](https://github.com/taiki-e/cargo-llvm-cov/pull/29)
 
 - [Add `--output-path` option to specify a file to write coverage data into.](https://github.com/taiki-e/cargo-llvm-cov/pull/18)
 

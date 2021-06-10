@@ -14,10 +14,8 @@ mod trace;
 mod process;
 
 mod cli;
+mod demangler;
 mod fs;
-
-#[cfg(test)]
-mod tests;
 
 use std::{
     env,
@@ -34,7 +32,7 @@ use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::{
-    cli::{Args, Coloring, Opts},
+    cli::{Args, Coloring, Opts, Subcommand},
     process::ProcessBuilder,
 };
 
@@ -45,6 +43,14 @@ fn main() -> Result<()> {
 }
 
 fn run(args: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<()> {
+    let matches = Opts::clap().get_matches_from(args);
+    let Opts::LlvmCov(args) = StructOpt::from_clap(&matches);
+
+    if let Some(Subcommand::Demangle) = &args.subcommand {
+        demangler::run()?;
+        return Ok(());
+    }
+
     let cx = &Context::new(args)?;
 
     if let Some(output_dir) = &cx.output_dir {
@@ -237,7 +243,6 @@ impl Format {
                 cmd.arg(ignore_filename);
             }
         } else {
-            cmd.arg("-ignore-filename-regex");
             let mut ignore_filename = DEFAULT_IGNORE_FILENAME_REGEX.to_string();
             if let Some(ignore) = &cx.ignore_filename_regex {
                 ignore_filename.push('|');
@@ -248,6 +253,7 @@ impl Format {
                 ignore_filename.push_str(&home.display().to_string());
                 ignore_filename.push('/');
             }
+            cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename);
         }
 
@@ -257,7 +263,9 @@ impl Format {
                     "-show-instantiations",
                     "-show-line-counts-or-regions",
                     "-show-expansions",
-                    "-Xdemangler=rustfilt",
+                    &format!("-Xdemangler={}", cx.current_exe.display()),
+                    "-Xdemangler=llvm-cov",
+                    "-Xdemangler=demangle",
                 ]);
                 if let Some(output_dir) = &cx.output_dir {
                     cmd.arg(&format!("-output-dir={}", output_dir.display()));
@@ -307,12 +315,11 @@ struct Context {
     llvm_profdata: Utf8PathBuf,
     cargo: OsString,
     nightly: bool,
+    current_exe: PathBuf,
 }
 
 impl Context {
-    fn new(args_raw: impl IntoIterator<Item = impl Into<OsString> + Clone>) -> Result<Self> {
-        let matches = Opts::clap().get_matches_from(args_raw);
-        let Opts::LlvmCov(mut args) = StructOpt::from_clap(&matches);
+    fn new(mut args: Args) -> Result<Self> {
         let verbose = if args.verbose == 0 {
             None
         } else {
@@ -386,14 +393,6 @@ impl Context {
                 if !nightly { " --toolchain nightly" } else { "" }
             );
         }
-        if args.show() {
-            process!("rustfilt", "-V").stdout_capture().run().with_context(|| {
-                format!(
-                    "{} flag requires rustfilt, please install rustfilt with `cargo install rustfilt`",
-                    if args.html { "--html" } else { "--text" }
-                )
-            })?;
-        }
 
         let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
@@ -422,6 +421,13 @@ impl Context {
             // TODO: emit info! or warn! if --no-run specified
             args.no_run = false;
         }
+        let current_exe = match env::current_exe() {
+            Ok(exe) => exe,
+            Err(e) => {
+                debug!(?e);
+                format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX).into()
+            }
+        };
 
         Ok(Self {
             args,
@@ -436,6 +442,7 @@ impl Context {
             llvm_profdata,
             cargo,
             nightly,
+            current_exe,
         })
     }
 
