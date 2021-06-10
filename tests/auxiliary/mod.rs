@@ -1,3 +1,13 @@
+macro_rules! trace {
+    ($($tt:tt)*) => {};
+}
+
+#[path = "../../src/fs.rs"]
+mod fs;
+#[macro_use]
+#[path = "../../src/process.rs"]
+mod process;
+
 use std::{
     env,
     path::{Path, PathBuf},
@@ -7,8 +17,6 @@ use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use once_cell::sync::Lazy;
 use walkdir::WalkDir;
-
-use crate::fs;
 
 static FIXTURES_PATH: Lazy<Utf8PathBuf> =
     Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
@@ -26,18 +34,20 @@ pub(crate) fn cargo_llvm_cov<'a>(
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = output_dir.join(name).with_extension(extension);
-    let mut v = vec![
-        "cargo",
+    process!(
+        env!("CARGO_BIN_EXE_cargo-llvm-cov"),
         "llvm-cov",
         "--color",
         "never",
         "--manifest-path",
         &manifest_path,
         "--output-path",
-        output_path.as_str(),
-    ];
-    v.extend(args.as_ref().iter());
-    crate::run(v)?;
+        output_path.as_str()
+    )
+    .args(args.as_ref())
+    .env_remove("RUST_LOG")
+    .stderr_capture()
+    .run()?;
     if env::var_os("CI").is_some() {
         process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
     }

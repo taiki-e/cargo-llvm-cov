@@ -24,6 +24,9 @@ pub(crate) enum Opts {
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) struct Args {
+    #[structopt(subcommand)]
+    pub(crate) subcommand: Option<Subcommand>,
+
     /// Export coverage data in "json" format
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
@@ -170,6 +173,16 @@ impl Args {
     pub(crate) fn show(&self) -> bool {
         self.text || self.html
     }
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(
+    rename_all = "kebab-case",
+    setting = AppSettings::DeriveDisplayOrder,
+    setting = AppSettings::UnifiedHelpMessage,
+)]
+pub(crate) enum Subcommand {
+    Demangle,
 }
 
 #[derive(Debug, Clone, Copy)]

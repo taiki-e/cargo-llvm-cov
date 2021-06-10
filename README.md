@@ -19,12 +19,6 @@ toolchain and llvm-tools-preview:
 rustup component add llvm-tools-preview --toolchain nightly
 ```
 
-If you use the `--html`, `--open`, or `--text` flag, [rustfilt](https://github.com/luser/rustfilt) is also required:
-
-```sh
-cargo install rustfilt
-```
-
 ### From source
 
 ```sh
