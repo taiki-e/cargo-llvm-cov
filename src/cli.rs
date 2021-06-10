@@ -115,7 +115,7 @@ pub(crate) struct Args {
     #[structopt(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from the test
-    #[structopt(long, value_name = "SPEC")]
+    #[structopt(long, value_name = "SPEC", requires = "workspace")]
     pub(crate) exclude: Vec<String>,
     // TODO: Should this only work for cargo's --jobs? Or should it also work
     //       for llvm-cov's -num-threads?

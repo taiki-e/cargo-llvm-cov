@@ -1,4 +1,4 @@
-pub fn match1(x: u32) {
+pub fn func(x: u32) {
     match x {
         0 => {}
         1 => {}
@@ -9,6 +9,6 @@ pub fn match1(x: u32) {
 
 #[test]
 fn test() {
-    match1(1);
-    match1(3);
+    func(1);
+    func(3);
 }

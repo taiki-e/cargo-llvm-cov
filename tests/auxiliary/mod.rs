@@ -1,6 +1,9 @@
 macro_rules! trace {
     ($($tt:tt)*) => {};
 }
+macro_rules! debug {
+    ($($tt:tt)*) => {};
+}
 
 #[path = "../../src/fs.rs"]
 mod fs;
@@ -10,12 +13,13 @@ mod process;
 
 use std::{
     env,
-    path::{Path, PathBuf},
+    sync::atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use once_cell::sync::Lazy;
+use tempfile::{Builder, TempDir};
 use walkdir::WalkDir;
 
 static FIXTURES_PATH: Lazy<Utf8PathBuf> =
@@ -30,7 +34,7 @@ pub(crate) fn cargo_llvm_cov<'a>(
     args: impl AsRef<[&'a str]>,
 ) -> Result<()> {
     let workspace_root = test_project(model, name)?;
-    let manifest_path = workspace_root.join("Cargo.toml").display().to_string();
+    let manifest_path = workspace_root.path().join("Cargo.toml").display().to_string();
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = output_dir.join(name).with_extension(extension);
@@ -46,7 +50,6 @@ pub(crate) fn cargo_llvm_cov<'a>(
     )
     .args(args.as_ref())
     .env_remove("RUST_LOG")
-    .stderr_capture()
     .run()?;
     if env::var_os("CI").is_some() {
         process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
@@ -54,15 +57,15 @@ pub(crate) fn cargo_llvm_cov<'a>(
     Ok(())
 }
 
-fn test_project(model: &str, name: &str) -> Result<PathBuf> {
-    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("cargo-llvm-cov-tests")
-        .join(&format!("{}-{}", model, name));
+fn test_project(model: &str, name: &str) -> Result<TempDir> {
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    let tmpdir = Builder::new()
+        .prefix(&format!("test_project_{}_{}_{}", model, name, COUNTER.fetch_add(1, Relaxed)))
+        .tempdir()?;
+    let workspace_root = tmpdir.path();
     let model_path = FIXTURES_PATH.join("coverage").join(model);
 
-    fs::remove_dir_all(&workspace_root)?;
-    fs::create_dir_all(&workspace_root)?;
     for entry in WalkDir::new(&model_path).into_iter().filter_map(Result::ok) {
         let from = entry.path();
         let to = &workspace_root.join(from.strip_prefix(&model_path)?);
@@ -73,5 +76,5 @@ fn test_project(model: &str, name: &str) -> Result<PathBuf> {
         }
     }
 
-    Ok(workspace_root)
+    Ok(tmpdir)
 }

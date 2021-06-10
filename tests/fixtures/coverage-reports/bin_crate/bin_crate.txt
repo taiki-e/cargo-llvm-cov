@@ -8,8 +8,6 @@
     7|       |    }
     8|      2|}
   ------------------
-  | Unexecuted instantiation: bin_crate::main
-  ------------------
   | bin_crate::main:
   |    1|      2|fn main() {
   |    2|      2|    match std::env::args().skip(1).next().unwrap().parse::<u8>().unwrap() {
@@ -19,4 +17,6 @@
   |    6|      0|        _ => {}
   |    7|       |    }
   |    8|      2|}
+  ------------------
+  | Unexecuted instantiation: bin_crate::main
   ------------------
