@@ -21,7 +21,7 @@ use std::{
     env,
     ffi::{OsStr, OsString},
     ops,
-    path::{Path, PathBuf},
+    path::{self, Path, PathBuf},
 };
 
 use anyhow::{bail, format_err, Context as _, Result};
@@ -269,7 +269,12 @@ impl Format {
 }
 
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
-    const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
+    fn default_ignore_filename_regex() -> String {
+        format!(
+            r"rustc{0}|.cargo{0}(registry|git){0}|.rustup{0}toolchains{0}|tests{0}|examples{0}|benches{0}|target{0}llvm-cov-target{0}",
+            if cfg!(windows) { r"\\" } else { r"/" }
+        )
+    }
 
     let mut out = String::new();
 
@@ -278,7 +283,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             out.push_str(ignore_filename);
         }
     } else {
-        out.push_str(DEFAULT_IGNORE_FILENAME_REGEX);
+        out.push_str(&default_ignore_filename_regex());
         if let Some(ignore) = &cx.ignore_filename_regex {
             out.push('|');
             out.push_str(ignore);
@@ -286,7 +291,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         if let Some(home) = dirs_next::home_dir() {
             out.push('|');
             out.push_str(&home.display().to_string());
-            out.push('/');
+            out.push(path::MAIN_SEPARATOR);
         }
     }
 
@@ -309,7 +314,8 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             out.push('|');
         }
         // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
-        out.push_str(package_path.as_str())
+        out.push_str(package_path.as_str());
+        out.push(path::MAIN_SEPARATOR);
     }
 
     if out.is_empty() { None } else { Some(out) }

@@ -37,20 +37,25 @@ pub(crate) fn cargo_llvm_cov<'a>(
     let manifest_path = workspace_root.path().join("Cargo.toml").display().to_string();
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
-    let output_path = output_dir.join(name).with_extension(extension);
-    process!(
+    let output_path = &output_dir.join(name).with_extension(extension);
+    let output = process!(
         env!("CARGO_BIN_EXE_cargo-llvm-cov"),
         "llvm-cov",
         "--color",
         "never",
         "--manifest-path",
         &manifest_path,
-        "--output-path",
-        output_path.as_str()
     )
     .args(args.as_ref())
     .env_remove("RUST_LOG")
-    .run()?;
+    .read()?;
+    dbg!(&output);
+
+    // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
+    #[cfg(windows)]
+    fs::write(output_path, output.replace("\\\\", "/").replace('\\', "/"))?;
+    #[cfg(not(windows))]
+    fs::write(output_path, output)?;
     if env::var_os("CI").is_some() {
         process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
     }

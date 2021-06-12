@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - staging
+      - windows
   schedule:
     - cron: '40 1 * * *'
 
@@ -27,8 +28,7 @@ jobs:
         include:
           - os: ubuntu-18.04
           - os: macos-latest
-          # TODO: does -Zinstrument-coverage supports windows?
-          # - os: windows-latest
+          - os: windows-latest
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
@@ -43,7 +43,7 @@ jobs:
       - run: cross test --target ${{ matrix.target }}
         if: matrix.target != ''
       - run: cargo test
-        if: matrix.target == ''
+        if: matrix.target == '' && !startsWith(matrix.os, 'windows')
       - name: test
         run: |
           set -x
@@ -70,6 +70,7 @@ jobs:
           cargo llvm-cov --html
           cargo clean
       - run: tools/check-minimal-versions.sh
+        if: matrix.target == '' && !startsWith(matrix.os, 'windows')
 
   build:
     strategy:
