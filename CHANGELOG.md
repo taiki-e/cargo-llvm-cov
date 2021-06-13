@@ -10,7 +10,21 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.0-alpha.4] - 2021-06-13
+
 - [cargo-llvm-cov no longer requires rustfilt.](https://github.com/taiki-e/cargo-llvm-cov/pull/29)
+
+- [Acknowledge that procedural macros are supported.](https://github.com/taiki-e/cargo-llvm-cov/pull/27)
+
+- [Fix support of testing binary crate](https://github.com/taiki-e/cargo-llvm-cov/pull/23)
+
+- [Fix an issue where git dependencies were displayed in the coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
+
+- [Fix an issue where path dependencies that not included in the workspace were displayed in coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/25)
+
+- [Fix bug in `--exclude` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/30)
+
+- Fix several bugs.
 
 - [Add `--output-path` option to specify a file to write coverage data into.](https://github.com/taiki-e/cargo-llvm-cov/pull/18)
 
@@ -21,14 +35,6 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 - [Add `--no-fail-fast`, `--frozen`, and `--locked` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/16)
 
 - [Add `--verbose` flag.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
-
-- [Fix support of testing binary crate](https://github.com/taiki-e/cargo-llvm-cov/pull/23)
-
-- [Fix an issue where git dependencies were displayed in the coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
-
-- [Fix an issue where path dependencies that not included in the workspace were displayed in coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/25)
-
-- Fix several bugs.
 
 - [Improve diagnostics when the required tools are not installed.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
 
@@ -60,7 +66,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.3...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.4...HEAD
+[0.1.0-alpha.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
 [0.1.0-alpha.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.1...v0.1.0-alpha.2
 [0.1.0-alpha.1]: https://github.com/taiki-e/cargo-llvm-cov/releases/tag/v0.1.0-alpha.1

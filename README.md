@@ -22,7 +22,7 @@ rustup component add llvm-tools-preview --toolchain nightly
 ### From source
 
 ```sh
-cargo install cargo-llvm-cov --version 0.1.0-alpha.3
+cargo install cargo-llvm-cov --version 0.1.0-alpha.4
 ```
 
 cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
@@ -211,7 +211,7 @@ jobs:
       - name: Install Rust nightly and llvm-tools-preview
         run: rustup toolchain install nightly --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.3/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.4/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov

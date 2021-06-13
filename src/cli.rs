@@ -182,6 +182,8 @@ impl Args {
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) enum Subcommand {
+    // internal (unstable)
+    #[structopt(setting = AppSettings::Hidden)]
     Demangle,
 }
 
