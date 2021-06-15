@@ -7,3 +7,5 @@ doctest = false
 
 [dependencies]
 member2 = { path = "../member2" }
+member3 = { path = "../member2/member3" }
+member4 = { path = "../member2/src/member4" }

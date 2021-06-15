@@ -12,4 +12,6 @@ fn test() {
     func(1);
     func(3);
     member2::func(0);
+    member3::func(0);
+    member4::func(0);
 }

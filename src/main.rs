@@ -14,25 +14,25 @@ mod trace;
 mod process;
 
 mod cli;
+mod context;
 mod demangler;
 mod fs;
 
 use std::{
     env,
     ffi::{OsStr, OsString},
-    ops,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
-use anyhow::{bail, format_err, Context as _, Result};
-use camino::Utf8PathBuf;
-use serde::{Deserialize, Serialize};
+use anyhow::Result;
+use serde::Deserialize;
 use structopt::StructOpt;
 use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::{
     cli::{Args, Coloring, Opts, Subcommand},
+    context::Context,
     process::ProcessBuilder,
 };
 
@@ -89,8 +89,8 @@ fn main() -> Result<()> {
             ));
         }
 
-        let mut cargo = cx.process(&cx.cargo);
-        if !cx.nightly {
+        let mut cargo = cx.process(&*cx.cargo);
+        if !cx.cargo.nightly {
             cargo.arg("+nightly");
         }
 
@@ -271,48 +271,39 @@ impl Format {
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
     const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
 
-    let mut out = String::new();
+    #[derive(Default)]
+    struct Out(String);
+
+    impl Out {
+        fn push(&mut self, s: impl AsRef<str>) {
+            if !self.0.is_empty() {
+                self.0.push('|');
+            }
+            self.0.push_str(s.as_ref());
+        }
+    }
+
+    let mut out = Out::default();
 
     if cx.disable_default_ignore_filename_regex {
         if let Some(ignore_filename) = &cx.ignore_filename_regex {
-            out.push_str(ignore_filename);
+            out.push(ignore_filename);
         }
     } else {
-        out.push_str(DEFAULT_IGNORE_FILENAME_REGEX);
+        out.push(DEFAULT_IGNORE_FILENAME_REGEX);
         if let Some(ignore) = &cx.ignore_filename_regex {
-            out.push('|');
-            out.push_str(ignore);
+            out.push(ignore);
         }
         if let Some(home) = dirs_next::home_dir() {
-            out.push('|');
-            out.push_str(&home.display().to_string());
-            out.push('/');
+            out.push(format!("{}/", home.display()));
         }
     }
 
-    for spec in &cx.exclude {
-        if !cx.metadata.workspace_members.iter().any(|id| cx.metadata[id].name == *spec) {
-            warn!(
-                "excluded package(s) `{}` not found in workspace `{}`",
-                spec, cx.metadata.workspace_root
-            );
-        }
+    for path in &cx.excluded_path {
+        out.push(path.as_str())
     }
 
-    for id in
-        cx.metadata.workspace_members.iter().filter(|id| cx.exclude.contains(&cx.metadata[id].name))
-    {
-        let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
-        let package_path =
-            manifest_dir.strip_prefix(&cx.metadata.workspace_root).unwrap_or(manifest_dir);
-        if !out.is_empty() {
-            out.push('|');
-        }
-        // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
-        out.push_str(package_path.as_str())
-    }
-
-    if out.is_empty() { None } else { Some(out) }
+    if out.0.is_empty() { None } else { Some(out.0) }
 }
 
 #[derive(Debug, Deserialize)]
@@ -325,213 +316,6 @@ struct Artifact {
 #[derive(Debug, Deserialize)]
 struct Profile {
     test: bool,
-}
-
-struct Context {
-    args: Args,
-    verbose: Option<String>,
-    metadata: cargo_metadata::Metadata,
-    manifest_path: PathBuf,
-    target_dir: Utf8PathBuf,
-    doctests_dir: Utf8PathBuf,
-    package_name: String,
-    profdata_file: Utf8PathBuf,
-    llvm_cov: Utf8PathBuf,
-    llvm_profdata: Utf8PathBuf,
-    cargo: OsString,
-    nightly: bool,
-    current_exe: PathBuf,
-}
-
-impl Context {
-    fn new(mut args: Args) -> Result<Self> {
-        let verbose = if args.verbose == 0 {
-            None
-        } else {
-            Some(format!("-{}", "v".repeat(args.verbose as _)))
-        };
-        debug!(?args);
-        args.html |= args.open;
-        if args.output_dir.is_some() && !args.show() {
-            // If the format flag is not specified, this flag is no-op.
-            args.output_dir = None;
-        }
-        if args.color.is_none() {
-            // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
-            args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
-            debug!(?args.color);
-        }
-        if args.disable_default_ignore_filename_regex {
-            warn!("--disable-default-ignore-filename-regex is unstable");
-        }
-        if args.doctests {
-            warn!("--doctests is unstable");
-        }
-        if args.no_run {
-            warn!("--no-run is unstable");
-        }
-
-        let package_root = if let Some(manifest_path) = &args.manifest_path {
-            manifest_path.clone()
-        } else {
-            process!("cargo", "locate-project", "--message-format", "plain")
-                .stdout_capture()
-                .read()?
-                .into()
-        };
-
-        let metadata =
-            cargo_metadata::MetadataCommand::new().manifest_path(&package_root).exec()?;
-        let cargo_target_dir = &metadata.target_directory;
-        debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
-
-        if args.output_dir.is_none() && args.html {
-            args.output_dir = Some(cargo_target_dir.join("llvm-cov").into());
-        }
-
-        // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
-        // use a subdirectory of the target directory as the actual target directory.
-        let target_dir = cargo_target_dir.join("llvm-cov-target");
-        let doctests_dir = target_dir.join("doctestbins");
-
-        let mut cargo = cargo();
-        let version =
-            process!(&cargo, "version").dir(&metadata.workspace_root).stdout_capture().read()?;
-        let nightly = version.contains("-nightly") || version.contains("-dev");
-        if !nightly {
-            cargo = "cargo".into();
-        }
-
-        let sysroot: Utf8PathBuf = sysroot(nightly)?.into();
-        // https://github.com/rust-lang/rust/issues/85658
-        // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
-        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host()?));
-        let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
-        let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
-
-        debug!(?llvm_cov, ?llvm_profdata, ?cargo, ?nightly);
-
-        // Check if required tools are installed.
-        if !llvm_cov.exists() || !llvm_profdata.exists() {
-            bail!(
-                "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
-                if !nightly { " --toolchain nightly" } else { "" }
-            );
-        }
-
-        let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
-        let profdata_file = target_dir.join(format!("{}.profdata", package_name));
-
-        let current_info = CargoLlvmCovInfo::new();
-        debug!(?current_info);
-        let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
-        let mut clean_target_dir = true;
-        if info_file.is_file() {
-            match serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?) {
-                Ok(prev_info) => {
-                    debug!(?prev_info);
-                    if prev_info == current_info {
-                        clean_target_dir = false;
-                    }
-                }
-                Err(e) => {
-                    debug!(?e);
-                }
-            }
-        }
-        if clean_target_dir {
-            fs::remove_dir_all(&target_dir)?;
-            fs::create_dir_all(&target_dir)?;
-            fs::write(info_file, serde_json::to_string(&current_info)?)?;
-            // TODO: emit info! or warn! if --no-run specified
-            args.no_run = false;
-        }
-        let current_exe = match env::current_exe() {
-            Ok(exe) => exe,
-            Err(e) => {
-                debug!(?e);
-                format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX).into()
-            }
-        };
-
-        Ok(Self {
-            args,
-            verbose,
-            metadata,
-            manifest_path: package_root,
-            target_dir,
-            doctests_dir,
-            package_name,
-            profdata_file,
-            llvm_cov,
-            llvm_profdata,
-            cargo,
-            nightly,
-            current_exe,
-        })
-    }
-
-    fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
-        let mut cmd = process!(program);
-        cmd.dir(&self.metadata.workspace_root);
-        if self.verbose.is_some() {
-            cmd.display_env_vars();
-        }
-        cmd
-    }
-}
-
-impl ops::Deref for Context {
-    type Target = Args;
-
-    fn deref(&self) -> &Self::Target {
-        &self.args
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct CargoLlvmCovInfo {
-    version: String,
-}
-
-impl CargoLlvmCovInfo {
-    fn new() -> Self {
-        Self { version: env!("CARGO_PKG_VERSION").into() }
-    }
-}
-
-fn sysroot(nightly: bool) -> Result<String> {
-    Ok(if nightly {
-        process!(rustc(), "--print", "sysroot")
-    } else {
-        process!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
-    }
-    .stdout_capture()
-    .read()
-    .context("failed to find sysroot")?
-    .trim()
-    .into())
-}
-
-fn host() -> Result<String> {
-    let rustc = &rustc();
-    let output = process!(rustc, "--version", "--verbose").stdout_capture().read()?;
-    output
-        .lines()
-        .find_map(|line| line.strip_prefix("host: "))
-        .ok_or_else(|| {
-            format_err!("unexpected version output from `{}`: {}", rustc.to_string_lossy(), output)
-        })
-        .map(ToString::to_string)
-}
-
-fn rustc() -> OsString {
-    env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"))
-}
-
-fn cargo() -> OsString {
-    env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
 }
 
 fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {

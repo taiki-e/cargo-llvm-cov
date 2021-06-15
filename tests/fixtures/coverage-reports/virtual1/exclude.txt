@@ -13,4 +13,6 @@
    12|      1|    func(1);
    13|      1|    func(3);
    14|      1|    member2::func(0);
-   15|      1|}
+   15|      1|    member3::func(0);
+   16|      1|    member4::func(0);
+   17|      1|}
