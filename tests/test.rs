@@ -40,13 +40,16 @@ fn run(model: &str, name: &str, args: &[&str]) {
 #[test]
 fn real_root() {
     run("real1", "workspace_root", &[]);
+    run("real1", "workspace_root_all", &["--all"]);
+    run("real1", "workspace_root_member2", &["--manifest-path", "member1/member2/Cargo.toml"]);
 
     run("virtual1", "workspace_root", &[]);
+
+    // TODO: member2/member3 and member2/src/member4 should not be excluded.
+    run("virtual1", "exclude", &["--workspace", "--exclude", "member2"]);
 
     // TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
     run("no_test", "no_test", &[]);
 
     run("bin_crate", "bin_crate", &[]);
-
-    run("virtual1", "exclude", &["--workspace", "--exclude", "member2"]);
 }

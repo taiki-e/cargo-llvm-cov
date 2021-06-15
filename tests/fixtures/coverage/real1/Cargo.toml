@@ -3,6 +3,11 @@ name = "crate1"
 version = "0.0.0"
 
 [workspace]
+members = ["member1", "member1/member2"]
 
 [lib]
 doctest = false
+
+[dependencies]
+member1 = { path = "member1" }
+member2 = { path = "member1/member2" }

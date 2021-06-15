@@ -33,8 +33,8 @@ pub(crate) fn cargo_llvm_cov<'a>(
     extension: &str,
     args: impl AsRef<[&'a str]>,
 ) -> Result<()> {
+    let args = args.as_ref().to_vec();
     let workspace_root = test_project(model, name)?;
-    let manifest_path = workspace_root.path().join("Cargo.toml").display().to_string();
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = output_dir.join(name).with_extension(extension);
@@ -43,12 +43,11 @@ pub(crate) fn cargo_llvm_cov<'a>(
         "llvm-cov",
         "--color",
         "never",
-        "--manifest-path",
-        &manifest_path,
         "--output-path",
         output_path.as_str()
     )
-    .args(args.as_ref())
+    .args(args)
+    .dir(workspace_root.path())
     .env_remove("RUST_LOG")
     .run()?;
     if env::var_os("CI").is_some() {
