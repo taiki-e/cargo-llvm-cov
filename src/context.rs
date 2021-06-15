@@ -94,7 +94,7 @@ impl Context {
         if !llvm_cov.exists() || !llvm_profdata.exists() {
             bail!(
                 "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
-                if !cargo.nightly { " --toolchain nightly" } else { "" }
+                if cargo.nightly { "" } else { " --toolchain nightly" }
             );
         }
 

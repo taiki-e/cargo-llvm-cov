@@ -25,7 +25,7 @@ fn create_disambiguator_re() -> Regex {
     Regex::new(r"\[[a-f0-9]{5,16}\]::").unwrap()
 }
 
-fn demangle_lines(lines: Lines<'_>) -> Result<Vec<String>> {
+fn demangle_lines(lines: Lines<'_>) -> Vec<String> {
     let strip_crate_disambiguators = create_disambiguator_re();
     let mut demangled_lines = Vec::new();
     for mangled in lines {
@@ -41,13 +41,13 @@ fn demangle_lines(lines: Lines<'_>) -> Result<Vec<String>> {
         }
         demangled_lines.push(demangled);
     }
-    Ok(demangled_lines)
+    demangled_lines
 }
 
 pub(crate) fn run() -> Result<()> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
-    let mut demangled_lines = demangle_lines(buffer.lines())?;
+    let mut demangled_lines = demangle_lines(buffer.lines());
     demangled_lines.push("".to_string()); // ensure a trailing newline
     io::stdout().write_all(demangled_lines.join("\n").as_bytes())?;
     Ok(())
@@ -107,7 +107,7 @@ RYFG_FGyyEvRYFF_EvRYFFEvERLB_B_B_ERLRjB_B_B_
 
     #[test]
     fn test_demangle_lines_no_crate_disambiguators() {
-        let demangled_lines = demangle_lines(MANGLED_INPUT.lines()).unwrap();
+        let demangled_lines = demangle_lines(MANGLED_INPUT.lines());
         for (expected, actual) in
             DEMANGLED_OUTPUT_NO_CRATE_DISAMBIGUATORS.lines().zip(demangled_lines)
         {

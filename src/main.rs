@@ -153,13 +153,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     for f in WalkDir::new(build_dir.as_str()).into_iter().filter_map(Result::ok) {
         let f = f.path();
         if is_executable::is_executable(&f) {
-            files.push(f.to_owned().into_os_string())
+            files.push(f.to_owned().into_os_string());
         }
     }
     if cx.doctests {
         for f in glob::glob(cx.doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok) {
             if is_executable::is_executable(&f) {
-                files.push(f.into_os_string())
+                files.push(f.into_os_string());
             }
         }
     }
@@ -300,7 +300,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     }
 
     for path in &cx.excluded_path {
-        out.push(path.as_str())
+        out.push(path.as_str());
     }
 
     if out.0.is_empty() { None } else { Some(out.0) }
