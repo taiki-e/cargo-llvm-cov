@@ -69,7 +69,7 @@ fn test_project(model: &str, name: &str) -> Result<TempDir> {
         let from = entry.path();
         let to = &workspace_root.join(from.strip_prefix(&model_path)?);
         if from.is_dir() {
-            fs::create_dir(to)?;
+            fs::create_dir_all(to)?;
         } else {
             fs::copy(from, to)?;
         }

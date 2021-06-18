@@ -61,7 +61,7 @@ fn main() -> Result<()> {
 
         if cx.doctests {
             fs::remove_dir_all(&cx.doctests_dir)?;
-            fs::create_dir(&cx.doctests_dir)?;
+            fs::create_dir_all(&cx.doctests_dir)?;
         }
 
         fs::remove_file(&cx.profdata_file)?;

@@ -4,23 +4,6 @@ use std::{io, path::Path};
 
 use anyhow::{Context as _, Result};
 
-/// Creates a new, empty directory **if not exists**.
-/// This is a wrapper for [`std::fs::create_dir`].
-#[track_caller]
-pub(crate) fn create_dir(path: impl AsRef<Path>) -> Result<()> {
-    let path = path.as_ref();
-    match std::fs::create_dir(path) {
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            trace!(track_caller: res = ?Ok::<_, ()>(e), ?path, "create_dir");
-            Ok(())
-        }
-        res => {
-            trace!(track_caller: ?res, ?path, "create_dir");
-            res.with_context(|| format!("failed to create directory `{}`", path.display()))
-        }
-    }
-}
-
 /// Recursively create a directory **if not exists**.
 /// This is a wrapper for [`std::fs::create_dir_all`].
 #[track_caller]
