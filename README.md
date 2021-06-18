@@ -40,6 +40,7 @@ You can download prebuilt binaries from the [Release page](https://github.com/ta
 <details>
 <summary>Click to show a complete list of options</summary>
 
+<!-- readme-long-help:start -->
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
@@ -152,7 +153,9 @@ OPTIONS:
 ARGS:
     <args>...
             Arguments for the test binary
+
 ```
+<!-- readme-long-help:end -->
 
 </details>
 
