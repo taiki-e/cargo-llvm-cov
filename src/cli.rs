@@ -17,8 +17,12 @@ pub(crate) enum Opts {
     LlvmCov(Args),
 }
 
+/// A wrapper for source based code coverage (-Zinstrument-coverage).
+///
+/// Use -h for short descriptions and --help for more details.
 #[derive(Debug, StructOpt)]
 #[structopt(
+    bin_name = "cargo llvm-cov",
     rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
@@ -214,5 +218,104 @@ impl FromStr for Coloring {
             "never" => Ok(Self::Never),
             other => bail!("must be auto, always, or never, but found `{}`", other),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{env, path::Path, process::Command};
+
+    use anyhow::Result;
+    use structopt::StructOpt;
+    use tempfile::Builder;
+
+    use super::Args;
+    use crate::fs;
+
+    fn get_long_help() -> Result<String> {
+        let mut app = Args::clap();
+        let mut buf = vec![];
+        app.write_long_help(&mut buf)?;
+        let mut out = String::new();
+        for mut line in String::from_utf8(buf)?.lines() {
+            if let Some(new) = line.trim_end().strip_suffix(env!("CARGO_PKG_VERSION")) {
+                line = new;
+            }
+            out.push_str(line.trim_end());
+            out.push('\n');
+        }
+        Ok(out)
+    }
+
+    #[track_caller]
+    fn assert_diff(expected_path: impl AsRef<Path>, actual: impl AsRef<str>) {
+        let actual = actual.as_ref();
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let expected_path = &manifest_dir.join(expected_path);
+        if !expected_path.is_file() {
+            fs::write(expected_path, "").unwrap();
+        }
+        let expected = fs::read_to_string(expected_path).unwrap();
+        if expected != actual {
+            if env::var_os("CI").is_some() {
+                let outdir = Builder::new().prefix("assert_diff").tempdir().unwrap();
+                let actual_path = &outdir.path().join(expected_path.file_name().unwrap());
+                fs::write(actual_path, actual).unwrap();
+                let status = Command::new("git")
+                    .args(&["--no-pager", "diff", "--no-index", "--"])
+                    .args(&[expected_path, actual_path])
+                    .status()
+                    .unwrap();
+                assert!(!status.success());
+                panic!("assertion failed");
+            } else {
+                fs::write(expected_path, actual).unwrap();
+            }
+        }
+    }
+
+    #[test]
+    fn long_help() {
+        let actual = get_long_help().unwrap();
+        assert_diff("tests/long-help.txt", actual);
+    }
+
+    #[test]
+    fn update_readme() -> Result<()> {
+        let new = get_long_help()?;
+        let path = &Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
+        let base = fs::read_to_string(path)?;
+        let mut out = String::with_capacity(base.capacity());
+        let mut lines = base.lines();
+        let mut start = false;
+        let mut end = false;
+        while let Some(line) = lines.next() {
+            out.push_str(line);
+            out.push('\n');
+            if line == "<!-- readme-long-help:start -->" {
+                start = true;
+                out.push_str("```console\n");
+                out.push_str("$ cargo llvm-cov --help\n");
+                out.push_str(&new);
+                out.push('\n');
+                for line in &mut lines {
+                    if line == "<!-- readme-long-help:end -->" {
+                        out.push_str("```\n");
+                        out.push_str(line);
+                        out.push('\n');
+                        end = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if start && end {
+            fs::write(path, out)?;
+        } else if start {
+            panic!("missing `<!-- readme-long-help:end -->` comment in README.md");
+        } else {
+            panic!("missing `<!-- readme-long-help:start -->` comment in README.md");
+        }
+        Ok(())
     }
 }
