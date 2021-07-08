@@ -21,7 +21,7 @@ resolver = "2"
 [dependencies]
 anyhow = "1.0.34"
 camino = "1"
-cargo_metadata = "0.13"
+cargo_metadata = "0.14"
 dirs-next = "2"
 duct = "0.13.1"
 glob = "0.3"
