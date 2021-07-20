@@ -4,21 +4,14 @@ use std::{io, path::Path};
 
 use anyhow::{Context as _, Result};
 
-/// Recursively create a directory **if not exists**.
+/// Recursively create a directory.
 /// This is a wrapper for [`std::fs::create_dir_all`].
 #[track_caller]
 pub(crate) fn create_dir_all(path: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
-    match std::fs::create_dir_all(path) {
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            trace!(track_caller: res = ?Ok::<_, ()>(e), ?path, "create_dir_all");
-            Ok(())
-        }
-        res => {
-            trace!(track_caller: ?res, ?path, "create_dir_all");
-            res.with_context(|| format!("failed to create directory `{}`", path.display()))
-        }
-    }
+    let res = std::fs::create_dir_all(path);
+    trace!(track_caller: ?res, ?path, "create_dir_all");
+    res.with_context(|| format!("failed to create directory `{}`", path.display()))
 }
 
 /// Removes a file from the filesystem **if exists**.
