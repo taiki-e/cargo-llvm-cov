@@ -8,6 +8,11 @@
 **\[EXPERIMENTAL\]**
 A wrapper for source based code coverage ([-Zinstrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
 
+- [Installation](#installation)
+- [Usage](#usage)
+- [Known limitations](#known-limitations)
+- [License](#license)
+
 ## Installation
 
 ### Prerequisites
@@ -34,6 +39,15 @@ nightly anyway.
 ### From prebuilt binaries
 
 You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
+Prebuilt binaries are available for macOS and Linux (gnu and musl).
+
+### Via Homebrew
+
+You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
+
+```sh
+brew install taiki-e/tap/cargo-llvm-cov
+```
 
 ## Usage
 
