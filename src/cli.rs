@@ -11,13 +11,13 @@ use structopt::{clap::AppSettings, StructOpt};
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) enum Opts {
-    /// A wrapper for source based code coverage (-Zinstrument-coverage).
+    /// A wrapper for source based code coverage (-Z instrument-coverage).
     ///
     /// Use -h for short descriptions and --help for more details.
     LlvmCov(Args),
 }
 
-/// A wrapper for source based code coverage (-Zinstrument-coverage).
+/// A wrapper for source based code coverage (-Z instrument-coverage).
 ///
 /// Use -h for short descriptions and --help for more details.
 #[derive(Debug, StructOpt)]

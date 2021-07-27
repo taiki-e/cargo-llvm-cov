@@ -6,7 +6,7 @@
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
 **\[EXPERIMENTAL\]**
-A wrapper for source based code coverage ([-Zinstrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
+A wrapper for source based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -58,7 +58,7 @@ brew install taiki-e/tap/cargo-llvm-cov
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-A wrapper for source based code coverage (-Zinstrument-coverage).
+A wrapper for source based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
@@ -238,11 +238,11 @@ jobs:
           fail_ci_if_error: true
 ```
 
-Note: Currently, only line coverage is available on Codecov. This is because `-Zinstrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+Note: Currently, only line coverage is available on Codecov. This is because `-Z instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
 
 ## Known limitations
 
-- Due to a bug of `-Zinstrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
+- Due to a bug of `-Z instrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
 

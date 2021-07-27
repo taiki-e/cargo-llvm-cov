@@ -74,7 +74,7 @@ fn main() -> Result<()> {
         debug!(RUSTFLAGS = ?rustflags);
         // --remap-path-prefix for Sometimes macros are displayed with abs path
         rustflags.push(format!(
-            " -Zinstrument-coverage --remap-path-prefix {}/=",
+            " -Z instrument-coverage --remap-path-prefix {}/=",
             cx.metadata.workspace_root
         ));
 
@@ -84,7 +84,7 @@ fn main() -> Result<()> {
         if cx.doctests {
             let flags = rustdocflags.get_or_insert_with(OsString::new);
             flags.push(format!(
-                " -Zinstrument-coverage -Zunstable-options --persist-doctests {}",
+                " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
                 cx.doctests_dir
             ));
         }

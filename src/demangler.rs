@@ -1,7 +1,7 @@
 // Based on rust-lang/rust's rust-demangler.
 //
 // Source:
-// - https://github.com/rust-lang/rust/tree/eab201df7028ebb6812c0b1a01702ac6ecfcceed/src/tools/rust-demangler.
+// - https://github.com/rust-lang/rust/tree/eab201df7028ebb6812c0b1a01702ac6ecfcceed/src/tools/rust-demangler
 //
 // Copyright & License:
 // - https://github.com/rust-lang/rust/blob/eab201df7028ebb6812c0b1a01702ac6ecfcceed/COPYRIGHT

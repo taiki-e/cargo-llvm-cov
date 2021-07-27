@@ -1,5 +1,5 @@
 cargo-llvm-cov
-A wrapper for source based code coverage (-Zinstrument-coverage).
+A wrapper for source based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 

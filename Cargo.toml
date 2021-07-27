@@ -9,7 +9,7 @@ keywords = ["cargo", "subcommand", "testing"]
 categories = ["command-line-utilities", "development-tools::cargo-plugins"]
 exclude = ["/.*", "/tools"]
 description = """
-A wrapper for source based code coverage (-Zinstrument-coverage).
+A wrapper for source based code coverage (-Z instrument-coverage).
 """
 
 [package.metadata.docs.rs]
@@ -37,7 +37,7 @@ tracing = { version = "0.1.21", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.2.16", default-features = false, features = ["ansi", "env-filter"] }
 walkdir = "2"
 
-# This is needed for -Zminimal-versions.
+# This is needed for -Z minimal-versions.
 lazy_static = "1.4"
 
 [dev-dependencies]
