@@ -102,6 +102,11 @@ fn main() -> Result<()> {
         }
 
         cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
+        if cx.doctests && !cx.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
+            // https://github.com/rust-lang/cargo/issues/9427
+            cargo.arg("-Z");
+            cargo.arg("doctest-in-workspace");
+        }
         append_args(cx, &mut cargo);
 
         cargo.stdout_to_stderr().run()?;
