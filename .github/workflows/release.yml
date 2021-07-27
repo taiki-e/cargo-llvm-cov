@@ -74,4 +74,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_PROFILE_RELEASE_LTO: true
-          RUSTFLAGS: -C codegen-units=1
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
