@@ -18,7 +18,7 @@ pub(crate) struct Context {
     // cargo workspace info
     pub(crate) metadata: cargo_metadata::Metadata,
     // package root
-    pub(crate) manifest_path: PathBuf,
+    pub(crate) manifest_path: Utf8PathBuf,
     pub(crate) excluded_path: Vec<Utf8PathBuf>,
 
     // Paths to executables.
@@ -71,7 +71,7 @@ impl Context {
         debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
 
         if args.output_dir.is_none() && args.html {
-            args.output_dir = Some(cargo_target_dir.join("llvm-cov").into());
+            args.output_dir = Some(cargo_target_dir.join("llvm-cov"));
         }
 
         // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,

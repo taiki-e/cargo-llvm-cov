@@ -1,16 +1,57 @@
-use std::{ffi::OsString, path::PathBuf, str::FromStr};
+use std::{env, ffi::OsString, str::FromStr};
 
-use anyhow::{bail, Error, Result};
-use structopt::{clap::AppSettings, StructOpt};
+use anyhow::{bail, format_err, Error, Result};
+use camino::Utf8PathBuf;
+use clap::{AppSettings, Clap};
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+// Clap panics if you pass a non-utf8 value to an argument that expects a utf8
+// value.
+//
+// clap 3.0.0-beta.2:
+//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-3.0.0-beta.2/src/parse/matches/arg_matches.rs:220:28
+//
+// clap 2.33.3:
+//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
+//
+// Even if you store a value as OsString and pass to cargo as is, you will get
+// the same panic on cargo side:
+//
+//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
+//      stack backtrace:
+//         0: _rust_begin_unwind
+//         1: core::panicking::panic_fmt
+//         2: core::option::expect_failed
+//         3: clap::args::arg_matches::ArgMatches::values_of::to_str_slice
+//         4: <clap::args::arg_matches::Values as core::iter::traits::iterator::Iterator>::next
+//         5: <alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter
+//         6: cargo::commands::test::exec
+//         7: cargo::cli::main
+//         8: cargo::main
+fn handle_args(args: impl IntoIterator<Item = impl Into<OsString>>) -> Result<Vec<String>> {
+    // Adapted from https://github.com/rust-lang/rust/blob/3bc9dd0dd293ab82945e35888ed6d7ab802761ef/compiler/rustc_driver/src/lib.rs#L1365-L1375.
+    args.into_iter()
+        .enumerate()
+        .map(|(i, arg)| {
+            arg.into()
+                .into_string()
+                .map_err(|arg| format_err!("argument {} is not valid Unicode: {:?}", i, arg))
+        })
+        .collect()
+}
+
+pub(crate) fn from_args() -> Result<Args> {
+    let Opts::LlvmCov(args) = Opts::parse_from(handle_args(env::args_os())?);
+    Ok(args)
+}
+
+#[derive(Debug, Clap)]
+#[clap(
     bin_name = "cargo",
     rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
-pub(crate) enum Opts {
+enum Opts {
     /// A wrapper for source based code coverage (-Z instrument-coverage).
     ///
     /// Use -h for short descriptions and --help for more details.
@@ -20,15 +61,15 @@ pub(crate) enum Opts {
 /// A wrapper for source based code coverage (-Z instrument-coverage).
 ///
 /// Use -h for short descriptions and --help for more details.
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Clap)]
+#[clap(
     bin_name = "cargo llvm-cov",
     rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) struct Args {
-    #[structopt(subcommand)]
+    #[clap(subcommand)]
     pub(crate) subcommand: Option<Subcommand>,
 
     /// Export coverage data in "json" format
@@ -37,7 +78,7 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov export -format=text`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) json: bool,
     /// Export coverage data in "lcov" format.
     ///
@@ -45,7 +86,7 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov export -format=lcov`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    #[structopt(long, conflicts_with = "json")]
+    #[clap(long, conflicts_with = "json")]
     pub(crate) lcov: bool,
 
     /// Generate coverage reports in “text” format.
@@ -54,7 +95,7 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov show -format=text`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov"])]
+    #[clap(long, conflicts_with_all = &["json", "lcov"])]
     pub(crate) text: bool,
     /// Generate coverage reports in "html" format.
     ////
@@ -62,115 +103,115 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov show -format=html`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
+    #[clap(long, conflicts_with_all = &["json", "lcov", "text"])]
     pub(crate) html: bool,
     /// Generate coverage reports in "html" format and open them in a browser after the operation.
     ///
     /// See --html for more.
-    #[structopt(long, conflicts_with_all = &["json", "lcov", "text"])]
+    #[clap(long, conflicts_with_all = &["json", "lcov", "text"])]
     pub(crate) open: bool,
 
     /// Export only summary information for each file in the coverage data.
     ///
     /// This flag can only be used together with either --json or --lcov.
     // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
-    #[structopt(long, conflicts_with_all = &["text", "html", "open"])]
+    #[clap(long, conflicts_with_all = &["text", "html", "open"])]
     pub(crate) summary_only: bool,
     /// Specify a file to write coverage data into.
     ///
     /// This flag can only be used together with --json, --lcov, or --text.
     /// See --output-dir for --html and --open.
-    #[structopt(long, value_name = "PATH", conflicts_with_all = &["html", "open"])]
-    pub(crate) output_path: Option<PathBuf>,
+    #[clap(long, value_name = "PATH", conflicts_with_all = &["html", "open"])]
+    pub(crate) output_path: Option<Utf8PathBuf>,
     /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
     ///
     /// This flag can only be used together with --text, --html, or --open.
     /// See also --output-path.
     // If the format flag is not specified, this flag is no-op.
-    #[structopt(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
-    pub(crate) output_dir: Option<PathBuf>,
+    #[clap(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
+    pub(crate) output_dir: Option<Utf8PathBuf>,
 
     /// Skip source code files with file paths that match the given regular expression.
-    #[structopt(long, value_name = "PATTERN")]
+    #[clap(long, value_name = "PATTERN")]
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
-    #[structopt(long, hidden = true)]
+    #[clap(long, hidden = true)]
     pub(crate) disable_default_ignore_filename_regex: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) doctests: bool,
 
     // =========================================================================
     // `cargo test` options
     // https://doc.rust-lang.org/cargo/commands/cargo-test.html
     /// Compile, but don't run tests (unstable)
-    #[structopt(long, hidden = true)]
+    #[clap(long, hidden = true)]
     pub(crate) no_run: bool,
     /// Run all tests regardless of failure
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) no_fail_fast: bool,
     // TODO: --package doesn't work properly, use --manifest-path instead for now.
     // /// Package to run tests for
-    // #[structopt(short, long, value_name = "SPEC")]
+    // #[clap(short, long, value_name = "SPEC")]
     // package: Vec<String>,
     /// Test all packages in the workspace
-    #[structopt(long, visible_alias = "all")]
+    #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from the test
-    #[structopt(long, value_name = "SPEC", requires = "workspace")]
+    #[clap(long, value_name = "SPEC", requires = "workspace")]
     pub(crate) exclude: Vec<String>,
     // TODO: Should this only work for cargo's --jobs? Or should it also work
     //       for llvm-cov's -num-threads?
     // /// Number of parallel jobs, defaults to # of CPUs
-    // #[structopt(short, long, value_name = "N")]
+    // #[clap(short, long, value_name = "N")]
     // jobs: Option<u64>,
     /// Build artifacts in release mode, with optimizations
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) release: bool,
     /// Space or comma separated list of features to activate
-    #[structopt(long, value_name = "FEATURES")]
+    #[clap(long, value_name = "FEATURES")]
     pub(crate) features: Vec<String>,
     /// Activate all available features
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) all_features: bool,
     /// Do not activate the `default` feature
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) no_default_features: bool,
     /// Build for the target triple
-    #[structopt(long, value_name = "TRIPLE")]
+    #[clap(long, value_name = "TRIPLE")]
     pub(crate) target: Option<String>,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
     //       on its behavior?
     // /// Directory for all generated artifacts
-    // #[structopt(long, value_name = "DIRECTORY", parse(from_os_str))]
-    // target_dir: Option<PathBuf>,
+    // #[clap(long, value_name = "DIRECTORY")]
+    // target_dir: Option<Utf8PathBuf>,
     /// Path to Cargo.toml
-    #[structopt(long, value_name = "PATH", parse(from_os_str))]
-    pub(crate) manifest_path: Option<PathBuf>,
+    #[clap(long, value_name = "PATH")]
+    pub(crate) manifest_path: Option<Utf8PathBuf>,
     /// Use verbose output (-vv very verbose/build.rs output)
-    #[structopt(short, long, parse(from_occurrences))]
+    #[clap(short, long, parse(from_occurrences))]
     pub(crate) verbose: u8,
     /// Coloring: auto, always, never
     // This flag will be propagated to both cargo and llvm-cov.
-    #[structopt(long, value_name = "WHEN")]
+    #[clap(long, value_name = "WHEN")]
     pub(crate) color: Option<Coloring>,
     /// Require Cargo.lock and cache are up to date
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) frozen: bool,
     /// Require Cargo.lock is up to date
-    #[structopt(long)]
+    #[clap(long)]
     pub(crate) locked: bool,
 
     /// Unstable (nightly-only) flags to Cargo
-    #[structopt(short = "Z", value_name = "FLAG")]
+    #[clap(short = 'Z', value_name = "FLAG")]
     pub(crate) unstable_flags: Vec<String>,
 
     /// Arguments for the test binary
-    #[structopt(last = true, parse(from_os_str))]
-    pub(crate) args: Vec<OsString>,
+    #[clap(last = true)]
+    pub(crate) args: Vec<String>,
 }
 
 impl Args {
@@ -179,15 +220,15 @@ impl Args {
     }
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(
+#[derive(Debug, Clap)]
+#[clap(
     rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) enum Subcommand {
     // internal (unstable)
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(setting = AppSettings::Hidden)]
     Demangle,
 }
 
@@ -223,17 +264,40 @@ impl FromStr for Coloring {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, path::Path, process::Command};
+    use std::{env, ffi::OsStr, os::unix::ffi::OsStrExt, panic, path::Path, process::Command};
 
     use anyhow::Result;
-    use structopt::StructOpt;
+    use clap::{Clap, IntoApp};
     use tempfile::Builder;
 
-    use super::Args;
+    use super::{Args, Opts};
     use crate::fs;
 
+    // See handle_args function for more.
+    #[test]
+    fn non_utf8_arg() {
+        // `cargo llvm-cov -- $'fo\x80o'`
+        let res = panic::catch_unwind(|| {
+            drop(Opts::try_parse_from(&[
+                "cargo".as_ref(),
+                "llvm-cov".as_ref(),
+                "--".as_ref(),
+                OsStr::from_bytes(&[b'f', b'o', 0x80, b'o']),
+            ]));
+        });
+        assert!(res.is_err());
+
+        super::handle_args(&[
+            "cargo".as_ref(),
+            "llvm-cov".as_ref(),
+            "--".as_ref(),
+            OsStr::from_bytes(&[b'f', b'o', 0x80, b'o']),
+        ])
+        .unwrap_err();
+    }
+
     fn get_long_help() -> Result<String> {
-        let mut app = Args::clap();
+        let mut app = Args::into_app();
         let mut buf = vec![];
         app.write_long_help(&mut buf)?;
         let mut out = String::new();

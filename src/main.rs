@@ -21,17 +21,15 @@ mod fs;
 use std::{
     env,
     ffi::{OsStr, OsString},
-    path::Path,
 };
 
 use anyhow::Result;
 use serde::Deserialize;
-use structopt::StructOpt;
 use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::{
-    cli::{Args, Coloring, Opts, Subcommand},
+    cli::{Args, Coloring, Subcommand},
     context::Context,
     process::ProcessBuilder,
 };
@@ -39,7 +37,7 @@ use crate::{
 fn main() -> Result<()> {
     trace::init();
 
-    let Opts::LlvmCov(args) = Opts::from_args();
+    let args = cli::from_args()?;
     if let Some(Subcommand::Demangle) = &args.subcommand {
         demangler::run()?;
         return Ok(());
@@ -123,7 +121,7 @@ fn main() -> Result<()> {
         Format::None.run(cx, &object_files)?;
 
         if cx.open {
-            open::that(Path::new(cx.output_dir.as_ref().unwrap()).join("index.html"))?;
+            open::that(cx.output_dir.as_ref().unwrap().join("index.html"))?;
         }
     }
 
@@ -251,7 +249,7 @@ impl Format {
                     "-Xdemangler=demangle",
                 ]);
                 if let Some(output_dir) = &cx.output_dir {
-                    cmd.arg(&format!("-output-dir={}", output_dir.display()));
+                    cmd.arg(&format!("-output-dir={}", output_dir));
                 }
             }
             Self::Json | Self::LCov => {
