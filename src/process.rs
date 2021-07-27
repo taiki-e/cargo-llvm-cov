@@ -7,7 +7,6 @@
 use std::{cell::Cell, collections::BTreeMap, ffi::OsString, fmt, path::PathBuf, process::Output};
 
 use anyhow::Result;
-use shell_escape::escape;
 
 macro_rules! process {
     ($program:expr $(, $arg:expr)* $(,)?) => {{
@@ -191,11 +190,10 @@ impl fmt::Display for ProcessBuilder {
         if self.display_env_vars.get() {
             for (key, val) in &self.env {
                 if let Some(val) = val {
-                    let val = escape(val.to_string_lossy());
                     if cfg!(windows) {
-                        write!(f, "set {}={}&& ", key, val)?;
+                        write!(f, "set {}={}&& ", key, val.to_string_lossy())?;
                     } else {
-                        write!(f, "{}={} ", key, val)?;
+                        write!(f, "{}={} ", key, val.to_string_lossy())?;
                     }
                 }
             }
@@ -204,7 +202,7 @@ impl fmt::Display for ProcessBuilder {
         write!(f, "{}", self.program.to_string_lossy())?;
 
         for arg in &self.args {
-            write!(f, " {}", escape(arg.to_string_lossy()))?;
+            write!(f, " {}", arg.to_string_lossy())?;
         }
 
         write!(f, "`")?;
