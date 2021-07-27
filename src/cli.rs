@@ -297,9 +297,8 @@ mod tests {
     }
 
     fn get_long_help() -> Result<String> {
-        let mut app = Args::into_app();
         let mut buf = vec![];
-        app.write_long_help(&mut buf)?;
+        Args::into_app().term_width(80).write_long_help(&mut buf)?;
         let mut out = String::new();
         for mut line in String::from_utf8(buf)?.lines() {
             if let Some(new) = line.trim_end().strip_suffix(env!("CARGO_PKG_VERSION")) {

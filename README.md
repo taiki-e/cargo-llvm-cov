@@ -73,31 +73,45 @@ OPTIONS:
         --json
             Export coverage data in "json" format
 
-            If --output-path is not specified, the report will be printed to stdout.
+            If --output-path is not specified, the report will be printed to
+            stdout.
 
-            This internally calls `llvm-cov export -format=text`. See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+            This internally calls `llvm-cov export -format=text`. See
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export>
+            for more.
 
         --lcov
             Export coverage data in "lcov" format.
 
-            If --output-path is not specified, the report will be printed to stdout.
+            If --output-path is not specified, the report will be printed to
+            stdout.
 
-            This internally calls `llvm-cov export -format=lcov`. See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+            This internally calls `llvm-cov export -format=lcov`. See
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export>
+            for more.
 
         --text
             Generate coverage reports in “text” format.
 
-            If --output-path or --output-dir is not specified, the report will be printed to stdout.
+            If --output-path or --output-dir is not specified, the report will
+            be printed to stdout.
 
-            This internally calls `llvm-cov show -format=text`. See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+            This internally calls `llvm-cov show -format=text`. See
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for
+            more.
 
         --html
-            Generate coverage reports in "html" format. If --output-dir is not specified, the report will be generated in `target/llvm-cov` directory.
+            Generate coverage reports in "html" format. If --output-dir is not
+            specified, the report will be generated in `target/llvm-cov`
+            directory.
 
-            This internally calls `llvm-cov show -format=html`. See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+            This internally calls `llvm-cov show -format=html`. See
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for
+            more.
 
         --open
-            Generate coverage reports in "html" format and open them in a browser after the operation.
+            Generate coverage reports in "html" format and open them in a
+            browser after the operation.
 
             See --html for more.
 
@@ -109,15 +123,19 @@ OPTIONS:
         --output-path <PATH>
             Specify a file to write coverage data into.
 
-            This flag can only be used together with --json, --lcov, or --text. See --output-dir for --html and --open.
+            This flag can only be used together with --json, --lcov, or --text.
+            See --output-dir for --html and --open.
 
         --output-dir <DIRECTORY>
-            Specify a directory to write coverage reports into (default to `target/llvm-cov`).
+            Specify a directory to write coverage reports into (default to
+            `target/llvm-cov`).
 
-            This flag can only be used together with --text, --html, or --open. See also --output-path.
+            This flag can only be used together with --text, --html, or --open.
+            See also --output-path.
 
         --ignore-filename-regex <PATTERN>
-            Skip source code files with file paths that match the given regular expression
+            Skip source code files with file paths that match the given regular
+            expression
 
         --doctests
             Including doc tests (unstable)
