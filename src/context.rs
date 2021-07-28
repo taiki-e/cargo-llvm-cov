@@ -43,7 +43,11 @@ impl Context {
         }
         if args.color.is_none() {
             // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
-            args.color = env::var("CARGO_TERM_COLOR").ok().map(|s| s.parse()).transpose()?;
+            args.color = env::var("CARGO_TERM_COLOR")
+                .ok()
+                .map(|s| clap::ArgEnum::from_str(&s, false))
+                .transpose()
+                .map_err(|e| format_err!("{}", e))?;
             debug!(?args.color);
         }
         if args.disable_default_ignore_filename_regex {

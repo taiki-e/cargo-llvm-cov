@@ -171,7 +171,7 @@ OPTIONS:
             Use verbose output (-vv very verbose/build.rs output)
 
         --color <WHEN>
-            Coloring: auto, always, never
+            Coloring [possible values: auto, always, never]
 
         --frozen
             Require Cargo.lock and cache are up to date

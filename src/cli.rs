@@ -1,6 +1,6 @@
-use std::{env, ffi::OsString, str::FromStr};
+use std::{env, ffi::OsString};
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{format_err, Result};
 use camino::Utf8PathBuf;
 use clap::{AppSettings, Clap};
 
@@ -47,7 +47,6 @@ pub(crate) fn from_args() -> Result<Args> {
 #[derive(Debug, Clap)]
 #[clap(
     bin_name = "cargo",
-    rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
@@ -64,7 +63,6 @@ enum Opts {
 #[derive(Debug, Clap)]
 #[clap(
     bin_name = "cargo llvm-cov",
-    rename_all = "kebab-case",
     setting = AppSettings::DeriveDisplayOrder,
     setting = AppSettings::UnifiedHelpMessage,
 )]
@@ -194,9 +192,9 @@ pub(crate) struct Args {
     /// Use verbose output (-vv very verbose/build.rs output)
     #[clap(short, long, parse(from_occurrences))]
     pub(crate) verbose: u8,
-    /// Coloring: auto, always, never
+    /// Coloring
     // This flag will be propagated to both cargo and llvm-cov.
-    #[clap(long, value_name = "WHEN")]
+    #[clap(long, arg_enum, value_name = "WHEN")]
     pub(crate) color: Option<Coloring>,
     /// Require Cargo.lock and cache are up to date
     #[clap(long)]
@@ -221,18 +219,17 @@ impl Args {
 }
 
 #[derive(Debug, Clap)]
-#[clap(
-    rename_all = "kebab-case",
-    setting = AppSettings::DeriveDisplayOrder,
-    setting = AppSettings::UnifiedHelpMessage,
-)]
 pub(crate) enum Subcommand {
     // internal (unstable)
-    #[clap(setting = AppSettings::Hidden)]
+    #[clap(
+        setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::UnifiedHelpMessage,
+        setting = AppSettings::Hidden,
+    )]
     Demangle,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, clap::ArgEnum)]
 pub(crate) enum Coloring {
     Auto,
     Always,
@@ -240,24 +237,12 @@ pub(crate) enum Coloring {
 }
 
 impl Coloring {
+    // TODO: use clap::ArgEnum::as_arg instead once new version of clap released.
     pub(crate) fn cargo_color(self) -> &'static str {
         match self {
             Self::Auto => "auto",
             Self::Always => "always",
             Self::Never => "never",
-        }
-    }
-}
-
-impl FromStr for Coloring {
-    type Err = Error;
-
-    fn from_str(color: &str) -> Result<Self, Self::Err> {
-        match color {
-            "auto" => Ok(Self::Auto),
-            "always" => Ok(Self::Always),
-            "never" => Ok(Self::Never),
-            other => bail!("must be auto, always, or never, but found `{}`", other),
         }
     }
 }
