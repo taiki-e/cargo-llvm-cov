@@ -11,6 +11,7 @@ on:
       - staging
   schedule:
     - cron: '40 1 * * *'
+  workflow_dispatch:
 
 env:
   CARGO_INCREMENTAL: 0
@@ -42,8 +43,8 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           component: llvm-tools-preview
-      - run: cargo install cargo-hack
-      - run: cargo install cross
+      - run: cargo install cargo-hack --debug
+      - run: cargo install cross --debug
         if: matrix.target != ''
       - run: cross test --target ${{ matrix.target }}
         if: matrix.target != ''
@@ -53,9 +54,9 @@ jobs:
         run: |
           set -x
           if [[ -z "${{ matrix.target }}" ]]; then
-            cargo install --path .
+            cargo install --path . --debug
           else
-            cargo install --path . --target ${{ matrix.target }}
+            cargo install --path . --debug --target ${{ matrix.target }}
           fi
           git clone https://github.com/taiki-e/easytime.git
           cd easytime
@@ -93,7 +94,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - run: cargo build
 
-  clippy:
+  tidy:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
@@ -101,27 +102,12 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/github-actions/install-rust@main
         with:
-          component: clippy
+          component: clippy,rustfmt
       - run: cargo clippy --all --all-features --all-targets
-
-  fmt:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-      - uses: taiki-e/github-actions/install-rust@main
-        with:
-          component: rustfmt
       - run: cargo fmt --all -- --check
-
-  shellcheck:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          persist-credentials: false
+        if: always()
       - run: shellcheck **/*.sh
+        if: always()
 
   # This job doesn't actually test anything, but they're used to tell bors the
   # build completed, as there is no practical way to detect when a workflow is
@@ -134,9 +120,8 @@ jobs:
     if: github.event_name == 'push' && success()
     needs:
       - test
-      - clippy
-      - fmt
-      - shellcheck
+      - build
+      - tidy
     runs-on: ubuntu-18.04
     steps:
       - name: Mark the job as a success
