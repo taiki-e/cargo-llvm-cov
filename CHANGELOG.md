@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Support Windows.](https://github.com/taiki-e/cargo-llvm-cov/pull/41)
+
 - [Fix mapping error in `--doctests`.](https://github.com/taiki-e/cargo-llvm-cov/pull/40)
 
 ## [0.1.0-alpha.4] - 2021-06-13

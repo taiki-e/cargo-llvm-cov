@@ -14,19 +14,7 @@ use clap::{AppSettings, Clap};
 //      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
 //
 // Even if you store a value as OsString and pass to cargo as is, you will get
-// the same panic on cargo side:
-//
-//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
-//      stack backtrace:
-//         0: _rust_begin_unwind
-//         1: core::panicking::panic_fmt
-//         2: core::option::expect_failed
-//         3: clap::args::arg_matches::ArgMatches::values_of::to_str_slice
-//         4: <clap::args::arg_matches::Values as core::iter::traits::iterator::Iterator>::next
-//         5: <alloc::vec::Vec<T> as alloc::vec::spec_from_iter::SpecFromIter<T,I>>::from_iter
-//         6: cargo::commands::test::exec
-//         7: cargo::cli::main
-//         8: cargo::main
+// the same panic on cargo side.
 fn handle_args(args: impl IntoIterator<Item = impl Into<OsString>>) -> Result<Vec<String>> {
     // Adapted from https://github.com/rust-lang/rust/blob/3bc9dd0dd293ab82945e35888ed6d7ab802761ef/compiler/rustc_driver/src/lib.rs#L1365-L1375.
     args.into_iter()
@@ -249,18 +237,25 @@ impl Coloring {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, ffi::OsStr, os::unix::ffi::OsStrExt, panic, path::Path, process::Command};
+    use std::{env, panic, path::Path, process::Command};
 
     use anyhow::Result;
-    use clap::{Clap, IntoApp};
+    use clap::IntoApp;
     use tempfile::Builder;
 
-    use super::{Args, Opts};
+    use super::Args;
     use crate::fs;
 
     // See handle_args function for more.
+    #[cfg(unix)]
     #[test]
     fn non_utf8_arg() {
+        use std::{ffi::OsStr, os::unix::prelude::OsStrExt};
+
+        use clap::Clap;
+
+        use super::Opts;
+
         // `cargo llvm-cov -- $'fo\x80o'`
         let res = panic::catch_unwind(|| {
             drop(Opts::try_parse_from(&[

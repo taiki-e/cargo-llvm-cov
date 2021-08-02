@@ -31,8 +31,7 @@ jobs:
         include:
           - os: ubuntu-18.04
           - os: macos-latest
-          # TODO: does -Z instrument-coverage supports windows?
-          # - os: windows-latest
+          - os: windows-latest
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os }}
@@ -44,6 +43,7 @@ jobs:
         with:
           component: llvm-tools-preview
       - run: cargo install cargo-hack --debug
+        if: matrix.target == ''
       - run: cargo install cross --debug
         if: matrix.target != ''
       - run: cross test --target ${{ matrix.target }}
@@ -76,6 +76,7 @@ jobs:
           cargo llvm-cov --html
           cargo clean
       - run: tools/check-minimal-versions.sh
+        if: matrix.target == '' && !startsWith(matrix.os, 'windows')
 
   build:
     strategy:
