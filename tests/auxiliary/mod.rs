@@ -37,19 +37,26 @@ pub(crate) fn cargo_llvm_cov<'a>(
     let workspace_root = test_project(model, name)?;
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
-    let output_path = output_dir.join(name).with_extension(extension);
+    let output_path = &output_dir.join(name).with_extension(extension);
     process!(
         env!("CARGO_BIN_EXE_cargo-llvm-cov"),
         "llvm-cov",
         "--color",
         "never",
         "--output-path",
-        output_path.as_str()
+        output_path
     )
     .args(args)
     .dir(workspace_root.path())
     .env_remove("RUST_LOG")
     .run()?;
+
+    #[cfg(windows)]
+    {
+        let tmp = fs::read_to_string(output_path)?;
+        // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
+        fs::write(output_path, tmp.replace("\\\\", "/").replace('\\', "/"))?;
+    }
     if env::var_os("CI").is_some() {
         process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
     }

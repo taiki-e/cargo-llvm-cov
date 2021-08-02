@@ -272,7 +272,16 @@ impl Format {
 }
 
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
-    const DEFAULT_IGNORE_FILENAME_REGEX: &str = r"rustc/|.cargo/(registry|git)/|.rustup/toolchains/|test(s)?/|examples/|benches/|target/llvm-cov-target/";
+    #[cfg(not(windows))]
+    const SEPARATOR: &str = "/";
+    #[cfg(windows)]
+    const SEPARATOR: &str = "\\\\";
+    fn default_ignore_filename_regex() -> String {
+        format!(
+            r"rustc{0}|.cargo{0}(registry|git){0}|.rustup{0}toolchains{0}|tests{0}|examples{0}|benches{0}|target{0}llvm-cov-target{0}",
+            SEPARATOR
+        )
+    }
 
     #[derive(Default)]
     struct Out(String);
@@ -293,12 +302,12 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             out.push(ignore_filename);
         }
     } else {
-        out.push(DEFAULT_IGNORE_FILENAME_REGEX);
+        out.push(default_ignore_filename_regex());
         if let Some(ignore) = &cx.ignore_filename_regex {
             out.push(ignore);
         }
         if let Some(home) = dirs_next::home_dir() {
-            out.push(format!("{}/", home.display()));
+            out.push(format!("{}{}", home.display(), SEPARATOR));
         }
     }
 

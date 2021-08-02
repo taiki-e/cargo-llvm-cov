@@ -56,9 +56,8 @@ jobs:
             os: ubuntu-18.04
           - target: x86_64-apple-darwin
             os: macos-latest
-          # TODO: does -Z instrument-coverage supports windows?
-          # - target: x86_64-pc-windows-msvc
-          #   os: windows-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -71,6 +70,8 @@ jobs:
         with:
           bin: cargo-llvm-cov
           target: ${{ matrix.target }}
+          tar: all
+          zip: windows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_PROFILE_RELEASE_LTO: true
