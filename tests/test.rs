@@ -41,9 +41,20 @@ fn run(model: &str, name: &str, args: &[&str]) {
 fn real_root() {
     run("real1", "workspace_root", &[]);
     run("real1", "workspace_root_all", &["--all"]);
-    run("real1", "workspace_root_member2", &["--manifest-path", "member1/member2/Cargo.toml"]);
+    run("real1", "workspace_root_member2_manifest_path", &[
+        "--manifest-path",
+        "member1/member2/Cargo.toml",
+    ]);
+    run("real1", "workspace_root_member2_package", &["--package", "member2"]);
 
     run("virtual1", "workspace_root", &[]);
+    run("virtual1", "workspace_root_member1_package", &["--package", "member1"]);
+    run("virtual1", "workspace_root_member1_2_package", &[
+        "--package",
+        "member1",
+        "--package",
+        "member2",
+    ]);
 
     // TODO: member2/member3 and member2/src/member4 should not be excluded.
     run("virtual1", "exclude", &["--workspace", "--exclude", "member2"]);
