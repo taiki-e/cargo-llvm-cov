@@ -138,10 +138,9 @@ pub(crate) struct Args {
     /// Run all tests regardless of failure
     #[clap(long)]
     pub(crate) no_fail_fast: bool,
-    // TODO: --package doesn't work properly, use --manifest-path instead for now.
-    // /// Package to run tests for
-    // #[clap(short, long, value_name = "SPEC")]
-    // package: Vec<String>,
+    /// Package to run tests for
+    #[clap(short, long, value_name = "SPEC")]
+    pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,

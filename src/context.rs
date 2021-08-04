@@ -146,8 +146,10 @@ impl Context {
                 );
             }
         }
-        let workspace = args.workspace || metadata.resolve.as_ref().unwrap().root.is_none();
+        let workspace = args.workspace
+            || (metadata.resolve.as_ref().unwrap().root.is_none() && args.package.is_empty());
         if workspace {
+            // with --workspace
             for id in metadata
                 .workspace_members
                 .iter()
@@ -160,16 +162,28 @@ impl Context {
                 // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
                 excluded_path.push(package_path.into());
             }
-        } else {
-            // TODO: add --package option
+        } else if !args.package.is_empty() {
+            // with --package
+            for id in metadata
+                .workspace_members
+                .iter()
+                .filter(|id| !args.package.contains(&metadata[*id].name))
+            {
+                let manifest_dir = metadata[id].manifest_path.parent().unwrap();
 
+                let package_path =
+                    manifest_dir.strip_prefix(&metadata.workspace_root).unwrap_or(manifest_dir);
+                // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
+                excluded_path.push(package_path.into());
+            }
+        } else {
             let current_package = metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
             for id in metadata.workspace_members.iter().filter(|id| **id != *current_package) {
                 let manifest_dir = metadata[id].manifest_path.parent().unwrap();
 
                 let package_path =
                     manifest_dir.strip_prefix(&metadata.workspace_root).unwrap_or(manifest_dir);
-                // TODO: This will become incomplete, once --package option added.
+                // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
                 excluded_path.push(package_path.into());
             }
         }

@@ -84,6 +84,9 @@ OPTIONS:
         --no-fail-fast
             Run all tests regardless of failure
 
+    -p, --package <SPEC>...
+            Package to run tests for
+
         --workspace
             Test all packages in the workspace [aliases: all]
 

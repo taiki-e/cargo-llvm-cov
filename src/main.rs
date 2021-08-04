@@ -312,7 +312,10 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     }
 
     for path in &cx.excluded_path {
+        #[cfg(not(windows))]
         out.push(path.as_str());
+        #[cfg(windows)]
+        out.push(path.as_str().replace('\\', SEPARATOR));
     }
 
     if out.0.is_empty() {
@@ -337,6 +340,10 @@ struct Profile {
 fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.no_fail_fast {
         cmd.arg("--no-fail-fast");
+    }
+    for package in &cx.package {
+        cmd.arg("--package");
+        cmd.arg(package);
     }
     if cx.workspace {
         cmd.arg("--workspace");
