@@ -1,10 +1,6 @@
 # Rustfmt configuration
 # https://github.com/rust-lang/rustfmt/blob/HEAD/Configurations.md
 
-# This is required for bug-fixes, which technically can't be made to the stable
-# first version.
-# This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3383).
-version = "Two"
 # Rustfmt cannot format long lines inside macros, but this option detects this.
 # This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3391)
 error_on_line_overflow = true

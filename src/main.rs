@@ -315,7 +315,11 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         out.push(path.as_str());
     }
 
-    if out.0.is_empty() { None } else { Some(out.0) }
+    if out.0.is_empty() {
+        None
+    } else {
+        Some(out.0)
+    }
 }
 
 #[derive(Debug, Deserialize)]
