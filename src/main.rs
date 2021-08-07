@@ -148,12 +148,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // environment variable, pass all compiled executables.
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#tips-for-listing-the-binaries-automatically
-    let mut build_dir = cx.target_dir.join(if cx.release { "release" } else { "debug" });
+    let mut target_dir = cx.target_dir.clone();
     if let Some(target) = &cx.target {
-        build_dir.push(target);
+        target_dir.push(target);
     }
-    fs::remove_dir_all(build_dir.join("incremental"))?;
-    for f in WalkDir::new(build_dir.as_str()).into_iter().filter_map(Result::ok) {
+    target_dir.push(if cx.release { "release" } else { "debug" });
+    fs::remove_dir_all(target_dir.join("incremental"))?;
+    for f in WalkDir::new(target_dir.as_str()).into_iter().filter_map(Result::ok) {
         let f = f.path();
         if is_executable::is_executable(&f) {
             files.push(f.to_owned().into_os_string());

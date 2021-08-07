@@ -51,13 +51,19 @@ impl Context {
             debug!(?args.color);
         }
         if args.disable_default_ignore_filename_regex {
-            warn!("--disable-default-ignore-filename-regex is unstable");
+            warn!("--disable-default-ignore-filename-regex option is unstable");
         }
         if args.doctests {
-            warn!("--doctests is unstable");
+            warn!("--doctests option is unstable");
         }
         if args.no_run {
-            warn!("--no-run is unstable");
+            warn!("--no-run option is unstable");
+        }
+        if args.target.is_some() {
+            warn!(
+                "When --target option is used, coverage for proc-macro and build script will \
+                 not be displayed because cargo does not pass RUSTFLAGS to them"
+            );
         }
 
         let package_root = if let Some(manifest_path) = &args.manifest_path {
