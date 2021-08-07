@@ -5,16 +5,17 @@
 [![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
-**\[EXPERIMENTAL\]**
-A wrapper for source based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
+Wrapper for source based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
 
 - [Installation](#installation)
 - [Usage](#usage)
+  - [Continuous Integration](#continuous-integration)
 - [Known limitations](#known-limitations)
 - [License](#license)
 
 ## Installation
 
+<!-- omit in toc -->
 ### Prerequisites
 
 cargo-llvm-cov requires nightly
@@ -24,10 +25,11 @@ toolchain and llvm-tools-preview:
 rustup component add llvm-tools-preview --toolchain nightly
 ```
 
+<!-- omit in toc -->
 ### From source
 
 ```sh
-cargo install cargo-llvm-cov --version 0.1.0-alpha.4
+cargo install cargo-llvm-cov --version 0.1.0-alpha.5
 ```
 
 cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
@@ -36,11 +38,13 @@ toolchain or the one with which cargo-llvm-cov itself is executed. If the defaul
 toolchain is one other than nightly, running `cargo llvm-cov` will find and use
 nightly anyway.
 
+<!-- omit in toc -->
 ### From prebuilt binaries
 
 You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
 Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows.
 
+<!-- omit in toc -->
 ### Via Homebrew
 
 You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
@@ -58,7 +62,7 @@ brew install taiki-e/tap/cargo-llvm-cov
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-A wrapper for source based code coverage (-Z instrument-coverage).
+Wrapper for source based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
@@ -196,8 +200,6 @@ OPTIONS:
 
     -V, --version
             Prints version information
-
-
 ```
 <!-- readme-long-help:end -->
 
@@ -257,7 +259,7 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.4/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.5/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov

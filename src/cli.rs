@@ -39,13 +39,13 @@ pub(crate) fn from_args() -> Result<Args> {
     setting = AppSettings::UnifiedHelpMessage,
 )]
 enum Opts {
-    /// A wrapper for source based code coverage (-Z instrument-coverage).
+    /// Wrapper for source based code coverage (-Z instrument-coverage).
     ///
     /// Use -h for short descriptions and --help for more details.
     LlvmCov(Args),
 }
 
-/// A wrapper for source based code coverage (-Z instrument-coverage).
+/// Wrapper for source based code coverage (-Z instrument-coverage).
 ///
 /// Use -h for short descriptions and --help for more details.
 #[derive(Debug, Clap)]
@@ -289,6 +289,7 @@ mod tests {
             out.push_str(line.trim_end());
             out.push('\n');
         }
+        out.pop();
         Ok(out)
     }
 
@@ -342,7 +343,6 @@ mod tests {
                 out.push_str("```console\n");
                 out.push_str("$ cargo llvm-cov --help\n");
                 out.push_str(&new);
-                out.push('\n');
                 for line in &mut lines {
                     if line == "<!-- readme-long-help:end -->" {
                         out.push_str("```\n");
