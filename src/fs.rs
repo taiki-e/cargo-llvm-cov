@@ -1,5 +1,6 @@
 #![cfg_attr(test, allow(dead_code))]
 
+pub(crate) use std::fs::ReadDir;
 use std::{io, path::Path};
 
 use anyhow::{Context as _, Result};
@@ -80,4 +81,14 @@ pub(crate) fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
     let res = std::fs::read_to_string(path);
     trace!(track_caller: ?res, ?path, "read_to_string");
     res.with_context(|| format!("failed to read from file `{}`", path.display()))
+}
+
+/// Returns an iterator over the entries within a directory.
+/// This is a wrapper for [`std::fs::read_dir`].
+#[track_caller]
+pub(crate) fn read_dir(path: impl AsRef<Path>) -> Result<ReadDir> {
+    let path = path.as_ref();
+    let res = std::fs::read_dir(path);
+    trace!(track_caller: ?res, ?path, "read_dir");
+    res.with_context(|| format!("failed to read directory `{}`", path.display()))
 }
