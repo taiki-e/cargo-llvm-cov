@@ -11,6 +11,8 @@ mod fs;
 #[path = "../../src/process.rs"]
 mod process;
 
+mod json;
+
 use std::{
     env,
     sync::atomic::{AtomicUsize, Ordering::Relaxed},
@@ -33,7 +35,7 @@ pub(crate) fn cargo_llvm_cov<'a>(
     extension: &str,
     args: impl AsRef<[&'a str]>,
 ) -> Result<()> {
-    let args = args.as_ref().to_vec();
+    let args = args.as_ref();
     let workspace_root = test_project(model, name)?;
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
@@ -51,11 +53,17 @@ pub(crate) fn cargo_llvm_cov<'a>(
     .env_remove("RUST_LOG")
     .run()?;
 
+    if args.contains(&"--json") && !args.contains(&"--summary-only") {
+        let s = fs::read_to_string(output_path)?;
+        let mut json = serde_json::from_str::<json::LlvmCovJsonExport>(&s).unwrap();
+        json.demangle();
+        fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
+    }
     #[cfg(windows)]
     {
-        let tmp = fs::read_to_string(output_path)?;
+        let s = fs::read_to_string(output_path)?;
         // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
-        fs::write(output_path, tmp.replace("\\\\", "/").replace('\\', "/"))?;
+        fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
     }
     if env::var_os("CI").is_some() {
         process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;

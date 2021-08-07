@@ -15,6 +15,14 @@ fn run(model: &str, name: &str, args: &[&str]) {
     .context(id.clone())
     .unwrap();
 
+    cargo_llvm_cov(model, name, "full.json", {
+        let mut v = vec!["--json"];
+        v.extend_from_slice(args);
+        v
+    })
+    .context(id.clone())
+    .unwrap();
+
     cargo_llvm_cov(model, name, "lcov.info", {
         let mut v = vec!["--lcov", "--summary-only"];
         v.extend_from_slice(args);
