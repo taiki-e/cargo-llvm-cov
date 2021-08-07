@@ -12,7 +12,13 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Support Windows.](https://github.com/taiki-e/cargo-llvm-cov/pull/41)
 
-- [Fix mapping error in `--doctests`.](https://github.com/taiki-e/cargo-llvm-cov/pull/40)
+- [Support trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/44)
+
+- [Fix mapping error in `--doctests` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/40)
+
+- [Fix bug in `--target` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/46)
+
+- [Add `--package` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/42)
 
 ## [0.1.0-alpha.4] - 2021-06-13
 
