@@ -140,6 +140,9 @@ OPTIONS:
         --doctests
             Including doc tests (unstable)
 
+        --no-run
+            Compile, but don't run tests (unstable)
+
         --no-fail-fast
             Run all tests regardless of failure
 
@@ -166,6 +169,9 @@ OPTIONS:
 
         --target <TRIPLE>
             Build for the target triple
+
+            When this option is used, coverage for proc-macro and build script
+            will not be displayed because cargo does not pass RUSTFLAGS to them.
 
         --manifest-path <PATH>
             Path to Cargo.toml

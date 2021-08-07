@@ -133,7 +133,7 @@ pub(crate) struct Args {
     // `cargo test` options
     // https://doc.rust-lang.org/cargo/commands/cargo-test.html
     /// Compile, but don't run tests (unstable)
-    #[clap(long, hidden = true)]
+    #[clap(long)]
     pub(crate) no_run: bool,
     /// Run all tests regardless of failure
     #[clap(long)]
@@ -165,6 +165,9 @@ pub(crate) struct Args {
     #[clap(long)]
     pub(crate) no_default_features: bool,
     /// Build for the target triple
+    ///
+    /// When this option is used, coverage for proc-macro and build script will
+    /// not be displayed because cargo does not pass RUSTFLAGS to them.
     #[clap(long, value_name = "TRIPLE")]
     pub(crate) target: Option<String>,
     // TODO: Currently, we are using a subdirectory of the target directory as
