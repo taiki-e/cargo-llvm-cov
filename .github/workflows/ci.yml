@@ -50,31 +50,6 @@ jobs:
         if: matrix.target != ''
       - run: cargo test
         if: matrix.target == ''
-      - name: test
-        run: |
-          set -x
-          if [[ -z "${{ matrix.target }}" ]]; then
-            cargo install --path . --debug
-          else
-            cargo install --path . --debug --target ${{ matrix.target }}
-          fi
-          git clone https://github.com/taiki-e/easytime.git
-          cd easytime
-          # llvm-cov report
-          cargo llvm-cov
-          cargo clean
-          # llvm-cov export -format=text
-          cargo llvm-cov --json
-          cargo clean
-          # llvm-cov export -format=lcov
-          cargo llvm-cov --lcov
-          cargo clean
-          # llvm-cov show -format=text
-          cargo llvm-cov --text
-          cargo clean
-          # llvm-cov show -format=html
-          cargo llvm-cov --html
-          cargo clean
       - run: tools/check-minimal-versions.sh
         if: matrix.target == '' && !startsWith(matrix.os, 'windows')
 
