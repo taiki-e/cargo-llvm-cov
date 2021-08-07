@@ -176,6 +176,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         trybuild_target.push(target);
     }
     trybuild_target.push("debug");
+    fs::remove_dir_all(trybuild_target.join("incremental"))?;
     if trybuild_target.is_dir() {
         let mut trybuild_projects = vec![];
         for entry in fs::read_dir(trybuild_dir)?.filter_map(Result::ok) {
