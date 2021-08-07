@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2021-08-07
+
+- [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
+
 ## [0.1.0-alpha.5] - 2021-08-07
 
 - [Support Windows.](https://github.com/taiki-e/cargo-llvm-cov/pull/41)
