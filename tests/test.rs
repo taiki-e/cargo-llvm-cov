@@ -63,4 +63,7 @@ fn real_root() {
     run("no_test", "no_test", &[]);
 
     run("bin_crate", "bin_crate", &[]);
+
+    // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
+    run("instantiations", "instantiations", &[]);
 }
