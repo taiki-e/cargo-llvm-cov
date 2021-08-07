@@ -138,8 +138,9 @@ impl Context {
         let current_exe = match env::current_exe() {
             Ok(exe) => exe,
             Err(e) => {
-                warn!(?e);
-                format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX).into()
+                let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
+                warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
+                exe.into()
             }
         };
 
@@ -290,7 +291,7 @@ fn host() -> Result<String> {
         .ok_or_else(|| {
             format_err!("unexpected version output from `{}`: {}", rustc.to_string_lossy(), output)
         })
-        .map(ToString::to_string)
+        .map(str::to_owned)
 }
 
 fn rustc() -> OsString {

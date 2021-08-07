@@ -22,7 +22,7 @@ use crate::Result;
 const REPLACE_COLONS: &str = "::";
 
 fn create_disambiguator_re() -> Regex {
-    Regex::new(r"\[[a-f0-9]{5,16}\]::").unwrap()
+    Regex::new(r"\[[0-9a-f]{5,16}\]::").unwrap()
 }
 
 fn demangle_lines(lines: Lines<'_>) -> Vec<String> {

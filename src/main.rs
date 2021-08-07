@@ -187,8 +187,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             trybuild_projects.push(manifest.package.name);
         }
         if !trybuild_projects.is_empty() {
-            let re =
-                Regex::new(&format!("^({})-[0-9A-Fa-f]+$", trybuild_projects.join("|"))).unwrap();
+            let re = Regex::new(&format!("^({})-[0-9a-f]+$", trybuild_projects.join("|"))).unwrap();
             for entry in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {
                 let path = entry.path();
                 if let Some(path) = path.file_name().unwrap().to_str() {
