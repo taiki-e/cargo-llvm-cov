@@ -1,14 +1,20 @@
-use std::{env, ffi::OsString, ops, path::PathBuf};
+use std::{
+    env,
+    ffi::{OsStr, OsString},
+    ops,
+    path::PathBuf,
+};
 
 use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use crate::{cli::Args, fs, process, process::ProcessBuilder};
+use crate::{cargo, cli::Args, fs, process, process::ProcessBuilder};
 
 pub(crate) struct Context {
     pub(crate) args: Args,
+    pub(crate) env: EnvironmentVariables,
     pub(crate) verbose: Option<String>,
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
@@ -30,25 +36,14 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
-        let verbose = if args.verbose == 0 {
-            None
-        } else {
-            Some(format!("-{}", "v".repeat(args.verbose as _)))
-        };
         debug!(?args);
+        let mut env = EnvironmentVariables::new()?;
+        debug!(?env);
+
         args.html |= args.open;
         if args.output_dir.is_some() && !args.show() {
             // If the format flag is not specified, this flag is no-op.
             args.output_dir = None;
-        }
-        if args.color.is_none() {
-            // https://doc.rust-lang.org/cargo/reference/config.html#termcolor
-            args.color = env::var("CARGO_TERM_COLOR")
-                .ok()
-                .map(|s| clap::ArgEnum::from_str(&s, false))
-                .transpose()
-                .map_err(|e| format_err!("{}", e))?;
-            debug!(?args.color);
         }
         if args.disable_default_ignore_filename_regex {
             warn!("--disable-default-ignore-filename-regex option is unstable");
@@ -80,6 +75,25 @@ impl Context {
         let cargo_target_dir = &metadata.target_directory;
         debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
 
+        // .cargo/config is prefer over .cargo/config.toml
+        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#hierarchical-structure
+        let workspace_config = &metadata.workspace_root.join(".cargo/config");
+        let workspace_config_toml = &metadata.workspace_root.join(".cargo/config.toml");
+        let mut config = if workspace_config.is_file() {
+            toml::from_str(&fs::read_to_string(workspace_config)?)?
+        } else if workspace_config_toml.is_file() {
+            toml::from_str(&fs::read_to_string(workspace_config_toml)?)?
+        } else {
+            cargo::Config::default()
+        };
+        config.apply_env()?;
+        config.merge_to(&mut args, &mut env);
+
+        let verbose = if args.verbose == 0 {
+            None
+        } else {
+            Some(format!("-{}", "v".repeat(args.verbose as _)))
+        };
         if args.output_dir.is_none() && args.html {
             args.output_dir = Some(cargo_target_dir.join("llvm-cov"));
         }
@@ -89,13 +103,13 @@ impl Context {
         let target_dir = cargo_target_dir.join("llvm-cov-target");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let cargo = Cargo::new(&metadata.workspace_root)?;
+        let cargo = Cargo::new(&env, &metadata.workspace_root)?;
         debug!(?cargo);
 
-        let sysroot: Utf8PathBuf = sysroot(cargo.nightly)?.into();
+        let sysroot: Utf8PathBuf = sysroot(&env, cargo.nightly)?.into();
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
-        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host()?));
+        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host(&env)?));
         let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
         let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
         debug!(?llvm_cov, ?llvm_profdata);
@@ -111,7 +125,7 @@ impl Context {
         let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
 
-        let current_info = CargoLlvmCovInfo::new();
+        let current_info = CargoLlvmCovInfo::current();
         debug!(?current_info);
         let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
         let mut clean_target_dir = true;
@@ -209,6 +223,7 @@ impl Context {
             llvm_cov,
             llvm_profdata,
             current_exe,
+            env,
         })
     }
 
@@ -230,6 +245,56 @@ impl ops::Deref for Context {
     }
 }
 
+/// Environment variables fetched at runtime.
+///
+/// These environment variables are either applied to both cargo and
+/// cargo-llvm-cov, or are modified before being passed to cargo.
+#[derive(Debug)]
+pub(crate) struct EnvironmentVariables {
+    // Environment variables Cargo reads
+    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads
+    /// `RUSTFLAGS` environment variable.
+    pub(crate) rustflags: Option<OsString>,
+    /// `RUSTDOCFLAGS` environment variable.
+    pub(crate) rustdocflags: Option<OsString>,
+    /// `RUSTC` environment variable.
+    pub(crate) rustc: Option<OsString>,
+
+    // Environment variables Cargo sets for 3rd party subcommands
+    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
+    /// `CARGO` environment variable.
+    pub(crate) cargo: Option<OsString>,
+}
+
+impl EnvironmentVariables {
+    fn new() -> Result<Self> {
+        if env::var_os("CARGO_INCREMENTAL").map_or(false, |s| s == "1") {
+            warn!("environment variable CARGO_INCREMENTAL=1 will not be passed to cargo");
+        }
+        env::set_var("CARGO_INCREMENTAL", "0");
+
+        if let Some(v) = env::var_os("LLVM_PROFILE_FILE") {
+            warn!("environment variable LLVM_PROFILE_FILE={:?} will be ignored", v);
+            env::remove_var("LLVM_PROFILE_FILE");
+        }
+
+        Ok(Self {
+            rustflags: env::var_os("RUSTFLAGS"),
+            rustdocflags: env::var_os("RUSTDOCFLAGS"),
+            rustc: env::var_os("RUSTC"),
+            cargo: env::var_os("CARGO"),
+        })
+    }
+
+    pub(crate) fn rustc(&self) -> &OsStr {
+        self.rustc.as_deref().unwrap_or_else(|| OsStr::new("rustc"))
+    }
+
+    pub(crate) fn cargo(&self) -> &OsStr {
+        self.cargo.as_deref().unwrap_or_else(|| OsStr::new("cargo"))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CargoLlvmCovInfo {
@@ -237,7 +302,7 @@ struct CargoLlvmCovInfo {
 }
 
 impl CargoLlvmCovInfo {
-    fn new() -> Self {
+    fn current() -> Self {
         Self { version: env!("CARGO_PKG_VERSION").into() }
     }
 }
@@ -249,8 +314,8 @@ pub(crate) struct Cargo {
 }
 
 impl Cargo {
-    pub(crate) fn new(workspace_root: &Utf8Path) -> Result<Self> {
-        let mut path = cargo();
+    pub(crate) fn new(env: &EnvironmentVariables, workspace_root: &Utf8Path) -> Result<Self> {
+        let mut path = env.cargo().to_owned();
         let version = process!(&path, "version").dir(workspace_root).stdout_capture().read()?;
         let nightly = version.contains("-nightly") || version.contains("-dev");
         if !nightly {
@@ -269,9 +334,9 @@ impl ops::Deref for Cargo {
     }
 }
 
-fn sysroot(nightly: bool) -> Result<String> {
+fn sysroot(env: &EnvironmentVariables, nightly: bool) -> Result<String> {
     Ok(if nightly {
-        process!(rustc(), "--print", "sysroot")
+        process!(env.rustc(), "--print", "sysroot")
     } else {
         process!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
     }
@@ -282,22 +347,17 @@ fn sysroot(nightly: bool) -> Result<String> {
     .into())
 }
 
-fn host() -> Result<String> {
-    let rustc = &rustc();
-    let output = process!(rustc, "--version", "--verbose").stdout_capture().read()?;
+fn host(env: &EnvironmentVariables) -> Result<String> {
+    let output = process!(env.rustc(), "--version", "--verbose").stdout_capture().read()?;
     output
         .lines()
         .find_map(|line| line.strip_prefix("host: "))
         .ok_or_else(|| {
-            format_err!("unexpected version output from `{}`: {}", rustc.to_string_lossy(), output)
+            format_err!(
+                "unexpected version output from `{}`: {}",
+                env.rustc().to_string_lossy(),
+                output
+            )
         })
         .map(str::to_owned)
-}
-
-fn rustc() -> OsString {
-    env::var_os("RUSTC").unwrap_or_else(|| OsString::from("rustc"))
-}
-
-fn cargo() -> OsString {
-    env::var_os("CARGO").unwrap_or_else(|| OsString::from("cargo"))
 }

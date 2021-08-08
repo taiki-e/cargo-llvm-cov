@@ -1,0 +1,8 @@
+[package]
+name = "cargo_config"
+version = "0.0.0"
+
+[workspace]
+
+[lib]
+doctest = false

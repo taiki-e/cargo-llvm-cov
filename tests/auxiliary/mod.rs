@@ -50,7 +50,10 @@ pub(crate) fn cargo_llvm_cov<'a>(
     )
     .args(args)
     .dir(workspace_root.path())
+    .env_remove("RUSTFLAGS")
     .env_remove("RUST_LOG")
+    .stdout_capture()
+    .stderr_capture()
     .run()?;
 
     if args.contains(&"--json") && !args.contains(&"--summary-only") {
@@ -78,7 +81,7 @@ fn test_project(model: &str, name: &str) -> Result<TempDir> {
         .prefix(&format!("test_project_{}_{}_{}", model, name, COUNTER.fetch_add(1, Relaxed)))
         .tempdir()?;
     let workspace_root = tmpdir.path();
-    let model_path = FIXTURES_PATH.join("coverage").join(model);
+    let model_path = FIXTURES_PATH.join("crates").join(model);
 
     for entry in WalkDir::new(&model_path).into_iter().filter_map(Result::ok) {
         let from = entry.path();
