@@ -13,19 +13,16 @@ mod trace;
 #[macro_use]
 mod process;
 
+mod cargo;
 mod cli;
 mod context;
 mod demangler;
 mod fs;
 
-use std::{
-    env,
-    ffi::{OsStr, OsString},
-};
+use std::ffi::{OsStr, OsString};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use regex::Regex;
-use serde::Deserialize;
 use tracing::warn;
 use walkdir::WalkDir;
 
@@ -66,11 +63,7 @@ fn main() -> Result<()> {
         fs::remove_file(&cx.profdata_file)?;
         let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
-        let rustflags = &mut match env::var_os("RUSTFLAGS") {
-            Some(rustflags) => rustflags,
-            None => OsString::new(),
-        };
-        debug!(RUSTFLAGS = ?rustflags);
+        let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
         // --remap-path-prefix for Sometimes macros are displayed with abs path
         rustflags.push(format!(
             " -Z instrument-coverage --remap-path-prefix {}/=",
@@ -78,8 +71,7 @@ fn main() -> Result<()> {
         ));
 
         // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-        let rustdocflags = &mut env::var_os("RUSTDOCFLAGS");
-        debug!(RUSTDOCFLAGS = ?rustdocflags);
+        let rustdocflags = &mut cx.env.rustdocflags.clone();
         if cx.doctests {
             let flags = rustdocflags.get_or_insert_with(OsString::new);
             flags.push(format!(
@@ -116,13 +108,14 @@ fn main() -> Result<()> {
     merge_profraw(cx)?;
 
     let format = Format::from_args(cx);
-    format.run(cx, &object_files)?;
+    format.generate_report(cx, &object_files)?;
 
     if format == Format::Html {
-        Format::None.run(cx, &object_files)?;
+        Format::None.generate_report(cx, &object_files)?;
 
         if cx.open {
-            open::that(cx.output_dir.as_ref().unwrap().join("index.html"))?;
+            open::that(cx.output_dir.as_ref().unwrap().join("index.html"))
+                .context("couldn't open report")?;
         }
     }
 
@@ -175,6 +168,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     if let Some(target) = &cx.target {
         trybuild_target.push(target);
     }
+    // Currently, trybuild always use debug build.
     trybuild_target.push("debug");
     fs::remove_dir_all(trybuild_target.join("incremental"))?;
     if trybuild_target.is_dir() {
@@ -184,8 +178,10 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             if !manifest_path.is_file() {
                 continue;
             }
-            let manifest: Manifest = toml::from_str(&fs::read_to_string(manifest_path)?)?;
-            trybuild_projects.push(manifest.package.name);
+            let manifest: cargo::Manifest = toml::from_str(&fs::read_to_string(manifest_path)?)?;
+            if let Some(package) = manifest.package {
+                trybuild_projects.push(package.name);
+            }
         }
         if !trybuild_projects.is_empty() {
             let re = Regex::new(&format!("^({})-[0-9a-f]+$", trybuild_projects.join("|"))).unwrap();
@@ -263,14 +259,13 @@ impl Format {
         }
     }
 
-    fn run(self, cx: &Context, files: &[OsString]) -> Result<()> {
+    fn generate_report(self, cx: &Context, object_files: &[OsString]) -> Result<()> {
         let mut cmd = cx.process(&cx.llvm_cov);
 
-        cmd.args(self.llvm_cov_args())
-            .args(self.use_color(cx.color))
-            .arg(format!("-instr-profile={}", cx.profdata_file))
-            // TODO: remove `vec!`, once Rust 1.53 stable
-            .args(files.iter().flat_map(|f| vec![OsStr::new("-object"), f]));
+        cmd.args(self.llvm_cov_args());
+        cmd.args(self.use_color(cx.color));
+        cmd.arg(format!("-instr-profile={}", cx.profdata_file));
+        cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
 
         if let Some(ignore_filename) = ignore_filename_regex(cx) {
             cmd.arg("-ignore-filename-regex");
@@ -278,7 +273,7 @@ impl Format {
         }
 
         match self {
-            Self::Text | Self::Html => {
+            Format::Text | Format::Html => {
                 cmd.args(&[
                     "-show-instantiations",
                     "-show-line-counts-or-regions",
@@ -291,12 +286,12 @@ impl Format {
                     cmd.arg(&format!("-output-dir={}", output_dir));
                 }
             }
-            Self::Json | Self::LCov => {
+            Format::Json | Format::LCov => {
                 if cx.summary_only {
                     cmd.arg("-summary-only");
                 }
             }
-            Self::None => {}
+            Format::None => {}
         }
 
         if let Some(output_path) = &cx.output_path {
@@ -315,6 +310,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     const SEPARATOR: &str = "/";
     #[cfg(windows)]
     const SEPARATOR: &str = "\\\\";
+
     fn default_ignore_filename_regex() -> String {
         format!(
             r"rustc{0}|.cargo{0}(registry|git){0}|.rustup{0}toolchains{0}|tests{0}|examples{0}|benches{0}|target{0}llvm-cov-target{0}",
@@ -362,30 +358,6 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     } else {
         Some(out.0)
     }
-}
-
-#[derive(Debug, Deserialize)]
-struct Artifact {
-    profile: Option<Profile>,
-    #[serde(default)]
-    filenames: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Profile {
-    test: bool,
-}
-
-// Cargo manifest
-// https://doc.rust-lang.org/cargo/reference/manifest.html
-#[derive(Debug, Deserialize)]
-struct Manifest {
-    package: Package,
-}
-
-#[derive(Debug, Deserialize)]
-struct Package {
-    name: String,
 }
 
 fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {

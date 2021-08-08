@@ -10,9 +10,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-## [0.1.0-alpha.6] - 2021-08-07
-
 - [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
+
+- [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
 ## [0.1.0-alpha.5] - 2021-08-07
 

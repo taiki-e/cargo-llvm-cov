@@ -3,6 +3,7 @@ use std::{env, ffi::OsString};
 use anyhow::{format_err, Result};
 use camino::Utf8PathBuf;
 use clap::{AppSettings, Clap};
+use serde::Deserialize;
 
 // Clap panics if you pass a non-utf8 value to an argument that expects a utf8
 // value.
@@ -131,7 +132,7 @@ pub(crate) struct Args {
 
     // =========================================================================
     // `cargo test` options
-    // https://doc.rust-lang.org/cargo/commands/cargo-test.html
+    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
     /// Compile, but don't run tests (unstable)
     #[clap(long)]
     pub(crate) no_run: bool,
@@ -219,7 +220,8 @@ pub(crate) enum Subcommand {
     Demangle,
 }
 
-#[derive(Debug, Clone, Copy, clap::ArgEnum)]
+#[derive(Debug, Clone, Copy, Deserialize, clap::ArgEnum)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) enum Coloring {
     Auto,
     Always,
