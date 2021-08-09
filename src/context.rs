@@ -8,9 +8,8 @@ use std::{
 use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
-use tracing::warn;
 
-use crate::{cargo, cli::Args, fs, process, process::ProcessBuilder};
+use crate::{cargo, cli::Args, fs, process, process::ProcessBuilder, term};
 
 pub(crate) struct Context {
     pub(crate) args: Args,
@@ -36,30 +35,9 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
+        let mut env = EnvironmentVariables::new();
         debug!(?args);
-        let mut env = EnvironmentVariables::new()?;
         debug!(?env);
-
-        args.html |= args.open;
-        if args.output_dir.is_some() && !args.show() {
-            // If the format flag is not specified, this flag is no-op.
-            args.output_dir = None;
-        }
-        if args.disable_default_ignore_filename_regex {
-            warn!("--disable-default-ignore-filename-regex option is unstable");
-        }
-        if args.doctests {
-            warn!("--doctests option is unstable");
-        }
-        if args.no_run {
-            warn!("--no-run option is unstable");
-        }
-        if args.target.is_some() {
-            warn!(
-                "When --target option is used, coverage for proc-macro and build script will \
-                 not be displayed because cargo does not pass RUSTFLAGS to them"
-            );
-        }
 
         let package_root = if let Some(manifest_path) = &args.manifest_path {
             manifest_path.clone()
@@ -89,6 +67,33 @@ impl Context {
         config.apply_env()?;
         config.merge_to(&mut args, &mut env);
 
+        term::set_coloring(args.color);
+
+        if let Some(v) = env::var_os("LLVM_PROFILE_FILE") {
+            warn!("environment variable LLVM_PROFILE_FILE={:?} will be ignored", v);
+            env::remove_var("LLVM_PROFILE_FILE");
+        }
+
+        args.html |= args.open;
+        if args.output_dir.is_some() && !args.show() {
+            // If the format flag is not specified, this flag is no-op.
+            args.output_dir = None;
+        }
+        if args.disable_default_ignore_filename_regex {
+            warn!("--disable-default-ignore-filename-regex option is unstable");
+        }
+        if args.doctests {
+            warn!("--doctests option is unstable");
+        }
+        if args.no_run {
+            warn!("--no-run option is unstable");
+        }
+        if args.target.is_some() {
+            warn!(
+                "When --target option is used, coverage for proc-macro and build script will \
+                 not be displayed because cargo does not pass RUSTFLAGS to them"
+            );
+        }
         let verbose = if args.verbose == 0 {
             None
         } else {
@@ -267,23 +272,14 @@ pub(crate) struct EnvironmentVariables {
 }
 
 impl EnvironmentVariables {
-    fn new() -> Result<Self> {
-        if env::var_os("CARGO_INCREMENTAL").map_or(false, |s| s == "1") {
-            warn!("environment variable CARGO_INCREMENTAL=1 will not be passed to cargo");
-        }
+    fn new() -> Self {
         env::set_var("CARGO_INCREMENTAL", "0");
-
-        if let Some(v) = env::var_os("LLVM_PROFILE_FILE") {
-            warn!("environment variable LLVM_PROFILE_FILE={:?} will be ignored", v);
-            env::remove_var("LLVM_PROFILE_FILE");
-        }
-
-        Ok(Self {
+        Self {
             rustflags: env::var_os("RUSTFLAGS"),
             rustdocflags: env::var_os("RUSTDOCFLAGS"),
             rustc: env::var_os("RUSTC"),
             cargo: env::var_os("CARGO"),
-        })
+        }
     }
 
     pub(crate) fn rustc(&self) -> &OsStr {

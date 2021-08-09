@@ -9,7 +9,8 @@
 
 #[macro_use]
 mod trace;
-
+#[macro_use]
+mod term;
 #[macro_use]
 mod process;
 
@@ -23,7 +24,6 @@ use std::ffi::{OsStr, OsString};
 
 use anyhow::{Context as _, Result};
 use regex::Regex;
-use tracing::warn;
 use walkdir::WalkDir;
 
 use crate::{
@@ -32,7 +32,14 @@ use crate::{
     process::ProcessBuilder,
 };
 
-fn main() -> Result<()> {
+fn main() {
+    if let Err(e) = try_main() {
+        error!("{:#}", e);
+        std::process::exit(1)
+    }
+}
+
+fn try_main() -> Result<()> {
     trace::init();
 
     let args = cli::from_args()?;
@@ -43,14 +50,14 @@ fn main() -> Result<()> {
 
     let cx = &Context::new(args)?;
 
-    if let Some(output_dir) = &cx.output_dir {
-        if !cx.no_run {
-            fs::remove_dir_all(output_dir)?;
-        }
-        fs::create_dir_all(output_dir)?;
-    }
-
     if !cx.no_run {
+        debug!("cleaning build artifacts");
+
+        if let Some(output_dir) = &cx.output_dir {
+            fs::remove_dir_all(output_dir)?;
+            fs::create_dir_all(output_dir)?;
+        }
+
         for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
             fs::remove_file(path)?;
         }
@@ -61,10 +68,13 @@ fn main() -> Result<()> {
         }
 
         fs::remove_file(&cx.profdata_file)?;
+
+        debug!("running tests");
+
         let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
         let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
-        // --remap-path-prefix for Sometimes macros are displayed with abs path
+        // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
         rustflags.push(format!(
             " -Z instrument-coverage --remap-path-prefix {}/=",
             cx.metadata.workspace_root
@@ -103,26 +113,27 @@ fn main() -> Result<()> {
         cargo.stdout_to_stderr().run()?;
     }
 
-    let object_files = object_files(cx)?;
+    debug!("generating reports");
 
-    merge_profraw(cx)?;
+    let object_files = object_files(cx).context("failed to collect object files")?;
 
-    let format = Format::from_args(cx);
-    format.generate_report(cx, &object_files)?;
+    merge_profraw(cx).context("failed to merge profile data")?;
 
-    if format == Format::Html {
-        Format::None.generate_report(cx, &object_files)?;
+    for format in Format::from_args(cx) {
+        format.generate_report(cx, &object_files).context("failed to generate report")?;
+    }
 
-        if cx.open {
-            open::that(cx.output_dir.as_ref().unwrap().join("index.html"))
-                .context("couldn't open report")?;
-        }
+    if cx.open {
+        open::that(cx.output_dir.as_ref().unwrap().join("index.html"))
+            .context("couldn't open report")?;
     }
 
     Ok(())
 }
 
 fn merge_profraw(cx: &Context) -> Result<()> {
+    debug!("merging profile data");
+
     // Convert raw profile data.
     cx.process(&cx.llvm_profdata)
         .args(&["merge", "-sparse"])
@@ -137,6 +148,8 @@ fn merge_profraw(cx: &Context) -> Result<()> {
 }
 
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
+    debug!("collecting profile data");
+
     let mut files = vec![];
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
@@ -222,17 +235,17 @@ enum Format {
 }
 
 impl Format {
-    fn from_args(args: &Args) -> Self {
+    fn from_args(args: &Args) -> Vec<Self> {
         if args.json {
-            Self::Json
+            vec![Self::Json]
         } else if args.lcov {
-            Self::LCov
+            vec![Self::LCov]
         } else if args.text {
-            Self::Text
+            vec![Self::Text]
         } else if args.html {
-            Self::Html
+            vec![Self::Html, Self::None]
         } else {
-            Self::None
+            vec![Self::None]
         }
     }
 
@@ -260,6 +273,8 @@ impl Format {
     }
 
     fn generate_report(self, cx: &Context, object_files: &[OsString]) -> Result<()> {
+        debug!("generating report for format {:?}", self);
+
         let mut cmd = cx.process(&cx.llvm_cov);
 
         cmd.args(self.llvm_cov_args());

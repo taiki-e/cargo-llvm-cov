@@ -220,10 +220,11 @@ pub(crate) enum Subcommand {
     Demangle,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, clap::ArgEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, clap::ArgEnum)]
 #[serde(rename_all = "kebab-case")]
+#[repr(u8)]
 pub(crate) enum Coloring {
-    Auto,
+    Auto = 0,
     Always,
     Never,
 }
