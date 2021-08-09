@@ -51,68 +51,82 @@ fn try_main() -> Result<()> {
     let cx = &Context::new(args)?;
 
     if !cx.no_run {
-        debug!("cleaning build artifacts");
+        clean_partial(cx)?;
+        run_test(cx)?;
+    }
+    generate_report(cx)?;
 
-        if let Some(output_dir) = &cx.output_dir {
-            fs::remove_dir_all(output_dir)?;
-            fs::create_dir_all(output_dir)?;
-        }
+    Ok(())
+}
 
-        for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
-            fs::remove_file(path)?;
-        }
+fn clean_partial(cx: &Context) -> Result<()> {
+    debug!("cleaning build artifacts");
 
-        if cx.doctests {
-            fs::remove_dir_all(&cx.doctests_dir)?;
-            fs::create_dir_all(&cx.doctests_dir)?;
-        }
-
-        fs::remove_file(&cx.profdata_file)?;
-
-        debug!("running tests");
-
-        let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
-
-        let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
-        // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
-        rustflags.push(format!(
-            " -Z instrument-coverage --remap-path-prefix {}/=",
-            cx.metadata.workspace_root
-        ));
-
-        // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-        let rustdocflags = &mut cx.env.rustdocflags.clone();
-        if cx.doctests {
-            let flags = rustdocflags.get_or_insert_with(OsString::new);
-            flags.push(format!(
-                " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
-                cx.doctests_dir
-            ));
-        }
-
-        let mut cargo = cx.process(&*cx.cargo);
-        if !cx.cargo.nightly {
-            cargo.arg("+nightly");
-        }
-
-        cargo.env("RUSTFLAGS", &rustflags);
-        cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
-        cargo.env("CARGO_INCREMENTAL", "0");
-        if let Some(rustdocflags) = rustdocflags {
-            cargo.env("RUSTDOCFLAGS", &rustdocflags);
-        }
-
-        cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
-        if cx.doctests && !cx.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
-            // https://github.com/rust-lang/cargo/issues/9427
-            cargo.arg("-Z");
-            cargo.arg("doctest-in-workspace");
-        }
-        append_args(cx, &mut cargo);
-
-        cargo.stdout_to_stderr().run()?;
+    if let Some(output_dir) = &cx.output_dir {
+        fs::remove_dir_all(output_dir)?;
+        fs::create_dir_all(output_dir)?;
     }
 
+    for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
+        fs::remove_file(path)?;
+    }
+
+    if cx.doctests {
+        fs::remove_dir_all(&cx.doctests_dir)?;
+        fs::create_dir_all(&cx.doctests_dir)?;
+    }
+
+    fs::remove_file(&cx.profdata_file)?;
+    Ok(())
+}
+
+fn run_test(cx: &Context) -> Result<()> {
+    debug!("running tests");
+
+    let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
+
+    let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
+    // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
+    rustflags.push(format!(
+        " -Z instrument-coverage --remap-path-prefix {}/=",
+        cx.metadata.workspace_root
+    ));
+
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
+    let rustdocflags = &mut cx.env.rustdocflags.clone();
+    if cx.doctests {
+        let flags = rustdocflags.get_or_insert_with(OsString::new);
+        flags.push(format!(
+            " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
+            cx.doctests_dir
+        ));
+    }
+
+    let mut cargo = cx.process(&*cx.cargo);
+    if !cx.cargo.nightly {
+        cargo.arg("+nightly");
+    }
+
+    cargo.env("RUSTFLAGS", &rustflags);
+    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
+    cargo.env("CARGO_INCREMENTAL", "0");
+    if let Some(rustdocflags) = rustdocflags {
+        cargo.env("RUSTDOCFLAGS", &rustdocflags);
+    }
+
+    cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
+    if cx.doctests && !cx.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
+        // https://github.com/rust-lang/cargo/issues/9427
+        cargo.arg("-Z");
+        cargo.arg("doctest-in-workspace");
+    }
+    append_args(cx, &mut cargo);
+
+    cargo.stdout_to_stderr().run()?;
+    Ok(())
+}
+
+fn generate_report(cx: &Context) -> Result<()> {
     debug!("generating reports");
 
     let object_files = object_files(cx).context("failed to collect object files")?;
@@ -127,7 +141,6 @@ fn try_main() -> Result<()> {
         open::that(cx.output_dir.as_ref().unwrap().join("index.html"))
             .context("couldn't open report")?;
     }
-
     Ok(())
 }
 
