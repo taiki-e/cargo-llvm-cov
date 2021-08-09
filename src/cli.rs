@@ -15,7 +15,7 @@ use serde::Deserialize;
 //      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
 //
 // Even if you store a value as OsString and pass to cargo as is, you will get
-// the same panic on cargo side.
+// the same panic on cargo side. e.g., `cargo check --manifest-path $'fo\x80o'`
 fn handle_args(args: impl IntoIterator<Item = impl Into<OsString>>) -> Result<Vec<String>> {
     // Adapted from https://github.com/rust-lang/rust/blob/3bc9dd0dd293ab82945e35888ed6d7ab802761ef/compiler/rustc_driver/src/lib.rs#L1365-L1375.
     args.into_iter()

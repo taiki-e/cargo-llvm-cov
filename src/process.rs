@@ -1,9 +1,5 @@
 #![cfg_attr(test, allow(dead_code))]
 
-// Refs:
-// - https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
-// - https://docs.rs/duct
-
 use std::{
     cell::Cell,
     collections::BTreeMap,
@@ -27,16 +23,16 @@ macro_rules! process {
     }};
 }
 
-/// A builder object for an external process, similar to `std::process::Command`.
+// A builder for an external process, inspired by https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 #[must_use]
 pub(crate) struct ProcessBuilder {
     /// The program to execute.
     program: OsString,
     /// A list of arguments to pass to the program.
     pub(crate) args: Vec<OsString>,
-    /// The environment variables in the expression's environment.
+    /// The environment variables in the process's environment.
     env: BTreeMap<String, Option<OsString>>,
-    /// The working directory where the expression will execute.
+    /// The working directory where the process will execute.
     dir: Option<PathBuf>,
     pub(crate) stdout_capture: bool,
     pub(crate) stderr_capture: bool,
@@ -63,13 +59,13 @@ impl ProcessBuilder {
         }
     }
 
-    /// Adds `arg` to the args list.
+    /// Adds an argument to pass to the program.
     pub(crate) fn arg(&mut self, arg: impl Into<OsString>) -> &mut Self {
         self.args.push(arg.into());
         self
     }
 
-    /// Adds multiple `args` to the args list.
+    /// Adds multiple arguments to pass to the program.
     pub(crate) fn args(
         &mut self,
         args: impl IntoIterator<Item = impl Into<OsString>>,
@@ -78,20 +74,20 @@ impl ProcessBuilder {
         self
     }
 
-    /// Set a variable in the expression's environment.
+    /// Set a variable in the process's environment.
     pub(crate) fn env(&mut self, key: impl Into<String>, val: impl Into<OsString>) -> &mut Self {
         self.env.insert(key.into(), Some(val.into()));
         self
     }
 
-    /// Remove a variable from the expression's environment.
+    /// Remove a variable from the process's environment.
     #[cfg(test)]
     pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
         self.env.insert(key.into(), None);
         self
     }
 
-    /// Set the working directory where the expression will execute.
+    /// Set the working directory where the process will execute.
     pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
         self.dir = Some(path.into());
         self
@@ -128,10 +124,11 @@ impl ProcessBuilder {
     //     self
     // }
 
-    /// Execute an expression, wait for it to complete.
+    /// Executes a process, waiting for completion, and mapping non-zero exit
+    /// status to an error.
     #[track_caller]
     pub(crate) fn run(&mut self) -> Result<Output> {
-        debug!(track_caller: command = ?self, "run");
+        trace!(track_caller: command = ?self, "run");
         let output = self.build().unchecked().run().with_context(|| {
             ProcessError::new(&format!("could not execute process {}", self), None, None)
         })?;
@@ -147,14 +144,12 @@ impl ProcessBuilder {
         }
     }
 
-    /// Execute an expression, capture its standard output, and return the
-    /// captured output as a `String`.
+    /// Executes a process, captures its standard output, returning the captured
+    /// output as a `String`.
     #[track_caller]
     pub(crate) fn read(&mut self) -> Result<String> {
-        debug!(track_caller: command = ?self, "read");
-        let res = self.build().read();
-        trace!(track_caller: command = ?self, result = ?res, "read");
-        Ok(res?)
+        trace!(track_caller: command = ?self, "read");
+        Ok(self.build().read()?)
     }
 
     fn build(&self) -> duct::Expression {
@@ -241,13 +236,13 @@ impl fmt::Display for ProcessBuilder {
 
 // Based on https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/errors.rs
 #[derive(Debug)]
-pub(crate) struct ProcessError {
+struct ProcessError {
     /// A detailed description to show to the user why the process failed.
     desc: String,
     /// The exit status of the process.
     ///
     /// This can be `None` if the process failed to launch (like process not found).
-    exit: Option<ExitStatus>,
+    status: Option<ExitStatus>,
     /// The output from the process.
     ///
     /// This can be `None` if the process failed to launch, or the output was not captured.
@@ -283,7 +278,7 @@ impl ProcessError {
             }
         }
 
-        Self { desc, exit: status, output: output.cloned() }
+        Self { desc, status, output: output.cloned() }
     }
 }
 

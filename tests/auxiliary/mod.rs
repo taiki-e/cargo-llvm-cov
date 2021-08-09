@@ -1,9 +1,6 @@
 macro_rules! trace {
     ($($tt:tt)*) => {};
 }
-macro_rules! debug {
-    ($($tt:tt)*) => {};
-}
 
 #[path = "../../src/fs.rs"]
 mod fs;
