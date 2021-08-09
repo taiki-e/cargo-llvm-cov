@@ -5,7 +5,7 @@
 [![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
-Wrapper for source-based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
+Cargo subcommand for LLVM source-based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -62,7 +62,7 @@ brew install taiki-e/tap/cargo-llvm-cov
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-Wrapper for source-based code coverage (-Z instrument-coverage).
+Cargo subcommand for LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 

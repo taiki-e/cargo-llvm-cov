@@ -33,7 +33,7 @@ pub(crate) fn from_args() -> Result<Args> {
     Ok(args)
 }
 
-const ABOUT: &str = "Wrapper for source-based code coverage (-Z instrument-coverage).
+const ABOUT: &str = "Cargo subcommand for LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.";
 
