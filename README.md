@@ -5,7 +5,7 @@
 [![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
-Wrapper for source based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
+Wrapper for source-based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -62,7 +62,7 @@ brew install taiki-e/tap/cargo-llvm-cov
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-Wrapper for source based code coverage (-Z instrument-coverage).
+Wrapper for source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
@@ -77,45 +77,37 @@ OPTIONS:
         --json
             Export coverage data in "json" format
 
-            If --output-path is not specified, the report will be printed to
-            stdout.
+            If --output-path is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov export -format=text`. See
-            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export>
-            for more.
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
         --lcov
             Export coverage data in "lcov" format.
 
-            If --output-path is not specified, the report will be printed to
-            stdout.
+            If --output-path is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov export -format=lcov`. See
-            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export>
-            for more.
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
         --text
             Generate coverage reports in “text” format.
 
-            If --output-path or --output-dir is not specified, the report will
-            be printed to stdout.
+            If --output-path or --output-dir is not specified, the report will be printed to stdout.
 
             This internally calls `llvm-cov show -format=text`. See
-            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for
-            more.
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
 
         --html
-            Generate coverage reports in "html" format. If --output-dir is not
-            specified, the report will be generated in `target/llvm-cov`
-            directory.
+            Generate coverage reports in "html" format. If --output-dir is not specified, the report
+            will be generated in `target/llvm-cov` directory.
 
             This internally calls `llvm-cov show -format=html`. See
-            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for
-            more.
+            <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
 
         --open
-            Generate coverage reports in "html" format and open them in a
-            browser after the operation.
+            Generate coverage reports in "html" format and open them in a browser after the
+            operation.
 
             See --html for more.
 
@@ -127,19 +119,17 @@ OPTIONS:
         --output-path <PATH>
             Specify a file to write coverage data into.
 
-            This flag can only be used together with --json, --lcov, or --text.
-            See --output-dir for --html and --open.
+            This flag can only be used together with --json, --lcov, or --text. See --output-dir for
+            --html and --open.
 
         --output-dir <DIRECTORY>
-            Specify a directory to write coverage reports into (default to
-            `target/llvm-cov`).
+            Specify a directory to write coverage reports into (default to `target/llvm-cov`).
 
-            This flag can only be used together with --text, --html, or --open.
-            See also --output-path.
+            This flag can only be used together with --text, --html, or --open. See also --output-
+            path.
 
         --ignore-filename-regex <PATTERN>
-            Skip source code files with file paths that match the given regular
-            expression
+            Skip source code files with file paths that match the given regular expression
 
         --doctests
             Including doc tests (unstable)
@@ -174,8 +164,8 @@ OPTIONS:
         --target <TRIPLE>
             Build for the target triple
 
-            When this option is used, coverage for proc-macro and build script
-            will not be displayed because cargo does not pass RUSTFLAGS to them.
+            When this option is used, coverage for proc-macro and build script will not be displayed
+            because cargo does not pass RUSTFLAGS to them.
 
         --manifest-path <PATH>
             Path to Cargo.toml

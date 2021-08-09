@@ -1,0 +1,52 @@
+cargo-llvm-cov
+Wrapper for source-based code coverage (-Z instrument-coverage).
+
+Use -h for short descriptions and --help for more details.
+
+USAGE:
+    cargo llvm-cov [OPTIONS] [-- <args>...]
+
+ARGS:
+    <args>...    Arguments for the test binary
+
+OPTIONS:
+        --json                               Export coverage data in "json" format
+        --lcov                               Export coverage data in "lcov" format
+        --text                               Generate coverage reports in “text” format
+        --html
+            Generate coverage reports in "html" format. If --output-dir is not specified, the report
+            will be generated in `target/llvm-cov` directory
+
+        --open
+            Generate coverage reports in "html" format and open them in a browser after the
+            operation
+
+        --summary-only
+            Export only summary information for each file in the coverage data
+
+        --output-path <PATH>                 Specify a file to write coverage data into
+        --output-dir <DIRECTORY>
+            Specify a directory to write coverage reports into (default to `target/llvm-cov`)
+
+        --ignore-filename-regex <PATTERN>
+            Skip source code files with file paths that match the given regular expression
+
+        --doctests                           Including doc tests (unstable)
+        --no-run                             Compile, but don't run tests (unstable)
+        --no-fail-fast                       Run all tests regardless of failure
+    -p, --package <SPEC>...                  Package to run tests for
+        --workspace                          Test all packages in the workspace [aliases: all]
+        --exclude <SPEC>...                  Exclude packages from the test
+        --release                            Build artifacts in release mode, with optimizations
+        --features <FEATURES>...             Space or comma separated list of features to activate
+        --all-features                       Activate all available features
+        --no-default-features                Do not activate the `default` feature
+        --target <TRIPLE>                    Build for the target triple
+        --manifest-path <PATH>               Path to Cargo.toml
+    -v, --verbose                            Use verbose output (-vv very verbose/build.rs output)
+        --color <WHEN>                       Coloring [possible values: auto, always, never]
+        --frozen                             Require Cargo.lock and cache are up to date
+        --locked                             Require Cargo.lock is up to date
+    -Z <FLAG>...                             Unstable (nightly-only) flags to Cargo
+    -h, --help                               Prints help information
+    -V, --version                            Prints version information
