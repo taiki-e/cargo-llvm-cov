@@ -1,6 +1,4 @@
-use std::{env, io};
-
-use tracing::Level;
+use std::io;
 
 macro_rules! trace {
     (track_caller: $($tt:tt)*) => {
@@ -39,16 +37,8 @@ macro_rules! debug {
 }
 
 pub(crate) fn init() {
-    let rust_log = env::var_os("RUST_LOG");
-    if rust_log.is_none() {
-        env::set_var(
-            "RUST_LOG",
-            format!("{}={}", env!("CARGO_BIN_NAME").replace('-', "_"), Level::INFO),
-        );
-    }
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_writer(io::stderr)
         .init();
-    debug!(RUST_LOG = ?rust_log);
 }

@@ -14,6 +14,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
+- Diagnostic improvements.
+
 ## [0.1.0-alpha.5] - 2021-08-07
 
 - [Support Windows.](https://github.com/taiki-e/cargo-llvm-cov/pull/41)
