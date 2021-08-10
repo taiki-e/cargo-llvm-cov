@@ -1,12 +1,14 @@
+#![warn(rust_2018_idioms)]
+
 mod auxiliary;
 
 use anyhow::Context as _;
-use auxiliary::cargo_llvm_cov;
+use auxiliary::test_report;
 
 fn run(model: &str, name: &str, args: &[&str]) {
     let id = format!("{}/{}", model, name);
 
-    cargo_llvm_cov(model, name, "txt", {
+    test_report(model, name, "txt", {
         let mut v = vec!["--text"];
         v.extend_from_slice(args);
         v
@@ -14,9 +16,9 @@ fn run(model: &str, name: &str, args: &[&str]) {
     .context(id.clone())
     .unwrap();
 
-    cargo_llvm_cov(model, name, "summary.txt", args).context(id.clone()).unwrap();
+    test_report(model, name, "summary.txt", args).context(id.clone()).unwrap();
 
-    cargo_llvm_cov(model, name, "json", {
+    test_report(model, name, "json", {
         let mut v = vec!["--json", "--summary-only"];
         v.extend_from_slice(args);
         v
@@ -24,7 +26,7 @@ fn run(model: &str, name: &str, args: &[&str]) {
     .context(id.clone())
     .unwrap();
 
-    cargo_llvm_cov(model, name, "full.json", {
+    test_report(model, name, "full.json", {
         let mut v = vec!["--json"];
         v.extend_from_slice(args);
         v
@@ -32,7 +34,7 @@ fn run(model: &str, name: &str, args: &[&str]) {
     .context(id.clone())
     .unwrap();
 
-    cargo_llvm_cov(model, name, "lcov.info", {
+    test_report(model, name, "lcov.info", {
         let mut v = vec!["--lcov", "--summary-only"];
         v.extend_from_slice(args);
         v

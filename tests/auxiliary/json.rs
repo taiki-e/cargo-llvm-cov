@@ -118,7 +118,9 @@ pub struct CoverageCounts {
 }
 
 mod tests {
-    use super::{super::fs, LlvmCovJsonExport};
+    use fs_err as fs;
+
+    use super::LlvmCovJsonExport;
 
     #[test]
     fn parse_llvm_cov_json_full() {

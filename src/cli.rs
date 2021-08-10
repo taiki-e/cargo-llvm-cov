@@ -250,10 +250,10 @@ mod tests {
 
     use anyhow::Result;
     use clap::IntoApp;
+    use fs_err as fs;
     use tempfile::Builder;
 
     use super::{Args, MAX_TERM_WIDTH};
-    use crate::fs;
 
     // See handle_args function for more.
     #[cfg(unix)]

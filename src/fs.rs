@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(dead_code))]
-
 pub(crate) use std::fs::ReadDir;
 use std::{io, path::Path};
 
@@ -47,20 +45,6 @@ pub(crate) fn remove_dir_all(path: impl AsRef<Path>) -> Result<()> {
             res.with_context(|| format!("failed to remove directory `{}`", path.display()))
         }
     }
-}
-
-/// Copies the contents of one file to another.
-/// This is a wrapper for [`std::fs::copy`].
-#[cfg(test)]
-#[track_caller]
-pub(crate) fn copy(from: impl AsRef<Path>, to: impl AsRef<Path>) -> Result<u64> {
-    let from = from.as_ref();
-    let to = to.as_ref();
-    let res = std::fs::copy(from, to);
-    trace!(track_caller: ?res, ?from, ?to, "copy");
-    res.with_context(|| {
-        format!("failed to copy file from `{}` to `{}`", from.display(), to.display())
-    })
 }
 
 /// Write a slice as the entire contents of a file.
