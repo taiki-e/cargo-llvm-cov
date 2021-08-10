@@ -1,35 +1,10 @@
-use std::{env, ffi::OsString};
-
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::{AppSettings, Clap};
 use serde::Deserialize;
 
-// Clap panics if you pass a non-utf8 value to an argument that expects a utf8
-// value.
-//
-// clap 3.0.0-beta.2:
-//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-3.0.0-beta.2/src/parse/matches/arg_matches.rs:220:28
-//
-// clap 2.33.3:
-//      thread 'main' panicked at 'unexpected invalid UTF-8 code point', $CARGO/clap-2.33.3/src/args/arg_matches.rs:217:28
-//
-// Even if you store a value as OsString and pass to cargo as is, you will get
-// the same panic on cargo side. e.g., `cargo check --manifest-path $'fo\x80o'`
-fn handle_args(args: impl IntoIterator<Item = impl Into<OsString>>) -> Result<Vec<String>> {
-    // Adapted from https://github.com/rust-lang/rust/blob/3bc9dd0dd293ab82945e35888ed6d7ab802761ef/compiler/rustc_driver/src/lib.rs#L1365-L1375.
-    args.into_iter()
-        .enumerate()
-        .map(|(i, arg)| {
-            arg.into()
-                .into_string()
-                .map_err(|arg| format_err!("argument {} is not valid Unicode: {:?}", i, arg))
-        })
-        .collect()
-}
-
 pub(crate) fn from_args() -> Result<Args> {
-    let Opts::LlvmCov(args) = Opts::parse_from(handle_args(env::args_os())?);
+    let Opts::LlvmCov(args) = Opts::parse();
     Ok(args)
 }
 
@@ -44,6 +19,7 @@ const MAX_TERM_WIDTH: usize = 100;
     bin_name = "cargo",
     max_term_width = MAX_TERM_WIDTH,
     setting = AppSettings::DeriveDisplayOrder,
+    setting = AppSettings::StrictUtf8,
     setting = AppSettings::UnifiedHelpMessage,
 )]
 enum Opts {
@@ -57,6 +33,7 @@ enum Opts {
     about = ABOUT,
     max_term_width = MAX_TERM_WIDTH,
     setting = AppSettings::DeriveDisplayOrder,
+    setting = AppSettings::StrictUtf8,
     setting = AppSettings::UnifiedHelpMessage,
 )]
 pub(crate) struct Args {
@@ -255,7 +232,7 @@ mod tests {
 
     use super::{Args, MAX_TERM_WIDTH};
 
-    // See handle_args function for more.
+    // https://github.com/clap-rs/clap/issues/751
     #[cfg(unix)]
     #[test]
     fn non_utf8_arg() {
@@ -266,17 +243,7 @@ mod tests {
         use super::Opts;
 
         // `cargo llvm-cov -- $'fo\x80o'`
-        let res = panic::catch_unwind(|| {
-            drop(Opts::try_parse_from(&[
-                "cargo".as_ref(),
-                "llvm-cov".as_ref(),
-                "--".as_ref(),
-                OsStr::from_bytes(&[b'f', b'o', 0x80, b'o']),
-            ]));
-        });
-        assert!(res.is_err());
-
-        super::handle_args(&[
+        Opts::try_parse_from(&[
             "cargo".as_ref(),
             "llvm-cov".as_ref(),
             "--".as_ref(),
