@@ -169,7 +169,7 @@ pub(crate) struct Args {
     /// Path to Cargo.toml
     #[clap(long, value_name = "PATH")]
     pub(crate) manifest_path: Option<Utf8PathBuf>,
-    /// Use verbose output (-vv very verbose/build.rs output)
+    /// Use verbose output (-vv/-vvv propagate verbosity to cargo)
     #[clap(short, long, parse(from_occurrences))]
     pub(crate) verbose: u8,
     /// Coloring

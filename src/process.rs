@@ -122,9 +122,7 @@ impl ProcessBuilder {
 
     /// Executes a process, waiting for completion, and mapping non-zero exit
     /// status to an error.
-    #[track_caller]
     pub(crate) fn run(&mut self) -> Result<Output> {
-        trace!(track_caller: command = ?self, "run");
         let output = self.build().unchecked().run().with_context(|| {
             ProcessError::new(&format!("could not execute process {}", self), None, None)
         })?;
@@ -142,9 +140,7 @@ impl ProcessBuilder {
 
     /// Executes a process, captures its standard output, returning the captured
     /// output as a `String`.
-    #[track_caller]
     pub(crate) fn read(&mut self) -> Result<String> {
-        trace!(track_caller: command = ?self, "read");
         Ok(self.build().read()?)
     }
 
@@ -197,7 +193,7 @@ impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`")?;
 
-        if self.display_env_vars.get() {
+        if !f.alternate() && self.display_env_vars.get() {
             for (key, val) in &self.env {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
@@ -218,7 +214,7 @@ impl fmt::Display for ProcessBuilder {
 
         write!(f, "`")?;
 
-        if self.display_dir.get() {
+        if !f.alternate() && self.display_dir.get() {
             if let Some(dir) = &self.dir {
                 write!(f, " (")?;
                 write!(f, "{}", dir.display())?;

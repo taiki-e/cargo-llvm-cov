@@ -1,7 +1,4 @@
-use std::{
-    env,
-    ffi::{OsStr, OsString},
-};
+use std::ffi::{OsStr, OsString};
 
 use anyhow::{format_err, Result};
 use camino::Utf8Path;
@@ -9,7 +6,8 @@ use serde::Deserialize;
 
 use crate::{
     cli::{Args, Coloring},
-    context::Env,
+    context::Context,
+    env::{self, Env},
     process::ProcessBuilder,
 };
 
@@ -57,6 +55,71 @@ pub(crate) fn locate_project() -> Result<String> {
     cmd!("cargo", "locate-project", "--message-format", "plain").read()
 }
 
+pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
+    if !cx.doctests {
+        cmd.arg("--tests");
+    }
+    if cx.no_fail_fast {
+        cmd.arg("--no-fail-fast");
+    }
+    for package in &cx.package {
+        cmd.arg("--package");
+        cmd.arg(package);
+    }
+    if cx.workspace {
+        cmd.arg("--workspace");
+    }
+    for exclude in &cx.exclude {
+        cmd.arg("--exclude");
+        cmd.arg(exclude);
+    }
+    if cx.release {
+        cmd.arg("--release");
+    }
+    for features in &cx.features {
+        cmd.arg("--features");
+        cmd.arg(features);
+    }
+    if cx.all_features {
+        cmd.arg("--all-features");
+    }
+    if cx.no_default_features {
+        cmd.arg("--no-default-features");
+    }
+    if let Some(target) = &cx.target {
+        cmd.arg("--target");
+        cmd.arg(target);
+    }
+
+    cmd.arg("--manifest-path");
+    cmd.arg(&cx.manifest_path);
+
+    if let Some(color) = cx.color {
+        cmd.arg("--color");
+        cmd.arg(color.cargo_color());
+    }
+    if cx.frozen {
+        cmd.arg("--frozen");
+    }
+    if cx.locked {
+        cmd.arg("--locked");
+    }
+
+    if cx.args.verbose > 1 {
+        cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
+    }
+
+    for unstable_flag in &cx.unstable_flags {
+        cmd.arg("-Z");
+        cmd.arg(unstable_flag);
+    }
+
+    if !cx.args.args.is_empty() {
+        cmd.arg("--");
+        cmd.args(&cx.args.args);
+    }
+}
+
 // =============================================================================
 // Cargo configuration
 //
@@ -77,22 +140,22 @@ impl Config {
     fn apply_env(&mut self) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
-        if let Some(rustc) = ver("CARGO_BUILD_RUSTC")? {
+        if let Some(rustc) = env::ver("CARGO_BUILD_RUSTC")? {
             self.build.rustc = Some(rustc);
         }
-        if let Some(rustflags) = ver("CARGO_BUILD_RUSTFLAGS")? {
+        if let Some(rustflags) = env::ver("CARGO_BUILD_RUSTFLAGS")? {
             self.build.rustflags = Some(StringOrArray::String(rustflags));
         }
-        if let Some(rustdocflags) = ver("CARGO_BUILD_RUSTDOCFLAGS")? {
+        if let Some(rustdocflags) = env::ver("CARGO_BUILD_RUSTDOCFLAGS")? {
             self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
         }
-        if let Some(target) = ver("CARGO_BUILD_TARGET")? {
+        if let Some(target) = env::ver("CARGO_BUILD_TARGET")? {
             self.build.target = Some(target);
         }
-        if let Some(verbose) = ver("CARGO_TERM_VERBOSE")? {
+        if let Some(verbose) = env::ver("CARGO_TERM_VERBOSE")? {
             self.term.verbose = Some(verbose.parse()?);
         }
-        if let Some(color) = ver("CARGO_TERM_COLOR")? {
+        if let Some(color) = env::ver("CARGO_TERM_COLOR")? {
             self.term.color =
                 Some(clap::ArgEnum::from_str(&color, false).map_err(|e| format_err!("{}", e))?);
         }
@@ -167,14 +230,5 @@ impl StringOrArray {
             Self::String(s) => s,
             Self::Array(v) => v.join(" "),
         }
-    }
-}
-
-fn ver(key: &str) -> Result<Option<String>> {
-    match env::var(key) {
-        Ok(v) if v.is_empty() => Ok(None),
-        Ok(v) => Ok(Some(v)),
-        Err(env::VarError::NotPresent) => Ok(None),
-        Err(e) => Err(e.into()),
     }
 }
