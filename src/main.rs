@@ -165,6 +165,9 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         )
         .arg("-o")
         .arg(&cx.profdata_file);
+    if let Some(flags) = &cx.env.cargo_llvm_profdata_flags {
+        cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
+    }
     if cx.verbose {
         status!("Running", "{:#}", cmd);
     }
@@ -331,6 +334,10 @@ impl Format {
                 }
             }
             Format::None => {}
+        }
+
+        if let Some(flags) = &cx.env.cargo_llvm_cov_flags {
+            cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
         }
 
         if let Some(output_path) = &cx.output_path {

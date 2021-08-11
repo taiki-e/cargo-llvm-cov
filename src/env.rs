@@ -8,6 +8,13 @@ use anyhow::Result;
 
 #[derive(Debug)]
 pub(crate) struct Env {
+    /// `CARGO_LLVM_COV_FLAGS` environment variable to pass additional flags
+    /// to llvm-cov. (value: space-separated list)
+    pub(crate) cargo_llvm_cov_flags: Option<String>,
+    /// `CARGO_LLVM_PROFDATA_FLAGS` environment variable to pass additional flags
+    /// to llvm-profdata. (value: space-separated list)
+    pub(crate) cargo_llvm_profdata_flags: Option<String>,
+
     // Environment variables Cargo reads
     // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads
     /// `RUSTFLAGS` environment variable.
@@ -27,11 +34,15 @@ pub(crate) struct Env {
 
 impl Env {
     pub(crate) fn new() -> Result<Self> {
+        let cargo_llvm_cov_flags = ver("CARGO_LLVM_COV_FLAGS")?;
+        let cargo_llvm_profdata_flags = ver("CARGO_LLVM_PROFDATA_FLAGS")?;
         env::remove_var("LLVM_COV_FLAGS");
         env::remove_var("LLVM_PROFDATA_FLAGS");
         env::set_var("CARGO_INCREMENTAL", "0");
 
         Ok(Self {
+            cargo_llvm_cov_flags,
+            cargo_llvm_profdata_flags,
             rustflags: env::var_os("RUSTFLAGS"),
             rustdocflags: env::var_os("RUSTDOCFLAGS"),
             rustc: env::var_os("RUSTC"),
