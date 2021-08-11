@@ -54,3 +54,11 @@ macro_rules! warn {
         let _ = writeln!(stream, $($msg),*);
     }};
 }
+
+macro_rules! info {
+    ($($msg:expr),* $(,)?) => {{
+        use std::io::Write;
+        let mut stream = crate::term::print_inner(None, "info");
+        let _ = writeln!(stream, $($msg),*);
+    }};
+}

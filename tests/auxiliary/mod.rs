@@ -1,32 +1,37 @@
-macro_rules! trace {
-    ($($tt:tt)*) => {};
-}
-
-#[path = "../../src/fs.rs"]
-mod fs;
-#[macro_use]
-#[path = "../../src/process.rs"]
-mod process;
-
 mod json;
 
 use std::{
     env,
+    process::{Command, ExitStatus},
     sync::atomic::{AtomicUsize, Ordering::Relaxed},
 };
 
 use anyhow::Result;
 use camino::{Utf8Path, Utf8PathBuf};
+use easy_ext::ext;
+use fs_err as fs;
 use once_cell::sync::Lazy;
 use tempfile::{Builder, TempDir};
 use walkdir::WalkDir;
 
-static FIXTURES_PATH: Lazy<Utf8PathBuf> =
+pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
     Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
 
-#[allow(single_use_lifetimes)]
+pub fn cargo_llvm_cov() -> Command {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
+    cmd.arg("llvm-cov");
+    cmd.env_remove("RUSTFLAGS")
+        .env_remove("RUSTDOCFLAGS")
+        .env_remove("CARGO_BUILD_RUSTFLAGS")
+        .env_remove("CARGO_BUILD_RUSTDOCFLAGS")
+        .env_remove("CARGO_TERM_VERBOSE")
+        .env_remove("CARGO_TERM_COLOR")
+        .env_remove("RUST_LOG");
+    cmd
+}
+
 #[track_caller]
-pub(crate) fn cargo_llvm_cov<'a>(
+pub fn test_report<'a>(
     model: &str,
     name: &str,
     extension: &str,
@@ -37,26 +42,35 @@ pub(crate) fn cargo_llvm_cov<'a>(
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
-    process!(
-        env!("CARGO_BIN_EXE_cargo-llvm-cov"),
-        "llvm-cov",
-        "--color",
-        "never",
-        "--output-path",
-        output_path
-    )
-    .args(args)
-    .dir(workspace_root.path())
-    .env_remove("RUSTFLAGS")
-    .env_remove("RUST_LOG")
-    .stdout_capture()
-    .stderr_capture()
-    .run()?;
+    cargo_llvm_cov()
+        .args(["--color", "never", "--output-path"])
+        .arg(output_path)
+        .args(args)
+        .current_dir(workspace_root.path())
+        .assert_success();
 
-    if args.contains(&"--json") && !args.contains(&"--summary-only") {
+    normalize_output(output_path, args)?;
+    assert_output(output_path)
+}
+
+pub fn assert_output(output_path: &Utf8Path) -> Result<()> {
+    if env::var_os("CI").is_some() {
+        assert!(Command::new("git")
+            .args(&["--no-pager", "diff", "--exit-code"])
+            .arg(output_path)
+            .status()?
+            .success());
+    }
+    Ok(())
+}
+
+pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
+    if args.contains(&"--json") {
         let s = fs::read_to_string(output_path)?;
         let mut json = serde_json::from_str::<json::LlvmCovJsonExport>(&s).unwrap();
-        json.demangle();
+        if !args.contains(&"--summary-only") {
+            json.demangle();
+        }
         fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
     }
     #[cfg(windows)]
@@ -65,13 +79,10 @@ pub(crate) fn cargo_llvm_cov<'a>(
         // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
         fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
     }
-    if env::var_os("CI").is_some() {
-        process!("git", "--no-pager", "diff", "--exit-code", output_path).run()?;
-    }
     Ok(())
 }
 
-fn test_project(model: &str, name: &str) -> Result<TempDir> {
+pub fn test_project(model: &str, name: &str) -> Result<TempDir> {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     let tmpdir = Builder::new()
@@ -91,4 +102,51 @@ fn test_project(model: &str, name: &str) -> Result<TempDir> {
     }
 
     Ok(tmpdir)
+}
+
+#[ext(CommandExt)]
+impl Command {
+    #[track_caller]
+    pub fn assert_output(&mut self) -> AssertOutput {
+        let output = self.output().unwrap_or_else(|e| panic!("could not execute process: {}", e));
+        AssertOutput {
+            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+            status: output.status,
+        }
+    }
+
+    #[track_caller]
+    pub fn assert_success(&mut self) -> AssertOutput {
+        let output = self.assert_output();
+        if !output.status.success() {
+            panic!(
+                "assertion failed: `self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+                "-".repeat(60),
+                output.stdout,
+                output.stderr,
+            );
+        }
+        output
+    }
+
+    #[track_caller]
+    pub fn assert_failure(&mut self) -> AssertOutput {
+        let output = self.assert_output();
+        if output.status.success() {
+            panic!(
+                "assertion failed: `!self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+                "-".repeat(60),
+                output.stdout,
+                output.stderr,
+            );
+        }
+        output
+    }
+}
+
+pub struct AssertOutput {
+    stdout: String,
+    stderr: String,
+    status: ExitStatus,
 }

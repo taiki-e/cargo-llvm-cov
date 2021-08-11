@@ -1,0 +1,15 @@
+    1|      1|// https://github.com/taiki-e/cargo-llvm-cov/issues/43// https://github.com/taiki-e/cargo-llvm-cov/issues/43
+    2|       |
+    3|      2|fn func<T: Default + PartialOrd>(t: T) -> bool {
+    4|      2|    if t < T::default() {
+    5|      1|        true
+    6|       |    } else {
+    7|      1|        false
+    8|       |    }
+    9|      2|}
+   10|       |
+   11|      1|#[test]
+   12|      1|fn test() {
+   13|      1|    assert!(!func(1_f32));
+   14|      1|    assert!(func(-1_i32));
+   15|      1|}

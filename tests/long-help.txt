@@ -71,8 +71,11 @@ OPTIONS:
         --doctests
             Including doc tests (unstable)
 
+        --no-report
+            Run tests, but don't generate coverage reports
+
         --no-run
-            Compile, but don't run tests (unstable)
+            Generate coverage reports without running tests
 
         --no-fail-fast
             Run all tests regardless of failure

@@ -1,0 +1,12 @@
+[package]
+name = "merge"
+version = "0.0.0"
+
+[workspace]
+
+[lib]
+doctest = false
+
+[features]
+a = []
+b = []

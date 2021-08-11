@@ -9,8 +9,10 @@
 
 #[macro_use]
 mod trace;
+
 #[macro_use]
 mod term;
+
 #[macro_use]
 mod process;
 
@@ -50,11 +52,23 @@ fn try_main() -> Result<()> {
 
     let cx = &Context::new(args)?;
 
-    if !cx.no_run {
-        clean_partial(cx)?;
-        run_test(cx)?;
+    match (cx.no_run, cx.no_report) {
+        (false, false) => {
+            clean_partial(cx)?;
+            create_dirs(cx)?;
+            run_test(cx)?;
+            generate_report(cx)?;
+        }
+        (false, true) => {
+            create_dirs(cx)?;
+            run_test(cx)?;
+        }
+        (true, false) => {
+            create_dirs(cx)?;
+            generate_report(cx)?;
+        }
+        (true, true) => unreachable!(),
     }
-    generate_report(cx)?;
 
     Ok(())
 }
@@ -64,7 +78,6 @@ fn clean_partial(cx: &Context) -> Result<()> {
 
     if let Some(output_dir) = &cx.output_dir {
         fs::remove_dir_all(output_dir)?;
-        fs::create_dir_all(output_dir)?;
     }
 
     for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
@@ -73,10 +86,20 @@ fn clean_partial(cx: &Context) -> Result<()> {
 
     if cx.doctests {
         fs::remove_dir_all(&cx.doctests_dir)?;
-        fs::create_dir_all(&cx.doctests_dir)?;
     }
 
     fs::remove_file(&cx.profdata_file)?;
+    Ok(())
+}
+
+fn create_dirs(cx: &Context) -> Result<()> {
+    if let Some(output_dir) = &cx.output_dir {
+        fs::create_dir_all(output_dir)?;
+    }
+
+    if cx.doctests {
+        fs::create_dir_all(&cx.doctests_dir)?;
+    }
     Ok(())
 }
 
@@ -102,11 +125,7 @@ fn run_test(cx: &Context) -> Result<()> {
         ));
     }
 
-    let mut cargo = cx.process(&*cx.cargo);
-    if !cx.cargo.nightly {
-        cargo.arg("+nightly");
-    }
-
+    let mut cargo = cx.cargo_process();
     cargo.env("RUSTFLAGS", &rustflags);
     cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
     cargo.env("CARGO_INCREMENTAL", "0");
@@ -204,9 +223,15 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             if !manifest_path.is_file() {
                 continue;
             }
-            let manifest: cargo::Manifest = toml::from_str(&fs::read_to_string(manifest_path)?)?;
-            if let Some(package) = manifest.package {
-                trybuild_projects.push(package.name);
+            for package in cargo_metadata::MetadataCommand::new()
+                .manifest_path(manifest_path)
+                .no_deps()
+                .exec()?
+                .packages
+            {
+                for target in package.targets {
+                    trybuild_projects.push(target.name);
+                }
             }
         }
         if !trybuild_projects.is_empty() {
@@ -303,10 +328,10 @@ impl Format {
         match self {
             Format::Text | Format::Html => {
                 cmd.args(&[
-                    "-show-instantiations",
+                    &format!("-show-instantiations={}", !cx.hide_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
-                    &format!("-Xdemangler={}", cx.current_exe.display()),
+                    &format!("-Xdemangler={}", cx.env.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
                 ]);
@@ -323,7 +348,7 @@ impl Format {
         }
 
         if let Some(output_path) = &cx.output_path {
-            let out = cmd.stdout_capture().read()?;
+            let out = cmd.read()?;
             fs::write(output_path, out)?;
             return Ok(());
         }

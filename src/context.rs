@@ -6,14 +6,20 @@ use std::{
 };
 
 use anyhow::{bail, format_err, Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
-use crate::{cargo, cli::Args, fs, process, process::ProcessBuilder, term};
+use crate::{
+    cargo::{self, Cargo},
+    cli::Args,
+    fs,
+    process::ProcessBuilder,
+    term,
+};
 
 pub(crate) struct Context {
     pub(crate) args: Args,
-    pub(crate) env: EnvironmentVariables,
+    pub(crate) env: Env,
     pub(crate) verbose: Option<String>,
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
@@ -27,25 +33,21 @@ pub(crate) struct Context {
     pub(crate) excluded_path: Vec<Utf8PathBuf>,
 
     // Paths to executables.
-    pub(crate) cargo: Cargo,
+    cargo: Cargo,
     pub(crate) llvm_cov: Utf8PathBuf,
     pub(crate) llvm_profdata: Utf8PathBuf,
-    pub(crate) current_exe: PathBuf,
 }
 
 impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
-        let mut env = EnvironmentVariables::new();
+        let mut env = Env::new();
         debug!(?args);
         debug!(?env);
 
         let package_root = if let Some(manifest_path) = &args.manifest_path {
             manifest_path.clone()
         } else {
-            process!("cargo", "locate-project", "--message-format", "plain")
-                .stdout_capture()
-                .read()?
-                .into()
+            cargo::locate_project()?.into()
         };
 
         let metadata =
@@ -53,18 +55,10 @@ impl Context {
         let cargo_target_dir = &metadata.target_directory;
         debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
 
-        // .cargo/config is prefer over .cargo/config.toml
-        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#hierarchical-structure
-        let workspace_config = &metadata.workspace_root.join(".cargo/config");
-        let workspace_config_toml = &metadata.workspace_root.join(".cargo/config.toml");
-        let mut config = if workspace_config.is_file() {
-            toml::from_str(&fs::read_to_string(workspace_config)?)?
-        } else if workspace_config_toml.is_file() {
-            toml::from_str(&fs::read_to_string(workspace_config_toml)?)?
-        } else {
-            cargo::Config::default()
-        };
-        config.apply_env()?;
+        let cargo = Cargo::new(&env, &metadata.workspace_root)?;
+        debug!(?cargo);
+
+        let config = cargo::config(&cargo, &metadata.workspace_root)?;
         config.merge_to(&mut args, &mut env);
 
         term::set_coloring(args.color);
@@ -85,12 +79,9 @@ impl Context {
         if args.doctests {
             warn!("--doctests option is unstable");
         }
-        if args.no_run {
-            warn!("--no-run option is unstable");
-        }
         if args.target.is_some() {
-            warn!(
-                "When --target option is used, coverage for proc-macro and build script will \
+            info!(
+                "when --target option is used, coverage for proc-macro and build script will \
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
@@ -108,10 +99,7 @@ impl Context {
         let target_dir = cargo_target_dir.join("llvm-cov-target");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let cargo = Cargo::new(&env, &metadata.workspace_root)?;
-        debug!(?cargo);
-
-        let sysroot: Utf8PathBuf = sysroot(&env, cargo.nightly)?.into();
+        let sysroot = sysroot(&env, cargo.nightly)?;
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
         let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host(&env)?));
@@ -154,14 +142,6 @@ impl Context {
             // TODO: emit info! or warn! if --no-run specified
             args.no_run = false;
         }
-        let current_exe = match env::current_exe() {
-            Ok(exe) => exe,
-            Err(e) => {
-                let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
-                warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
-                exe.into()
-            }
-        };
 
         let mut excluded_path = vec![];
         for spec in &args.exclude {
@@ -227,13 +207,21 @@ impl Context {
             cargo,
             llvm_cov,
             llvm_profdata,
-            current_exe,
             env,
         })
     }
 
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
-        let mut cmd = process!(program);
+        let mut cmd = cmd!(program);
+        cmd.dir(&self.metadata.workspace_root);
+        if self.verbose.is_some() {
+            cmd.display_env_vars();
+        }
+        cmd
+    }
+
+    pub(crate) fn cargo_process(&self) -> ProcessBuilder {
+        let mut cmd = self.cargo.process();
         cmd.dir(&self.metadata.workspace_root);
         if self.verbose.is_some() {
             cmd.display_env_vars();
@@ -250,12 +238,8 @@ impl ops::Deref for Context {
     }
 }
 
-/// Environment variables fetched at runtime.
-///
-/// These environment variables are either applied to both cargo and
-/// cargo-llvm-cov, or are modified before being passed to cargo.
 #[derive(Debug)]
-pub(crate) struct EnvironmentVariables {
+pub(crate) struct Env {
     // Environment variables Cargo reads
     // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads
     /// `RUSTFLAGS` environment variable.
@@ -269,9 +253,11 @@ pub(crate) struct EnvironmentVariables {
     // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
     /// `CARGO` environment variable.
     pub(crate) cargo: Option<OsString>,
+
+    pub(crate) current_exe: PathBuf,
 }
 
-impl EnvironmentVariables {
+impl Env {
     fn new() -> Self {
         env::set_var("CARGO_INCREMENTAL", "0");
         Self {
@@ -279,6 +265,14 @@ impl EnvironmentVariables {
             rustdocflags: env::var_os("RUSTDOCFLAGS"),
             rustc: env::var_os("RUSTC"),
             cargo: env::var_os("CARGO"),
+            current_exe: match env::current_exe() {
+                Ok(exe) => exe,
+                Err(e) => {
+                    let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
+                    warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
+                    exe.into()
+                }
+            },
         }
     }
 
@@ -303,48 +297,20 @@ impl CargoLlvmCovInfo {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct Cargo {
-    path: OsString,
-    pub(crate) nightly: bool,
-}
-
-impl Cargo {
-    pub(crate) fn new(env: &EnvironmentVariables, workspace_root: &Utf8Path) -> Result<Self> {
-        let mut path = env.cargo().to_owned();
-        let version = process!(&path, "version").dir(workspace_root).stdout_capture().read()?;
-        let nightly = version.contains("-nightly") || version.contains("-dev");
-        if !nightly {
-            path = "cargo".into();
-        }
-
-        Ok(Self { path, nightly })
-    }
-}
-
-impl ops::Deref for Cargo {
-    type Target = OsString;
-
-    fn deref(&self) -> &Self::Target {
-        &self.path
-    }
-}
-
-fn sysroot(env: &EnvironmentVariables, nightly: bool) -> Result<String> {
+fn sysroot(env: &Env, nightly: bool) -> Result<Utf8PathBuf> {
     Ok(if nightly {
-        process!(env.rustc(), "--print", "sysroot")
+        cmd!(env.rustc(), "--print", "sysroot")
     } else {
-        process!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
+        cmd!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
     }
-    .stdout_capture()
     .read()
     .context("failed to find sysroot")?
     .trim()
     .into())
 }
 
-fn host(env: &EnvironmentVariables) -> Result<String> {
-    let output = process!(env.rustc(), "--version", "--verbose").stdout_capture().read()?;
+fn host(env: &Env) -> Result<String> {
+    let output = cmd!(env.rustc(), "--version", "--verbose").read()?;
     output
         .lines()
         .find_map(|line| line.strip_prefix("host: "))

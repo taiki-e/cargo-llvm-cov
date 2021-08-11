@@ -1,0 +1,15 @@
+    1|      2|fn func(x: i32) -> bool {fn func(x: i32) -> bool {
+    2|      2|    if x < 0 {
+    3|      1|        true
+    4|       |    } else {
+    5|      1|        false
+    6|       |    }
+    7|      2|}
+    8|       |
+    9|      2|#[test]
+   10|      1|fn test() {
+   11|      1|    #[cfg(feature = "a")]
+   12|      1|    assert!(!func(1));
+   13|      1|    #[cfg(feature = "b")]
+   14|      1|    assert!(func(-1));
+   15|      2|}

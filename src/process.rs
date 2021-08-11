@@ -1,5 +1,3 @@
-#![cfg_attr(test, allow(dead_code))]
-
 use std::{
     cell::Cell,
     collections::BTreeMap,
@@ -13,9 +11,9 @@ use std::{
 use anyhow::{Context as _, Result};
 use shell_escape::escape;
 
-macro_rules! process {
+macro_rules! cmd {
     ($program:expr $(, $arg:expr)* $(,)?) => {{
-        let mut _cmd = process::ProcessBuilder::new($program);
+        let mut _cmd = $crate::process::ProcessBuilder::new($program);
         $(
             _cmd.arg($arg);
         )*
@@ -80,12 +78,11 @@ impl ProcessBuilder {
         self
     }
 
-    /// Remove a variable from the process's environment.
-    #[cfg(test)]
-    pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
-        self.env.insert(key.into(), None);
-        self
-    }
+    // /// Remove a variable from the process's environment.
+    // pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
+    //     self.env.insert(key.into(), None);
+    //     self
+    // }
 
     /// Set the working directory where the process will execute.
     pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
@@ -93,14 +90,13 @@ impl ProcessBuilder {
         self
     }
 
-    /// Enables [`duct::Expression::stdout_capture`].
-    pub(crate) fn stdout_capture(&mut self) -> &mut Self {
-        self.stdout_capture = true;
-        self
-    }
+    // /// Enables [`duct::Expression::stdout_capture`].
+    // pub(crate) fn stdout_capture(&mut self) -> &mut Self {
+    //     self.stdout_capture = true;
+    //     self
+    // }
 
     /// Enables [`duct::Expression::stderr_capture`].
-    #[cfg(test)]
     pub(crate) fn stderr_capture(&mut self) -> &mut Self {
         self.stderr_capture = true;
         self

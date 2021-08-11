@@ -1,40 +1,68 @@
-use std::env;
+use std::{
+    env,
+    ffi::{OsStr, OsString},
+};
 
 use anyhow::{format_err, Result};
+use camino::Utf8Path;
 use serde::Deserialize;
 
 use crate::{
     cli::{Args, Coloring},
-    context::EnvironmentVariables,
+    context::Env,
+    process::ProcessBuilder,
 };
 
-fn ver(key: &str) -> Result<Option<String>> {
-    match env::var(key) {
-        Ok(v) if v.is_empty() => Ok(None),
-        Ok(v) => Ok(Some(v)),
-        Err(env::VarError::NotPresent) => Ok(None),
-        Err(e) => Err(e.into()),
+#[derive(Debug)]
+pub(crate) struct Cargo {
+    path: OsString,
+    pub(crate) nightly: bool,
+}
+
+impl Cargo {
+    pub(crate) fn new(env: &Env, workspace_root: &Utf8Path) -> Result<Self> {
+        let mut path = env.cargo();
+        let version = cmd!(path, "version").dir(workspace_root).read()?;
+        let nightly = version.contains("-nightly") || version.contains("-dev");
+        if !nightly {
+            path = OsStr::new("cargo");
+        }
+
+        Ok(Self { path: path.into(), nightly })
+    }
+
+    pub(crate) fn process(&self) -> ProcessBuilder {
+        let mut cmd = cmd!(&self.path);
+        if !self.nightly {
+            cmd.arg("+nightly");
+        }
+        cmd
     }
 }
 
-// =============================================================================
-// Cargo manifest
-// https://doc.rust-lang.org/nightly/cargo/reference/manifest.html
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct Manifest {
-    pub(crate) package: Option<Package>,
+pub(crate) fn config(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Config> {
+    let s = cargo
+        .process()
+        .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
+        .env("RUSTC_BOOTSTRAP", "1")
+        .dir(workspace_root)
+        .stderr_capture()
+        .read()?;
+    let mut config: Config = serde_json::from_str(&s)?;
+    config.apply_env()?;
+    Ok(config)
 }
 
-// https://doc.rust-lang.org/nightly/cargo/reference/manifest.html#the-package-section
-#[derive(Debug, Deserialize)]
-pub(crate) struct Package {
-    pub(crate) name: String,
+pub(crate) fn locate_project() -> Result<String> {
+    cmd!("cargo", "locate-project", "--message-format", "plain").read()
 }
 
 // =============================================================================
 // Cargo configuration
-// https://doc.rust-lang.org/nightly/cargo/reference/config.html
+//
+// Refs:
+// - https://doc.rust-lang.org/nightly/cargo/reference/config.html
+// - https://github.com/rust-lang/cargo/issues/9301
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Config {
@@ -46,7 +74,7 @@ pub(crate) struct Config {
 
 impl Config {
     // Apply configuration environment variables
-    pub(crate) fn apply_env(&mut self) -> Result<()> {
+    fn apply_env(&mut self) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
         if let Some(rustc) = ver("CARGO_BUILD_RUSTC")? {
@@ -58,6 +86,9 @@ impl Config {
         if let Some(rustdocflags) = ver("CARGO_BUILD_RUSTDOCFLAGS")? {
             self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
         }
+        if let Some(target) = ver("CARGO_BUILD_TARGET")? {
+            self.build.target = Some(target);
+        }
         if let Some(verbose) = ver("CARGO_TERM_VERBOSE")? {
             self.term.verbose = Some(verbose.parse()?);
         }
@@ -68,7 +99,7 @@ impl Config {
         Ok(())
     }
 
-    pub(crate) fn merge_to(self, args: &mut Args, env: &mut EnvironmentVariables) {
+    pub(crate) fn merge_to(self, args: &mut Args, env: &mut Env) {
         // RUSTFLAGS environment variable is prefer over build.rustflags config value.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
         if env.rustflags.is_none() {
@@ -89,6 +120,9 @@ impl Config {
                 env.rustc = Some(rustc.into());
             }
         }
+        if args.target.is_none() {
+            args.target = self.build.target;
+        }
         if args.verbose == 0 && self.term.verbose.unwrap_or(false) {
             args.verbose = 1;
         }
@@ -107,6 +141,8 @@ struct Build {
     rustflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
     rustdocflags: Option<StringOrArray>,
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget
+    target: Option<String>,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#term
@@ -131,5 +167,14 @@ impl StringOrArray {
             Self::String(s) => s,
             Self::Array(v) => v.join(" "),
         }
+    }
+}
+
+fn ver(key: &str) -> Result<Option<String>> {
+    match env::var(key) {
+        Ok(v) if v.is_empty() => Ok(None),
+        Ok(v) => Ok(Some(v)),
+        Err(env::VarError::NotPresent) => Ok(None),
+        Err(e) => Err(e.into()),
     }
 }

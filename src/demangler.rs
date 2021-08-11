@@ -14,10 +14,9 @@ use std::{
     str::Lines,
 };
 
+use anyhow::Result;
 use regex::Regex;
 use rustc_demangle::demangle;
-
-use crate::Result;
 
 const REPLACE_COLONS: &str = "::";
 

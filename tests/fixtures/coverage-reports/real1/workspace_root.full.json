@@ -154,19 +154,16 @@
             "functions": {
               "count": 4,
               "covered": 4,
-              "notcovered": null,
               "percent": 100.0
             },
             "instantiations": {
               "count": 4,
               "covered": 4,
-              "notcovered": null,
               "percent": 100.0
             },
             "lines": {
               "count": 15,
               "covered": 13,
-              "notcovered": null,
               "percent": 86.66666666666667
             },
             "regions": {
