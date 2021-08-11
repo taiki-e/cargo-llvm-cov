@@ -114,7 +114,7 @@ pub(crate) struct Args {
     #[clap(long)]
     pub(crate) doctests: bool,
     /// Run tests, but don't generate coverage reports
-    #[clap(long, conflicts_with_all = &["no-run"])]
+    #[clap(long, conflicts_with = "no-run")]
     pub(crate) no_report: bool,
 
     // =========================================================================
@@ -127,7 +127,9 @@ pub(crate) struct Args {
     #[clap(long)]
     pub(crate) no_fail_fast: bool,
     /// Package to run tests for
-    #[clap(short, long, value_name = "SPEC")]
+    // cargo allows the combination of --package and --workspace, but we reject
+    // it because the situation where both flags are specified is odd.
+    #[clap(short, long, value_name = "SPEC", conflicts_with = "workspace")]
     pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     #[clap(long, visible_alias = "all")]

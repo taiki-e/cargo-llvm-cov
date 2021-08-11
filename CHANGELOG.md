@@ -21,6 +21,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
 
+- [Fix bug in `--exclude` and `--package` options](https://github.com/taiki-e/cargo-llvm-cov/pull/56)
+
 - [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
 - Diagnostic improvements.

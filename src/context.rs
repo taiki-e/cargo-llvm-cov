@@ -1,4 +1,6 @@
 use std::{
+    collections::HashMap,
+    convert::TryInto,
     env,
     ffi::{OsStr, OsString},
     ops,
@@ -6,8 +8,9 @@ use std::{
 };
 
 use anyhow::{bail, format_err, Context as _, Result};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
+use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Cargo},
@@ -143,7 +146,6 @@ impl Context {
             args.no_run = false;
         }
 
-        let mut excluded_path = vec![];
         for spec in &args.exclude {
             if !metadata.workspace_members.iter().any(|id| metadata[id].name == *spec) {
                 warn!(
@@ -154,45 +156,40 @@ impl Context {
         }
         let workspace = args.workspace
             || (metadata.resolve.as_ref().unwrap().root.is_none() && args.package.is_empty());
+        let mut excluded = vec![];
+        let mut included = vec![];
         if workspace {
             // with --workspace
-            for id in metadata
-                .workspace_members
-                .iter()
-                .filter(|id| args.exclude.contains(&metadata[id].name))
-            {
+            for id in &metadata.workspace_members {
                 let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-
-                let package_path =
-                    manifest_dir.strip_prefix(&metadata.workspace_root).unwrap_or(manifest_dir);
-                // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
-                excluded_path.push(package_path.into());
+                if args.exclude.contains(&metadata[id].name) {
+                    excluded.push(manifest_dir);
+                } else {
+                    included.push(manifest_dir);
+                }
             }
         } else if !args.package.is_empty() {
             // with --package
-            for id in metadata
-                .workspace_members
-                .iter()
-                .filter(|id| !args.package.contains(&metadata[*id].name))
-            {
+            for id in &metadata.workspace_members {
                 let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-
-                let package_path =
-                    manifest_dir.strip_prefix(&metadata.workspace_root).unwrap_or(manifest_dir);
-                // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
-                excluded_path.push(package_path.into());
+                if args.package.contains(&metadata[id].name) {
+                    included.push(manifest_dir);
+                } else {
+                    excluded.push(manifest_dir);
+                }
             }
         } else {
             let current_package = metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
-            for id in metadata.workspace_members.iter().filter(|id| **id != *current_package) {
+            for id in &metadata.workspace_members {
                 let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-
-                let package_path =
-                    manifest_dir.strip_prefix(&metadata.workspace_root).unwrap_or(manifest_dir);
-                // TODO: This is still incomplete as it does not work well for patterns like `crate1/crate2`.
-                excluded_path.push(package_path.into());
+                if current_package == id {
+                    included.push(manifest_dir);
+                } else {
+                    excluded.push(manifest_dir);
+                }
             }
         }
+        let excluded_path = resolve_excluded_paths(&metadata.workspace_root, &included, &excluded);
 
         Ok(Self {
             args,
@@ -236,6 +233,71 @@ impl ops::Deref for Context {
     fn deref(&self) -> &Self::Target {
         &self.args
     }
+}
+
+fn resolve_excluded_paths(
+    workspace_root: &Utf8Path,
+    included: &[&Utf8Path],
+    excluded: &[&Utf8Path],
+) -> Vec<Utf8PathBuf> {
+    let mut excluded_path = vec![];
+    let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
+    for &included in included {
+        for &excluded in excluded.iter().filter(|e| included.starts_with(e)) {
+            if let Some(v) = contains.get_mut(&excluded) {
+                v.push(included);
+            } else {
+                contains.insert(excluded, vec![included]);
+            }
+        }
+    }
+    if contains.is_empty() {
+        for &manifest_dir in excluded {
+            let package_path = manifest_dir.strip_prefix(workspace_root).unwrap_or(manifest_dir);
+            excluded_path.push(package_path.into());
+        }
+        return excluded_path;
+    }
+
+    for &excluded in excluded {
+        let included = match contains.get(&excluded) {
+            Some(included) => included,
+            None => {
+                let package_path = excluded.strip_prefix(workspace_root).unwrap_or(excluded);
+                excluded_path.push(package_path.into());
+                continue;
+            }
+        };
+
+        for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {
+            let p = e.path();
+            if !p.is_dir() {
+                if p.extension().map_or(false, |e| e == "rs") {
+                    let p = p.strip_prefix(workspace_root).unwrap_or(p);
+                    excluded_path.push(p.to_owned().try_into().unwrap());
+                }
+                return false;
+            }
+
+            let mut contains = false;
+            for included in included {
+                if included.starts_with(p) {
+                    if p.starts_with(included) {
+                        return false;
+                    }
+                    contains = true;
+                }
+            }
+            if contains {
+                // continue to walk
+                return true;
+            }
+            let p = p.strip_prefix(workspace_root).unwrap_or(p);
+            excluded_path.push(p.to_owned().try_into().unwrap());
+            false
+        }) {}
+    }
+    excluded_path
 }
 
 #[derive(Debug)]
