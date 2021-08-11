@@ -1,11 +1,4 @@
-use std::{
-    collections::HashMap,
-    convert::TryInto,
-    env,
-    ffi::{OsStr, OsString},
-    ops,
-    path::PathBuf,
-};
+use std::{collections::HashMap, convert::TryInto, env, ffi::OsString, ops};
 
 use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -15,6 +8,7 @@ use walkdir::WalkDir;
 use crate::{
     cargo::{self, Cargo},
     cli::Args,
+    env::Env,
     fs,
     process::ProcessBuilder,
     term,
@@ -23,7 +17,7 @@ use crate::{
 pub(crate) struct Context {
     pub(crate) args: Args,
     pub(crate) env: Env,
-    pub(crate) verbose: Option<String>,
+    pub(crate) verbose: bool,
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
     pub(crate) package_name: String,
@@ -43,9 +37,7 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
-        let mut env = Env::new();
-        debug!(?args);
-        debug!(?env);
+        let mut env = Env::new()?;
 
         let package_root = if let Some(manifest_path) = &args.manifest_path {
             manifest_path.clone()
@@ -56,10 +48,8 @@ impl Context {
         let metadata =
             cargo_metadata::MetadataCommand::new().manifest_path(&package_root).exec()?;
         let cargo_target_dir = &metadata.target_directory;
-        debug!(?package_root, ?metadata.workspace_root, ?metadata.target_directory);
 
         let cargo = Cargo::new(&env, &metadata.workspace_root)?;
-        debug!(?cargo);
 
         let config = cargo::config(&cargo, &metadata.workspace_root)?;
         config.merge_to(&mut args, &mut env);
@@ -88,11 +78,6 @@ impl Context {
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
-        let verbose = if args.verbose == 0 {
-            None
-        } else {
-            Some(format!("-{}", "v".repeat(args.verbose as _)))
-        };
         if args.output_dir.is_none() && args.html {
             args.output_dir = Some(cargo_target_dir.join("llvm-cov"));
         }
@@ -108,7 +93,6 @@ impl Context {
         let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host(&env)?));
         let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
         let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
-        debug!(?llvm_cov, ?llvm_profdata);
 
         // Check if required tools are installed.
         if !llvm_cov.exists() || !llvm_profdata.exists() {
@@ -122,20 +106,16 @@ impl Context {
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
 
         let current_info = CargoLlvmCovInfo::current();
-        debug!(?current_info);
         let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
         let mut clean_target_dir = true;
         if info_file.is_file() {
             match serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?) {
                 Ok(prev_info) => {
-                    debug!(?prev_info);
                     if prev_info == current_info {
                         clean_target_dir = false;
                     }
                 }
-                Err(e) => {
-                    debug!(?e);
-                }
+                Err(_e) => {}
             }
         }
         if clean_target_dir {
@@ -191,6 +171,7 @@ impl Context {
         }
         let excluded_path = resolve_excluded_paths(&metadata.workspace_root, &included, &excluded);
 
+        let verbose = args.verbose != 0;
         Ok(Self {
             args,
             verbose,
@@ -211,7 +192,7 @@ impl Context {
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
         let mut cmd = cmd!(program);
         cmd.dir(&self.metadata.workspace_root);
-        if self.verbose.is_some() {
+        if self.verbose {
             cmd.display_env_vars();
         }
         cmd
@@ -220,7 +201,7 @@ impl Context {
     pub(crate) fn cargo_process(&self) -> ProcessBuilder {
         let mut cmd = self.cargo.process();
         cmd.dir(&self.metadata.workspace_root);
-        if self.verbose.is_some() {
+        if self.verbose {
             cmd.display_env_vars();
         }
         cmd
@@ -298,53 +279,6 @@ fn resolve_excluded_paths(
         }) {}
     }
     excluded_path
-}
-
-#[derive(Debug)]
-pub(crate) struct Env {
-    // Environment variables Cargo reads
-    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads
-    /// `RUSTFLAGS` environment variable.
-    pub(crate) rustflags: Option<OsString>,
-    /// `RUSTDOCFLAGS` environment variable.
-    pub(crate) rustdocflags: Option<OsString>,
-    /// `RUSTC` environment variable.
-    pub(crate) rustc: Option<OsString>,
-
-    // Environment variables Cargo sets for 3rd party subcommands
-    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
-    /// `CARGO` environment variable.
-    pub(crate) cargo: Option<OsString>,
-
-    pub(crate) current_exe: PathBuf,
-}
-
-impl Env {
-    fn new() -> Self {
-        env::set_var("CARGO_INCREMENTAL", "0");
-        Self {
-            rustflags: env::var_os("RUSTFLAGS"),
-            rustdocflags: env::var_os("RUSTDOCFLAGS"),
-            rustc: env::var_os("RUSTC"),
-            cargo: env::var_os("CARGO"),
-            current_exe: match env::current_exe() {
-                Ok(exe) => exe,
-                Err(e) => {
-                    let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
-                    warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
-                    exe.into()
-                }
-            },
-        }
-    }
-
-    pub(crate) fn rustc(&self) -> &OsStr {
-        self.rustc.as_deref().unwrap_or_else(|| OsStr::new("rustc"))
-    }
-
-    pub(crate) fn cargo(&self) -> &OsStr {
-        self.cargo.as_deref().unwrap_or_else(|| OsStr::new("cargo"))
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -44,7 +44,9 @@ OPTIONS:
         --no-default-features                Do not activate the `default` feature
         --target <TRIPLE>                    Build for the target triple
         --manifest-path <PATH>               Path to Cargo.toml
-    -v, --verbose                            Use verbose output (-vv very verbose/build.rs output)
+    -v, --verbose
+            Use verbose output (-vv/-vvv propagate verbosity to cargo)
+
         --color <WHEN>                       Coloring [possible values: auto, always, never]
         --frozen                             Require Cargo.lock and cache are up to date
         --locked                             Require Cargo.lock is up to date

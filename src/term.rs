@@ -30,19 +30,25 @@ fn coloring() -> ColorChoice {
     }
 }
 
-pub(crate) fn print_inner(color: Option<Color>, kind: &str) -> StandardStream {
+pub(crate) fn print_inner(status: &str, color: Option<Color>, justified: bool) -> StandardStream {
     let mut stream = StandardStream::stderr(coloring());
     let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
-    let _ = write!(stream, "{}", kind);
+    if justified {
+        let _ = write!(stream, "{:>12}", status);
+    } else {
+        let _ = write!(stream, "{}", status);
+        let _ = stream.set_color(ColorSpec::new().set_bold(true));
+        let _ = write!(stream, ":");
+    }
     let _ = stream.reset();
-    let _ = write!(stream, ": ");
+    let _ = write!(stream, " ");
     stream
 }
 
 macro_rules! error {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        let mut stream = crate::term::print_inner(Some(termcolor::Color::Red), "error");
+        let mut stream = crate::term::print_inner("error", Some(termcolor::Color::Red), false);
         let _ = writeln!(stream, $($msg),*);
     }};
 }
@@ -50,7 +56,7 @@ macro_rules! error {
 macro_rules! warn {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        let mut stream = crate::term::print_inner(Some(termcolor::Color::Yellow), "warning");
+        let mut stream = crate::term::print_inner("warning", Some(termcolor::Color::Yellow), false);
         let _ = writeln!(stream, $($msg),*);
     }};
 }
@@ -58,7 +64,15 @@ macro_rules! warn {
 macro_rules! info {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        let mut stream = crate::term::print_inner(None, "info");
+        let mut stream = crate::term::print_inner("info", None, false);
+        let _ = writeln!(stream, $($msg),*);
+    }};
+}
+
+macro_rules! status {
+    ($status:expr, $($msg:expr),* $(,)?) => {{
+        use std::io::Write;
+        let mut stream = crate::term::print_inner($status, Some(termcolor::Color::Cyan), true);
         let _ = writeln!(stream, $($msg),*);
     }};
 }

@@ -8,9 +8,6 @@
 // - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
 #[macro_use]
-mod trace;
-
-#[macro_use]
 mod term;
 
 #[macro_use]
@@ -20,6 +17,7 @@ mod cargo;
 mod cli;
 mod context;
 mod demangler;
+mod env;
 mod fs;
 
 use std::ffi::{OsStr, OsString};
@@ -31,7 +29,6 @@ use walkdir::WalkDir;
 use crate::{
     cli::{Args, Coloring, Subcommand},
     context::Context,
-    process::ProcessBuilder,
 };
 
 fn main() {
@@ -42,8 +39,6 @@ fn main() {
 }
 
 fn try_main() -> Result<()> {
-    trace::init();
-
     let args = cli::from_args()?;
     if let Some(Subcommand::Demangle) = &args.subcommand {
         demangler::run()?;
@@ -74,8 +69,6 @@ fn try_main() -> Result<()> {
 }
 
 fn clean_partial(cx: &Context) -> Result<()> {
-    debug!("cleaning build artifacts");
-
     if let Some(output_dir) = &cx.output_dir {
         fs::remove_dir_all(output_dir)?;
     }
@@ -104,8 +97,6 @@ fn create_dirs(cx: &Context) -> Result<()> {
 }
 
 fn run_test(cx: &Context) -> Result<()> {
-    debug!("running tests");
-
     let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
     let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
@@ -139,15 +130,16 @@ fn run_test(cx: &Context) -> Result<()> {
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
-    append_args(cx, &mut cargo);
+    cargo::append_args(cx, &mut cargo);
 
+    if cx.verbose {
+        status!("Running", "{:#}", cargo);
+    }
     cargo.stdout_to_stderr().run()?;
     Ok(())
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
-    debug!("generating reports");
-
     let object_files = object_files(cx).context("failed to collect object files")?;
 
     merge_profraw(cx).context("failed to merge profile data")?;
@@ -164,24 +156,23 @@ fn generate_report(cx: &Context) -> Result<()> {
 }
 
 fn merge_profraw(cx: &Context) -> Result<()> {
-    debug!("merging profile data");
-
     // Convert raw profile data.
-    cx.process(&cx.llvm_profdata)
-        .args(&["merge", "-sparse"])
+    let mut cmd = cx.process(&cx.llvm_profdata);
+    cmd.args(&["merge", "-sparse"])
         .args(
             glob::glob(cx.target_dir.join(format!("{}-*.profraw", cx.package_name)).as_str())?
                 .filter_map(Result::ok),
         )
         .arg("-o")
-        .arg(&cx.profdata_file)
-        .run()?;
+        .arg(&cx.profdata_file);
+    if cx.verbose {
+        status!("Running", "{:#}", cmd);
+    }
+    cmd.run()?;
     Ok(())
 }
 
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
-    debug!("collecting profile data");
-
     let mut files = vec![];
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
@@ -252,7 +243,6 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
 
     // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
     files.sort_unstable();
-    trace!(object_files = ?files);
     Ok(files)
 }
 
@@ -309,8 +299,6 @@ impl Format {
     }
 
     fn generate_report(self, cx: &Context, object_files: &[OsString]) -> Result<()> {
-        debug!("generating report for format {:?}", self);
-
         let mut cmd = cx.process(&cx.llvm_cov);
 
         cmd.args(self.llvm_cov_args());
@@ -346,12 +334,24 @@ impl Format {
         }
 
         if let Some(output_path) = &cx.output_path {
+            if cx.verbose {
+                status!("Running", "{:#}", cmd);
+            }
             let out = cmd.read()?;
             fs::write(output_path, out)?;
+            status!("Finished", "report saved to {:#}", output_path);
             return Ok(());
         }
 
+        if cx.verbose {
+            status!("Running", "{:#}", cmd);
+        }
         cmd.run()?;
+        if matches!(self, Self::Html | Self::Text) {
+            if let Some(output_dir) = &cx.output_dir {
+                status!("Finished", "report saved to {:#}", output_dir);
+            }
+        }
         Ok(())
     }
 }
@@ -408,70 +408,5 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         None
     } else {
         Some(out.0)
-    }
-}
-
-fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if !cx.doctests {
-        cmd.arg("--tests");
-    }
-    if cx.no_fail_fast {
-        cmd.arg("--no-fail-fast");
-    }
-    for package in &cx.package {
-        cmd.arg("--package");
-        cmd.arg(package);
-    }
-    if cx.workspace {
-        cmd.arg("--workspace");
-    }
-    for exclude in &cx.exclude {
-        cmd.arg("--exclude");
-        cmd.arg(exclude);
-    }
-    if cx.release {
-        cmd.arg("--release");
-    }
-    for features in &cx.features {
-        cmd.arg("--features");
-        cmd.arg(features);
-    }
-    if cx.all_features {
-        cmd.arg("--all-features");
-    }
-    if cx.no_default_features {
-        cmd.arg("--no-default-features");
-    }
-    if let Some(target) = &cx.target {
-        cmd.arg("--target");
-        cmd.arg(target);
-    }
-
-    cmd.arg("--manifest-path");
-    cmd.arg(&cx.manifest_path);
-
-    if let Some(color) = cx.color {
-        cmd.arg("--color");
-        cmd.arg(color.cargo_color());
-    }
-    if cx.frozen {
-        cmd.arg("--frozen");
-    }
-    if cx.locked {
-        cmd.arg("--locked");
-    }
-
-    if let Some(verbose) = &cx.verbose {
-        cmd.arg(verbose);
-    }
-
-    for unstable_flag in &cx.unstable_flags {
-        cmd.arg("-Z");
-        cmd.arg(unstable_flag);
-    }
-
-    if !cx.args.args.is_empty() {
-        cmd.arg("--");
-        cmd.args(&cx.args.args);
     }
 }

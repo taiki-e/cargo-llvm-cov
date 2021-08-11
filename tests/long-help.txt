@@ -111,7 +111,7 @@ OPTIONS:
             Path to Cargo.toml
 
     -v, --verbose
-            Use verbose output (-vv very verbose/build.rs output)
+            Use verbose output (-vv/-vvv propagate verbosity to cargo)
 
         --color <WHEN>
             Coloring [possible values: auto, always, never]
