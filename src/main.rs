@@ -102,11 +102,7 @@ fn run_test(cx: &Context) -> Result<()> {
         ));
     }
 
-    let mut cargo = cx.process(&*cx.cargo);
-    if !cx.cargo.nightly {
-        cargo.arg("+nightly");
-    }
-
+    let mut cargo = cx.cargo_process();
     cargo.env("RUSTFLAGS", &rustflags);
     cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
     cargo.env("CARGO_INCREMENTAL", "0");
@@ -204,9 +200,15 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             if !manifest_path.is_file() {
                 continue;
             }
-            let manifest: cargo::Manifest = toml::from_str(&fs::read_to_string(manifest_path)?)?;
-            if let Some(package) = manifest.package {
-                trybuild_projects.push(package.name);
+            for package in cargo_metadata::MetadataCommand::new()
+                .manifest_path(manifest_path)
+                .no_deps()
+                .exec()?
+                .packages
+            {
+                for target in package.targets {
+                    trybuild_projects.push(target.name);
+                }
             }
         }
         if !trybuild_projects.is_empty() {
@@ -306,7 +308,7 @@ impl Format {
                     "-show-instantiations",
                     "-show-line-counts-or-regions",
                     "-show-expansions",
-                    &format!("-Xdemangler={}", cx.current_exe.display()),
+                    &format!("-Xdemangler={}", cx.env.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
                 ]);
@@ -323,7 +325,7 @@ impl Format {
         }
 
         if let Some(output_path) = &cx.output_path {
-            let out = cmd.stdout_capture().read()?;
+            let out = cmd.read()?;
             fs::write(output_path, out)?;
             return Ok(());
         }
