@@ -1,0 +1,65 @@
+    1|      2|fn func(x: i32) -> bool {fn func(x: i32) -> bool {
+  ------------------
+  | merge::main:
+  |    1|      1|fn func(x: i32) -> bool {fn func(x: i32) -> bool {
+  ------------------
+  | merge::main:
+  |    1|      1|fn func(x: i32) -> bool {fn func(x: i32) -> bool {
+  ------------------
+    2|      2|    if x < 0 {
+    3|      1|        true
+    4|       |    } else {
+    5|      1|        false
+    6|       |    }
+    7|      2|}
+  ------------------
+  | merge::func:
+  |    1|      1|fn func(x: i32) -> bool {
+  |    2|      1|    if x < 0 {
+  |    3|      1|        true
+  |    4|       |    } else {
+  |    5|      0|        false
+  |    6|       |    }
+  |    7|      1|}
+  ------------------
+  | merge::func:
+  |    1|      1|fn func(x: i32) -> bool {
+  |    2|      1|    if x < 0 {
+  |    3|      0|        true
+  |    4|       |    } else {
+  |    5|      1|        false
+  |    6|       |    }
+  |    7|      1|}
+  ------------------
+    8|       |
+    9|      2|#[test]
+  ------------------
+  | merge::test::{closure#0}:
+  |    9|      1|#[test]
+  ------------------
+  | merge::test::{closure#0}:
+  |    9|      1|#[test]
+  ------------------
+   10|      1|fn test() {
+   11|      1|    #[cfg(feature = "a")]
+   12|      1|    assert!(!func(1));
+   13|      1|    #[cfg(feature = "b")]
+   14|      1|    assert!(func(-1));
+   15|      2|}
+  ------------------
+  | merge::test:
+  |   10|      1|fn test() {
+  |   11|      1|    #[cfg(feature = "a")]
+  |   12|      1|    assert!(!func(1));
+  |   13|      1|    #[cfg(feature = "b")]
+  |   14|      1|    assert!(func(-1));
+  |   15|      1|}
+  ------------------
+  | merge::test:
+  |   10|      1|fn test() {
+  |   11|      1|    #[cfg(feature = "a")]
+  |   12|      1|    assert!(!func(1));
+  |   13|       |    #[cfg(feature = "b")]
+  |   14|       |    assert!(func(-1));
+  |   15|      1|}
+  ------------------

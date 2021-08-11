@@ -122,19 +122,16 @@
             "functions": {
               "count": 2,
               "covered": 1,
-              "notcovered": null,
               "percent": 50.0
             },
             "instantiations": {
               "count": 2,
               "covered": 1,
-              "notcovered": null,
               "percent": 50.0
             },
             "lines": {
               "count": 8,
               "covered": 1,
-              "notcovered": null,
               "percent": 12.5
             },
             "regions": {

@@ -105,16 +105,22 @@ pub(crate) struct Args {
     // For debugging (unstable)
     #[clap(long, hidden = true)]
     pub(crate) disable_default_ignore_filename_regex: bool,
+    // For debugging (unstable)
+    #[clap(long, hidden = true)]
+    pub(crate) hide_instantiations: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
     #[clap(long)]
     pub(crate) doctests: bool,
+    /// Run tests, but don't generate coverage reports
+    #[clap(long, conflicts_with_all = &["no-run"])]
+    pub(crate) no_report: bool,
 
     // =========================================================================
     // `cargo test` options
     // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
-    /// Compile, but don't run tests (unstable)
+    /// Generate coverage reports without running tests
     #[clap(long)]
     pub(crate) no_run: bool,
     /// Run all tests regardless of failure
@@ -194,7 +200,9 @@ impl Args {
 pub(crate) enum Subcommand {
     // internal (unstable)
     #[clap(
+        max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::StrictUtf8,
         setting = AppSettings::UnifiedHelpMessage,
         setting = AppSettings::Hidden,
     )]

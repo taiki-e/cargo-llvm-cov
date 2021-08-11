@@ -79,12 +79,9 @@ impl Context {
         if args.doctests {
             warn!("--doctests option is unstable");
         }
-        if args.no_run {
-            warn!("--no-run option is unstable");
-        }
         if args.target.is_some() {
-            warn!(
-                "When --target option is used, coverage for proc-macro and build script will \
+            info!(
+                "when --target option is used, coverage for proc-macro and build script will \
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }

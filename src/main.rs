@@ -9,8 +9,10 @@
 
 #[macro_use]
 mod trace;
+
 #[macro_use]
 mod term;
+
 #[macro_use]
 mod process;
 
@@ -50,11 +52,23 @@ fn try_main() -> Result<()> {
 
     let cx = &Context::new(args)?;
 
-    if !cx.no_run {
-        clean_partial(cx)?;
-        run_test(cx)?;
+    match (cx.no_run, cx.no_report) {
+        (false, false) => {
+            clean_partial(cx)?;
+            create_dirs(cx)?;
+            run_test(cx)?;
+            generate_report(cx)?;
+        }
+        (false, true) => {
+            create_dirs(cx)?;
+            run_test(cx)?;
+        }
+        (true, false) => {
+            create_dirs(cx)?;
+            generate_report(cx)?;
+        }
+        (true, true) => unreachable!(),
     }
-    generate_report(cx)?;
 
     Ok(())
 }
@@ -64,7 +78,6 @@ fn clean_partial(cx: &Context) -> Result<()> {
 
     if let Some(output_dir) = &cx.output_dir {
         fs::remove_dir_all(output_dir)?;
-        fs::create_dir_all(output_dir)?;
     }
 
     for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
@@ -73,10 +86,20 @@ fn clean_partial(cx: &Context) -> Result<()> {
 
     if cx.doctests {
         fs::remove_dir_all(&cx.doctests_dir)?;
-        fs::create_dir_all(&cx.doctests_dir)?;
     }
 
     fs::remove_file(&cx.profdata_file)?;
+    Ok(())
+}
+
+fn create_dirs(cx: &Context) -> Result<()> {
+    if let Some(output_dir) = &cx.output_dir {
+        fs::create_dir_all(output_dir)?;
+    }
+
+    if cx.doctests {
+        fs::create_dir_all(&cx.doctests_dir)?;
+    }
     Ok(())
 }
 
@@ -305,7 +328,7 @@ impl Format {
         match self {
             Format::Text | Format::Html => {
                 cmd.args(&[
-                    "-show-instantiations",
+                    &format!("-show-instantiations={}", !cx.hide_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     &format!("-Xdemangler={}", cx.env.current_exe.display()),

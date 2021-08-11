@@ -1,1 +1,71 @@
-{"data":[{"files":[{"filename":"src/lib.rs","summary":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"functions":{"count":4,"covered":4,"percent":100},"instantiations":{"count":4,"covered":4,"percent":100},"lines":{"count":11,"covered":10,"percent":90.909090909090907},"regions":{"count":8,"covered":7,"notcovered":1,"percent":87.5}}}],"totals":{"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},"functions":{"count":4,"covered":4,"percent":100},"instantiations":{"count":4,"covered":4,"percent":100},"lines":{"count":11,"covered":10,"percent":90.909090909090907},"regions":{"count":8,"covered":7,"notcovered":1,"percent":87.5}}}],"type":"llvm.coverage.json.export","version":"2.0.1"}
+{
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "src/lib.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 4,
+              "covered": 4,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 4,
+              "covered": 4,
+              "percent": 100.0
+            },
+            "lines": {
+              "count": 11,
+              "covered": 10,
+              "percent": 90.9090909090909
+            },
+            "regions": {
+              "count": 8,
+              "covered": 7,
+              "notcovered": 1,
+              "percent": 87.5
+            }
+          }
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 4,
+          "covered": 4,
+          "percent": 100
+        },
+        "instantiations": {
+          "count": 4,
+          "covered": 4,
+          "percent": 100
+        },
+        "lines": {
+          "count": 11,
+          "covered": 10,
+          "percent": 90.9090909090909
+        },
+        "regions": {
+          "count": 8,
+          "covered": 7,
+          "notcovered": 1,
+          "percent": 87.5
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}

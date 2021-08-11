@@ -32,7 +32,8 @@ OPTIONS:
             Skip source code files with file paths that match the given regular expression
 
         --doctests                           Including doc tests (unstable)
-        --no-run                             Compile, but don't run tests (unstable)
+        --no-report                          Run tests, but don't generate coverage reports
+        --no-run                             Generate coverage reports without running tests
         --no-fail-fast                       Run all tests regardless of failure
     -p, --package <SPEC>...                  Package to run tests for
         --workspace                          Test all packages in the workspace [aliases: all]

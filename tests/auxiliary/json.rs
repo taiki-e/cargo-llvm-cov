@@ -15,8 +15,10 @@ pub struct LlvmCovJsonExport {
 impl LlvmCovJsonExport {
     pub fn demangle(&mut self) {
         for data in &mut self.data {
-            for func in &mut data.functions {
-                func.name = format!("{:#}", rustc_demangle::demangle(&func.name));
+            if let Some(functions) = &mut data.functions {
+                for func in functions {
+                    func.name = format!("{:#}", rustc_demangle::demangle(&func.name));
+                }
             }
         }
     }
@@ -29,7 +31,10 @@ pub struct Export {
     /// List of objects describing coverage for files
     pub files: Vec<File>,
     /// List of objects describing coverage for functions
-    pub functions: Vec<Function>,
+    ///
+    /// This is None if report is summary-only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub functions: Option<Vec<Function>>,
     #[cfg(test)]
     pub totals: serde_json::Value,
 }
@@ -39,15 +44,24 @@ pub struct Export {
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct File {
     /// List of Branches in the file
+    ///
+    /// This is None if report is summary-only.
     // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L93
     #[cfg(test)]
-    pub branches: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
+    ///
+    /// This is None if report is summary-only.
     #[cfg(test)]
-    pub expansions: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expansions: Option<Vec<serde_json::Value>>,
     pub filename: String,
     /// List of Segments contained in the file
-    pub segments: Vec<Segment>,
+    ///
+    /// This is None if report is summary-only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub segments: Option<Vec<Segment>>,
     /// Object summarizing the coverage for this file
     pub summary: Summary,
 }
@@ -113,6 +127,7 @@ pub struct CoverageCounts {
     pub count: u64,
     pub covered: u64,
     // Currently only branches and regions has this field.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notcovered: Option<u64>,
     pub percent: f64,
 }
@@ -123,15 +138,15 @@ mod tests {
     use super::LlvmCovJsonExport;
 
     #[test]
-    fn parse_llvm_cov_json_full() {
+    fn parse_llvm_cov_json() {
         let files: Vec<_> = glob::glob(&format!(
-            "{}/tests/fixtures/coverage-reports/**/*.full.json",
+            "{}/tests/fixtures/coverage-reports/**/*.json",
             env!("CARGO_MANIFEST_DIR")
         ))
         .unwrap()
         .filter_map(Result::ok)
         .collect();
-        assert_eq!(files.len(), 13);
+        assert_eq!(files.len(), 28);
 
         for file in files {
             let s = fs::read_to_string(file).unwrap();

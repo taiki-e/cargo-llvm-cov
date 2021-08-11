@@ -134,8 +134,11 @@ OPTIONS:
         --doctests
             Including doc tests (unstable)
 
+        --no-report
+            Run tests, but don't generate coverage reports
+
         --no-run
-            Compile, but don't run tests (unstable)
+            Generate coverage reports without running tests
 
         --no-fail-fast
             Run all tests regardless of failure
@@ -230,6 +233,15 @@ With lcov report (if `--output-path` is not specified, the report will be printe
 
 ```sh
 cargo llvm-cov --lcov --output-path lcov.info
+```
+
+You can merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
+
+```sh
+cargo clean
+cargo llvm-cov --no-report --features a
+cargo llvm-cov --no-report --features b
+cargo llvm-cov --no-run --lcov
 ```
 
 ### Continuous Integration

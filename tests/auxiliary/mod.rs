@@ -14,7 +14,7 @@ use once_cell::sync::Lazy;
 use tempfile::{Builder, TempDir};
 use walkdir::WalkDir;
 
-static FIXTURES_PATH: Lazy<Utf8PathBuf> =
+pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
     Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
 
 pub fn cargo_llvm_cov() -> Command {
@@ -49,18 +49,11 @@ pub fn test_report<'a>(
         .current_dir(workspace_root.path())
         .assert_success();
 
-    if args.contains(&"--json") && !args.contains(&"--summary-only") {
-        let s = fs::read_to_string(output_path)?;
-        let mut json = serde_json::from_str::<json::LlvmCovJsonExport>(&s).unwrap();
-        json.demangle();
-        fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
-    }
-    #[cfg(windows)]
-    {
-        let s = fs::read_to_string(output_path)?;
-        // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
-        fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
-    }
+    normalize_output(output_path, args)?;
+    assert_output(output_path)
+}
+
+pub fn assert_output(output_path: &Utf8Path) -> Result<()> {
     if env::var_os("CI").is_some() {
         assert!(Command::new("git")
             .args(&["--no-pager", "diff", "--exit-code"])
@@ -71,7 +64,25 @@ pub fn test_report<'a>(
     Ok(())
 }
 
-fn test_project(model: &str, name: &str) -> Result<TempDir> {
+pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
+    if args.contains(&"--json") {
+        let s = fs::read_to_string(output_path)?;
+        let mut json = serde_json::from_str::<json::LlvmCovJsonExport>(&s).unwrap();
+        if !args.contains(&"--summary-only") {
+            json.demangle();
+        }
+        fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
+    }
+    #[cfg(windows)]
+    {
+        let s = fs::read_to_string(output_path)?;
+        // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
+        fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
+    }
+    Ok(())
+}
+
+pub fn test_project(model: &str, name: &str) -> Result<TempDir> {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     let tmpdir = Builder::new()

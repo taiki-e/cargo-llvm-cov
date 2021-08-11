@@ -10,6 +10,15 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- You can now merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
+
+  ```sh
+  cargo clean
+  cargo llvm-cov --no-report --features a
+  cargo llvm-cov --no-report --features b
+  cargo llvm-cov --no-run --lcov
+  ```
+
 - [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
 
 - [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
