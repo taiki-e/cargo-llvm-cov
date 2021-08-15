@@ -107,7 +107,7 @@ OPTIONS:
 
         --html
             Generate coverage reports in "html" format. If --output-dir is not specified, the report
-            will be generated in `target/llvm-cov` directory.
+            will be generated in `target/llvm-cov/html` directory.
 
             This internally calls `llvm-cov show -format=html`. See
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
@@ -205,11 +205,11 @@ By default, only the summary is printed to stdout.
 cargo llvm-cov
 ```
 
-With html report (the report will be generated to `target/llvm-cov` directory):
+With html report (the report will be generated to `target/llvm-cov/html` directory):
 
 ```sh
 cargo llvm-cov --html
-open target/llvm-cov/index.html
+open target/llvm-cov/html/index.html
 ```
 
 or

@@ -70,7 +70,8 @@ fn try_main() -> Result<()> {
 
 fn clean_partial(cx: &Context) -> Result<()> {
     if let Some(output_dir) = &cx.output_dir {
-        fs::remove_dir_all(output_dir)?;
+        fs::remove_dir_all(output_dir.join("html"))?;
+        fs::remove_dir_all(output_dir.join("text"))?;
     }
 
     for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
@@ -88,6 +89,12 @@ fn clean_partial(cx: &Context) -> Result<()> {
 fn create_dirs(cx: &Context) -> Result<()> {
     if let Some(output_dir) = &cx.output_dir {
         fs::create_dir_all(output_dir)?;
+        if cx.html {
+            fs::create_dir_all(output_dir.join("html"))?;
+        }
+        if cx.text {
+            fs::create_dir_all(output_dir.join("text"))?;
+        }
     }
 
     if cx.doctests {
@@ -152,7 +159,7 @@ fn generate_report(cx: &Context) -> Result<()> {
     }
 
     if cx.open {
-        open::that(cx.output_dir.as_ref().unwrap().join("index.html"))
+        open::that(cx.output_dir.as_ref().unwrap().join("html/index.html"))
             .context("couldn't open report")?;
     }
     Ok(())
@@ -328,7 +335,11 @@ impl Format {
                     "-Xdemangler=demangle",
                 ]);
                 if let Some(output_dir) = &cx.output_dir {
-                    cmd.arg(&format!("-output-dir={}", output_dir));
+                    if self == Format::Html {
+                        cmd.arg(&format!("-output-dir={}", output_dir.join("html")));
+                    } else {
+                        cmd.arg(&format!("-output-dir={}", output_dir.join("text")));
+                    }
                 }
             }
             Format::Json | Format::LCov => {
@@ -359,7 +370,11 @@ impl Format {
         cmd.run()?;
         if matches!(self, Self::Html | Self::Text) {
             if let Some(output_dir) = &cx.output_dir {
-                status!("Finished", "report saved to {:#}", output_dir);
+                if self == Self::Html {
+                    status!("Finished", "report saved to {:#}", output_dir.join("html"));
+                } else {
+                    status!("Finished", "report saved to {:#}", output_dir.join("text"));
+                }
             }
         }
         Ok(())

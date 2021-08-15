@@ -69,6 +69,9 @@ impl Context {
         if args.disable_default_ignore_filename_regex {
             warn!("--disable-default-ignore-filename-regex option is unstable");
         }
+        if args.hide_instantiations {
+            warn!("--hide-instantiations option is unstable");
+        }
         if args.doctests {
             warn!("--doctests option is unstable");
         }
