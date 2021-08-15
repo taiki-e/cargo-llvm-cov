@@ -298,13 +298,16 @@ impl Format {
         }
     }
 
-    fn use_color(self, color: Option<Coloring>) -> Option<&'static str> {
+    fn use_color(self, cx: &Context) -> Option<&'static str> {
         if matches!(self, Self::Json | Self::LCov) {
             // `llvm-cov export` doesn't have `-use-color` flag.
             // https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export
             return None;
         }
-        match color {
+        if self == Self::Text && cx.output_dir.is_some() {
+            return Some("-use-color=0");
+        }
+        match cx.color {
             Some(Coloring::Auto) | None => None,
             Some(Coloring::Always) => Some("-use-color=1"),
             Some(Coloring::Never) => Some("-use-color=0"),
@@ -315,7 +318,7 @@ impl Format {
         let mut cmd = cx.process(&cx.llvm_cov);
 
         cmd.args(self.llvm_cov_args());
-        cmd.args(self.use_color(cx.color));
+        cmd.args(self.use_color(cx));
         cmd.arg(format!("-instr-profile={}", cx.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
 

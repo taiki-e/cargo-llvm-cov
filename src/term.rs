@@ -13,12 +13,13 @@ const AUTO: u8 = Coloring::Auto as _;
 const ALWAYS: u8 = Coloring::Always as _;
 const NEVER: u8 = Coloring::Never as _;
 
-pub(crate) fn set_coloring(coloring: Option<Coloring>) {
-    let mut coloring = coloring.unwrap_or(Coloring::Auto);
-    if coloring == Coloring::Auto && !atty::is(atty::Stream::Stderr) {
-        coloring = Coloring::Never;
+pub(crate) fn set_coloring(coloring: &mut Option<Coloring>) {
+    let mut color = coloring.unwrap_or(Coloring::Auto);
+    if color == Coloring::Auto && !atty::is(atty::Stream::Stderr) {
+        *coloring = Some(Coloring::Never);
+        color = Coloring::Never;
     }
-    COLORING.store(coloring as _, Relaxed);
+    COLORING.store(color as _, Relaxed);
 }
 
 fn coloring() -> ColorChoice {

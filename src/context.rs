@@ -54,7 +54,7 @@ impl Context {
         let config = cargo::config(&cargo, &metadata.workspace_root)?;
         config.merge_to(&mut args, &mut env);
 
-        term::set_coloring(args.color);
+        term::set_coloring(&mut args.color);
 
         if let Some(v) = env::var_os("LLVM_PROFILE_FILE") {
             warn!("environment variable LLVM_PROFILE_FILE={:?} will be ignored", v);
