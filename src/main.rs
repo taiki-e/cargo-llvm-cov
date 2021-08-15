@@ -70,8 +70,12 @@ fn try_main() -> Result<()> {
 
 fn clean_partial(cx: &Context) -> Result<()> {
     if let Some(output_dir) = &cx.output_dir {
-        fs::remove_dir_all(output_dir.join("html"))?;
-        fs::remove_dir_all(output_dir.join("text"))?;
+        if cx.html {
+            fs::remove_dir_all(output_dir.join("html"))?;
+        }
+        if cx.text {
+            fs::remove_dir_all(output_dir.join("text"))?;
+        }
     }
 
     for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
