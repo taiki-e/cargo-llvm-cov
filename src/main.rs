@@ -275,7 +275,7 @@ impl Format {
         } else if args.text {
             vec![Self::Text]
         } else if args.html {
-            vec![Self::Html, Self::None]
+            vec![Self::Html]
         } else {
             vec![Self::None]
         }
