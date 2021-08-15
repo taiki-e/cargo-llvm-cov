@@ -1,6 +1,6 @@
 use anyhow::Result;
 use camino::Utf8PathBuf;
-use clap::{AppSettings, Clap};
+use clap::{AppSettings, ArgSettings, Clap};
 use serde::Deserialize;
 
 pub(crate) fn from_args() -> Result<Args> {
@@ -17,24 +17,24 @@ const MAX_TERM_WIDTH: usize = 100;
 #[derive(Debug, Clap)]
 #[clap(
     bin_name = "cargo",
-    max_term_width = MAX_TERM_WIDTH,
-    setting = AppSettings::DeriveDisplayOrder,
-    setting = AppSettings::StrictUtf8,
-    setting = AppSettings::UnifiedHelpMessage,
+    max_term_width(MAX_TERM_WIDTH),
+    setting(AppSettings::DeriveDisplayOrder),
+    setting(AppSettings::StrictUtf8),
+    setting(AppSettings::UnifiedHelpMessage)
 )]
 enum Opts {
-    #[clap(about = ABOUT)]
+    #[clap(about(ABOUT))]
     LlvmCov(Args),
 }
 
 #[derive(Debug, Clap)]
 #[clap(
     bin_name = "cargo llvm-cov",
-    about = ABOUT,
-    max_term_width = MAX_TERM_WIDTH,
-    setting = AppSettings::DeriveDisplayOrder,
-    setting = AppSettings::StrictUtf8,
-    setting = AppSettings::UnifiedHelpMessage,
+    about(ABOUT),
+    max_term_width(MAX_TERM_WIDTH),
+    setting(AppSettings::DeriveDisplayOrder),
+    setting(AppSettings::StrictUtf8),
+    setting(AppSettings::UnifiedHelpMessage)
 )]
 pub(crate) struct Args {
     #[clap(subcommand)]
@@ -63,7 +63,7 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov show -format=text`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[clap(long, conflicts_with_all = &["json", "lcov"])]
+    #[clap(long, conflicts_with = "json", conflicts_with = "lcov")]
     pub(crate) text: bool,
     /// Generate coverage reports in "html" format.
     ////
@@ -71,36 +71,49 @@ pub(crate) struct Args {
     ///
     /// This internally calls `llvm-cov show -format=html`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    #[clap(long, conflicts_with_all = &["json", "lcov", "text"])]
+    #[clap(long, conflicts_with = "json", conflicts_with = "lcov", conflicts_with = "text")]
     pub(crate) html: bool,
     /// Generate coverage reports in "html" format and open them in a browser after the operation.
     ///
     /// See --html for more.
-    #[clap(long, conflicts_with_all = &["json", "lcov", "text"])]
+    #[clap(long, conflicts_with = "json", conflicts_with = "lcov", conflicts_with = "text")]
     pub(crate) open: bool,
 
     /// Export only summary information for each file in the coverage data.
     ///
     /// This flag can only be used together with either --json or --lcov.
     // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
-    #[clap(long, conflicts_with_all = &["text", "html", "open"])]
+    #[clap(long, conflicts_with = "text", conflicts_with = "html", conflicts_with = "open")]
     pub(crate) summary_only: bool,
     /// Specify a file to write coverage data into.
     ///
     /// This flag can only be used together with --json, --lcov, or --text.
     /// See --output-dir for --html and --open.
-    #[clap(long, value_name = "PATH", conflicts_with_all = &["html", "open"])]
+    #[clap(
+        long,
+        value_name = "PATH",
+        conflicts_with = "html",
+        conflicts_with = "open",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) output_path: Option<Utf8PathBuf>,
     /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
     ///
     /// This flag can only be used together with --text, --html, or --open.
     /// See also --output-path.
     // If the format flag is not specified, this flag is no-op.
-    #[clap(long, value_name = "DIRECTORY", conflicts_with_all = &["json", "lcov", "output-path"])]
+    #[clap(
+        long,
+        value_name = "DIRECTORY",
+        conflicts_with = "json",
+        conflicts_with = "lcov",
+        conflicts_with = "output-path",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) output_dir: Option<Utf8PathBuf>,
 
     /// Skip source code files with file paths that match the given regular expression.
-    #[clap(long, value_name = "PATTERN")]
+    #[clap(long, value_name = "PATTERN", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
     #[clap(long, hidden = true)]
@@ -129,13 +142,26 @@ pub(crate) struct Args {
     /// Package to run tests for
     // cargo allows the combination of --package and --workspace, but we reject
     // it because the situation where both flags are specified is odd.
-    #[clap(short, long, value_name = "SPEC", conflicts_with = "workspace")]
+    #[clap(
+        short,
+        long,
+        multiple_occurrences = true,
+        value_name = "SPEC",
+        conflicts_with = "workspace",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from the test
-    #[clap(long, value_name = "SPEC", requires = "workspace")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "SPEC",
+        requires = "workspace",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) exclude: Vec<String>,
     // TODO: Should this only work for cargo's --jobs? Or should it also work
     //       for llvm-cov's -num-threads?
@@ -146,7 +172,12 @@ pub(crate) struct Args {
     #[clap(long)]
     pub(crate) release: bool,
     /// Space or comma separated list of features to activate
-    #[clap(long, value_name = "FEATURES")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "FEATURES",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) features: Vec<String>,
     /// Activate all available features
     #[clap(long)]
@@ -158,7 +189,7 @@ pub(crate) struct Args {
     ///
     /// When this option is used, coverage for proc-macro and build script will
     /// not be displayed because cargo does not pass RUSTFLAGS to them.
-    #[clap(long, value_name = "TRIPLE")]
+    #[clap(long, value_name = "TRIPLE", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) target: Option<String>,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
@@ -167,7 +198,7 @@ pub(crate) struct Args {
     // #[clap(long, value_name = "DIRECTORY")]
     // target_dir: Option<Utf8PathBuf>,
     /// Path to Cargo.toml
-    #[clap(long, value_name = "PATH")]
+    #[clap(long, value_name = "PATH", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) manifest_path: Option<Utf8PathBuf>,
     /// Use verbose output (-vv/-vvv propagate verbosity to cargo)
     #[clap(short, long, parse(from_occurrences))]
@@ -184,11 +215,16 @@ pub(crate) struct Args {
     pub(crate) locked: bool,
 
     /// Unstable (nightly-only) flags to Cargo
-    #[clap(short = 'Z', value_name = "FLAG")]
+    #[clap(
+        short = 'Z',
+        multiple_occurrences = true,
+        value_name = "FLAG",
+        setting(ArgSettings::ForbidEmptyValues)
+    )]
     pub(crate) unstable_flags: Vec<String>,
 
     /// Arguments for the test binary
-    #[clap(last = true)]
+    #[clap(last = true, setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) args: Vec<String>,
 }
 
@@ -221,13 +257,8 @@ pub(crate) enum Coloring {
 }
 
 impl Coloring {
-    // TODO: use clap::ArgEnum::as_arg instead once new version of clap released.
     pub(crate) fn cargo_color(self) -> &'static str {
-        match self {
-            Self::Auto => "auto",
-            Self::Always => "always",
-            Self::Never => "never",
-        }
+        clap::ArgEnum::as_arg(&self).unwrap()
     }
 }
 
@@ -236,21 +267,17 @@ mod tests {
     use std::{env, panic, path::Path, process::Command};
 
     use anyhow::Result;
-    use clap::IntoApp;
+    use clap::{Clap, IntoApp};
     use fs_err as fs;
     use tempfile::Builder;
 
-    use super::{Args, MAX_TERM_WIDTH};
+    use super::{Args, Opts, MAX_TERM_WIDTH};
 
     // https://github.com/clap-rs/clap/issues/751
     #[cfg(unix)]
     #[test]
     fn non_utf8_arg() {
         use std::{ffi::OsStr, os::unix::prelude::OsStrExt};
-
-        use clap::Clap;
-
-        use super::Opts;
 
         // `cargo llvm-cov -- $'fo\x80o'`
         Opts::try_parse_from(&[
@@ -260,6 +287,55 @@ mod tests {
             OsStr::from_bytes(&[b'f', b'o', 0x80, b'o']),
         ])
         .unwrap_err();
+    }
+
+    // https://github.com/clap-rs/clap/issues/1772
+    #[test]
+    fn multiple_occurrences() {
+        let Opts::LlvmCov(args) =
+            Opts::try_parse_from(&["cargo", "llvm-cov", "--features", "a", "--features", "b"])
+                .unwrap();
+        assert_eq!(args.features, ["a", "b"]);
+
+        let Opts::LlvmCov(args) =
+            Opts::try_parse_from(&["cargo", "llvm-cov", "--package", "a", "--package", "b"])
+                .unwrap();
+        assert_eq!(args.package, ["a", "b"]);
+
+        let Opts::LlvmCov(args) = Opts::try_parse_from(&[
+            "cargo",
+            "llvm-cov",
+            "--exclude",
+            "a",
+            "--exclude",
+            "b",
+            "--all",
+        ])
+        .unwrap();
+        assert_eq!(args.exclude, ["a", "b"]);
+
+        let Opts::LlvmCov(args) =
+            Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", "a", "-Zb"]).unwrap();
+        assert_eq!(args.unstable_flags, ["a", "b"]);
+
+        let Opts::LlvmCov(args) =
+            Opts::try_parse_from(&["cargo", "llvm-cov", "--", "a", "b"]).unwrap();
+        assert_eq!(args.args, ["a", "b"]);
+    }
+
+    // https://github.com/clap-rs/clap/issues/1740
+    #[test]
+    fn empty_value() {
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--output-path", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--output-dir", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--ignore-filename-regex", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--package", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--exclude", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--features", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--target", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--manifest-path", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", ""]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--", ""]).unwrap_err();
     }
 
     fn get_help(long: bool) -> Result<String> {
@@ -276,9 +352,6 @@ mod tests {
             }
             out.push_str(line.trim_end());
             out.push('\n');
-        }
-        if long {
-            out.pop();
         }
         Ok(out)
     }
