@@ -1,6 +1,6 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.1.0-alpha.5"
+version = "0.1.0"
 authors = ["Taiki Endo <te316e89@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0 OR MIT"
@@ -9,7 +9,7 @@ keywords = ["cargo", "coverage", "subcommand", "testing"]
 categories = ["command-line-utilities", "development-tools", "development-tools::cargo-plugins", "development-tools::testing"]
 exclude = ["/.*", "/tools"]
 description = """
-Cargo subcommand for LLVM source-based code coverage (-Z instrument-coverage).
+Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
 """
 
 [package.metadata.docs.rs]

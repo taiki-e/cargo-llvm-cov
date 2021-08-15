@@ -5,7 +5,16 @@
 [![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
-Cargo subcommand for LLVM source-based code coverage ([-Z instrument-coverage][instrument-coverage], [rust-lang/rust#79121]).
+Cargo subcommand to easily use LLVM source-based code coverage.
+
+This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] and provides:
+
+- Generate very precise coverage data. (line coverage and region coverage)
+- Support for proc-macro, including coverage of UI tests.
+- Support for doc tests. (this is currently optional, see [#2] for more)
+- Command-line interface compatible with `cargo test`.
+
+**Table of Contents:**
 
 - [Installation](#installation)
 - [Usage](#usage)
@@ -29,7 +38,7 @@ rustup component add llvm-tools-preview --toolchain nightly
 ### From source
 
 ```sh
-cargo install cargo-llvm-cov --version 0.1.0-alpha.5
+cargo install cargo-llvm-cov
 ```
 
 cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
@@ -63,7 +72,7 @@ brew install taiki-e/tap/cargo-llvm-cov
 $ cargo llvm-cov --help
 cargo-llvm-cov
 
-Cargo subcommand for LLVM source-based code coverage (-Z instrument-coverage).
+Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
@@ -199,7 +208,7 @@ OPTIONS:
 
 </details>
 
-By default, only the summary is printed to stdout.
+By default, run tests, and print the coverage summary to stdout.
 
 ```sh
 cargo llvm-cov
@@ -262,7 +271,7 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/download/v0.1.0-alpha.5/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
@@ -291,7 +300,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#26]: https://github.com/taiki-e/cargo-llvm-cov/issues/26
 [codecov]: https://codecov.io
 [instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
-[rust-lang/rust#79121]: https://github.com/rust-lang/rust/issues/79121
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#86177]: https://github.com/rust-lang/rust/issues/86177
