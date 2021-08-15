@@ -23,6 +23,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Fix bug in `--exclude` and `--package` options](https://github.com/taiki-e/cargo-llvm-cov/pull/56)
 
+- `--html` and `--open` options no longer outputs a summary at the same time.
+
 - [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
 - Diagnostic improvements.
