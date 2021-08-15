@@ -10,7 +10,15 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- You can now merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
+## [0.1.0] - 2021-08-15
+
+- [Update clap to fix build error.](https://github.com/taiki-e/cargo-llvm-cov/pull/59)
+
+- [Support latest version of trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/54)
+
+- [Change output directory of `--html` and `--open` options from `target/llvm-cov` to `target/llvm-cov/html`.](https://github.com/taiki-e/cargo-llvm-cov/pull/62)
+
+- [You can now merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.](https://github.com/taiki-e/cargo-llvm-cov/pull/55)
 
   ```sh
   cargo clean
@@ -19,13 +27,18 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
   cargo llvm-cov --no-run --lcov
   ```
 
+- [Add environment variables to pass additional flags to llvm-cov/llvm-profdata.](https://github.com/taiki-e/cargo-llvm-cov/pull/58)
+
+  - `CARGO_LLVM_COV_FLAGS` to pass additional flags to llvm-cov. (value: space-separated list)
+  - `CARGO_LLVM_PROFDATA_FLAGS` to pass additional flags to llvm-profdata. (value: space-separated list)
+
 - [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
 
 - [Fix bug in `--exclude` and `--package` options](https://github.com/taiki-e/cargo-llvm-cov/pull/56)
 
-- Change output directory of `--html` and `--open` options from `target/llvm-cov` to `target/llvm-cov/html`.
+- [Fix bug in color-detection when both `--text` and `--output-dir` used.](https://github.com/taiki-e/cargo-llvm-cov/pull/62)
 
-- `--html` and `--open` options no longer outputs a summary at the same time.
+- [`--html` and `--open` options no longer outputs a summary at the same time.](https://github.com/taiki-e/cargo-llvm-cov/pull/61)
 
 - [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
@@ -99,7 +112,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.5...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.5...v0.1.0
 [0.1.0-alpha.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.0-alpha.2...v0.1.0-alpha.3
