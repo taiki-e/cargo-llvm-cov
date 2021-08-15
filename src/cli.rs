@@ -18,13 +18,14 @@ const MAX_TERM_WIDTH: usize = 100;
 #[derive(Debug, Clap)]
 #[clap(
     bin_name = "cargo",
+    version,
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder),
     setting(AppSettings::StrictUtf8),
     setting(AppSettings::UnifiedHelpMessage)
 )]
 enum Opts {
-    #[clap(about(ABOUT))]
+    #[clap(about(ABOUT), version)]
     LlvmCov(Args),
 }
 
