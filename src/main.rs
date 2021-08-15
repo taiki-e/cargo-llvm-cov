@@ -105,6 +105,9 @@ fn run_test(cx: &Context) -> Result<()> {
         " -Z instrument-coverage --remap-path-prefix {}/=",
         cx.metadata.workspace_root
     ));
+    if cx.target.is_none() {
+        rustflags.push(" --cfg trybuild_no_target");
+    }
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     let rustdocflags = &mut cx.env.rustdocflags.clone();

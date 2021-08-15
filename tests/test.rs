@@ -79,12 +79,6 @@ fn merge() {
     let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
-        // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
-        #[cfg(windows)]
-        if extension == "txt" || extension == "full.json" {
-            continue;
-        }
-
         let workspace_root = auxiliary::test_project(model, model).unwrap();
         let output_path = &output_dir.join(model).with_extension(extension);
         cargo_llvm_cov()

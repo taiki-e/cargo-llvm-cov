@@ -62,18 +62,25 @@ brew install taiki-e/tap/cargo-llvm-cov
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
+
 Cargo subcommand for LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
 USAGE:
-    cargo llvm-cov [OPTIONS] [-- <args>...]
+    cargo llvm-cov [OPTIONS] [-- <ARGS>...]
 
 ARGS:
-    <args>...
+    <ARGS>...
             Arguments for the test binary
 
 OPTIONS:
+    -h, --help
+            Print help information
+
+    -V, --version
+            Print version information
+
         --json
             Export coverage data in "json" format
 
@@ -187,12 +194,6 @@ OPTIONS:
 
     -Z <FLAG>...
             Unstable (nightly-only) flags to Cargo
-
-    -h, --help
-            Prints help information
-
-    -V, --version
-            Prints version information
 ```
 <!-- readme-long-help:end -->
 
