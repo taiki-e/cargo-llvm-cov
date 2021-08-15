@@ -67,7 +67,7 @@ pub(crate) struct Args {
     pub(crate) text: bool,
     /// Generate coverage reports in "html" format.
     ////
-    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov` directory.
+    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov/html` directory.
     ///
     /// This internally calls `llvm-cov show -format=html`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.

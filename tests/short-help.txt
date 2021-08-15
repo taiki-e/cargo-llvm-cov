@@ -28,7 +28,7 @@ OPTIONS:
 
         --html
             Generate coverage reports in "html" format. If --output-dir is not specified, the report
-            will be generated in `target/llvm-cov` directory
+            will be generated in `target/llvm-cov/html` directory
 
         --open
             Generate coverage reports in "html" format and open them in a browser after the

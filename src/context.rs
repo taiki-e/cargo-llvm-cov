@@ -54,7 +54,7 @@ impl Context {
         let config = cargo::config(&cargo, &metadata.workspace_root)?;
         config.merge_to(&mut args, &mut env);
 
-        term::set_coloring(args.color);
+        term::set_coloring(&mut args.color);
 
         if let Some(v) = env::var_os("LLVM_PROFILE_FILE") {
             warn!("environment variable LLVM_PROFILE_FILE={:?} will be ignored", v);
@@ -68,6 +68,9 @@ impl Context {
         }
         if args.disable_default_ignore_filename_regex {
             warn!("--disable-default-ignore-filename-regex option is unstable");
+        }
+        if args.hide_instantiations {
+            warn!("--hide-instantiations option is unstable");
         }
         if args.doctests {
             warn!("--doctests option is unstable");
