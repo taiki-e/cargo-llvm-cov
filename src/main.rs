@@ -23,11 +23,12 @@ mod fs;
 use std::ffi::{OsStr, OsString};
 
 use anyhow::{Context as _, Result};
+use clap::Clap;
 use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
-    cli::{Args, Coloring, Subcommand},
+    cli::{Args, Coloring, Opts, Subcommand},
     context::Context,
 };
 
@@ -39,7 +40,7 @@ fn main() {
 }
 
 fn try_main() -> Result<()> {
-    let args = cli::from_args()?;
+    let Opts::LlvmCov(args) = Opts::parse();
     if let Some(Subcommand::Demangle) = &args.subcommand {
         demangler::run()?;
         return Ok(());

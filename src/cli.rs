@@ -1,12 +1,6 @@
-use anyhow::Result;
 use camino::Utf8PathBuf;
 use clap::{AppSettings, ArgSettings, Clap};
 use serde::Deserialize;
-
-pub(crate) fn from_args() -> Result<Args> {
-    let Opts::LlvmCov(args) = Opts::parse();
-    Ok(args)
-}
 
 const ABOUT: &str =
     "Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
@@ -24,7 +18,7 @@ const MAX_TERM_WIDTH: usize = 100;
     setting(AppSettings::StrictUtf8),
     setting(AppSettings::UnifiedHelpMessage)
 )]
-enum Opts {
+pub(crate) enum Opts {
     #[clap(about(ABOUT), version)]
     LlvmCov(Args),
 }
