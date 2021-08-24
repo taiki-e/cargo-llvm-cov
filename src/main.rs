@@ -140,7 +140,7 @@ fn run_test(cx: &Context) -> Result<()> {
     cargo.env("CARGO_INCREMENTAL", "0");
     cargo.env("CARGO_TARGET_DIR", &cx.target_dir);
 
-    cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
+    cargo.arg("test");
     if cx.doctests && !cx.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
@@ -225,8 +225,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
     // Currently, trybuild always use debug build.
     trybuild_target.push("debug");
-    fs::remove_dir_all(trybuild_target.join("incremental"))?;
     if trybuild_target.is_dir() {
+        fs::remove_dir_all(trybuild_target.join("incremental"))?;
         let mut trybuild_projects = vec![];
         for entry in fs::read_dir(trybuild_dir)?.filter_map(Result::ok) {
             let manifest_path = entry.path().join("Cargo.toml");
