@@ -9,7 +9,6 @@
 // - https://github.com/rust-lang/rust/blob/eab201df7028ebb6812c0b1a01702ac6ecfcceed/LICENSE-MIT
 
 use std::{
-    fmt::Write as _,
     io::{self, Read, Write},
     str::Lines,
 };
@@ -28,16 +27,8 @@ fn demangle_lines(lines: Lines<'_>) -> Vec<String> {
     let strip_crate_disambiguators = create_disambiguator_re();
     let mut demangled_lines = Vec::new();
     for mangled in lines {
-        let mut demangled = String::new();
-        // `<Demangle as Display>::fmt()` may fails even if `demangle()` succeed:
-        // https://github.com/alexcrichton/rustc-demangle/blob/8282f4b52aafc25df810f8da925b59bb22406b26/src/lib.rs#L380-L397
-        match write!(demangled, "{}", demangle(mangled)) {
-            Ok(()) => {
-                demangled =
-                    strip_crate_disambiguators.replace_all(&demangled, REPLACE_COLONS).to_string();
-            }
-            Err(_) => demangled = mangled.to_string(),
-        }
+        let mut demangled = demangle(mangled).to_string();
+        demangled = strip_crate_disambiguators.replace_all(&demangled, REPLACE_COLONS).to_string();
         demangled_lines.push(demangled);
     }
     demangled_lines
@@ -87,21 +78,21 @@ cc::spawn::{closure#0}::{closure#0}
 <core::slice::Iter<u8> as core::iter::iterator::Iterator>::rposition::<core::slice::memchr::memrchr::{closure#1}>::{closure#0}
 alloc::alloc::box_free::<dyn alloc::boxed::FnBox<(), Output = ()>>
 INtC8arrayvec8ArrayVechKj7b_E
-<const_generic::Unsigned<11: u8>>
-<const_generic::Signed<152: i16>>
-<const_generic::Signed<-11: i8>>
-<const_generic::Bool<false: bool>>
-<const_generic::Bool<true: bool>>
-<const_generic::Char<'v': char>>
-<const_generic::Char<'\n': char>>
-<const_generic::Char<'∂': char>>
+<const_generic::Unsigned<11u8>>
+<const_generic::Signed<152i16>>
+<const_generic::Signed<-11i8>>
+<const_generic::Bool<false>>
+<const_generic::Bool<true>>
+<const_generic::Char<'v'>>
+<const_generic::Char<'\n'>>
+<const_generic::Char<'∂'>>
 <const_generic::Foo<_>>::foo::FOO
 foo[0]
 foo[0]
 backtrace[0]::foo
 rand::rngs::adapter::reseeding::fork::FORK_HANDLER_REGISTERED.0.0
-_RNvB_1a
-RYFG_FGyyEvRYFF_EvRYFFEvERLB_B_B_ERLRjB_B_B_
+{recursion limit reached}
+{size limit reached}
 ";
 
     #[test]
@@ -110,7 +101,17 @@ RYFG_FGyyEvRYFF_EvRYFFEvERLB_B_B_ERLRjB_B_B_
         for (expected, actual) in
             DEMANGLED_OUTPUT_NO_CRATE_DISAMBIGUATORS.lines().zip(demangled_lines)
         {
-            assert_eq!(expected, actual);
+            match expected {
+                "{recursion limit reached}" => {
+                    assert_eq!(expected, &actual[..expected.len()]);
+                }
+                "{size limit reached}" => {
+                    assert_eq!(expected, &actual[actual.len() - expected.len()..]);
+                }
+                _ => {
+                    assert_eq!(expected, actual);
+                }
+            }
         }
     }
 }
