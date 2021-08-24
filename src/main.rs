@@ -133,11 +133,12 @@ fn run_test(cx: &Context) -> Result<()> {
 
     let mut cargo = cx.cargo_process();
     cargo.env("RUSTFLAGS", &rustflags);
-    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
-    cargo.env("CARGO_INCREMENTAL", "0");
     if let Some(rustdocflags) = rustdocflags {
         cargo.env("RUSTDOCFLAGS", &rustdocflags);
     }
+    cargo.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
+    cargo.env("CARGO_INCREMENTAL", "0");
+    cargo.env("CARGO_TARGET_DIR", &cx.target_dir);
 
     cargo.args(&["test", "--target-dir"]).arg(&cx.target_dir);
     if cx.doctests && !cx.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
@@ -217,7 +218,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     // trybuild
-    let trybuild_dir = &cx.metadata.target_directory.join("tests");
+    let trybuild_dir = &cx.target_dir.join("tests");
     let mut trybuild_target = trybuild_dir.join("target");
     if let Some(target) = &cx.target {
         trybuild_target.push(target);
@@ -333,7 +334,7 @@ impl Format {
         }
 
         match self {
-            Format::Text | Format::Html => {
+            Self::Text | Self::Html => {
                 cmd.args(&[
                     &format!("-show-instantiations={}", !cx.hide_instantiations),
                     "-show-line-counts-or-regions",
@@ -343,19 +344,19 @@ impl Format {
                     "-Xdemangler=demangle",
                 ]);
                 if let Some(output_dir) = &cx.output_dir {
-                    if self == Format::Html {
+                    if self == Self::Html {
                         cmd.arg(&format!("-output-dir={}", output_dir.join("html")));
                     } else {
                         cmd.arg(&format!("-output-dir={}", output_dir.join("text")));
                     }
                 }
             }
-            Format::Json | Format::LCov => {
+            Self::Json | Self::LCov => {
                 if cx.summary_only {
                     cmd.arg("-summary-only");
                 }
             }
-            Format::None => {}
+            Self::None => {}
         }
 
         if let Some(flags) = &cx.env.cargo_llvm_cov_flags {
