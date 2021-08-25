@@ -6,12 +6,13 @@
 #    ./tools/publish.sh <version> [--dry-run]
 #
 # Note:
-# - This script does not intend to use with projects that have multiple public
-#   packages with different version numbers in the workspace, like crossbeam.
+# - This script assumes all crates that this script will publish have the same version numbers
 # - This script requires parse-changelog <https://github.com/taiki-e/parse-changelog>
 
 set -euo pipefail
 IFS=$'\n\t'
+
+cd "$(cd "$(dirname "$0")" && pwd)"/..
 
 # A list of paths to the crate to be published.
 MEMBERS=(
@@ -22,15 +23,10 @@ error() {
     echo "error: $*" >&2
 }
 
-cd "$(cd "$(dirname "${0}")" && pwd)"/..
-
-git diff --exit-code
-git diff --exit-code --staged
-
 # Parse arguments.
 version="${1:?}"
 tag="v${version}"
-if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z_0-9\.-]+)?(\+[a-zA-Z_0-9\.-]+)?$ ]]; then
+if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z\.-]+)?(\+[0-9A-Za-z\.-]+)?$ ]]; then
     error "invalid version format: ${version}"
     exit 1
 fi
@@ -39,8 +35,13 @@ if [[ "${2:-}" == "--dry-run" ]]; then
     shift
 fi
 if [[ -n "${2:-}" ]]; then
-    error "invalid argument: ${2}"
+    error "invalid argument: $2"
     exit 1
+fi
+
+if [[ -z "${dryrun:-}" ]]; then
+    git diff --exit-code
+    git diff --exit-code --staged
 fi
 
 # Make sure that the version number of the workspace members matches the specified version.
@@ -61,17 +62,14 @@ done
 
 # Make sure that a valid release note for this version exists.
 # https://github.com/taiki-e/parse-changelog
-echo "========== changes =========="
+echo "============== CHANGELOG =============="
 parse-changelog CHANGELOG.md "${version}"
-echo "============================="
+echo
+echo "======================================="
 
 # Make sure the same release has not been created in the past.
 if gh release view "${tag}" &>/dev/null; then
     error "tag '${tag}' has already been created and pushed"
-    exit 1
-fi
-if git --no-pager tag | grep "$tag" &>/dev/null; then
-    error "tag '${tag}' has already been created"
     exit 1
 fi
 
