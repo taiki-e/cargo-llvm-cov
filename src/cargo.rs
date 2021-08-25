@@ -101,11 +101,18 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
         has_target_selection_options = true;
         cmd.arg("--all-targets");
     }
+    if cx.doc {
+        has_target_selection_options = true;
+        cmd.arg("--doc");
+    }
 
     if !has_target_selection_options && !cx.doctests {
         cmd.arg("--tests");
     }
 
+    if cx.quiet {
+        cmd.arg("--quiet");
+    }
     if cx.no_fail_fast {
         cmd.arg("--no-fail-fast");
     }
@@ -119,6 +126,10 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     for exclude in &cx.exclude {
         cmd.arg("--exclude");
         cmd.arg(exclude);
+    }
+    if let Some(jobs) = cx.jobs {
+        cmd.arg("--jobs");
+        cmd.arg(jobs.to_string());
     }
     if cx.release {
         cmd.arg("--release");

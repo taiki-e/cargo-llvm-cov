@@ -1,6 +1,6 @@
 use std::{
     io::Write,
-    sync::atomic::{AtomicU8, Ordering::Relaxed},
+    sync::atomic::{AtomicBool, AtomicU8, Ordering::Relaxed},
 };
 
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -29,6 +29,16 @@ fn coloring() -> ColorChoice {
         NEVER => ColorChoice::Never,
         _ => unreachable!(),
     }
+}
+
+static QUIET: AtomicBool = AtomicBool::new(false);
+
+pub(crate) fn set_quiet(quiet: bool) {
+    QUIET.store(quiet, Relaxed);
+}
+
+pub(crate) fn quiet() -> bool {
+    QUIET.load(Relaxed)
 }
 
 pub(crate) fn print_inner(status: &str, color: Option<Color>, justified: bool) -> StandardStream {
@@ -73,7 +83,9 @@ macro_rules! info {
 macro_rules! status {
     ($status:expr, $($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        let mut stream = crate::term::print_inner($status, Some(termcolor::Color::Cyan), true);
-        let _ = writeln!(stream, $($msg),*);
+        if !crate::term::quiet() {
+            let mut stream = crate::term::print_inner($status, Some(termcolor::Color::Cyan), true);
+            let _ = writeln!(stream, $($msg),*);
+        }
     }};
 }

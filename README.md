@@ -112,6 +112,9 @@ OPTIONS:
         --doctests
             Including doc tests (unstable)
 
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
+            more.
+
         --no-report
             Run tests, but don't generate coverage report
 
@@ -120,6 +123,9 @@ OPTIONS:
 
         --no-fail-fast
             Run all tests regardless of failure
+
+    -q, --quiet
+            Display one character per test instead of one line
 
         --lib
             Test only this package's library unit tests
@@ -151,6 +157,12 @@ OPTIONS:
         --all-targets
             Test all targets
 
+        --doc
+            Test only this library's documentation (unstable)
+
+            This flag is unstable because it automatically enables --doctests flag. See
+            <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
+
     -p, --package <SPEC>...
             Package to run tests for
 
@@ -159,6 +171,9 @@ OPTIONS:
 
         --exclude <SPEC>...
             Exclude packages from the test
+
+    -j, --jobs <N>
+            Number of parallel jobs, defaults to # of CPUs
 
         --release
             Build artifacts in release mode, with optimizations
