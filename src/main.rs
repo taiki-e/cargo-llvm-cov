@@ -165,7 +165,8 @@ fn generate_report(cx: &Context) -> Result<()> {
     }
 
     if cx.open {
-        open::that(cx.output_dir.as_ref().unwrap().join("html/index.html"))
+        // TODO: support BROWSER environment variable
+        opener::open(cx.output_dir.as_ref().unwrap().join("html/index.html"))
             .context("couldn't open report")?;
     }
     Ok(())
