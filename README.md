@@ -16,51 +16,11 @@ This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] a
 
 **Table of Contents:**
 
-- [Installation](#installation)
 - [Usage](#usage)
   - [Continuous Integration](#continuous-integration)
+- [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [License](#license)
-
-## Installation
-
-<!-- omit in toc -->
-### Prerequisites
-
-cargo-llvm-cov requires nightly
-toolchain and llvm-tools-preview:
-
-```sh
-rustup component add llvm-tools-preview --toolchain nightly
-```
-
-<!-- omit in toc -->
-### From source
-
-```sh
-cargo install cargo-llvm-cov
-```
-
-cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
-toolchain to be installed, though does not require nightly to be the default
-toolchain or the one with which cargo-llvm-cov itself is executed. If the default
-toolchain is one other than nightly, running `cargo llvm-cov` will find and use
-nightly anyway.
-
-<!-- omit in toc -->
-### From prebuilt binaries
-
-You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
-Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows.
-
-<!-- omit in toc -->
-### Via Homebrew
-
-You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
-
-```sh
-brew install taiki-e/tap/cargo-llvm-cov
-```
 
 ## Usage
 
@@ -323,6 +283,46 @@ jobs:
 ```
 
 **NOTE:** Currently, only line coverage is available on Codecov. This is because `-Z instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+
+## Installation
+
+<!-- omit in toc -->
+### Prerequisites
+
+cargo-llvm-cov requires nightly
+toolchain and llvm-tools-preview:
+
+```sh
+rustup component add llvm-tools-preview --toolchain nightly
+```
+
+<!-- omit in toc -->
+### From source
+
+```sh
+cargo install cargo-llvm-cov
+```
+
+cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
+toolchain to be installed, though does not require nightly to be the default
+toolchain or the one with which cargo-llvm-cov itself is executed. If the default
+toolchain is one other than nightly, running `cargo llvm-cov` will find and use
+nightly anyway.
+
+<!-- omit in toc -->
+### From prebuilt binaries
+
+You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
+Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows.
+
+<!-- omit in toc -->
+### Via Homebrew
+
+You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
+
+```sh
+brew install taiki-e/tap/cargo-llvm-cov
+```
 
 ## Known limitations
 
