@@ -76,6 +76,10 @@ impl Context {
         if args.doctests {
             warn!("--doctests option is unstable");
         }
+        if args.doc {
+            args.doctests = true;
+            warn!("--doc option is unstable");
+        }
         if args.target.is_some() {
             info!(
                 "when --target option is used, coverage for proc-macro and build script will \

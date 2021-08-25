@@ -43,6 +43,7 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(args) = Opts::parse();
+    term::set_quiet(args.quiet);
     if let Some(Subcommand::Demangle) = &args.subcommand {
         demangler::run()?;
         return Ok(());
@@ -206,6 +207,9 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         )
         .arg("-o")
         .arg(&cx.profdata_file);
+    if let Some(jobs) = cx.jobs {
+        cmd.arg(format!("-num-threads={}", jobs));
+    }
     if let Some(flags) = &cx.env.cargo_llvm_profdata_flags {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
@@ -352,7 +356,9 @@ impl Format {
         cmd.args(self.use_color(cx));
         cmd.arg(format!("-instr-profile={}", cx.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
-
+        if let Some(jobs) = cx.jobs {
+            cmd.arg(format!("-num-threads={}", jobs));
+        }
         if let Some(ignore_filename) = ignore_filename_regex(cx) {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename);

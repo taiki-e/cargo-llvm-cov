@@ -120,6 +120,9 @@ pub(crate) struct Args {
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
+    ///
+    /// This flag is unstable.
+    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
     #[clap(long)]
     pub(crate) doctests: bool,
     /// Run tests, but don't generate coverage report
@@ -135,44 +138,69 @@ pub(crate) struct Args {
     /// Run all tests regardless of failure
     #[clap(long)]
     pub(crate) no_fail_fast: bool,
-    // TODO
-    // /// Display one character per test instead of one line
-    // #[clap(short, long)]
-    // pub(crate) quiet: bool,
+    /// Display one character per test instead of one line
+    #[clap(short, long, conflicts_with = "verbose")]
+    pub(crate) quiet: bool,
     /// Test only this package's library unit tests
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) lib: bool,
     /// Test only the specified binary
-    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
     pub(crate) bin: Vec<String>,
     /// Test all binaries
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) bins: bool,
     /// Test only the specified example
-    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
     pub(crate) example: Vec<String>,
     /// Test all examples
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) examples: bool,
     /// Test only the specified test target
-    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
     pub(crate) test: Vec<String>,
     /// Test all tests
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) tests: bool,
     /// Test only the specified bench target
-    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
     pub(crate) bench: Vec<String>,
     /// Test all benches
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) benches: bool,
     /// Test all targets
-    #[clap(long)]
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
     pub(crate) all_targets: bool,
-    // TODO
-    // /// Test only this library's documentation
-    // #[clap(long)]
-    // pub(crate) doc: bool,
+    /// Test only this library's documentation (unstable)
+    ///
+    /// This flag is unstable because it automatically enables --doctests flag.
+    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
+    #[clap(long)]
+    pub(crate) doc: bool,
     /// Package to run tests for
     // cargo allows the combination of --package and --workspace, but we reject
     // it because the situation where both flags are specified is odd.
@@ -190,11 +218,10 @@ pub(crate) struct Args {
     /// Exclude packages from the test
     #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
     pub(crate) exclude: Vec<String>,
-    // TODO: Should this only work for cargo's --jobs? Or should it also work
-    //       for llvm-cov's -num-threads?
-    // /// Number of parallel jobs, defaults to # of CPUs
-    // #[clap(short, long, value_name = "N")]
-    // jobs: Option<u64>,
+    /// Number of parallel jobs, defaults to # of CPUs
+    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/util/command_prelude.rs#L332
+    #[clap(short, long, value_name = "N")]
+    pub(crate) jobs: Option<u32>,
     /// Build artifacts in release mode, with optimizations
     #[clap(long)]
     pub(crate) release: bool,
@@ -223,7 +250,7 @@ pub(crate) struct Args {
     // #[clap(long, value_name = "DIRECTORY")]
     // target_dir: Option<Utf8PathBuf>,
     /// Path to Cargo.toml
-    #[clap(long, value_name = "PATH", setting(ArgSettings::ForbidEmptyValues))]
+    #[clap(long, value_name = "PATH")]
     pub(crate) manifest_path: Option<Utf8PathBuf>,
     /// Use verbose output
     ///
@@ -356,7 +383,6 @@ mod tests {
             "--output-dir",
             "--ignore-filename-regex",
             // "--target-dir",
-            "--manifest-path",
         ];
         let allowed = &[
             "--bin",
@@ -369,7 +395,7 @@ mod tests {
             "--features",
             "--target",
             // "--target-dir",
-            // "--manifest-path",
+            "--manifest-path",
             "-Z",
             "--",
         ];
