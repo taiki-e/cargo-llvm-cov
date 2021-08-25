@@ -426,7 +426,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         if let Some(ignore) = &cx.ignore_filename_regex {
             out.push(ignore);
         }
-        if let Some(home) = dirs_next::home_dir() {
+        if let Some(home) = home::home_dir() {
             out.push(format!("^{}{}", home.display(), SEPARATOR));
         }
 
