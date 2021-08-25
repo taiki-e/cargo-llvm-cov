@@ -56,9 +56,56 @@ pub(crate) fn locate_project() -> Result<String> {
 }
 
 pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if !cx.doctests {
+    let mut has_target_selection_options = false;
+    if cx.lib {
+        has_target_selection_options = true;
+        cmd.arg("--lib");
+    }
+    for name in &cx.bin {
+        has_target_selection_options = true;
+        cmd.arg("--bin");
+        cmd.arg(name);
+    }
+    if cx.bins {
+        has_target_selection_options = true;
+        cmd.arg("--bins");
+    }
+    for name in &cx.example {
+        has_target_selection_options = true;
+        cmd.arg("--example");
+        cmd.arg(name);
+    }
+    if cx.examples {
+        has_target_selection_options = true;
+        cmd.arg("--examples");
+    }
+    for name in &cx.test {
+        has_target_selection_options = true;
+        cmd.arg("--test");
+        cmd.arg(name);
+    }
+    if cx.tests {
+        has_target_selection_options = true;
         cmd.arg("--tests");
     }
+    for name in &cx.bench {
+        has_target_selection_options = true;
+        cmd.arg("--bench");
+        cmd.arg(name);
+    }
+    if cx.benches {
+        has_target_selection_options = true;
+        cmd.arg("--benches");
+    }
+    if cx.all_targets {
+        has_target_selection_options = true;
+        cmd.arg("--all-targets");
+    }
+
+    if !has_target_selection_options && !cx.doctests {
+        cmd.arg("--tests");
+    }
+
     if cx.no_fail_fast {
         cmd.arg("--no-fail-fast");
     }
@@ -75,6 +122,10 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     }
     if cx.release {
         cmd.arg("--release");
+    }
+    if let Some(profile) = &cx.profile {
+        cmd.arg("--profile");
+        cmd.arg(profile);
     }
     for features in &cx.features {
         cmd.arg("--features");
@@ -103,6 +154,9 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     }
     if cx.locked {
         cmd.arg("--locked");
+    }
+    if cx.offline {
+        cmd.arg("--offline");
     }
 
     if cx.args.verbose > 1 {

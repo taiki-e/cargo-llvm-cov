@@ -44,7 +44,7 @@ pub(crate) struct Args {
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     #[clap(long)]
     pub(crate) json: bool,
-    /// Export coverage data in "lcov" format.
+    /// Export coverage data in "lcov" format
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
     ///
@@ -53,7 +53,7 @@ pub(crate) struct Args {
     #[clap(long, conflicts_with = "json")]
     pub(crate) lcov: bool,
 
-    /// Generate coverage reports in “text” format.
+    /// Generate coverage report in “text” format
     ///
     /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
     ///
@@ -61,8 +61,8 @@ pub(crate) struct Args {
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
     #[clap(long, conflicts_with = "json", conflicts_with = "lcov")]
     pub(crate) text: bool,
-    /// Generate coverage reports in "html" format.
-    ////
+    /// Generate coverage report in "html" format
+    ///
     /// If --output-dir is not specified, the report will be generated in `target/llvm-cov/html` directory.
     ///
     /// This internally calls `llvm-cov show -format=html`.
@@ -75,7 +75,7 @@ pub(crate) struct Args {
     #[clap(long, conflicts_with = "json", conflicts_with = "lcov", conflicts_with = "text")]
     pub(crate) open: bool,
 
-    /// Export only summary information for each file in the coverage data.
+    /// Export only summary information for each file in the coverage data
     ///
     /// This flag can only be used together with either --json or --lcov.
     // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
@@ -93,7 +93,7 @@ pub(crate) struct Args {
         setting(ArgSettings::ForbidEmptyValues)
     )]
     pub(crate) output_path: Option<Utf8PathBuf>,
-    /// Specify a directory to write coverage reports into (default to `target/llvm-cov`).
+    /// Specify a directory to write coverage report into (default to `target/llvm-cov`).
     ///
     /// This flag can only be used together with --text, --html, or --open.
     /// See also --output-path.
@@ -122,19 +122,57 @@ pub(crate) struct Args {
     /// Including doc tests (unstable)
     #[clap(long)]
     pub(crate) doctests: bool,
-    /// Run tests, but don't generate coverage reports
+    /// Run tests, but don't generate coverage report
     #[clap(long, conflicts_with = "no-run")]
     pub(crate) no_report: bool,
 
     // =========================================================================
     // `cargo test` options
     // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
-    /// Generate coverage reports without running tests
+    /// Generate coverage report without running tests
     #[clap(long)]
     pub(crate) no_run: bool,
     /// Run all tests regardless of failure
     #[clap(long)]
     pub(crate) no_fail_fast: bool,
+    // TODO
+    // /// Display one character per test instead of one line
+    // #[clap(short, long)]
+    // pub(crate) quiet: bool,
+    /// Test only this package's library unit tests
+    #[clap(long)]
+    pub(crate) lib: bool,
+    /// Test only the specified binary
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) bin: Vec<String>,
+    /// Test all binaries
+    #[clap(long)]
+    pub(crate) bins: bool,
+    /// Test only the specified example
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) example: Vec<String>,
+    /// Test all examples
+    #[clap(long)]
+    pub(crate) examples: bool,
+    /// Test only the specified test target
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) test: Vec<String>,
+    /// Test all tests
+    #[clap(long)]
+    pub(crate) tests: bool,
+    /// Test only the specified bench target
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) bench: Vec<String>,
+    /// Test all benches
+    #[clap(long)]
+    pub(crate) benches: bool,
+    /// Test all targets
+    #[clap(long)]
+    pub(crate) all_targets: bool,
+    // TODO
+    // /// Test only this library's documentation
+    // #[clap(long)]
+    // pub(crate) doc: bool,
     /// Package to run tests for
     // cargo allows the combination of --package and --workspace, but we reject
     // it because the situation where both flags are specified is odd.
@@ -143,21 +181,14 @@ pub(crate) struct Args {
         long,
         multiple_occurrences = true,
         value_name = "SPEC",
-        conflicts_with = "workspace",
-        setting(ArgSettings::ForbidEmptyValues)
+        conflicts_with = "workspace"
     )]
     pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from the test
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "SPEC",
-        requires = "workspace",
-        setting(ArgSettings::ForbidEmptyValues)
-    )]
+    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
     pub(crate) exclude: Vec<String>,
     // TODO: Should this only work for cargo's --jobs? Or should it also work
     //       for llvm-cov's -num-threads?
@@ -167,13 +198,11 @@ pub(crate) struct Args {
     /// Build artifacts in release mode, with optimizations
     #[clap(long)]
     pub(crate) release: bool,
+    /// Build artifacts with the specified profile
+    #[clap(long, value_name = "PROFILE-NAME")]
+    pub(crate) profile: Option<String>,
     /// Space or comma separated list of features to activate
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "FEATURES",
-        setting(ArgSettings::ForbidEmptyValues)
-    )]
+    #[clap(long, multiple_occurrences = true, value_name = "FEATURES")]
     pub(crate) features: Vec<String>,
     /// Activate all available features
     #[clap(long)]
@@ -185,7 +214,7 @@ pub(crate) struct Args {
     ///
     /// When this option is used, coverage for proc-macro and build script will
     /// not be displayed because cargo does not pass RUSTFLAGS to them.
-    #[clap(long, value_name = "TRIPLE", setting(ArgSettings::ForbidEmptyValues))]
+    #[clap(long, value_name = "TRIPLE")]
     pub(crate) target: Option<String>,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
@@ -196,7 +225,9 @@ pub(crate) struct Args {
     /// Path to Cargo.toml
     #[clap(long, value_name = "PATH", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) manifest_path: Option<Utf8PathBuf>,
-    /// Use verbose output (-vv/-vvv propagate verbosity to cargo)
+    /// Use verbose output
+    ///
+    /// Use -vv (-vvv) to propagate verbosity to cargo.
     #[clap(short, long, parse(from_occurrences))]
     pub(crate) verbose: u8,
     /// Coloring
@@ -209,18 +240,16 @@ pub(crate) struct Args {
     /// Require Cargo.lock is up to date
     #[clap(long)]
     pub(crate) locked: bool,
+    /// Run without accessing the network
+    #[clap(long)]
+    pub(crate) offline: bool,
 
     /// Unstable (nightly-only) flags to Cargo
-    #[clap(
-        short = 'Z',
-        multiple_occurrences = true,
-        value_name = "FLAG",
-        setting(ArgSettings::ForbidEmptyValues)
-    )]
+    #[clap(short = 'Z', multiple_occurrences = true, value_name = "FLAG")]
     pub(crate) unstable_flags: Vec<String>,
 
     /// Arguments for the test binary
-    #[clap(last = true, setting(ArgSettings::ForbidEmptyValues))]
+    #[clap(last = true)]
     pub(crate) args: Vec<String>,
 }
 
@@ -322,16 +351,39 @@ mod tests {
     // https://github.com/clap-rs/clap/issues/1740
     #[test]
     fn empty_value() {
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--output-path", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--output-dir", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--ignore-filename-regex", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--package", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--exclude", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--features", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--target", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--manifest-path", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", ""]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--", ""]).unwrap_err();
+        let forbidden = &[
+            "--output-path",
+            "--output-dir",
+            "--ignore-filename-regex",
+            // "--target-dir",
+            "--manifest-path",
+        ];
+        let allowed = &[
+            "--bin",
+            "--example",
+            "--test",
+            "--bench",
+            "--package",
+            "--exclude",
+            "--profile",
+            "--features",
+            "--target",
+            // "--target-dir",
+            // "--manifest-path",
+            "-Z",
+            "--",
+        ];
+
+        for &flag in forbidden {
+            Opts::try_parse_from(&["cargo", "llvm-cov", flag, ""]).unwrap_err();
+        }
+        for &flag in allowed {
+            if flag == "--exclude" {
+                Opts::try_parse_from(&["cargo", "llvm-cov", flag, "", "--workspace"]).unwrap();
+            } else {
+                Opts::try_parse_from(&["cargo", "llvm-cov", flag, ""]).unwrap();
+            }
+        }
     }
 
     fn get_help(long: bool) -> Result<String> {

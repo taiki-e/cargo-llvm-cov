@@ -99,7 +99,7 @@ OPTIONS:
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
         --lcov
-            Export coverage data in "lcov" format.
+            Export coverage data in "lcov" format
 
             If --output-path is not specified, the report will be printed to stdout.
 
@@ -107,7 +107,7 @@ OPTIONS:
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
         --text
-            Generate coverage reports in “text” format.
+            Generate coverage report in “text” format
 
             If --output-path or --output-dir is not specified, the report will be printed to stdout.
 
@@ -115,8 +115,10 @@ OPTIONS:
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
 
         --html
-            Generate coverage reports in "html" format. If --output-dir is not specified, the report
-            will be generated in `target/llvm-cov/html` directory.
+            Generate coverage report in "html" format
+
+            If --output-dir is not specified, the report will be generated in `target/llvm-cov/html`
+            directory.
 
             This internally calls `llvm-cov show -format=html`. See
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
@@ -128,7 +130,7 @@ OPTIONS:
             See --html for more.
 
         --summary-only
-            Export only summary information for each file in the coverage data.
+            Export only summary information for each file in the coverage data
 
             This flag can only be used together with either --json or --lcov.
 
@@ -139,7 +141,7 @@ OPTIONS:
             --html and --open.
 
         --output-dir <DIRECTORY>
-            Specify a directory to write coverage reports into (default to `target/llvm-cov`).
+            Specify a directory to write coverage report into (default to `target/llvm-cov`).
 
             This flag can only be used together with --text, --html, or --open. See also --output-
             path.
@@ -151,13 +153,43 @@ OPTIONS:
             Including doc tests (unstable)
 
         --no-report
-            Run tests, but don't generate coverage reports
+            Run tests, but don't generate coverage report
 
         --no-run
-            Generate coverage reports without running tests
+            Generate coverage report without running tests
 
         --no-fail-fast
             Run all tests regardless of failure
+
+        --lib
+            Test only this package's library unit tests
+
+        --bin <NAME>...
+            Test only the specified binary
+
+        --bins
+            Test all binaries
+
+        --example <NAME>...
+            Test only the specified example
+
+        --examples
+            Test all examples
+
+        --test <NAME>...
+            Test only the specified test target
+
+        --tests
+            Test all tests
+
+        --bench <NAME>...
+            Test only the specified bench target
+
+        --benches
+            Test all benches
+
+        --all-targets
+            Test all targets
 
     -p, --package <SPEC>...
             Package to run tests for
@@ -170,6 +202,9 @@ OPTIONS:
 
         --release
             Build artifacts in release mode, with optimizations
+
+        --profile <PROFILE-NAME>
+            Build artifacts with the specified profile
 
         --features <FEATURES>...
             Space or comma separated list of features to activate
@@ -190,7 +225,9 @@ OPTIONS:
             Path to Cargo.toml
 
     -v, --verbose
-            Use verbose output (-vv/-vvv propagate verbosity to cargo)
+            Use verbose output
+
+            Use -vv (-vvv) to propagate verbosity to cargo.
 
         --color <WHEN>
             Coloring [possible values: auto, always, never]
@@ -200,6 +237,9 @@ OPTIONS:
 
         --locked
             Require Cargo.lock is up to date
+
+        --offline
+            Run without accessing the network
 
     -Z <FLAG>...
             Unstable (nightly-only) flags to Cargo
