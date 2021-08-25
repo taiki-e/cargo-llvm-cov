@@ -23,11 +23,13 @@ mod fs;
 use std::ffi::{OsStr, OsString};
 
 use anyhow::{Context as _, Result};
+use camino::Utf8Path;
 use clap::Clap;
 use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
+    cargo::StringOrArray,
     cli::{Args, Coloring, Opts, Subcommand},
     context::Context,
 };
@@ -165,9 +167,31 @@ fn generate_report(cx: &Context) -> Result<()> {
     }
 
     if cx.open {
-        // TODO: support BROWSER environment variable
-        opener::open(cx.output_dir.as_ref().unwrap().join("html/index.html"))
-            .context("couldn't open report")?;
+        let path = &cx.output_dir.as_ref().unwrap().join("html/index.html");
+        status!("Opening", "{}", path);
+        open_report(cx, path)?;
+    }
+    Ok(())
+}
+
+fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
+    // doc.browser config value is prefer over BROWSER environment variable.
+    // https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/ops/cargo_doc.rs#L58-L59
+    let browser = cx
+        .config
+        .doc
+        .browser
+        .as_ref()
+        .and_then(StringOrArray::path_and_args)
+        .or_else(|| Some((cx.env.browser.as_deref()?, vec![])));
+
+    match browser {
+        Some((browser, initial_args)) => {
+            cmd!(browser).args(initial_args).arg(path).run().with_context(|| {
+                format!("couldn't open report with {}", browser.to_string_lossy())
+            })?;
+        }
+        None => opener::open(path).context("couldn't open report")?,
     }
     Ok(())
 }
