@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Add `--lib`, `--bin`, `--bins`, `--example`, `--examples`, `--test`, `--tests`, `--bench`, `--benches`, `--all-targets`, `--profile`, and `--offline` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/67)
+
 - [Respect `BROWSER` environment variable and `doc.browser` cargo config.](https://github.com/taiki-e/cargo-llvm-cov/pull/66)
 
 ## [0.1.0] - 2021-08-15
