@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Respect `BROWSER` environment variable and `doc.browser` cargo config.](https://github.com/taiki-e/cargo-llvm-cov/pull/66)
+
 ## [0.1.0] - 2021-08-15
 
 - [Update clap to fix build error.](https://github.com/taiki-e/cargo-llvm-cov/pull/59)
@@ -40,7 +42,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [`--html` and `--open` options no longer outputs a summary at the same time.](https://github.com/taiki-e/cargo-llvm-cov/pull/61)
 
-- [Recognize rustflags and rustdocflags set by config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
+- [Respect rustflags and rustdocflags set by cargo config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
 
 - Diagnostic improvements.
 

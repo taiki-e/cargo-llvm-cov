@@ -17,6 +17,7 @@ use crate::{
 pub(crate) struct Context {
     pub(crate) args: Args,
     pub(crate) env: Env,
+    pub(crate) config: cargo::Config,
     pub(crate) verbose: bool,
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
@@ -177,6 +178,8 @@ impl Context {
         let verbose = args.verbose != 0;
         Ok(Self {
             args,
+            env,
+            config,
             verbose,
             target_dir,
             doctests_dir,
@@ -188,7 +191,6 @@ impl Context {
             cargo,
             llvm_cov,
             llvm_profdata,
-            env,
         })
     }
 

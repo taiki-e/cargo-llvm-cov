@@ -23,6 +23,8 @@ pub(crate) struct Env {
     pub(crate) rustdocflags: Option<OsString>,
     /// `RUSTC` environment variable.
     pub(crate) rustc: Option<OsString>,
+    /// `BROWSER` environment variable.
+    pub(crate) browser: Option<OsString>,
 
     // Environment variables Cargo sets for 3rd party subcommands
     // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
@@ -46,6 +48,7 @@ impl Env {
             rustflags: env::var_os("RUSTFLAGS"),
             rustdocflags: env::var_os("RUSTDOCFLAGS"),
             rustc: env::var_os("RUSTC"),
+            browser: env::var_os("BROWSER"),
             cargo: env::var_os("CARGO"),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,

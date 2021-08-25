@@ -130,9 +130,11 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Config {
     #[serde(default)]
-    build: Build,
+    pub(crate) build: Build,
     #[serde(default)]
-    term: Term,
+    pub(crate) doc: Doc,
+    #[serde(default)]
+    pub(crate) term: Term,
 }
 
 impl Config {
@@ -162,29 +164,29 @@ impl Config {
         Ok(())
     }
 
-    pub(crate) fn merge_to(self, args: &mut Args, env: &mut Env) {
+    pub(crate) fn merge_to(&self, args: &mut Args, env: &mut Env) {
         // RUSTFLAGS environment variable is prefer over build.rustflags config value.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
         if env.rustflags.is_none() {
-            if let Some(rustflags) = self.build.rustflags {
-                env.rustflags = Some(rustflags.into_string().into());
+            if let Some(rustflags) = &self.build.rustflags {
+                env.rustflags = Some(rustflags.to_string().into());
             }
         }
         // RUSTDOCFLAGS environment variable is prefer over build.rustdocflags config value.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
         if env.rustdocflags.is_none() {
-            if let Some(rustdocflags) = self.build.rustdocflags {
-                env.rustdocflags = Some(rustdocflags.into_string().into());
+            if let Some(rustdocflags) = &self.build.rustdocflags {
+                env.rustdocflags = Some(rustdocflags.to_string().into());
             }
         }
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc
         if env.rustc.is_none() {
-            if let Some(rustc) = self.build.rustc {
+            if let Some(rustc) = &self.build.rustc {
                 env.rustc = Some(rustc.into());
             }
         }
         if args.target.is_none() {
-            args.target = self.build.target;
+            args.target = self.build.target.clone();
         }
         if args.verbose == 0 && self.term.verbose.unwrap_or(false) {
             args.verbose = 1;
@@ -197,37 +199,60 @@ impl Config {
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#build
 #[derive(Debug, Default, Deserialize)]
-struct Build {
+pub(crate) struct Build {
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc
-    rustc: Option<String>,
+    pub(crate) rustc: Option<String>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
-    rustflags: Option<StringOrArray>,
+    pub(crate) rustflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
-    rustdocflags: Option<StringOrArray>,
+    pub(crate) rustdocflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget
-    target: Option<String>,
+    pub(crate) target: Option<String>,
+}
+
+// https://doc.rust-lang.org/nightly/cargo/reference/config.html#doc
+#[derive(Debug, Default, Deserialize)]
+pub(crate) struct Doc {
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#docbrowser
+    pub(crate) browser: Option<StringOrArray>,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#term
 #[derive(Debug, Default, Deserialize)]
-struct Term {
+pub(crate) struct Term {
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#termverbose
-    verbose: Option<bool>,
+    pub(crate) verbose: Option<bool>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#termcolor
-    color: Option<Coloring>,
+    pub(crate) color: Option<Coloring>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum StringOrArray {
+pub(crate) enum StringOrArray {
     String(String),
     Array(Vec<String>),
 }
 
 impl StringOrArray {
-    fn into_string(self) -> String {
+    pub(crate) fn path_and_args(&self) -> Option<(&OsStr, Vec<&str>)> {
         match self {
-            Self::String(s) => s,
+            Self::String(s) => {
+                let mut s = s.split(' ');
+                let path = s.next()?;
+                Some((OsStr::new(path), s.collect()))
+            }
+            Self::Array(v) => {
+                let path = v.get(0)?;
+                Some((OsStr::new(path), v.iter().skip(1).map(String::as_str).collect()))
+            }
+        }
+    }
+}
+
+impl ToString for StringOrArray {
+    fn to_string(&self) -> String {
+        match self {
+            Self::String(s) => s.clone(),
             Self::Array(v) => v.join(" "),
         }
     }
