@@ -38,6 +38,9 @@ shell-escape = "0.1.5"
 termcolor = "1.1"
 walkdir = "2"
 
+# This is needed until https://github.com/clap-rs/clap/pull/2706 is released.
+clap_derive = "=3.0.0-beta.4"
+
 [dev-dependencies]
 easy-ext = "1"
 once_cell = "1"
