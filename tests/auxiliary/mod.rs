@@ -28,7 +28,8 @@ pub fn cargo_llvm_cov() -> Command {
         .env_remove("CARGO_TERM_VERBOSE")
         .env_remove("CARGO_TERM_COLOR")
         .env_remove("BROWSER")
-        .env_remove("RUST_LOG");
+        .env_remove("RUST_LOG")
+        .env_remove("CI");
     cmd
 }
 
