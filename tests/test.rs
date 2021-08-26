@@ -74,6 +74,19 @@ fn cargo_config() {
 }
 
 #[test]
+fn no_coverage() {
+    let model = "no_coverage";
+    let id = format!("{}/{}", model, model);
+    for (extension, args2) in test_set() {
+        // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
+        if extension == "full.json" && cfg!(windows) {
+            continue;
+        }
+        test_report(model, model, extension, args2).context(id.clone()).unwrap();
+    }
+}
+
+#[test]
 fn merge() {
     let model = "merge";
     let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join(model);

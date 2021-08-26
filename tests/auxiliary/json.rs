@@ -146,7 +146,7 @@ mod tests {
         .unwrap()
         .filter_map(Result::ok)
         .collect();
-        assert_eq!(files.len(), 38);
+        assert_eq!(files.len(), 40);
 
         for file in files {
             let s = fs::read_to_string(file).unwrap();

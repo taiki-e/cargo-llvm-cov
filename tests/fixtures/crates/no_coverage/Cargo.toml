@@ -1,0 +1,5 @@
+[package]
+name = "no_coverage"
+version = "0.0.0"
+
+[workspace]

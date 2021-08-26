@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Set `cfg(coverage)` to easily use `#[no_coverage]`.](https://github.com/taiki-e/cargo-llvm-cov/pull/72)
+
 - [Add `--quiet`, `--doc`, and `--jobs` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/70)
 
 ## [0.1.1] - 2021-08-25
