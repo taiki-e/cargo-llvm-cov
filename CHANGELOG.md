@@ -10,11 +10,15 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.3] - 2021-08-26
+
 - [Add --verbose option to clean subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)
 
 - Fix regressions introduced in 0.1.2. ([#74](https://github.com/taiki-e/cargo-llvm-cov/pull/74), [#76](https://github.com/taiki-e/cargo-llvm-cov/pull/76))
 
 ## [0.1.2] - 2021-08-26
+
+**Note: This release has been yanked due to regressions fixed in 0.1.3.**
 
 - [Set `cfg(coverage)` to easily use `#[no_coverage]`.](https://github.com/taiki-e/cargo-llvm-cov/pull/72)
 
