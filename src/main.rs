@@ -55,15 +55,21 @@ fn try_main() -> Result<()> {
             demangler::run()?;
         }
 
-        Some(Subcommand::Clean { manifest_path, mut color }) => {
+        Some(Subcommand::Clean { manifest_path, verbose, mut color }) => {
             term::set_coloring(&mut color);
             let package_root = cargo::package_root(manifest_path.as_deref())?;
             let metadata = cargo::metadata(&package_root)?;
 
             let target_dir = metadata.target_directory.join("llvm-cov-target");
             let output_dir = metadata.target_directory.join("llvm-cov");
-            fs::remove_dir_all(target_dir)?;
-            fs::remove_dir_all(output_dir)?;
+            for dir in &[target_dir, output_dir] {
+                if dir.exists() {
+                    if verbose != 0 {
+                        status!("Removing", "{}", dir);
+                    }
+                    fs::remove_dir_all(dir)?;
+                }
+            }
         }
 
         None => {

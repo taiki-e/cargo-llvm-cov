@@ -308,14 +308,10 @@ pub(crate) enum Subcommand {
         /// Path to Cargo.toml
         #[clap(long, value_name = "PATH")]
         manifest_path: Option<Utf8PathBuf>,
-        // TODO
-        // /// Use verbose output
-        // ///
-        // /// Use -vv (-vvv) to propagate verbosity to cargo.
-        // #[clap(short, long, parse(from_occurrences))]
-        // verbose: u8,
+        /// Use verbose output
+        #[clap(short, long, parse(from_occurrences))]
+        verbose: u8,
         /// Coloring
-        // This flag will be propagated to both cargo and llvm-cov.
         #[clap(long, arg_enum, value_name = "WHEN")]
         color: Option<Coloring>,
     },
