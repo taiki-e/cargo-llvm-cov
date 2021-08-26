@@ -15,22 +15,28 @@ mod process;
 
 mod cargo;
 mod cli;
+mod config;
 mod context;
 mod demangler;
 mod env;
 mod fs;
+mod rustc;
 
-use std::ffi::{OsStr, OsString};
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    ffi::{OsStr, OsString},
+};
 
 use anyhow::{Context as _, Result};
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::Clap;
 use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
-    cargo::StringOrArray,
     cli::{Args, Coloring, Opts, Subcommand},
+    config::StringOrArray,
     context::Context,
 };
 
@@ -43,43 +49,70 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(args) = Opts::parse();
-    term::set_quiet(args.quiet);
-    if let Some(Subcommand::Demangle) = &args.subcommand {
-        demangler::run()?;
-        return Ok(());
+
+    match args.subcommand {
+        Some(Subcommand::Demangle) => {
+            demangler::run()?;
+        }
+
+        Some(Subcommand::Clean { manifest_path, mut color }) => {
+            term::set_coloring(&mut color);
+            let package_root = cargo::package_root(manifest_path.as_deref())?;
+            let metadata = cargo::metadata(&package_root)?;
+
+            let target_dir = metadata.target_directory.join("llvm-cov-target");
+            let output_dir = metadata.target_directory.join("llvm-cov");
+            fs::remove_dir_all(target_dir)?;
+            fs::remove_dir_all(output_dir)?;
+        }
+
+        None => {
+            term::set_quiet(args.quiet);
+            let cx = &Context::new(args)?;
+
+            match (cx.no_run, cx.no_report) {
+                (false, false) => {
+                    clean_partial(cx)?;
+                    create_dirs(cx)?;
+                    run_test(cx)?;
+                    generate_report(cx)?;
+                }
+                (false, true) => {
+                    create_dirs(cx)?;
+                    run_test(cx)?;
+                }
+                (true, false) => {
+                    create_dirs(cx)?;
+                    generate_report(cx)?;
+                }
+                (true, true) => unreachable!(),
+            }
+        }
     }
-
-    let cx = &Context::new(args)?;
-
-    match (cx.no_run, cx.no_report) {
-        (false, false) => {
-            clean_partial(cx)?;
-            create_dirs(cx)?;
-            run_test(cx)?;
-            generate_report(cx)?;
-        }
-        (false, true) => {
-            create_dirs(cx)?;
-            run_test(cx)?;
-        }
-        (true, false) => {
-            create_dirs(cx)?;
-            generate_report(cx)?;
-        }
-        (true, true) => unreachable!(),
-    }
-
     Ok(())
 }
 
+// - If there are old artifacts by a different version of rustc or
+//   cargo-llvm-cov: remove all artifacts (handled in Context::new)
+// - Otherwise:
+//   - If --no-run or --no-report is used: do not remove artifacts
+//   - Otherwise:
+//     - If CI environment variable is set: remove all artifacts
+//     - Otherwise: remove only profdata, profraw, doctest bins, and old report
 fn clean_partial(cx: &Context) -> Result<()> {
+    if cx.no_run || cx.no_report {
+        return Ok(());
+    }
+
     if let Some(output_dir) = &cx.output_dir {
-        if cx.html {
-            fs::remove_dir_all(output_dir.join("html"))?;
+        for format in &["html", "text"] {
+            fs::remove_dir_all(output_dir.join(format))?;
         }
-        if cx.text {
-            fs::remove_dir_all(output_dir.join("text"))?;
-        }
+    }
+
+    if env::var_os("CI").is_some() {
+        fs::remove_dir_all(&cx.target_dir)?;
+        return Ok(());
     }
 
     for path in glob::glob(cx.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
@@ -157,12 +190,14 @@ fn run_test(cx: &Context) -> Result<()> {
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
-    let object_files = object_files(cx).context("failed to collect object files")?;
-
     merge_profraw(cx).context("failed to merge profile data")?;
 
+    let object_files = object_files(cx).context("failed to collect object files")?;
+    let ignore_filename_regex = ignore_filename_regex(cx);
     for format in Format::from_args(cx) {
-        format.generate_report(cx, &object_files).context("failed to generate report")?;
+        format
+            .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
+            .context("failed to generate report")?;
     }
 
     if cx.open {
@@ -347,7 +382,12 @@ impl Format {
         }
     }
 
-    fn generate_report(self, cx: &Context, object_files: &[OsString]) -> Result<()> {
+    fn generate_report(
+        self,
+        cx: &Context,
+        object_files: &[OsString],
+        ignore_filename_regex: Option<&String>,
+    ) -> Result<()> {
         let mut cmd = cx.process(&cx.llvm_cov);
 
         cmd.args(self.llvm_cov_args());
@@ -357,9 +397,9 @@ impl Format {
         if let Some(jobs) = cx.jobs {
             cmd.arg(format!("-num-threads={}", jobs));
         }
-        if let Some(ignore_filename) = ignore_filename_regex(cx) {
+        if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
-            cmd.arg(ignore_filename);
+            cmd.arg(ignore_filename_regex);
         }
 
         match self {
@@ -459,7 +499,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             out.push(format!("^{}{}", home.display(), SEPARATOR));
         }
 
-        for path in &cx.excluded_path {
+        for path in resolve_excluded_paths(cx) {
             #[cfg(not(windows))]
             out.push(format!("^{}", path));
             #[cfg(windows)]
@@ -472,4 +512,111 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     } else {
         Some(out.0)
     }
+}
+
+fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
+    for spec in &cx.args.exclude {
+        if !cx.metadata.workspace_members.iter().any(|id| cx.metadata[id].name == *spec) {
+            warn!(
+                "excluded package(s) `{}` not found in workspace `{}`",
+                spec, cx.metadata.workspace_root
+            );
+        }
+    }
+    let workspace = cx.args.workspace
+        || (cx.metadata.resolve.as_ref().unwrap().root.is_none() && cx.args.package.is_empty());
+    let mut excluded = vec![];
+    let mut included = vec![];
+    if workspace {
+        // with --workspace
+        for id in &cx.metadata.workspace_members {
+            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
+            if cx.args.exclude.contains(&cx.metadata[id].name) {
+                excluded.push(manifest_dir);
+            } else {
+                included.push(manifest_dir);
+            }
+        }
+    } else if !cx.args.package.is_empty() {
+        // with --package
+        for id in &cx.metadata.workspace_members {
+            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
+            if cx.args.package.contains(&cx.metadata[id].name) {
+                included.push(manifest_dir);
+            } else {
+                excluded.push(manifest_dir);
+            }
+        }
+    } else {
+        let current_package = cx.metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
+        for id in &cx.metadata.workspace_members {
+            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
+            if current_package == id {
+                included.push(manifest_dir);
+            } else {
+                excluded.push(manifest_dir);
+            }
+        }
+    }
+
+    let mut excluded_path = vec![];
+    let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
+    for &included in &included {
+        for &excluded in excluded.iter().filter(|e| included.starts_with(e)) {
+            if let Some(v) = contains.get_mut(&excluded) {
+                v.push(included);
+            } else {
+                contains.insert(excluded, vec![included]);
+            }
+        }
+    }
+    if contains.is_empty() {
+        for &manifest_dir in &excluded {
+            let package_path =
+                manifest_dir.strip_prefix(&cx.metadata.workspace_root).unwrap_or(manifest_dir);
+            excluded_path.push(package_path.into());
+        }
+        return excluded_path;
+    }
+
+    for &excluded in &excluded {
+        let included = match contains.get(&excluded) {
+            Some(included) => included,
+            None => {
+                let package_path =
+                    excluded.strip_prefix(&cx.metadata.workspace_root).unwrap_or(excluded);
+                excluded_path.push(package_path.into());
+                continue;
+            }
+        };
+
+        for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {
+            let p = e.path();
+            if !p.is_dir() {
+                if p.extension().map_or(false, |e| e == "rs") {
+                    let p = p.strip_prefix(&cx.metadata.workspace_root).unwrap_or(p);
+                    excluded_path.push(p.to_owned().try_into().unwrap());
+                }
+                return false;
+            }
+
+            let mut contains = false;
+            for included in included {
+                if included.starts_with(p) {
+                    if p.starts_with(included) {
+                        return false;
+                    }
+                    contains = true;
+                }
+            }
+            if contains {
+                // continue to walk
+                return true;
+            }
+            let p = p.strip_prefix(&cx.metadata.workspace_root).unwrap_or(p);
+            excluded_path.push(p.to_owned().try_into().unwrap());
+            false
+        }) {}
+    }
+    excluded_path
 }

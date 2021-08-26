@@ -14,6 +14,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Add `--quiet`, `--doc`, and `--jobs` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/70)
 
+- [Add `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/73)
+
 ## [0.1.1] - 2021-08-25
 
 - [Add `--lib`, `--bin`, `--bins`, `--example`, `--examples`, `--test`, `--tests`, `--bench`, `--benches`, `--all-targets`, `--profile`, and `--offline` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/67)

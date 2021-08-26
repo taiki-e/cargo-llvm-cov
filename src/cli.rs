@@ -15,6 +15,7 @@ const MAX_TERM_WIDTH: usize = 100;
     version,
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder),
+    setting(AppSettings::DisableVersionForSubcommands),
     setting(AppSettings::StrictUtf8),
     setting(AppSettings::UnifiedHelpMessage)
 )]
@@ -29,6 +30,7 @@ pub(crate) enum Opts {
     about(ABOUT),
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder),
+    setting(AppSettings::DisableVersionForSubcommands),
     setting(AppSettings::StrictUtf8),
     setting(AppSettings::UnifiedHelpMessage)
 )]
@@ -288,8 +290,39 @@ impl Args {
 
 #[derive(Debug, Clap)]
 pub(crate) enum Subcommand {
+    /// Remove artifacts that cargo-llvm-cov has generated in the past
+    #[clap(
+        bin_name = "cargo llvm-cov clean",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::StrictUtf8,
+        setting = AppSettings::UnifiedHelpMessage,
+    )]
+    Clean {
+        // TODO: Currently, we are using a subdirectory of the target directory as
+        //       the actual target directory. What effect should this option have
+        //       on its behavior?
+        // /// Directory for all generated artifacts
+        // #[clap(long, value_name = "DIRECTORY")]
+        // target_dir: Option<Utf8PathBuf>,
+        /// Path to Cargo.toml
+        #[clap(long, value_name = "PATH")]
+        manifest_path: Option<Utf8PathBuf>,
+        // TODO
+        // /// Use verbose output
+        // ///
+        // /// Use -vv (-vvv) to propagate verbosity to cargo.
+        // #[clap(short, long, parse(from_occurrences))]
+        // verbose: u8,
+        /// Coloring
+        // This flag will be propagated to both cargo and llvm-cov.
+        #[clap(long, arg_enum, value_name = "WHEN")]
+        color: Option<Coloring>,
+    },
+
     // internal (unstable)
     #[clap(
+        bin_name = "cargo llvm-cov demangle",
         max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
         setting = AppSettings::StrictUtf8,
