@@ -38,19 +38,6 @@ impl Cargo {
     }
 }
 
-pub(crate) fn config(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Config> {
-    let s = cargo
-        .process()
-        .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
-        .env("RUSTC_BOOTSTRAP", "1")
-        .dir(workspace_root)
-        .stderr_capture()
-        .read()?;
-    let mut config: Config = serde_json::from_str(&s)?;
-    config.apply_env()?;
-    Ok(config)
-}
-
 pub(crate) fn locate_project() -> Result<String> {
     cmd!("cargo", "locate-project", "--message-format", "plain").read()
 }
@@ -190,7 +177,28 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
 //
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/reference/config.html
+// - https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
 // - https://github.com/rust-lang/cargo/issues/9301
+
+pub(crate) fn config(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Config> {
+    let mut config = match cargo
+        .process()
+        .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
+        .env("RUSTC_BOOTSTRAP", "1")
+        .dir(workspace_root)
+        .stderr_capture()
+        .read()
+    {
+        Ok(s) => serde_json::from_str(&s)?,
+        Err(e) => {
+            // Allow error from cargo-config as it is an unstable feature.
+            warn!("{:#}", e);
+            Config::default()
+        }
+    };
+    config.apply_env()?;
+    Ok(config)
+}
 
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Config {
