@@ -1,60 +1,33 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 
-use anyhow::{format_err, Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
+use anyhow::{format_err, Result};
+use camino::Utf8Path;
 
-use crate::{env::Env, process::ProcessBuilder};
+use crate::env::Env;
 
 #[derive(Debug)]
-pub(crate) struct Rustc {
-    path: OsString,
-    nightly: bool,
+pub(crate) struct RustcInfo {
     pub(crate) verbose_version: String,
     pub(crate) host: String,
 }
 
-impl Rustc {
+impl RustcInfo {
     pub(crate) fn new(env: &Env, workspace_root: &Utf8Path) -> Result<Self> {
         let path = env.rustc.as_deref().unwrap_or_else(|| OsStr::new("rustc"));
         let version = cmd!(path, "--version").dir(workspace_root).read()?;
         let nightly = version.contains("-nightly") || version.contains("-dev");
-        let mut rustc = Self {
-            path: path.into(),
-            nightly,
-            verbose_version: String::new(),
-            host: String::new(),
-        };
 
-        let mut cmd = rustc.nightly_process();
+        let mut cmd = if nightly { cmd!(path) } else { cmd!("rustup", "run", "nightly", "rustc") };
         cmd.args(&["--version", "--verbose"]);
-        rustc.verbose_version = cmd.read()?;
-        rustc.host = rustc
-            .verbose_version
+        let verbose_version = cmd.read()?;
+        let host = verbose_version
             .lines()
             .find_map(|line| line.strip_prefix("host: "))
             .ok_or_else(|| {
-                format_err!("unexpected version output from `{}`: {}", cmd, rustc.verbose_version)
+                format_err!("unexpected version output from `{}`: {}", cmd, verbose_version)
             })?
             .to_owned();
 
-        Ok(rustc)
+        Ok(Self { verbose_version, host })
     }
-
-    fn nightly_process(&self) -> ProcessBuilder {
-        if self.nightly {
-            cmd!(&self.path)
-        } else {
-            cmd!("rustup", "run", "nightly", "rustc")
-        }
-    }
-}
-
-pub(crate) fn sysroot(rustc: &Rustc) -> Result<Utf8PathBuf> {
-    Ok(rustc
-        .nightly_process()
-        .args(&["--print", "sysroot"])
-        .read()
-        .context("failed to find sysroot")?
-        .trim()
-        .into())
 }

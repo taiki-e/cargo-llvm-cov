@@ -70,19 +70,17 @@ fn try_main() -> Result<()> {
             term::set_quiet(args.quiet);
             let cx = &Context::new(args)?;
 
+            clean_partial(cx)?;
+            create_dirs(cx)?;
             match (cx.no_run, cx.no_report) {
                 (false, false) => {
-                    clean_partial(cx)?;
-                    create_dirs(cx)?;
                     run_test(cx)?;
                     generate_report(cx)?;
                 }
                 (false, true) => {
-                    create_dirs(cx)?;
                     run_test(cx)?;
                 }
                 (true, false) => {
-                    create_dirs(cx)?;
                     generate_report(cx)?;
                 }
                 (true, true) => unreachable!(),
@@ -128,6 +126,11 @@ fn clean_partial(cx: &Context) -> Result<()> {
 }
 
 fn create_dirs(cx: &Context) -> Result<()> {
+    fs::create_dir_all(&cx.target_dir)?;
+    if !cx.no_run {
+        fs::write(&cx.info_file, serde_json::to_string(&cx.info)?)?;
+    }
+
     if let Some(output_dir) = &cx.output_dir {
         fs::create_dir_all(output_dir)?;
         if cx.html {

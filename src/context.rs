@@ -11,7 +11,7 @@ use crate::{
     env::Env,
     fs,
     process::ProcessBuilder,
-    rustc::{self, Rustc},
+    rustc::RustcInfo,
     term,
 };
 
@@ -34,6 +34,9 @@ pub(crate) struct Context {
     cargo: Cargo,
     pub(crate) llvm_cov: Utf8PathBuf,
     pub(crate) llvm_profdata: Utf8PathBuf,
+
+    pub(crate) info: CargoLlvmCovInfo,
+    pub(crate) info_file: Utf8PathBuf,
 }
 
 impl Context {
@@ -88,8 +91,8 @@ impl Context {
         let target_dir = metadata.target_directory.join("llvm-cov-target");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let rustc = Rustc::new(&env, &metadata.workspace_root)?;
-        let sysroot = rustc::sysroot(&rustc)?;
+        let rustc = RustcInfo::new(&env, &metadata.workspace_root)?;
+        let sysroot = cargo::sysroot(&cargo)?;
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
         let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", rustc.host));
@@ -107,24 +110,20 @@ impl Context {
         let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
 
-        let current_info = CargoLlvmCovInfo::current(&rustc);
-        let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
+        let current_info = CargoLlvmCovInfo::current(rustc);
+        let info_file = target_dir.join(".cargo_llvm_cov_info.json");
         let mut clean_target_dir = true;
         if info_file.is_file() {
             if let Ok(prev_info) =
-                serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?)
+                serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(&info_file)?)
             {
                 if prev_info == current_info {
                     clean_target_dir = false;
                 }
             }
         }
-        if clean_target_dir {
+        if clean_target_dir && !args.no_run {
             fs::remove_dir_all(&target_dir)?;
-            fs::create_dir_all(&target_dir)?;
-            fs::write(info_file, serde_json::to_string(&current_info)?)?;
-            // TODO: emit info! or warn! if --no-run specified
-            args.no_run = false;
         }
 
         let verbose = args.verbose != 0;
@@ -142,6 +141,8 @@ impl Context {
             cargo,
             llvm_cov,
             llvm_profdata,
+            info: current_info,
+            info_file,
         })
     }
 
@@ -174,16 +175,16 @@ impl ops::Deref for Context {
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct CargoLlvmCovInfo {
+pub(crate) struct CargoLlvmCovInfo {
     cargo_llvm_cov_version: String,
     rustc_version: String,
 }
 
 impl CargoLlvmCovInfo {
-    fn current(rustc: &Rustc) -> Self {
+    fn current(rustc: RustcInfo) -> Self {
         Self {
             cargo_llvm_cov_version: env!("CARGO_PKG_VERSION").into(),
-            rustc_version: rustc.verbose_version.clone(),
+            rustc_version: rustc.verbose_version,
         }
     }
 }

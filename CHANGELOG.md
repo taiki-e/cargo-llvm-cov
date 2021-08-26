@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Fix bug in heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/74)
+
 ## [0.1.2] - 2021-08-26
 
 - [Set `cfg(coverage)` to easily use `#[no_coverage]`.](https://github.com/taiki-e/cargo-llvm-cov/pull/72)

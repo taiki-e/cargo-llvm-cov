@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{context::Context, env::Env, process::ProcessBuilder};
@@ -44,6 +44,16 @@ fn locate_project() -> Result<String> {
 
 pub(crate) fn metadata(manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
     Ok(cargo_metadata::MetadataCommand::new().manifest_path(manifest_path).exec()?)
+}
+
+pub(crate) fn sysroot(cargo: &Cargo) -> Result<Utf8PathBuf> {
+    Ok(cargo
+        .nightly_process()
+        .args(&["-Z", "unstable-options", "rustc", "--print", "sysroot"])
+        .read()
+        .context("failed to find sysroot")?
+        .trim()
+        .into())
 }
 
 pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
