@@ -159,21 +159,21 @@ fn line_separated(lines: &str, f: impl FnMut(&str)) {
 }
 
 impl AssertOutput {
-    // /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
-    // #[track_caller]
-    // pub fn stderr_contains(&self, pats: &str) -> &Self {
-    //     line_separated(pats, |pat| {
-    //         if !self.stderr.contains(pat) {
-    //             panic!(
-    //                 "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{1}\n{0}\n\nACTUAL:\n{0}\n{2}\n{0}\n",
-    //                 "-".repeat(60),
-    //                 pat,
-    //                 self.stderr
-    //             );
-    //         }
-    //     });
-    //     self
-    // }
+    /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
+    #[track_caller]
+    pub fn stderr_contains(&self, pats: &str) -> &Self {
+        line_separated(pats, |pat| {
+            if !self.stderr.contains(pat) {
+                panic!(
+                    "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{1}\n{0}\n\nACTUAL:\n{0}\n{2}\n{0}\n",
+                    "-".repeat(60),
+                    pat,
+                    self.stderr
+                );
+            }
+        });
+        self
+    }
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]

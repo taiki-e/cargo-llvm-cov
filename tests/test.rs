@@ -128,3 +128,11 @@ fn open_report() {
             &workspace_root.path().join("target/llvm-cov/html/index.html").to_string_lossy(),
         );
 }
+
+#[test]
+fn version() {
+    cargo_llvm_cov().arg("--version").assert_success().stdout_contains(env!("CARGO_PKG_VERSION"));
+    cargo_llvm_cov().args(["clean", "--version"]).assert_failure().stderr_contains(
+        "Found argument '--version' which wasn't expected, or isn't valid in this context",
+    );
+}

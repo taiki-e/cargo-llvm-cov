@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - [Add --verbose option to clean subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)
 
-- [Fix bug in heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/74)
+- Fix regressions introduced in 0.1.2. ([#74](https://github.com/taiki-e/cargo-llvm-cov/pull/74), [#76](https://github.com/taiki-e/cargo-llvm-cov/pull/76))
 
 ## [0.1.2] - 2021-08-26
 

@@ -15,12 +15,11 @@ const MAX_TERM_WIDTH: usize = 100;
     version,
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder),
-    setting(AppSettings::DisableVersionForSubcommands),
     setting(AppSettings::StrictUtf8),
     setting(AppSettings::UnifiedHelpMessage)
 )]
 pub(crate) enum Opts {
-    #[clap(about(ABOUT), version)]
+    #[clap(about(ABOUT), version, setting(AppSettings::DisableVersionForSubcommands))]
     LlvmCov(Args),
 }
 
