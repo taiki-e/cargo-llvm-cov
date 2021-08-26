@@ -38,7 +38,7 @@ Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-co
 Use -h for short descriptions and --help for more details.
 
 USAGE:
-    cargo llvm-cov [OPTIONS] [-- <ARGS>...]
+    cargo llvm-cov [OPTIONS] [-- <ARGS>...] [SUBCOMMAND]
 
 ARGS:
     <ARGS>...
@@ -219,6 +219,12 @@ OPTIONS:
 
     -Z <FLAG>...
             Unstable (nightly-only) flags to Cargo
+
+SUBCOMMANDS:
+    clean
+            Remove artifacts that cargo-llvm-cov has generated in the past
+    help
+            Print this message or the help of the given subcommand(s)
 ```
 <!-- readme-long-help:end -->
 

@@ -1,23 +1,24 @@
-use std::{collections::HashMap, convert::TryInto, env, ffi::OsString, ops};
+use std::{env, ffi::OsString, ops};
 
-use anyhow::{bail, format_err, Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
+use anyhow::{bail, Result};
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
-use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Cargo},
     cli::Args,
+    config::Config,
     env::Env,
     fs,
     process::ProcessBuilder,
+    rustc::{self, Rustc},
     term,
 };
 
 pub(crate) struct Context {
     pub(crate) args: Args,
     pub(crate) env: Env,
-    pub(crate) config: cargo::Config,
+    pub(crate) config: Config,
     pub(crate) verbose: bool,
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
@@ -28,7 +29,6 @@ pub(crate) struct Context {
     pub(crate) metadata: cargo_metadata::Metadata,
     // package root
     pub(crate) manifest_path: Utf8PathBuf,
-    pub(crate) excluded_path: Vec<Utf8PathBuf>,
 
     // Paths to executables.
     cargo: Cargo,
@@ -40,19 +40,12 @@ impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
         let mut env = Env::new()?;
 
-        let package_root = if let Some(manifest_path) = &args.manifest_path {
-            manifest_path.clone()
-        } else {
-            cargo::locate_project()?.into()
-        };
-
-        let metadata =
-            cargo_metadata::MetadataCommand::new().manifest_path(&package_root).exec()?;
-        let cargo_target_dir = &metadata.target_directory;
+        let package_root = cargo::package_root(args.manifest_path.as_deref())?;
+        let metadata = cargo::metadata(&package_root)?;
 
         let cargo = Cargo::new(&env, &metadata.workspace_root)?;
 
-        let config = cargo::config(&cargo, &metadata.workspace_root)?;
+        let config = Config::new(&cargo, &metadata.workspace_root)?;
         config.merge_to(&mut args, &mut env);
 
         term::set_coloring(&mut args.color);
@@ -87,18 +80,19 @@ impl Context {
             );
         }
         if args.output_dir.is_none() && args.html {
-            args.output_dir = Some(cargo_target_dir.join("llvm-cov"));
+            args.output_dir = Some(metadata.target_directory.join("llvm-cov"));
         }
 
         // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
         // use a subdirectory of the target directory as the actual target directory.
-        let target_dir = cargo_target_dir.join("llvm-cov-target");
+        let target_dir = metadata.target_directory.join("llvm-cov-target");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let sysroot = sysroot(&env, cargo.nightly)?;
+        let rustc = Rustc::new(&env, &metadata.workspace_root)?;
+        let sysroot = rustc::sysroot(&rustc)?;
         // https://github.com/rust-lang/rust/issues/85658
         // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
-        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", host(&env)?));
+        let rustlib = sysroot.join(format!("lib/rustlib/{}/bin", rustc.host));
         let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
         let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
 
@@ -113,17 +107,16 @@ impl Context {
         let package_name = metadata.workspace_root.file_stem().unwrap().to_string();
         let profdata_file = target_dir.join(format!("{}.profdata", package_name));
 
-        let current_info = CargoLlvmCovInfo::current();
+        let current_info = CargoLlvmCovInfo::current(&rustc);
         let info_file = &target_dir.join(".cargo_llvm_cov_info.json");
         let mut clean_target_dir = true;
         if info_file.is_file() {
-            match serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?) {
-                Ok(prev_info) => {
-                    if prev_info == current_info {
-                        clean_target_dir = false;
-                    }
+            if let Ok(prev_info) =
+                serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(info_file)?)
+            {
+                if prev_info == current_info {
+                    clean_target_dir = false;
                 }
-                Err(_e) => {}
             }
         }
         if clean_target_dir {
@@ -133,51 +126,6 @@ impl Context {
             // TODO: emit info! or warn! if --no-run specified
             args.no_run = false;
         }
-
-        for spec in &args.exclude {
-            if !metadata.workspace_members.iter().any(|id| metadata[id].name == *spec) {
-                warn!(
-                    "excluded package(s) `{}` not found in workspace `{}`",
-                    spec, metadata.workspace_root
-                );
-            }
-        }
-        let workspace = args.workspace
-            || (metadata.resolve.as_ref().unwrap().root.is_none() && args.package.is_empty());
-        let mut excluded = vec![];
-        let mut included = vec![];
-        if workspace {
-            // with --workspace
-            for id in &metadata.workspace_members {
-                let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-                if args.exclude.contains(&metadata[id].name) {
-                    excluded.push(manifest_dir);
-                } else {
-                    included.push(manifest_dir);
-                }
-            }
-        } else if !args.package.is_empty() {
-            // with --package
-            for id in &metadata.workspace_members {
-                let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-                if args.package.contains(&metadata[id].name) {
-                    included.push(manifest_dir);
-                } else {
-                    excluded.push(manifest_dir);
-                }
-            }
-        } else {
-            let current_package = metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
-            for id in &metadata.workspace_members {
-                let manifest_dir = metadata[id].manifest_path.parent().unwrap();
-                if current_package == id {
-                    included.push(manifest_dir);
-                } else {
-                    excluded.push(manifest_dir);
-                }
-            }
-        }
-        let excluded_path = resolve_excluded_paths(&metadata.workspace_root, &included, &excluded);
 
         let verbose = args.verbose != 0;
         Ok(Self {
@@ -191,7 +139,6 @@ impl Context {
             profdata_file,
             metadata,
             manifest_path: package_root,
-            excluded_path,
             cargo,
             llvm_cov,
             llvm_profdata,
@@ -208,7 +155,7 @@ impl Context {
     }
 
     pub(crate) fn cargo_process(&self) -> ProcessBuilder {
-        let mut cmd = self.cargo.process();
+        let mut cmd = self.cargo.nightly_process();
         cmd.dir(&self.metadata.workspace_root);
         if self.verbose {
             cmd.display_env_vars();
@@ -225,106 +172,18 @@ impl ops::Deref for Context {
     }
 }
 
-fn resolve_excluded_paths(
-    workspace_root: &Utf8Path,
-    included: &[&Utf8Path],
-    excluded: &[&Utf8Path],
-) -> Vec<Utf8PathBuf> {
-    let mut excluded_path = vec![];
-    let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
-    for &included in included {
-        for &excluded in excluded.iter().filter(|e| included.starts_with(e)) {
-            if let Some(v) = contains.get_mut(&excluded) {
-                v.push(included);
-            } else {
-                contains.insert(excluded, vec![included]);
-            }
-        }
-    }
-    if contains.is_empty() {
-        for &manifest_dir in excluded {
-            let package_path = manifest_dir.strip_prefix(workspace_root).unwrap_or(manifest_dir);
-            excluded_path.push(package_path.into());
-        }
-        return excluded_path;
-    }
-
-    for &excluded in excluded {
-        let included = match contains.get(&excluded) {
-            Some(included) => included,
-            None => {
-                let package_path = excluded.strip_prefix(workspace_root).unwrap_or(excluded);
-                excluded_path.push(package_path.into());
-                continue;
-            }
-        };
-
-        for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {
-            let p = e.path();
-            if !p.is_dir() {
-                if p.extension().map_or(false, |e| e == "rs") {
-                    let p = p.strip_prefix(workspace_root).unwrap_or(p);
-                    excluded_path.push(p.to_owned().try_into().unwrap());
-                }
-                return false;
-            }
-
-            let mut contains = false;
-            for included in included {
-                if included.starts_with(p) {
-                    if p.starts_with(included) {
-                        return false;
-                    }
-                    contains = true;
-                }
-            }
-            if contains {
-                // continue to walk
-                return true;
-            }
-            let p = p.strip_prefix(workspace_root).unwrap_or(p);
-            excluded_path.push(p.to_owned().try_into().unwrap());
-            false
-        }) {}
-    }
-    excluded_path
-}
-
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct CargoLlvmCovInfo {
-    version: String,
+    cargo_llvm_cov_version: String,
+    rustc_version: String,
 }
 
 impl CargoLlvmCovInfo {
-    fn current() -> Self {
-        Self { version: env!("CARGO_PKG_VERSION").into() }
+    fn current(rustc: &Rustc) -> Self {
+        Self {
+            cargo_llvm_cov_version: env!("CARGO_PKG_VERSION").into(),
+            rustc_version: rustc.verbose_version.clone(),
+        }
     }
-}
-
-fn sysroot(env: &Env, nightly: bool) -> Result<Utf8PathBuf> {
-    Ok(if nightly {
-        cmd!(env.rustc(), "--print", "sysroot")
-    } else {
-        cmd!("rustup", "run", "nightly", "rustc", "--print", "sysroot")
-    }
-    .read()
-    .context("failed to find sysroot")?
-    .trim()
-    .into())
-}
-
-fn host(env: &Env) -> Result<String> {
-    let output = cmd!(env.rustc(), "--version", "--verbose").read()?;
-    output
-        .lines()
-        .find_map(|line| line.strip_prefix("host: "))
-        .ok_or_else(|| {
-            format_err!(
-                "unexpected version output from `{}`: {}",
-                env.rustc().to_string_lossy(),
-                output
-            )
-        })
-        .map(str::to_owned)
 }

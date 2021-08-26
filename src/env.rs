@@ -1,3 +1,4 @@
+pub(crate) use std::env::var_os;
 use std::{
     env,
     ffi::{OsStr, OsString},
@@ -59,10 +60,6 @@ impl Env {
                 }
             },
         })
-    }
-
-    pub(crate) fn rustc(&self) -> &OsStr {
-        self.rustc.as_deref().unwrap_or_else(|| OsStr::new("rustc"))
     }
 
     pub(crate) fn cargo(&self) -> &OsStr {
