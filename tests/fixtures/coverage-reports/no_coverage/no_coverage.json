@@ -1,0 +1,71 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "src/lib.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 7,
+              "covered": 7,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 7,
+              "covered": 7,
+              "percent": 100.0
+            },
+            "lines": {
+              "count": 23,
+              "covered": 16,
+              "percent": 69.56521739130434
+            },
+            "regions": {
+              "count": 19,
+              "covered": 13,
+              "notcovered": 6,
+              "percent": 68.42105263157895
+            }
+          }
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 7,
+          "covered": 7,
+          "percent": 100
+        },
+        "instantiations": {
+          "count": 7,
+          "covered": 7,
+          "percent": 100
+        },
+        "lines": {
+          "count": 23,
+          "covered": 16,
+          "percent": 69.56521739130434
+        },
+        "regions": {
+          "count": 19,
+          "covered": 13,
+          "notcovered": 6,
+          "percent": 68.42105263157895
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}

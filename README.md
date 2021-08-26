@@ -18,6 +18,7 @@ This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] a
 
 - [Usage](#usage)
   - [Continuous Integration](#continuous-integration)
+  - [Exclude function from coverage](#exclude-function-from-coverage)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [License](#license)
@@ -269,6 +270,7 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov --no-run --lcov
 ```
 
+
 ### Continuous Integration
 
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
@@ -298,6 +300,21 @@ jobs:
 ```
 
 **NOTE:** Currently, only line coverage is available on Codecov. This is because `-Z instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+
+### Exclude function from coverage
+
+To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
+
+Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` set by cargo-llvm-cov.
+
+```rust
+#![cfg_attr(coverage, feature(no_coverage))]
+
+#[cfg_attr(coverage, no_coverage)]
+fn exclude_from_coverage() {
+    // ...
+}
+```
 
 ## Installation
 
@@ -357,6 +374,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
+[rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
 [rust-lang/rust#86177]: https://github.com/rust-lang/rust/issues/86177
 
 ## License

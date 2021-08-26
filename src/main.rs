@@ -115,11 +115,9 @@ fn run_test(cx: &Context) -> Result<()> {
     let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
     let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
+    rustflags.push(" -Z instrument-coverage --cfg coverage");
     // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
-    rustflags.push(format!(
-        " -Z instrument-coverage --remap-path-prefix {}/=",
-        cx.metadata.workspace_root
-    ));
+    rustflags.push(format!(" --remap-path-prefix {}/=", cx.metadata.workspace_root));
     if cx.target.is_none() {
         rustflags.push(" --cfg trybuild_no_target");
     }
