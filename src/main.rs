@@ -524,53 +524,20 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
 }
 
 fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
-    for spec in &cx.args.exclude {
-        if !cx.metadata.workspace_members.iter().any(|id| cx.metadata[id].name == *spec) {
-            warn!(
-                "excluded package(s) `{}` not found in workspace `{}`",
-                spec, cx.metadata.workspace_root
-            );
-        }
-    }
-    let workspace = cx.args.workspace
-        || (cx.metadata.resolve.as_ref().unwrap().root.is_none() && cx.args.package.is_empty());
-    let mut excluded = vec![];
-    let mut included = vec![];
-    if workspace {
-        // with --workspace
-        for id in &cx.metadata.workspace_members {
-            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
-            if cx.args.exclude.contains(&cx.metadata[id].name) {
-                excluded.push(manifest_dir);
-            } else {
-                included.push(manifest_dir);
-            }
-        }
-    } else if !cx.args.package.is_empty() {
-        // with --package
-        for id in &cx.metadata.workspace_members {
-            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
-            if cx.args.package.contains(&cx.metadata[id].name) {
-                included.push(manifest_dir);
-            } else {
-                excluded.push(manifest_dir);
-            }
-        }
-    } else {
-        let current_package = cx.metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
-        for id in &cx.metadata.workspace_members {
-            let manifest_dir = cx.metadata[id].manifest_path.parent().unwrap();
-            if current_package == id {
-                included.push(manifest_dir);
-            } else {
-                excluded.push(manifest_dir);
-            }
-        }
-    }
-
+    let excluded: Vec<_> = cx
+        .workspace_members
+        .excluded
+        .iter()
+        .map(|id| cx.metadata[id].manifest_path.parent().unwrap())
+        .collect();
+    let included = cx
+        .workspace_members
+        .included
+        .iter()
+        .map(|id| cx.metadata[id].manifest_path.parent().unwrap());
     let mut excluded_path = vec![];
     let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
-    for &included in &included {
+    for included in included {
         for &excluded in excluded.iter().filter(|e| included.starts_with(e)) {
             if let Some(v) = contains.get_mut(&excluded) {
                 v.push(included);
