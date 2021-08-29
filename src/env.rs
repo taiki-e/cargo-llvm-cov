@@ -21,8 +21,6 @@ pub(crate) struct Env {
     pub(crate) rustflags: Option<OsString>,
     /// `RUSTDOCFLAGS` environment variable.
     pub(crate) rustdocflags: Option<OsString>,
-    /// `RUSTC` environment variable.
-    pub(crate) rustc: Option<OsString>,
     /// `BROWSER` environment variable.
     pub(crate) browser: Option<OsString>,
 
@@ -47,7 +45,6 @@ impl Env {
             cargo_llvm_profdata_flags,
             rustflags: env::var_os("RUSTFLAGS"),
             rustdocflags: env::var_os("RUSTDOCFLAGS"),
-            rustc: env::var_os("RUSTC"),
             browser: env::var_os("BROWSER"),
             cargo: env::var_os("CARGO"),
             current_exe: match env::current_exe() {
