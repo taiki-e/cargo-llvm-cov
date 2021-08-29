@@ -129,6 +129,10 @@ impl Context {
         }
 
         let workspace_members = WorkspaceMembers::new(&args, &metadata);
+        if workspace_members.included.is_empty() {
+            bail!("no crates to be measured for coverage");
+        }
+
         let verbose = args.verbose != 0;
         let manifest_path = package_root;
         Ok(Self {
@@ -179,18 +183,13 @@ impl ops::Deref for Context {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(crate) struct CargoLlvmCovInfo {
-    cargo_llvm_cov_version: String,
     rustc_version: String,
 }
 
 impl CargoLlvmCovInfo {
     fn current(rustc: RustcInfo) -> Self {
-        Self {
-            cargo_llvm_cov_version: env!("CARGO_PKG_VERSION").into(),
-            rustc_version: rustc.verbose_version,
-        }
+        Self { rustc_version: rustc.verbose_version }
     }
 }
 

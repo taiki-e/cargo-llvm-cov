@@ -1,4 +1,3 @@
-pub(crate) use std::env::var_os;
 use std::{
     env,
     ffi::{OsStr, OsString},
