@@ -13,6 +13,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 - [Improve heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/79)
   This removes the need to recompile dependencies in most cases.
 
+- [Fix an issue where `--package` option could not handle package specifications containing the version such as `futures:0.3.16`.](https://github.com/taiki-e/cargo-llvm-cov/pull/80)
+
 ## [0.1.3] - 2021-08-26
 
 - [Add `--verbose` option to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)

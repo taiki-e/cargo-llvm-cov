@@ -200,16 +200,6 @@ pub(crate) struct WorkspaceMembers {
 
 impl WorkspaceMembers {
     fn new(args: &Args, metadata: &cargo_metadata::Metadata) -> Self {
-        for spec in &args.exclude {
-            // TODO: handle `package_name:version` format
-            if !metadata.workspace_members.iter().any(|id| metadata[id].name == *spec) {
-                warn!(
-                    "excluded package `{}` not found in workspace `{}`",
-                    spec, metadata.workspace_root
-                );
-            }
-        }
-
         let workspace = args.workspace
             || (metadata.resolve.as_ref().unwrap().root.is_none() && args.package.is_empty());
         let mut excluded = vec![];
@@ -217,6 +207,7 @@ impl WorkspaceMembers {
         if workspace {
             // with --workspace
             for id in &metadata.workspace_members {
+                // --exclude flag doesn't handle `name:version` format
                 if args.exclude.contains(&metadata[id].name) {
                     excluded.push(id.clone());
                 } else {
@@ -226,7 +217,10 @@ impl WorkspaceMembers {
         } else if !args.package.is_empty() {
             // with --package
             for id in &metadata.workspace_members {
-                if args.package.contains(&metadata[id].name) {
+                let package = &metadata[id];
+                if args.package.contains(&package.name)
+                    || args.package.contains(&format!("{}:{}", &package.name, &package.version))
+                {
                     included.push(id.clone());
                 } else {
                     excluded.push(id.clone());
