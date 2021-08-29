@@ -34,8 +34,8 @@ pub(crate) struct Env {
 
 impl Env {
     pub(crate) fn new() -> Result<Self> {
-        let cargo_llvm_cov_flags = ver("CARGO_LLVM_COV_FLAGS")?;
-        let cargo_llvm_profdata_flags = ver("CARGO_LLVM_PROFDATA_FLAGS")?;
+        let cargo_llvm_cov_flags = var("CARGO_LLVM_COV_FLAGS")?;
+        let cargo_llvm_profdata_flags = var("CARGO_LLVM_PROFDATA_FLAGS")?;
         env::remove_var("LLVM_COV_FLAGS");
         env::remove_var("LLVM_PROFDATA_FLAGS");
         env::set_var("CARGO_INCREMENTAL", "0");
@@ -63,7 +63,7 @@ impl Env {
     }
 }
 
-pub(crate) fn ver(key: &str) -> Result<Option<String>> {
+pub(crate) fn var(key: &str) -> Result<Option<String>> {
     match env::var(key) {
         Ok(v) if v.is_empty() => Ok(None),
         Ok(v) => Ok(Some(v)),

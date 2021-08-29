@@ -26,7 +26,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn new(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Config> {
+    pub(crate) fn new(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Self> {
         let mut config = match cargo
             .nightly_process()
             .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
@@ -38,7 +38,7 @@ impl Config {
             Err(e) => {
                 // Allow error from cargo-config as it is an unstable feature.
                 warn!("{:#}", e);
-                Config::default()
+                Self::default()
             }
         };
         config.apply_env()?;
@@ -49,19 +49,19 @@ impl Config {
     fn apply_env(&mut self) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
-        if let Some(rustflags) = env::ver("CARGO_BUILD_RUSTFLAGS")? {
+        if let Some(rustflags) = env::var("CARGO_BUILD_RUSTFLAGS")? {
             self.build.rustflags = Some(StringOrArray::String(rustflags));
         }
-        if let Some(rustdocflags) = env::ver("CARGO_BUILD_RUSTDOCFLAGS")? {
+        if let Some(rustdocflags) = env::var("CARGO_BUILD_RUSTDOCFLAGS")? {
             self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
         }
-        if let Some(target) = env::ver("CARGO_BUILD_TARGET")? {
+        if let Some(target) = env::var("CARGO_BUILD_TARGET")? {
             self.build.target = Some(target);
         }
-        if let Some(verbose) = env::ver("CARGO_TERM_VERBOSE")? {
+        if let Some(verbose) = env::var("CARGO_TERM_VERBOSE")? {
             self.term.verbose = Some(verbose.parse()?);
         }
-        if let Some(color) = env::ver("CARGO_TERM_COLOR")? {
+        if let Some(color) = env::var("CARGO_TERM_COLOR")? {
             self.term.color =
                 Some(clap::ArgEnum::from_str(&color, false).map_err(|e| format_err!("{}", e))?);
         }
