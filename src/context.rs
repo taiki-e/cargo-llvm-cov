@@ -2,6 +2,7 @@ use std::{env, ffi::OsString, ops};
 
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
+use cargo_metadata::PackageId;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -29,6 +30,7 @@ pub(crate) struct Context {
     pub(crate) metadata: cargo_metadata::Metadata,
     // package root
     pub(crate) manifest_path: Utf8PathBuf,
+    pub(crate) workspace_members: WorkspaceMembers,
 
     // Paths to executables.
     cargo: Cargo,
@@ -126,7 +128,13 @@ impl Context {
             fs::remove_dir_all(&target_dir)?;
         }
 
+        let workspace_members = WorkspaceMembers::new(&args, &metadata);
+        if workspace_members.included.is_empty() {
+            bail!("no crates to be measured for coverage");
+        }
+
         let verbose = args.verbose != 0;
+        let manifest_path = package_root;
         Ok(Self {
             args,
             env,
@@ -137,7 +145,8 @@ impl Context {
             package_name,
             profdata_file,
             metadata,
-            manifest_path: package_root,
+            manifest_path,
+            workspace_members,
             cargo,
             llvm_cov,
             llvm_profdata,
@@ -174,17 +183,66 @@ impl ops::Deref for Context {
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub(crate) struct CargoLlvmCovInfo {
-    cargo_llvm_cov_version: String,
     rustc_version: String,
 }
 
 impl CargoLlvmCovInfo {
     fn current(rustc: RustcInfo) -> Self {
-        Self {
-            cargo_llvm_cov_version: env!("CARGO_PKG_VERSION").into(),
-            rustc_version: rustc.verbose_version,
+        Self { rustc_version: rustc.verbose_version }
+    }
+}
+
+pub(crate) struct WorkspaceMembers {
+    pub(crate) excluded: Vec<PackageId>,
+    pub(crate) included: Vec<PackageId>,
+}
+
+impl WorkspaceMembers {
+    fn new(args: &Args, metadata: &cargo_metadata::Metadata) -> Self {
+        for spec in &args.exclude {
+            // TODO: handle `package_name:version` format
+            if !metadata.workspace_members.iter().any(|id| metadata[id].name == *spec) {
+                warn!(
+                    "excluded package `{}` not found in workspace `{}`",
+                    spec, metadata.workspace_root
+                );
+            }
         }
+
+        let workspace = args.workspace
+            || (metadata.resolve.as_ref().unwrap().root.is_none() && args.package.is_empty());
+        let mut excluded = vec![];
+        let mut included = vec![];
+        if workspace {
+            // with --workspace
+            for id in &metadata.workspace_members {
+                if args.exclude.contains(&metadata[id].name) {
+                    excluded.push(id.clone());
+                } else {
+                    included.push(id.clone());
+                }
+            }
+        } else if !args.package.is_empty() {
+            // with --package
+            for id in &metadata.workspace_members {
+                if args.package.contains(&metadata[id].name) {
+                    included.push(id.clone());
+                } else {
+                    excluded.push(id.clone());
+                }
+            }
+        } else {
+            let current_package = metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
+            for id in &metadata.workspace_members {
+                if current_package == id {
+                    included.push(id.clone());
+                } else {
+                    excluded.push(id.clone());
+                }
+            }
+        }
+
+        Self { excluded, included }
     }
 }

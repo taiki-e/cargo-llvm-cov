@@ -10,9 +10,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Improve heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/79)
+  This removes the need to recompile dependencies in most cases.
+
 ## [0.1.3] - 2021-08-26
 
-- [Add --verbose option to clean subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)
+- [Add `--verbose` option to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)
 
 - Fix regressions introduced in 0.1.2. ([#74](https://github.com/taiki-e/cargo-llvm-cov/pull/74), [#76](https://github.com/taiki-e/cargo-llvm-cov/pull/76))
 
