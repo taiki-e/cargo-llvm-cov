@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::{env, path::PathBuf};
 
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -7,7 +7,7 @@ use crate::{context::Context, env::Env, process::ProcessBuilder};
 
 #[derive(Debug)]
 pub(crate) struct Cargo {
-    path: OsString,
+    path: PathBuf,
     pub(crate) nightly: bool,
 }
 
@@ -20,7 +20,7 @@ impl Cargo {
         Ok(Self { path: path.into(), nightly })
     }
 
-    pub(crate) fn nightly_process(&self) -> ProcessBuilder {
+    pub(crate) fn process(&self) -> ProcessBuilder {
         if self.nightly {
             cmd!(&self.path)
         } else {
@@ -28,15 +28,36 @@ impl Cargo {
         }
     }
 
+    pub(crate) fn rustc_process(&self) -> ProcessBuilder {
+        if self.nightly {
+            let mut rustc = self.path.clone();
+            rustc.pop(); // cargo
+            rustc.push(format!("rustc{}", env::consts::EXE_SUFFIX));
+            cmd!(rustc)
+        } else {
+            cmd!("rustup", "run", "nightly", "rustc")
+        }
+    }
+
+    // https://github.com/rust-lang/cargo/issues/9357
     // https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--print-print-compiler-information
     pub(crate) fn rustc_print(&self, kind: &str) -> Result<String> {
-        Ok(self
-            .nightly_process()
-            .args(&["-Z", "unstable-options", "rustc", "--print", kind])
-            .read()
-            .with_context(|| format!("failed to find {}", kind))?
-            .trim()
-            .into())
+        // `cargo rustc --print` is more accurate than `rustc --print` in cargo
+        // subcommand's context. However, allow error from `cargo rustc --print`
+        // as it is an unstable feature, and fallback to `rustc --print`.
+        Ok(match self.process().args(["-Z", "unstable-options", "rustc", "--print", kind]).read() {
+            Ok(s) => Ok(s),
+            Err(e) => match self.rustc_process().args(["--print", kind]).read() {
+                Ok(s) => {
+                    warn!("{}", e);
+                    Ok(s)
+                }
+                Err(e) => Err(e),
+            },
+        }
+        .with_context(|| format!("failed to get {}", kind))?
+        .trim()
+        .into())
     }
 }
 

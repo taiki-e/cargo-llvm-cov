@@ -122,7 +122,7 @@ fn clean_partial(cx: &Context) -> Result<()> {
         .collect();
     if let Err(e) = cx
         .cargo_process()
-        .args(&["clean", "--target-dir", cx.target_dir.as_str()])
+        .args(["clean", "--target-dir", cx.target_dir.as_str()])
         .args(&package_args)
         .stderr_capture()
         .run()
@@ -135,7 +135,7 @@ fn clean_partial(cx: &Context) -> Result<()> {
     for metadata in trybuild_metadata(cx)? {
         if let Err(_e) = cx
             .cargo_process()
-            .args(&["clean", "--target-dir", trybuild_target.as_str()])
+            .args(["clean", "--target-dir", trybuild_target.as_str()])
             .args(&package_args)
             .dir(metadata.workspace_root)
             .stderr_capture()
@@ -266,7 +266,7 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
 fn merge_profraw(cx: &Context) -> Result<()> {
     // Convert raw profile data.
     let mut cmd = cx.process(&cx.llvm_profdata);
-    cmd.args(&["merge", "-sparse"])
+    cmd.args(["merge", "-sparse"])
         .args(
             glob::glob(cx.target_dir.join(format!("{}-*.profraw", cx.package_name)).as_str())?
                 .filter_map(Result::ok),
@@ -448,7 +448,7 @@ impl Format {
 
         match self {
             Self::Text | Self::Html => {
-                cmd.args(&[
+                cmd.args([
                     &format!("-show-instantiations={}", !cx.hide_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",

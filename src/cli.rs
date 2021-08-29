@@ -473,8 +473,8 @@ mod tests {
                 let actual_path = &outdir.path().join(expected_path.file_name().unwrap());
                 fs::write(actual_path, actual).unwrap();
                 let status = Command::new("git")
-                    .args(&["--no-pager", "diff", "--no-index", "--"])
-                    .args(&[expected_path, actual_path])
+                    .args(["--no-pager", "diff", "--no-index", "--"])
+                    .args([expected_path, actual_path])
                     .status()
                     .unwrap();
                 assert!(!status.success());

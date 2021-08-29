@@ -143,7 +143,7 @@ impl Context {
     }
 
     pub(crate) fn cargo_process(&self) -> ProcessBuilder {
-        let mut cmd = self.cargo.nightly_process();
+        let mut cmd = self.cargo.process();
         cmd.dir(&self.metadata.workspace_root);
         if self.verbose {
             cmd.display_env_vars();

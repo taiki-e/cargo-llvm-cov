@@ -59,7 +59,7 @@ pub fn test_report<'a>(
 pub fn assert_output(output_path: &Utf8Path) -> Result<()> {
     if env::var_os("CI").is_some() {
         assert!(Command::new("git")
-            .args(&["--no-pager", "diff", "--exit-code"])
+            .args(["--no-pager", "diff", "--exit-code"])
             .arg(output_path)
             .status()?
             .success());

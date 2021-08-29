@@ -28,8 +28,8 @@ pub(crate) struct Config {
 impl Config {
     pub(crate) fn new(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Self> {
         let mut config = match cargo
-            .nightly_process()
-            .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
+            .process()
+            .args(["-Z", "unstable-options", "config", "get", "--format", "json"])
             .dir(workspace_root)
             .stderr_capture()
             .read()
