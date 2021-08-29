@@ -270,12 +270,11 @@ cargo llvm-cov --lcov --output-path lcov.info
 You can merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
 
 ```sh
-cargo clean
+cargo llvm-cov clean
 cargo llvm-cov --no-report --features a
 cargo llvm-cov --no-report --features b
 cargo llvm-cov --no-run --lcov
 ```
-
 
 ### Continuous Integration
 
