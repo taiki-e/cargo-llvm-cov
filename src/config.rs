@@ -49,9 +49,6 @@ impl Config {
     fn apply_env(&mut self) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
-        if let Some(rustc) = env::ver("CARGO_BUILD_RUSTC")? {
-            self.build.rustc = Some(rustc);
-        }
         if let Some(rustflags) = env::ver("CARGO_BUILD_RUSTFLAGS")? {
             self.build.rustflags = Some(StringOrArray::String(rustflags));
         }
@@ -86,12 +83,6 @@ impl Config {
                 env.rustdocflags = Some(rustdocflags.to_string().into());
             }
         }
-        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc
-        if env.rustc.is_none() {
-            if let Some(rustc) = &self.build.rustc {
-                env.rustc = Some(rustc.into());
-            }
-        }
         if args.target.is_none() {
             args.target = self.build.target.clone();
         }
@@ -107,8 +98,6 @@ impl Config {
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#build
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Build {
-    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc
-    pub(crate) rustc: Option<String>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
     pub(crate) rustflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags

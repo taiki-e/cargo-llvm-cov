@@ -1,6 +1,6 @@
 use std::{io, path::Path};
 
-pub(crate) use fs_err::{create_dir_all, read_dir, read_to_string, write};
+pub(crate) use fs_err::{create_dir_all, read_dir, write};
 
 /// Removes a file from the filesystem **if exists**.
 pub(crate) fn remove_file(path: impl AsRef<Path>) -> io::Result<()> {

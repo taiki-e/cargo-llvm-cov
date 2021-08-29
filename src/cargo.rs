@@ -27,6 +27,17 @@ impl Cargo {
             cmd!("cargo", "+nightly")
         }
     }
+
+    // https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--print-print-compiler-information
+    pub(crate) fn rustc_print(&self, kind: &str) -> Result<String> {
+        Ok(self
+            .nightly_process()
+            .args(&["-Z", "unstable-options", "rustc", "--print", kind])
+            .read()
+            .with_context(|| format!("failed to find {}", kind))?
+            .trim()
+            .into())
+    }
 }
 
 pub(crate) fn package_root(manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
@@ -44,16 +55,6 @@ fn locate_project() -> Result<String> {
 
 pub(crate) fn metadata(manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
     Ok(cargo_metadata::MetadataCommand::new().manifest_path(manifest_path).exec()?)
-}
-
-pub(crate) fn sysroot(cargo: &Cargo) -> Result<Utf8PathBuf> {
-    Ok(cargo
-        .nightly_process()
-        .args(&["-Z", "unstable-options", "rustc", "--print", "sysroot"])
-        .read()
-        .context("failed to find sysroot")?
-        .trim()
-        .into())
 }
 
 pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {

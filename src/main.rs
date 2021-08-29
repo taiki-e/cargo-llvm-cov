@@ -20,7 +20,6 @@ mod context;
 mod demangler;
 mod env;
 mod fs;
-mod rustc;
 
 use std::{
     collections::HashMap,
@@ -97,15 +96,13 @@ fn try_main() -> Result<()> {
 }
 
 // Heuristic to avoid false positives/false negatives:
-// - If there are old artifacts by a different version of rustc: remove all artifacts (handled in Context::new)
-// - Otherwise:
-//   - If --no-run or --no-report is used: do not remove artifacts
-//   - Otherwise: remove only:
-//                - build artifacts of crates to be measured for coverage
-//                - profdata
-//                - profraw
-//                - doctest bins
-//                - old reports
+// - If --no-run or --no-report is used: do not remove artifacts
+// - Otherwise, remove the followings:
+//   - build artifacts of crates to be measured for coverage
+//   - profdata
+//   - profraw
+//   - doctest bins
+//   - old reports
 fn clean_partial(cx: &Context) -> Result<()> {
     if cx.no_run || cx.no_report {
         return Ok(());
@@ -136,7 +133,7 @@ fn clean_partial(cx: &Context) -> Result<()> {
     let trybuild_dir = &cx.target_dir.join("tests");
     let trybuild_target = trybuild_dir.join("target");
     for metadata in trybuild_metadata(cx)? {
-        if let Err(e) = cx
+        if let Err(_e) = cx
             .cargo_process()
             .args(&["clean", "--target-dir", trybuild_target.as_str()])
             .args(&package_args)
@@ -144,7 +141,8 @@ fn clean_partial(cx: &Context) -> Result<()> {
             .stderr_capture()
             .run()
         {
-            warn!("{:#}", e);
+            // We don't know if all included packages are referenced in the
+            // trybuild test, so we ignore the error.
         }
     }
 
@@ -162,9 +160,6 @@ fn clean_partial(cx: &Context) -> Result<()> {
 
 fn create_dirs(cx: &Context) -> Result<()> {
     fs::create_dir_all(&cx.target_dir)?;
-    if !cx.no_run {
-        fs::write(&cx.info_file, serde_json::to_string(&cx.info)?)?;
-    }
 
     if let Some(output_dir) = &cx.output_dir {
         fs::create_dir_all(output_dir)?;
