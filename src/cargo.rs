@@ -1,3 +1,6 @@
+// Refs:
+// - https://doc.rust-lang.org/nightly/cargo/index.html
+
 use std::{env, path::PathBuf};
 
 use anyhow::{Context as _, Result};
@@ -5,7 +8,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{context::Context, env::Env, process::ProcessBuilder};
 
-#[derive(Debug)]
 pub(crate) struct Cargo {
     path: PathBuf,
     pub(crate) nightly: bool,
@@ -61,24 +63,30 @@ impl Cargo {
     }
 }
 
-pub(crate) fn package_root(manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
+pub(crate) fn package_root(env: &Env, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
     let package_root = if let Some(manifest_path) = manifest_path {
         manifest_path.to_owned()
     } else {
-        locate_project()?.into()
+        locate_project(env)?.into()
     };
     Ok(package_root)
 }
 
-fn locate_project() -> Result<String> {
-    cmd!("cargo", "locate-project", "--message-format", "plain").read()
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-locate-project.html
+fn locate_project(env: &Env) -> Result<String> {
+    cmd!(env.cargo(), "locate-project", "--message-format", "plain").read()
 }
 
-pub(crate) fn metadata(manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
-    Ok(cargo_metadata::MetadataCommand::new().manifest_path(manifest_path).exec()?)
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-metadata.html
+pub(crate) fn metadata(env: &Env, manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
+    let mut cmd =
+        cmd!(env.cargo(), "metadata", "--format-version", "1", "--manifest-path", manifest_path);
+    serde_json::from_str(&cmd.read()?)
+        .with_context(|| format!("failed to parse output from {}", cmd))
 }
 
-pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
+pub(crate) fn test_args(cx: &Context, cmd: &mut ProcessBuilder) {
     let mut has_target_selection_options = false;
     if cx.lib {
         has_target_selection_options = true;
@@ -205,5 +213,40 @@ pub(crate) fn append_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if !cx.args.args.is_empty() {
         cmd.arg("--");
         cmd.args(&cx.args.args);
+    }
+}
+
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
+pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
+    if cx.quiet {
+        cmd.arg("--quiet");
+    }
+    if cx.release {
+        cmd.arg("--release");
+    }
+    if let Some(profile) = &cx.profile {
+        cmd.arg("--profile");
+        cmd.arg(profile);
+    }
+    if let Some(target) = &cx.target {
+        cmd.arg("--target");
+        cmd.arg(target);
+    }
+    if let Some(color) = cx.color {
+        cmd.arg("--color");
+        cmd.arg(color.cargo_color());
+    }
+    if cx.frozen {
+        cmd.arg("--frozen");
+    }
+    if cx.locked {
+        cmd.arg("--locked");
+    }
+    if cx.offline {
+        cmd.arg("--offline");
+    }
+
+    if cx.args.verbose > 1 {
+        cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
     }
 }

@@ -37,6 +37,7 @@ use crate::{
     cli::{Args, Coloring, Opts, Subcommand},
     config::StringOrArray,
     context::Context,
+    env::Env,
 };
 
 fn main() {
@@ -56,8 +57,9 @@ fn try_main() -> Result<()> {
 
         Some(Subcommand::Clean { manifest_path, verbose, mut color }) => {
             term::set_coloring(&mut color);
-            let package_root = cargo::package_root(manifest_path.as_deref())?;
-            let metadata = cargo::metadata(&package_root)?;
+            let env = Env::new()?;
+            let package_root = cargo::package_root(&env, manifest_path.as_deref())?;
+            let metadata = cargo::metadata(&env, &package_root)?;
 
             let target_dir = metadata.target_directory.join("llvm-cov-target");
             let output_dir = metadata.target_directory.join("llvm-cov");
@@ -120,27 +122,20 @@ fn clean_partial(cx: &Context) -> Result<()> {
         .iter()
         .flat_map(|id| ["--package", &cx.metadata[id].name])
         .collect();
-    if let Err(e) = cx
-        .cargo_process()
-        .args(["clean", "--target-dir", cx.target_dir.as_str()])
-        .args(&package_args)
-        .stderr_capture()
-        .run()
-    {
+    let mut cmd = cx.cargo_process();
+    cmd.args(["clean", "--target-dir", cx.target_dir.as_str()]).args(&package_args);
+    cargo::clean_args(cx, &mut cmd);
+    if let Err(e) = cmd.run_with_output() {
         warn!("{:#}", e);
     }
     // trybuild
     let trybuild_dir = &cx.target_dir.join("tests");
     let trybuild_target = trybuild_dir.join("target");
     for metadata in trybuild_metadata(cx)? {
-        if let Err(_e) = cx
-            .cargo_process()
-            .args(["clean", "--target-dir", trybuild_target.as_str()])
-            .args(&package_args)
-            .dir(metadata.workspace_root)
-            .stderr_capture()
-            .run()
-        {
+        let mut cmd = cx.cargo_process();
+        cmd.args(["clean", "--target-dir", trybuild_target.as_str()]).args(&package_args);
+        cargo::clean_args(cx, &mut cmd);
+        if let Err(_e) = cmd.dir(metadata.workspace_root).run_with_output() {
             // We don't know if all included packages are referenced in the
             // trybuild test, so we ignore the error.
         }
@@ -181,7 +176,10 @@ fn run_test(cx: &Context) -> Result<()> {
     let llvm_profile_file = cx.target_dir.join(format!("{}-%m.profraw", cx.package_name));
 
     let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
-    rustflags.push(" -Z instrument-coverage --cfg coverage");
+    rustflags.push(" -Z instrument-coverage");
+    if !cx.unset_cfg_coverage {
+        rustflags.push(" --cfg coverage");
+    }
     // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
     rustflags.push(format!(" --remap-path-prefix {}/=", cx.metadata.workspace_root));
     if cx.target.is_none() {
@@ -213,10 +211,10 @@ fn run_test(cx: &Context) -> Result<()> {
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
-    cargo::append_args(cx, &mut cargo);
+    cargo::test_args(cx, &mut cargo);
 
     if cx.verbose {
-        status!("Running", "{:#}", cargo);
+        status!("Running", "{}", cargo);
     }
     cargo.stdout_to_stderr().run()?;
     Ok(())
@@ -280,25 +278,40 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
     if cx.verbose {
-        status!("Running", "{:#}", cmd);
+        status!("Running", "{}", cmd);
     }
-    cmd.run()?;
+    cmd.stdout_to_stderr().run()?;
     Ok(())
 }
 
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
+    fn walk_target_dir(target_dir: &Utf8Path) -> impl Iterator<Item = walkdir::DirEntry> {
+        WalkDir::new(target_dir.as_str())
+            .into_iter()
+            .filter_entry(|e| {
+                let p = e.path();
+                if p.is_dir()
+                    && p.file_name().map_or(false, |f| f == "incremental" || f == ".fingerprint")
+                {
+                    return false;
+                }
+                true
+            })
+            .filter_map(Result::ok)
+    }
+
     let mut files = vec![];
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.target_dir.clone();
+    // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
     if let Some(target) = &cx.target {
         target_dir.push(target);
     }
     target_dir.push(if cx.release { "release" } else { "debug" });
-    fs::remove_dir_all(target_dir.join("incremental"))?;
-    for f in WalkDir::new(target_dir.as_str()).into_iter().filter_map(Result::ok) {
+    for f in walk_target_dir(&target_dir) {
         let f = f.path();
         if is_executable::is_executable(&f) {
             files.push(f.to_owned().into_os_string());
@@ -321,7 +334,6 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // Currently, trybuild always use debug build.
     trybuild_target.push("debug");
     if trybuild_target.is_dir() {
-        fs::remove_dir_all(trybuild_target.join("incremental"))?;
         let mut trybuild_targets = vec![];
         for metadata in trybuild_metadata(cx)? {
             for package in metadata.packages {
@@ -332,7 +344,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         if !trybuild_targets.is_empty() {
             let re = Regex::new(&format!("^({})-[0-9a-f]+$", trybuild_targets.join("|"))).unwrap();
-            for entry in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {
+            for entry in walk_target_dir(&trybuild_target) {
                 let path = entry.path();
                 if let Some(path) = path.file_name().unwrap().to_str() {
                     if re.is_match(path) {
@@ -478,24 +490,24 @@ impl Format {
 
         if let Some(output_path) = &cx.output_path {
             if cx.verbose {
-                status!("Running", "{:#}", cmd);
+                status!("Running", "{}", cmd);
             }
             let out = cmd.read()?;
             fs::write(output_path, out)?;
-            status!("Finished", "report saved to {:#}", output_path);
+            status!("Finished", "report saved to {}", output_path);
             return Ok(());
         }
 
         if cx.verbose {
-            status!("Running", "{:#}", cmd);
+            status!("Running", "{}", cmd);
         }
         cmd.run()?;
         if matches!(self, Self::Html | Self::Text) {
             if let Some(output_dir) = &cx.output_dir {
                 if self == Self::Html {
-                    status!("Finished", "report saved to {:#}", output_dir.join("html"));
+                    status!("Finished", "report saved to {}", output_dir.join("html"));
                 } else {
-                    status!("Finished", "report saved to {:#}", output_dir.join("text"));
+                    status!("Finished", "report saved to {}", output_dir.join("text"));
                 }
             }
         }

@@ -27,18 +27,14 @@ pub(crate) struct ProcessBuilder {
     /// The program to execute.
     program: OsString,
     /// A list of arguments to pass to the program.
-    pub(crate) args: Vec<OsString>,
+    args: Vec<OsString>,
     /// The environment variables in the process's environment.
     env: BTreeMap<String, Option<OsString>>,
     /// The working directory where the process will execute.
     dir: Option<PathBuf>,
-    pub(crate) stdout_capture: bool,
-    pub(crate) stderr_capture: bool,
-    pub(crate) stdout_to_stderr: bool,
+    stdout_to_stderr: bool,
     /// `true` to include environment variables in display.
     display_env_vars: Cell<bool>,
-    /// `true` to include working directory in display.
-    display_dir: Cell<bool>,
 }
 
 impl ProcessBuilder {
@@ -49,11 +45,8 @@ impl ProcessBuilder {
             args: Vec::new(),
             env: BTreeMap::new(),
             dir: None,
-            stdout_capture: false,
-            stderr_capture: false,
             stdout_to_stderr: false,
             display_env_vars: Cell::new(false),
-            display_dir: Cell::new(false),
         }
     }
 
@@ -87,18 +80,6 @@ impl ProcessBuilder {
     /// Set the working directory where the process will execute.
     pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
         self.dir = Some(path.into());
-        self
-    }
-
-    // /// Enables [`duct::Expression::stdout_capture`].
-    // pub(crate) fn stdout_capture(&mut self) -> &mut Self {
-    //     self.stdout_capture = true;
-    //     self
-    // }
-
-    /// Enables [`duct::Expression::stderr_capture`].
-    pub(crate) fn stderr_capture(&mut self) -> &mut Self {
-        self.stderr_capture = true;
         self
     }
 
@@ -138,10 +119,35 @@ impl ProcessBuilder {
         }
     }
 
-    /// Executes a process, captures its standard output, returning the captured
-    /// output as a `String`.
+    /// Executes a process, captures its stdio output, returning the captured
+    /// output, or an error if non-zero exit status.
+    pub(crate) fn run_with_output(&mut self) -> Result<Output> {
+        let output =
+            self.build().stdout_capture().stderr_capture().unchecked().run().with_context(
+                || ProcessError::new(&format!("could not execute process {}", self), None, None),
+            )?;
+        if output.status.success() {
+            Ok(output)
+        } else {
+            Err(ProcessError::new(
+                &format!("process didn't exit successfully: {}", self),
+                Some(output.status),
+                Some(&output),
+            )
+            .into())
+        }
+    }
+
+    /// Executes a process, captures its stdio output, returning the captured
+    /// standard output as a `String`.
     pub(crate) fn read(&mut self) -> Result<String> {
-        Ok(self.build().read()?)
+        assert!(!self.stdout_to_stderr);
+        let mut output = String::from_utf8(self.run_with_output()?.stdout)
+            .with_context(|| format!("failed to parse output from {}", self))?;
+        while output.ends_with('\n') || output.ends_with('\r') {
+            output.pop();
+        }
+        Ok(output)
     }
 
     fn build(&self) -> duct::Expression {
@@ -161,12 +167,6 @@ impl ProcessBuilder {
         if let Some(path) = &self.dir {
             cmd = cmd.dir(path);
         }
-        if self.stdout_capture {
-            cmd = cmd.stdout_capture();
-        }
-        if self.stderr_capture {
-            cmd = cmd.stderr_capture();
-        }
         if self.stdout_to_stderr {
             cmd = cmd.stdout_to_stderr();
         }
@@ -175,25 +175,12 @@ impl ProcessBuilder {
     }
 }
 
-impl fmt::Debug for ProcessBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Always display environment variables and working directory.
-        let prev_display_env_vars = self.display_env_vars.replace(true);
-        let prev_display_dir = self.display_dir.replace(true);
-        write!(f, "{}", self)?;
-        self.display_env_vars.set(prev_display_env_vars);
-        self.display_dir.set(prev_display_dir);
-
-        Ok(())
-    }
-}
-
 // Based on https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "`")?;
 
-        if !f.alternate() && self.display_env_vars.get() {
+        if self.display_env_vars.get() {
             for (key, val) in &self.env {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
@@ -213,14 +200,6 @@ impl fmt::Display for ProcessBuilder {
         }
 
         write!(f, "`")?;
-
-        if !f.alternate() && self.display_dir.get() {
-            if let Some(dir) = &self.dir {
-                write!(f, " (")?;
-                write!(f, "{}", dir.display())?;
-                write!(f, ")")?;
-            }
-        }
 
         Ok(())
     }

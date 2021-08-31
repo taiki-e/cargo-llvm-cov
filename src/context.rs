@@ -39,8 +39,8 @@ impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
         let mut env = Env::new()?;
 
-        let package_root = cargo::package_root(args.manifest_path.as_deref())?;
-        let metadata = cargo::metadata(&package_root)?;
+        let package_root = cargo::package_root(&env, args.manifest_path.as_deref())?;
+        let metadata = cargo::metadata(&env, &package_root)?;
 
         let cargo = Cargo::new(&env, &metadata.workspace_root)?;
 
@@ -64,6 +64,9 @@ impl Context {
         }
         if args.hide_instantiations {
             warn!("--hide-instantiations option is unstable");
+        }
+        if args.unset_cfg_coverage {
+            warn!("--unset-cfg-coverage option is unstable");
         }
         if args.doctests {
             warn!("--doctests option is unstable");
@@ -136,7 +139,8 @@ impl Context {
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
         let mut cmd = cmd!(program);
         cmd.dir(&self.metadata.workspace_root);
-        if self.verbose {
+        // cargo displays env vars only with -vv.
+        if self.args.verbose > 1 {
             cmd.display_env_vars();
         }
         cmd
@@ -145,7 +149,8 @@ impl Context {
     pub(crate) fn cargo_process(&self) -> ProcessBuilder {
         let mut cmd = self.cargo.process();
         cmd.dir(&self.metadata.workspace_root);
-        if self.verbose {
+        // cargo displays env vars only with -vv.
+        if self.args.verbose > 1 {
             cmd.display_env_vars();
         }
         cmd
