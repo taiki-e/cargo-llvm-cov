@@ -5,7 +5,7 @@
 
 use std::ffi::OsStr;
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context as _, Result};
 use camino::Utf8Path;
 use serde::Deserialize;
 
@@ -27,14 +27,12 @@ pub(crate) struct Config {
 
 impl Config {
     pub(crate) fn new(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Self> {
-        let mut config = match cargo
-            .process()
-            .args(["-Z", "unstable-options", "config", "get", "--format", "json"])
-            .dir(workspace_root)
-            .stderr_capture()
-            .read()
-        {
-            Ok(s) => serde_json::from_str(&s)?,
+        let mut cmd = cargo.process();
+        cmd.args(["-Z", "unstable-options", "config", "get", "--format", "json"])
+            .dir(workspace_root);
+        let mut config = match cmd.read() {
+            Ok(s) => serde_json::from_str(&s)
+                .with_context(|| format!("failed to parse output from {}", cmd))?,
             Err(e) => {
                 // Allow error from cargo-config as it is an unstable feature.
                 warn!("{:#}", e);
@@ -83,6 +81,7 @@ impl Config {
                 env.rustdocflags = Some(rustdocflags.to_string().into());
             }
         }
+        // CLI flags are prefer over config values.
         if args.target.is_none() {
             args.target = self.build.target.clone();
         }

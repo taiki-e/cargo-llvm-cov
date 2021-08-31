@@ -3,6 +3,3 @@ name = "instantiations"
 version = "0.0.0"
 
 [workspace]
-
-[lib]
-doctest = false

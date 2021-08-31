@@ -3,6 +3,3 @@ name = "cargo_config_toml"
 version = "0.0.0"
 
 [workspace]
-
-[lib]
-doctest = false

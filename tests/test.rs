@@ -84,6 +84,18 @@ fn no_coverage() {
         }
         test_report(model, model, extension, args2).context(id.clone()).unwrap();
     }
+
+    let name = "unset_cfg_coverage";
+    let id = format!("{}/{}", model, name);
+    for (extension, args2) in test_set() {
+        // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
+        if extension == "full.json" && cfg!(windows) {
+            continue;
+        }
+        test_report(model, name, extension, [args2, &["--unset-cfg-coverage"]].concat())
+            .context(id.clone())
+            .unwrap();
+    }
 }
 
 #[test]

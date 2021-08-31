@@ -116,8 +116,13 @@ pub(crate) struct Args {
     #[clap(long, hidden = true)]
     pub(crate) disable_default_ignore_filename_regex: bool,
     // For debugging (unstable)
+    /// Hide instantiations from report
     #[clap(long, hidden = true)]
     pub(crate) hide_instantiations: bool,
+    // For debugging (unstable)
+    /// Unset cfg(coverage)
+    #[clap(long, hidden = true)]
+    pub(crate) unset_cfg_coverage: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
@@ -227,6 +232,9 @@ pub(crate) struct Args {
     #[clap(long)]
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
+    // TODO: this option is not fully handled yet
+    // https://github.com/rust-lang/cargo/issues/6988
+    // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#custom-named-profiles
     #[clap(long, value_name = "PROFILE-NAME")]
     pub(crate) profile: Option<String>,
     /// Space or comma separated list of features to activate
