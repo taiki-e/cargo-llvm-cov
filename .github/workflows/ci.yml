@@ -30,10 +30,10 @@ jobs:
       matrix:
         include:
           - os: ubuntu-18.04
-          - os: macos-latest
-          - os: windows-latest
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
+          - os: macos-latest
+          - os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -55,20 +55,19 @@ jobs:
 
   build:
     strategy:
-      fail-fast: false
       matrix:
-        rust:
-          - stable
-          - beta
+        range:
+          # This is the minimum supported Rust version of this crate.
+          # When updating this, the reminder to update the minimum supported
+          # Rust version in README.md and .clippy.toml.
+          - 1.54..
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
         with:
           persist-credentials: false
-      - uses: taiki-e/github-actions/install-rust@main
-        with:
-          toolchain: ${{ matrix.rust }}
-      - run: cargo build
+      - run: cargo install cargo-hack --debug
+      - run: cargo hack build --all --ignore-private --no-dev-deps --version-range ${{ matrix.range }} --version-step 2
 
   tidy:
     runs-on: ubuntu-18.04
