@@ -19,10 +19,12 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     ]
 }
 
-fn run(model: &str, name: &str, args: &[&str]) {
+fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
     let id = format!("{}/{}", model, name);
     for (extension, args2) in test_set() {
-        test_report(model, name, extension, [args, args2].concat()).context(id.clone()).unwrap();
+        test_report(model, name, extension, &[args, args2].concat(), envs)
+            .context(id.clone())
+            .unwrap();
     }
 }
 
@@ -31,46 +33,49 @@ fn run(model: &str, name: &str, args: &[&str]) {
 
 #[test]
 fn real1() {
-    run("real1", "workspace_root", &[]);
-    run("real1", "all", &["--all"]);
-    run("real1", "manifest_path", &["--manifest-path", "member1/member2/Cargo.toml"]);
-    run("real1", "package1", &["--package", "member2"]);
-    run("real1", "exclude", &["--all", "--exclude", "crate1"]);
+    run("real1", "workspace_root", &[], &[]);
+    run("real1", "all", &["--all"], &[]);
+    run("real1", "manifest_path", &["--manifest-path", "member1/member2/Cargo.toml"], &[]);
+    run("real1", "package1", &["--package", "member2"], &[]);
+    run("real1", "exclude", &["--all", "--exclude", "crate1"], &[]);
 }
 
 #[test]
 fn virtual1() {
-    run("virtual1", "workspace_root", &[]);
-    run("virtual1", "package1", &["--package", "member1"]);
-    run("virtual1", "package2", &["--package", "member1", "--package", "member2"]);
-    run("virtual1", "package3", &["--package", "member2"]);
-    run("virtual1", "package4", &["--package", "member3"]);
-    run("virtual1", "package5", &["--package", "member4"]);
-    run("virtual1", "package6", &["--package", "member3", "--package", "member4"]);
-    run("virtual1", "exclude", &["--workspace", "--exclude", "member2"]);
+    run("virtual1", "workspace_root", &[], &[]);
+    run("virtual1", "package1", &["--package", "member1"], &[]);
+    run("virtual1", "package2", &["--package", "member1", "--package", "member2"], &[]);
+    run("virtual1", "package3", &["--package", "member2"], &[]);
+    run("virtual1", "package4", &["--package", "member3"], &[]);
+    run("virtual1", "package5", &["--package", "member4"], &[]);
+    run("virtual1", "package6", &["--package", "member3", "--package", "member4"], &[]);
+    run("virtual1", "exclude", &["--workspace", "--exclude", "member2"], &[]);
 }
 
 #[test]
 fn no_test() {
     // TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
-    run("no_test", "no_test", &[]);
+    run("no_test", "no_test", &[], &[]);
+    if !(cfg!(windows) && cfg!(target_env = "msvc")) {
+        run("no_test", "link_dead_code", &[], &[("RUSTFLAGS", "-C link-dead-code")]);
+    }
 }
 
 #[test]
 fn bin_crate() {
-    run("bin_crate", "bin_crate", &[]);
+    run("bin_crate", "bin_crate", &[], &[]);
 }
 
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
-    run("instantiations", "instantiations", &[]);
+    run("instantiations", "instantiations", &[], &[]);
 }
 
 #[test]
 fn cargo_config() {
-    run("cargo_config", "cargo_config", &[]);
-    run("cargo_config_toml", "cargo_config_toml", &[]);
+    run("cargo_config", "cargo_config", &[], &[]);
+    run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
 #[test]
@@ -82,7 +87,7 @@ fn no_coverage() {
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, model, extension, args2).context(id.clone()).unwrap();
+        test_report(model, model, extension, args2, &[]).context(id.clone()).unwrap();
     }
 
     let name = "no_cfg_coverage";
@@ -92,7 +97,7 @@ fn no_coverage() {
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, name, extension, [args2, &["--no-cfg-coverage"]].concat())
+        test_report(model, name, extension, &[args2, &["--no-cfg-coverage"]].concat(), &[])
             .context(id.clone())
             .unwrap();
     }
