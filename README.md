@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
-[![rustc](https://img.shields.io/badge/rustc-stable-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![rustc](https://img.shields.io/badge/rustc-1.54+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/workflow/status/taiki-e/cargo-llvm-cov/CI/main?style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
 Cargo subcommand to easily use LLVM source-based code coverage.
@@ -342,9 +342,11 @@ cargo install cargo-llvm-cov
 
 cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
 toolchain to be installed, though does not require nightly to be the default
-toolchain or the one with which cargo-llvm-cov itself is executed. If the default
-toolchain is one other than nightly, running `cargo llvm-cov` will find and use
-nightly anyway.
+toolchain or the one with which cargo-llvm-cov itself is executed. If the
+default toolchain is one other than nightly, running `cargo llvm-cov` will find
+and use nightly.
+
+Currently, installing cargo-llvm-cov requires rustc 1.54+.
 
 <!-- omit in toc -->
 ### From prebuilt binaries

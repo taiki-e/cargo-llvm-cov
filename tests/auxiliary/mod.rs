@@ -34,23 +34,26 @@ pub fn cargo_llvm_cov() -> Command {
 }
 
 #[track_caller]
-pub fn test_report<'a>(
+pub fn test_report(
     model: &str,
     name: &str,
     extension: &str,
-    args: impl AsRef<[&'a str]>,
+    args: &[&str],
+    envs: &[(&str, &str)],
 ) -> Result<()> {
-    let args = args.as_ref();
     let workspace_root = test_project(model, name)?;
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
-    cargo_llvm_cov()
-        .args(["--color", "never", "--output-path"])
+    let mut cmd = cargo_llvm_cov();
+    cmd.args(["--color", "never", "--output-path"])
         .arg(output_path)
         .args(args)
-        .current_dir(workspace_root.path())
-        .assert_success();
+        .current_dir(workspace_root.path());
+    for (key, val) in envs {
+        cmd.env(key, val);
+    }
+    cmd.assert_success();
 
     normalize_output(output_path, args)?;
     assert_output(output_path)

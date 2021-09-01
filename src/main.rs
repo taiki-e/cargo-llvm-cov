@@ -107,7 +107,7 @@ fn run_test(cx: &Context) -> Result<()> {
 
     let rustflags = &mut cx.env.rustflags.clone().unwrap_or_default();
     rustflags.push(" -Z instrument-coverage");
-    if !cx.args.unset_cfg_coverage {
+    if !cx.args.no_cfg_coverage {
         rustflags.push(" --cfg coverage");
     }
     // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
@@ -119,11 +119,14 @@ fn run_test(cx: &Context) -> Result<()> {
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     let rustdocflags = &mut cx.env.rustdocflags.clone();
     if cx.args.doctests {
-        let flags = rustdocflags.get_or_insert_with(OsString::new);
-        flags.push(format!(
+        let rustdocflags = rustdocflags.get_or_insert_with(OsString::new);
+        rustdocflags.push(format!(
             " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
             cx.ws.doctests_dir
         ));
+        if !cx.args.no_cfg_coverage {
+            rustdocflags.push(" --cfg coverage");
+        }
     }
 
     let mut cargo = cx.cargo_process();

@@ -122,7 +122,7 @@ pub(crate) struct Args {
     // For debugging (unstable)
     /// Unset cfg(coverage)
     #[clap(long, hidden = true)]
-    pub(crate) unset_cfg_coverage: bool,
+    pub(crate) no_cfg_coverage: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
