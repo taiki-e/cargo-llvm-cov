@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Add `--workspace` flag to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/85)
+
+- [Fix bug around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/85)
+
 ## [0.1.4] - 2021-08-29
 
 - [Improve heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/79)

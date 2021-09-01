@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use crate::{
     cargo::Cargo,
-    cli::{Args, Coloring},
+    cli::Coloring,
     env::{self, Env},
 };
 
@@ -66,7 +66,7 @@ impl Config {
         Ok(())
     }
 
-    pub(crate) fn merge_to(&self, args: &mut Args, env: &mut Env) {
+    pub(crate) fn merge_to_env(&self, env: &mut Env) {
         // RUSTFLAGS environment variable is prefer over build.rustflags config value.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
         if env.rustflags.is_none() {
@@ -81,15 +81,23 @@ impl Config {
                 env.rustdocflags = Some(rustdocflags.to_string().into());
             }
         }
+    }
+
+    pub(crate) fn merge_to_args(
+        &self,
+        target: &mut Option<String>,
+        verbose: &mut u8,
+        color: &mut Option<Coloring>,
+    ) {
         // CLI flags are prefer over config values.
-        if args.target.is_none() {
-            args.target = self.build.target.clone();
+        if target.is_none() {
+            *target = self.build.target.clone();
         }
-        if args.verbose == 0 && self.term.verbose.unwrap_or(false) {
-            args.verbose = 1;
+        if *verbose == 0 && self.term.verbose.unwrap_or(false) {
+            *verbose = 1;
         }
-        if args.color.is_none() {
-            args.color = self.term.color;
+        if color.is_none() {
+            *color = self.term.color;
         }
     }
 }

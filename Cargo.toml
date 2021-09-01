@@ -44,4 +44,5 @@ clap_derive = "=3.0.0-beta.4"
 [dev-dependencies]
 easy-ext = "1"
 once_cell = "1"
+rand = "0.8"
 tempfile = "3"
