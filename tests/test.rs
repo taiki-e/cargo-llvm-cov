@@ -126,6 +126,49 @@ fn merge() {
     }
 }
 
+#[test]
+fn clean_ws() {
+    let model = "merge";
+    let name = "clean_ws";
+    let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join(model);
+    fs::create_dir_all(&output_dir).unwrap();
+    for (extension, args) in test_set() {
+        let workspace_root = test_project(model, name).unwrap();
+        let output_path = &output_dir.join(name).with_extension(extension);
+        cargo_llvm_cov()
+            .args(["--color", "never", "--no-report", "--features", "a"])
+            .current_dir(workspace_root.path())
+            .assert_success();
+        cargo_llvm_cov()
+            .args(["--color", "never", "--no-run", "--output-path"])
+            .arg(output_path)
+            .args(args)
+            .current_dir(workspace_root.path())
+            .assert_success();
+
+        auxiliary::normalize_output(output_path, args).unwrap();
+        auxiliary::assert_output(output_path).unwrap();
+
+        cargo_llvm_cov()
+            .args(["clean", "--color", "never", "--workspace"])
+            .current_dir(workspace_root.path())
+            .assert_success();
+        cargo_llvm_cov()
+            .args(["--color", "never", "--no-report", "--features", "a"])
+            .current_dir(workspace_root.path())
+            .assert_success();
+        cargo_llvm_cov()
+            .args(["--color", "never", "--no-run", "--output-path"])
+            .arg(output_path)
+            .args(args)
+            .current_dir(workspace_root.path())
+            .assert_success();
+
+        auxiliary::normalize_output(output_path, args).unwrap();
+        auxiliary::assert_output(output_path).unwrap();
+    }
+}
+
 #[cfg_attr(windows, ignore)] // `echo` may not be available
 #[test]
 fn open_report() {

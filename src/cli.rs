@@ -305,23 +305,7 @@ pub(crate) enum Subcommand {
         setting = AppSettings::StrictUtf8,
         setting = AppSettings::UnifiedHelpMessage,
     )]
-    Clean {
-        // TODO: Currently, we are using a subdirectory of the target directory as
-        //       the actual target directory. What effect should this option have
-        //       on its behavior?
-        // /// Directory for all generated artifacts
-        // #[clap(long, value_name = "DIRECTORY")]
-        // target_dir: Option<Utf8PathBuf>,
-        /// Path to Cargo.toml
-        #[clap(long, value_name = "PATH")]
-        manifest_path: Option<Utf8PathBuf>,
-        /// Use verbose output
-        #[clap(short, long, parse(from_occurrences))]
-        verbose: u8,
-        /// Coloring
-        #[clap(long, arg_enum, value_name = "WHEN")]
-        color: Option<Coloring>,
-    },
+    Clean(CleanOptions),
 
     // internal (unstable)
     #[clap(
@@ -333,6 +317,28 @@ pub(crate) enum Subcommand {
         setting = AppSettings::Hidden,
     )]
     Demangle,
+}
+
+#[derive(Debug, Clap)]
+pub(crate) struct CleanOptions {
+    /// Remove artifacts that may affect the coverage results of packages in the workspace.
+    #[clap(long)]
+    pub(crate) workspace: bool,
+    // TODO: Currently, we are using a subdirectory of the target directory as
+    //       the actual target directory. What effect should this option have
+    //       on its behavior?
+    // /// Directory for all generated artifacts
+    // #[clap(long, value_name = "DIRECTORY")]
+    // pub(crate) target_dir: Option<Utf8PathBuf>,
+    /// Path to Cargo.toml
+    #[clap(long, value_name = "PATH")]
+    pub(crate) manifest_path: Option<Utf8PathBuf>,
+    /// Use verbose output
+    #[clap(short, long, parse(from_occurrences))]
+    pub(crate) verbose: u8,
+    /// Coloring
+    #[clap(long, arg_enum, value_name = "WHEN")]
+    pub(crate) color: Option<Coloring>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, clap::ArgEnum)]
