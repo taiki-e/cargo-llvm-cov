@@ -39,8 +39,8 @@ impl Context {
         if args.hide_instantiations {
             warn!("--hide-instantiations option is unstable");
         }
-        if args.unset_cfg_coverage {
-            warn!("--unset-cfg-coverage option is unstable");
+        if args.no_cfg_coverage {
+            warn!("--no-cfg-coverage option is unstable");
         }
         if args.doctests {
             warn!("--doctests option is unstable");
