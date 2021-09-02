@@ -11,16 +11,15 @@ use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Workspace},
-    cli::CleanOptions,
+    cli::{CleanOptions, ManifestOptions},
     context::Context,
     env::Env,
     fs, term,
 };
 
 pub(crate) fn run(mut options: CleanOptions) -> Result<()> {
-    let mut env = Env::new()?;
-    let ws = Workspace::new(&env, options.manifest_path.as_deref())?;
-    ws.config.merge_to_env(&mut env);
+    let env = Env::new()?;
+    let ws = Workspace::new(&env, &options.manifest, None)?;
     ws.config.merge_to_args(&mut None, &mut options.verbose, &mut options.color);
     term::set_coloring(&mut options.color);
 
@@ -31,7 +30,7 @@ pub(crate) fn run(mut options: CleanOptions) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws(&ws, &ws.metadata.workspace_members, options.verbose)?;
+    clean_ws(&ws, &ws.metadata.workspace_members, &options.manifest, options.verbose)?;
 
     Ok(())
 }
@@ -44,11 +43,11 @@ pub(crate) fn run(mut options: CleanOptions) -> Result<()> {
 // - doctest bins
 // - old reports
 pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
-    if cx.args.no_run || cx.args.no_report {
+    if cx.no_run || cx.cov.no_report {
         return Ok(());
     }
 
-    clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.args.verbose > 1)?;
+    clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.build.verbose > 1)?;
 
     let package_args: Vec<_> = cx
         .workspace_members
@@ -59,14 +58,19 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
     let mut cmd = cx.cargo_process();
     cmd.args(["clean", "--target-dir", cx.ws.target_dir.as_str()]).args(&package_args);
     cargo::clean_args(cx, &mut cmd);
-    if let Err(e) = if cx.args.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
+    if let Err(e) = if cx.build.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
         warn!("{:#}", e);
     }
 
     Ok(())
 }
 
-fn clean_ws(ws: &Workspace, pkg_ids: &[PackageId], verbose: u8) -> Result<()> {
+fn clean_ws(
+    ws: &Workspace,
+    pkg_ids: &[PackageId],
+    manifest: &ManifestOptions,
+    verbose: u8,
+) -> Result<()> {
     clean_ws_inner(ws, pkg_ids, verbose != 0)?;
 
     let package_args: Vec<_> =
@@ -88,6 +92,7 @@ fn clean_ws(ws: &Workspace, pkg_ids: &[PackageId], verbose: u8) -> Result<()> {
         if verbose > 0 {
             cmd.arg(format!("-{}", "v".repeat(verbose as usize)));
         }
+        manifest.cargo_args(&mut cmd);
         cmd.dir(&ws.metadata.workspace_root);
         if let Err(e) = if verbose > 0 { cmd.run() } else { cmd.run_with_output() } {
             warn!("{:#}", e);

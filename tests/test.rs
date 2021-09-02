@@ -22,7 +22,7 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
     let id = format!("{}/{}", model, name);
     for (extension, args2) in test_set() {
-        test_report(model, name, extension, &[args, args2].concat(), envs)
+        test_report(model, name, extension, None, &[args, args2].concat(), envs)
             .context(id.clone())
             .unwrap();
     }
@@ -64,6 +64,15 @@ fn no_test() {
 #[test]
 fn bin_crate() {
     run("bin_crate", "bin_crate", &[], &[]);
+
+    let model = "bin_crate";
+    let name = "run";
+    let id = format!("{}/{}", model, name);
+    for (extension, args2) in test_set() {
+        test_report(model, name, extension, Some("run"), &[args2, &["--", "1"]].concat(), &[])
+            .context(id.clone())
+            .unwrap();
+    }
 }
 
 #[test]
@@ -87,7 +96,7 @@ fn no_coverage() {
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, model, extension, args2, &[]).context(id.clone()).unwrap();
+        test_report(model, model, extension, None, args2, &[]).context(id.clone()).unwrap();
     }
 
     let name = "no_cfg_coverage";
@@ -97,7 +106,7 @@ fn no_coverage() {
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, name, extension, &[args2, &["--no-cfg-coverage"]].concat(), &[])
+        test_report(model, name, extension, None, &[args2, &["--no-cfg-coverage"]].concat(), &[])
             .context(id.clone())
             .unwrap();
     }

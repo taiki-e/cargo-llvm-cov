@@ -38,6 +38,7 @@ pub fn test_report(
     model: &str,
     name: &str,
     extension: &str,
+    subcommand: Option<&str>,
     args: &[&str],
     envs: &[(&str, &str)],
 ) -> Result<()> {
@@ -46,6 +47,9 @@ pub fn test_report(
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
     let mut cmd = cargo_llvm_cov();
+    if let Some(subcommand) = subcommand {
+        cmd.arg(subcommand);
+    }
     cmd.args(["--color", "never", "--output-path"])
         .arg(output_path)
         .args(args)

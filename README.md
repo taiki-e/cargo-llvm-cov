@@ -10,9 +10,10 @@ Cargo subcommand to easily use LLVM source-based code coverage.
 This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] and provides:
 
 - Generate very precise coverage data. (line coverage and region coverage)
+- Support both `cargo test` and `cargo run`.
 - Support for proc-macro, including coverage of UI tests.
 - Support for doc tests. (this is currently optional, see [#2] for more)
-- Command-line interface compatible with `cargo test`.
+- Command-line interface compatible with cargo.
 
 **Table of Contents:**
 
@@ -110,14 +111,14 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
+        --no-report
+            Run tests, but don't generate coverage report
+
         --doctests
             Including doc tests (unstable)
 
             This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
             more.
-
-        --no-report
-            Run tests, but don't generate coverage report
 
         --no-run
             Generate coverage report without running tests
@@ -197,9 +198,6 @@ OPTIONS:
             When this option is used, coverage for proc-macro and build script will not be displayed
             because cargo does not pass RUSTFLAGS to them.
 
-        --manifest-path <PATH>
-            Path to Cargo.toml
-
     -v, --verbose
             Use verbose output
 
@@ -207,6 +205,9 @@ OPTIONS:
 
         --color <WHEN>
             Coloring [possible values: auto, always, never]
+
+        --manifest-path <PATH>
+            Path to Cargo.toml
 
         --frozen
             Require Cargo.lock and cache are up to date
@@ -221,6 +222,8 @@ OPTIONS:
             Unstable (nightly-only) flags to Cargo
 
 SUBCOMMANDS:
+    run
+            Run a binary or example and generate coverage report
     clean
             Remove artifacts that cargo-llvm-cov has generated in the past
     help
@@ -230,10 +233,16 @@ SUBCOMMANDS:
 
 </details>
 
-By default, run tests, and print the coverage summary to stdout.
+By default, run tests (via `cargo test`), and print the coverage summary to stdout.
 
 ```sh
 cargo llvm-cov
+```
+
+To run `cargo run` instead of `cargo test`, use `run` subcommand.
+
+```sh
+cargo llvm-cov run
 ```
 
 With html report (the report will be generated to `target/llvm-cov/html` directory):
@@ -265,6 +274,13 @@ With lcov report (if `--output-path` is not specified, the report will be printe
 
 ```sh
 cargo llvm-cov --lcov --output-path lcov.info
+```
+
+You can get a coverage report in a different format based on the results of a previous run by using `--no-run`.
+
+```sh
+cargo llvm-cov --html          # run tests and generate html report
+cargo llvm-cov --no-run --lcov # generate lcov report
 ```
 
 You can merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
