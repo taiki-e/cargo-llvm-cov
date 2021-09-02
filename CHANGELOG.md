@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- [Add `cargo llvm-cov run` subcommand to get coverage of `cargo run`.](https://github.com/taiki-e/cargo-llvm-cov/pull/89)
+
 ## [0.1.5] - 2021-09-01
 
 - [Add `--workspace` flag to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/85)

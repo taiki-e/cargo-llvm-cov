@@ -45,11 +45,11 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
-        --doctests
-            Including doc tests (unstable)
-
         --no-report
             Run tests, but don't generate coverage report
+
+        --doctests
+            Including doc tests (unstable)
 
         --no-run
             Generate coverage report without running tests
@@ -123,14 +123,14 @@ OPTIONS:
         --target <TRIPLE>
             Build for the target triple
 
-        --manifest-path <PATH>
-            Path to Cargo.toml
-
     -v, --verbose
             Use verbose output
 
         --color <WHEN>
             Coloring [possible values: auto, always, never]
+
+        --manifest-path <PATH>
+            Path to Cargo.toml
 
         --frozen
             Require Cargo.lock and cache are up to date
@@ -145,5 +145,6 @@ OPTIONS:
             Unstable (nightly-only) flags to Cargo
 
 SUBCOMMANDS:
+    run      Run a binary or example and generate coverage report
     clean    Remove artifacts that cargo-llvm-cov has generated in the past
     help     Print this message or the help of the given subcommand(s)

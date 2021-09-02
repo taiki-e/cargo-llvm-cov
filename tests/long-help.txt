@@ -77,14 +77,14 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
+        --no-report
+            Run tests, but don't generate coverage report
+
         --doctests
             Including doc tests (unstable)
 
             This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
             more.
-
-        --no-report
-            Run tests, but don't generate coverage report
 
         --no-run
             Generate coverage report without running tests
@@ -164,9 +164,6 @@ OPTIONS:
             When this option is used, coverage for proc-macro and build script will not be displayed
             because cargo does not pass RUSTFLAGS to them.
 
-        --manifest-path <PATH>
-            Path to Cargo.toml
-
     -v, --verbose
             Use verbose output
 
@@ -174,6 +171,9 @@ OPTIONS:
 
         --color <WHEN>
             Coloring [possible values: auto, always, never]
+
+        --manifest-path <PATH>
+            Path to Cargo.toml
 
         --frozen
             Require Cargo.lock and cache are up to date
@@ -188,6 +188,8 @@ OPTIONS:
             Unstable (nightly-only) flags to Cargo
 
 SUBCOMMANDS:
+    run
+            Run a binary or example and generate coverage report
     clean
             Remove artifacts that cargo-llvm-cov has generated in the past
     help

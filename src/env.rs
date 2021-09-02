@@ -15,15 +15,6 @@ pub(crate) struct Env {
     /// to llvm-profdata. (value: space-separated list)
     pub(crate) cargo_llvm_profdata_flags: Option<String>,
 
-    // Environment variables Cargo reads
-    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads
-    /// `RUSTFLAGS` environment variable.
-    pub(crate) rustflags: Option<OsString>,
-    /// `RUSTDOCFLAGS` environment variable.
-    pub(crate) rustdocflags: Option<OsString>,
-    /// `BROWSER` environment variable.
-    pub(crate) browser: Option<OsString>,
-
     // Environment variables Cargo sets for 3rd party subcommands
     // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
     /// `CARGO` environment variable.
@@ -43,9 +34,6 @@ impl Env {
         Ok(Self {
             cargo_llvm_cov_flags,
             cargo_llvm_profdata_flags,
-            rustflags: env::var_os("RUSTFLAGS"),
-            rustdocflags: env::var_os("RUSTDOCFLAGS"),
-            browser: env::var_os("BROWSER"),
             cargo: env::var_os("CARGO"),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,

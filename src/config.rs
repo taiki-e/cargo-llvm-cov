@@ -3,22 +3,23 @@
 // - https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
 // - https://github.com/rust-lang/cargo/issues/9301
 
-use std::ffi::OsStr;
+use std::{collections::BTreeMap, ffi::OsStr};
 
 use anyhow::{format_err, Context as _, Result};
 use camino::Utf8Path;
 use serde::Deserialize;
 
-use crate::{
-    cargo::Cargo,
-    cli::Coloring,
-    env::{self, Env},
-};
+use crate::{cargo::Cargo, cli::Coloring, env};
 
+// NOTE: We don't need to get configuration values like net.offline here,
+// because those are configuration that need to be applied only to cargo,
+// and such configuration will be handled properly by cargo itself.
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Config {
     #[serde(default)]
-    pub(crate) build: Build,
+    build: Build,
+    #[serde(default)]
+    target: BTreeMap<String, Target>,
     #[serde(default)]
     pub(crate) doc: Doc,
     #[serde(default)]
@@ -26,7 +27,12 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn new(cargo: &Cargo, workspace_root: &Utf8Path) -> Result<Self> {
+    pub(crate) fn new(
+        cargo: &Cargo,
+        workspace_root: &Utf8Path,
+        target: Option<&str>,
+        host: Option<&str>,
+    ) -> Result<Self> {
         let mut cmd = cargo.process();
         cmd.args(["-Z", "unstable-options", "config", "get", "--format", "json"])
             .dir(workspace_root);
@@ -39,23 +45,63 @@ impl Config {
                 Self::default()
             }
         };
-        config.apply_env()?;
+        config.apply_env(target, host)?;
         Ok(config)
     }
 
     // Apply configuration environment variables
-    fn apply_env(&mut self) -> Result<()> {
+    fn apply_env(&mut self, target: Option<&str>, host: Option<&str>) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
-        if let Some(rustflags) = env::var("CARGO_BUILD_RUSTFLAGS")? {
-            self.build.rustflags = Some(StringOrArray::String(rustflags));
-        }
-        if let Some(rustdocflags) = env::var("CARGO_BUILD_RUSTDOCFLAGS")? {
-            self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
-        }
-        if let Some(target) = env::var("CARGO_BUILD_TARGET")? {
+
+        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget
+        // TODO: Handles the case where this is a relative path to the target spec file.
+        if let Some(target) = target {
+            self.build.target = Some(target.to_owned());
+        } else if let Some(target) = env::var("CARGO_BUILD_TARGET")? {
             self.build.target = Some(target);
         }
+        let target = self.build.target.as_deref().or(host);
+
+        // 1. RUSTFLAGS
+        // 2. target.<triple>.rustflags (CARGO_TARGET_<triple>_RUSTFLAGS) and target.<cfg>.rustflags
+        // 3. build.rustflags (CARGO_BUILD_RUSTFLAGS)
+        // NOTE: target.<cfg>.rustflags is currently ignored
+        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
+        if let Some(rustflags) = env::var("RUSTFLAGS")? {
+            self.build.rustflags = Some(StringOrArray::String(rustflags));
+        } else if let Some(target) = target {
+            if let Some(rustflags) = env::var(&format!(
+                "CARGO_TARGET_{}_RUSTFLAGS",
+                target.to_uppercase().replace('-', "_")
+            ))? {
+                self.build.rustflags = Some(StringOrArray::String(rustflags));
+            } else if let Some(Target { rustflags: Some(rustflags) }) = self.target.get(target) {
+                self.build.rustflags = Some(rustflags.clone());
+            } else if let Some(rustflags) = env::var("CARGO_BUILD_RUSTFLAGS")? {
+                self.build.rustflags = Some(StringOrArray::String(rustflags));
+            }
+        } else if let Some(rustflags) = env::var("CARGO_BUILD_RUSTFLAGS")? {
+            self.build.rustflags = Some(StringOrArray::String(rustflags));
+        }
+
+        // 1. RUSTDOCFLAGS
+        // 2. build.rustdocflags (CARGO_BUILD_RUSTDOCFLAGS)
+        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
+        if let Some(rustdocflags) = env::var("RUSTDOCFLAGS")? {
+            self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
+        } else if let Some(rustdocflags) = env::var("CARGO_BUILD_RUSTDOCFLAGS")? {
+            self.build.rustdocflags = Some(StringOrArray::String(rustdocflags));
+        }
+
+        // doc.browser config value is prefer over BROWSER environment variable.
+        // https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/ops/cargo_doc.rs#L58-L59
+        if self.doc.browser.is_none() {
+            if let Some(browser) = env::var("BROWSER")? {
+                self.doc.browser = Some(StringOrArray::String(browser));
+            }
+        }
+
         if let Some(verbose) = env::var("CARGO_TERM_VERBOSE")? {
             self.term.verbose = Some(verbose.parse()?);
         }
@@ -64,23 +110,6 @@ impl Config {
                 Some(clap::ArgEnum::from_str(&color, false).map_err(|e| format_err!("{}", e))?);
         }
         Ok(())
-    }
-
-    pub(crate) fn merge_to_env(&self, env: &mut Env) {
-        // RUSTFLAGS environment variable is prefer over build.rustflags config value.
-        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
-        if env.rustflags.is_none() {
-            if let Some(rustflags) = &self.build.rustflags {
-                env.rustflags = Some(rustflags.to_string().into());
-            }
-        }
-        // RUSTDOCFLAGS environment variable is prefer over build.rustdocflags config value.
-        // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
-        if env.rustdocflags.is_none() {
-            if let Some(rustdocflags) = &self.build.rustdocflags {
-                env.rustdocflags = Some(rustdocflags.to_string().into());
-            }
-        }
     }
 
     pub(crate) fn merge_to_args(
@@ -100,17 +129,34 @@ impl Config {
             *color = self.term.color;
         }
     }
+
+    pub(crate) fn rustflags(&self) -> Option<String> {
+        // Refer only build.rustflags because Self::apply_env update build.rustflags
+        // based on target.<..>.rustflags.
+        self.build.rustflags.as_ref().map(ToString::to_string)
+    }
+
+    pub(crate) fn rustdocflags(&self) -> Option<String> {
+        self.build.rustdocflags.as_ref().map(ToString::to_string)
+    }
 }
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#build
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Build {
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
-    pub(crate) rustflags: Option<StringOrArray>,
+    rustflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags
-    pub(crate) rustdocflags: Option<StringOrArray>,
+    rustdocflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget
-    pub(crate) target: Option<String>,
+    target: Option<String>,
+}
+
+// https://doc.rust-lang.org/nightly/cargo/reference/config.html#target
+#[derive(Debug, Deserialize)]
+struct Target {
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#targettriplerustflags
+    rustflags: Option<StringOrArray>,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#doc
@@ -129,7 +175,7 @@ pub(crate) struct Term {
     pub(crate) color: Option<Coloring>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum StringOrArray {
     String(String),

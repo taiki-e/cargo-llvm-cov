@@ -1,6 +1,10 @@
+use std::mem;
+
 use camino::Utf8PathBuf;
 use clap::{AppSettings, ArgSettings, Clap};
 use serde::Deserialize;
+
+use crate::process::ProcessBuilder;
 
 const ABOUT: &str =
     "Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
@@ -37,6 +41,172 @@ pub(crate) struct Args {
     #[clap(subcommand)]
     pub(crate) subcommand: Option<Subcommand>,
 
+    #[clap(flatten)]
+    cov: LlvmCovOptions,
+
+    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
+    /// Including doc tests (unstable)
+    ///
+    /// This flag is unstable.
+    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
+    #[clap(long)]
+    pub(crate) doctests: bool,
+
+    // =========================================================================
+    // `cargo test` options
+    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
+    /// Generate coverage report without running tests
+    #[clap(long, conflicts_with = "no-report")]
+    pub(crate) no_run: bool,
+    /// Run all tests regardless of failure
+    #[clap(long)]
+    pub(crate) no_fail_fast: bool,
+    /// Display one character per test instead of one line
+    #[clap(short, long, conflicts_with = "verbose")]
+    pub(crate) quiet: bool,
+    /// Test only this package's library unit tests
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) lib: bool,
+    /// Test only the specified binary
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
+    pub(crate) bin: Vec<String>,
+    /// Test all binaries
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) bins: bool,
+    /// Test only the specified example
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
+    pub(crate) example: Vec<String>,
+    /// Test all examples
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) examples: bool,
+    /// Test only the specified test target
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
+    pub(crate) test: Vec<String>,
+    /// Test all tests
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) tests: bool,
+    /// Test only the specified bench target
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        value_name = "NAME",
+        conflicts_with = "doc",
+        conflicts_with = "doctests"
+    )]
+    pub(crate) bench: Vec<String>,
+    /// Test all benches
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) benches: bool,
+    /// Test all targets
+    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
+    pub(crate) all_targets: bool,
+    /// Test only this library's documentation (unstable)
+    ///
+    /// This flag is unstable because it automatically enables --doctests flag.
+    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
+    #[clap(long)]
+    pub(crate) doc: bool,
+    /// Package to run tests for
+    // cargo allows the combination of --package and --workspace, but we reject
+    // it because the situation where both flags are specified is odd.
+    #[clap(
+        short,
+        long,
+        multiple_occurrences = true,
+        value_name = "SPEC",
+        conflicts_with = "workspace"
+    )]
+    pub(crate) package: Vec<String>,
+    /// Test all packages in the workspace
+    #[clap(long, visible_alias = "all")]
+    pub(crate) workspace: bool,
+    /// Exclude packages from the test
+    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
+    pub(crate) exclude: Vec<String>,
+
+    #[clap(flatten)]
+    build: BuildOptions,
+
+    #[clap(flatten)]
+    manifest: ManifestOptions,
+
+    /// Unstable (nightly-only) flags to Cargo
+    #[clap(short = 'Z', multiple_occurrences = true, value_name = "FLAG")]
+    pub(crate) unstable_flags: Vec<String>,
+
+    /// Arguments for the test binary
+    #[clap(last = true)]
+    pub(crate) args: Vec<String>,
+}
+
+impl Args {
+    pub(crate) fn cov(&mut self) -> LlvmCovOptions {
+        mem::take(&mut self.cov)
+    }
+
+    pub(crate) fn build(&mut self) -> BuildOptions {
+        mem::take(&mut self.build)
+    }
+
+    pub(crate) fn manifest(&mut self) -> ManifestOptions {
+        mem::take(&mut self.manifest)
+    }
+}
+
+#[derive(Debug, Clap)]
+pub(crate) enum Subcommand {
+    /// Run a binary or example and generate coverage report.
+    #[clap(
+        bin_name = "cargo llvm-cov run",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::StrictUtf8,
+        setting = AppSettings::UnifiedHelpMessage,
+    )]
+    Run(RunOptions),
+
+    /// Remove artifacts that cargo-llvm-cov has generated in the past
+    #[clap(
+        bin_name = "cargo llvm-cov clean",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::StrictUtf8,
+        setting = AppSettings::UnifiedHelpMessage,
+    )]
+    Clean(CleanOptions),
+
+    // internal (unstable)
+    #[clap(
+        bin_name = "cargo llvm-cov demangle",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+        setting = AppSettings::StrictUtf8,
+        setting = AppSettings::UnifiedHelpMessage,
+        setting = AppSettings::Hidden,
+    )]
+    Demangle,
+}
+
+#[derive(Debug, Default, Clap)]
+pub(crate) struct LlvmCovOptions {
     /// Export coverage data in "json" format
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
@@ -123,107 +293,19 @@ pub(crate) struct Args {
     /// Unset cfg(coverage)
     #[clap(long, hidden = true)]
     pub(crate) no_cfg_coverage: bool,
-
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
-    /// Including doc tests (unstable)
-    ///
-    /// This flag is unstable.
-    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
-    #[clap(long)]
-    pub(crate) doctests: bool,
     /// Run tests, but don't generate coverage report
-    #[clap(long, conflicts_with = "no-run")]
+    #[clap(long)]
     pub(crate) no_report: bool,
+}
 
-    // =========================================================================
-    // `cargo test` options
-    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
-    /// Generate coverage report without running tests
-    #[clap(long)]
-    pub(crate) no_run: bool,
-    /// Run all tests regardless of failure
-    #[clap(long)]
-    pub(crate) no_fail_fast: bool,
-    /// Display one character per test instead of one line
-    #[clap(short, long, conflicts_with = "verbose")]
-    pub(crate) quiet: bool,
-    /// Test only this package's library unit tests
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) lib: bool,
-    /// Test only the specified binary
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "NAME",
-        conflicts_with = "doc",
-        conflicts_with = "doctests"
-    )]
-    pub(crate) bin: Vec<String>,
-    /// Test all binaries
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) bins: bool,
-    /// Test only the specified example
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "NAME",
-        conflicts_with = "doc",
-        conflicts_with = "doctests"
-    )]
-    pub(crate) example: Vec<String>,
-    /// Test all examples
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) examples: bool,
-    /// Test only the specified test target
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "NAME",
-        conflicts_with = "doc",
-        conflicts_with = "doctests"
-    )]
-    pub(crate) test: Vec<String>,
-    /// Test all tests
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) tests: bool,
-    /// Test only the specified bench target
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        value_name = "NAME",
-        conflicts_with = "doc",
-        conflicts_with = "doctests"
-    )]
-    pub(crate) bench: Vec<String>,
-    /// Test all benches
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) benches: bool,
-    /// Test all targets
-    #[clap(long, conflicts_with = "doc", conflicts_with = "doctests")]
-    pub(crate) all_targets: bool,
-    /// Test only this library's documentation (unstable)
-    ///
-    /// This flag is unstable because it automatically enables --doctests flag.
-    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
-    #[clap(long)]
-    pub(crate) doc: bool,
-    /// Package to run tests for
-    // cargo allows the combination of --package and --workspace, but we reject
-    // it because the situation where both flags are specified is odd.
-    #[clap(
-        short,
-        long,
-        multiple_occurrences = true,
-        value_name = "SPEC",
-        conflicts_with = "workspace"
-    )]
-    pub(crate) package: Vec<String>,
-    /// Test all packages in the workspace
-    #[clap(long, visible_alias = "all")]
-    pub(crate) workspace: bool,
-    /// Exclude packages from the test
-    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
-    pub(crate) exclude: Vec<String>,
+impl LlvmCovOptions {
+    pub(crate) fn show(&self) -> bool {
+        self.text || self.html
+    }
+}
+
+#[derive(Debug, Default, Clap)]
+pub(crate) struct BuildOptions {
     /// Number of parallel jobs, defaults to # of CPUs
     // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/util/command_prelude.rs#L332
     #[clap(short, long, value_name = "N")]
@@ -258,9 +340,6 @@ pub(crate) struct Args {
     // /// Directory for all generated artifacts
     // #[clap(long, value_name = "DIRECTORY")]
     // target_dir: Option<Utf8PathBuf>,
-    /// Path to Cargo.toml
-    #[clap(long, value_name = "PATH")]
-    pub(crate) manifest_path: Option<Utf8PathBuf>,
     /// Use verbose output
     ///
     /// Use -vv (-vvv) to propagate verbosity to cargo.
@@ -270,15 +349,70 @@ pub(crate) struct Args {
     // This flag will be propagated to both cargo and llvm-cov.
     #[clap(long, arg_enum, value_name = "WHEN")]
     pub(crate) color: Option<Coloring>,
-    /// Require Cargo.lock and cache are up to date
-    #[clap(long)]
-    pub(crate) frozen: bool,
-    /// Require Cargo.lock is up to date
-    #[clap(long)]
-    pub(crate) locked: bool,
-    /// Run without accessing the network
-    #[clap(long)]
-    pub(crate) offline: bool,
+}
+
+impl BuildOptions {
+    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
+        if let Some(jobs) = self.jobs {
+            cmd.arg("--jobs");
+            cmd.arg(jobs.to_string());
+        }
+        if self.release {
+            cmd.arg("--release");
+        }
+        if let Some(profile) = &self.profile {
+            cmd.arg("--profile");
+            cmd.arg(profile);
+        }
+        for features in &self.features {
+            cmd.arg("--features");
+            cmd.arg(features);
+        }
+        if self.all_features {
+            cmd.arg("--all-features");
+        }
+        if self.no_default_features {
+            cmd.arg("--no-default-features");
+        }
+        if let Some(target) = &self.target {
+            cmd.arg("--target");
+            cmd.arg(target);
+        }
+
+        if let Some(color) = self.color {
+            cmd.arg("--color");
+            cmd.arg(color.cargo_color());
+        }
+
+        if self.verbose > 1 {
+            cmd.arg(format!("-{}", "v".repeat(self.verbose as usize - 1)));
+        }
+    }
+}
+
+#[derive(Debug, Clap)]
+pub(crate) struct RunOptions {
+    #[clap(flatten)]
+    cov: LlvmCovOptions,
+
+    /// No output printed to stdout
+    #[clap(short, long, conflicts_with = "verbose")]
+    pub(crate) quiet: bool,
+    /// Name of the bin target to run
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) bin: Vec<String>,
+    /// Name of the example target to run
+    #[clap(long, multiple_occurrences = true, value_name = "NAME")]
+    pub(crate) example: Vec<String>,
+    /// Package with the target to run
+    #[clap(short, long, value_name = "SPEC")]
+    pub(crate) package: Option<String>,
+
+    #[clap(flatten)]
+    build: BuildOptions,
+
+    #[clap(flatten)]
+    manifest: ManifestOptions,
 
     /// Unstable (nightly-only) flags to Cargo
     #[clap(short = 'Z', multiple_occurrences = true, value_name = "FLAG")]
@@ -289,34 +423,18 @@ pub(crate) struct Args {
     pub(crate) args: Vec<String>,
 }
 
-impl Args {
-    pub(crate) fn show(&self) -> bool {
-        self.text || self.html
+impl RunOptions {
+    pub(crate) fn cov(&mut self) -> LlvmCovOptions {
+        mem::take(&mut self.cov)
     }
-}
 
-#[derive(Debug, Clap)]
-pub(crate) enum Subcommand {
-    /// Remove artifacts that cargo-llvm-cov has generated in the past
-    #[clap(
-        bin_name = "cargo llvm-cov clean",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::StrictUtf8,
-        setting = AppSettings::UnifiedHelpMessage,
-    )]
-    Clean(CleanOptions),
+    pub(crate) fn build(&mut self) -> BuildOptions {
+        mem::take(&mut self.build)
+    }
 
-    // internal (unstable)
-    #[clap(
-        bin_name = "cargo llvm-cov demangle",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::StrictUtf8,
-        setting = AppSettings::UnifiedHelpMessage,
-        setting = AppSettings::Hidden,
-    )]
-    Demangle,
+    pub(crate) fn manifest(&mut self) -> ManifestOptions {
+        mem::take(&mut self.manifest)
+    }
 }
 
 #[derive(Debug, Clap)]
@@ -330,15 +448,46 @@ pub(crate) struct CleanOptions {
     // /// Directory for all generated artifacts
     // #[clap(long, value_name = "DIRECTORY")]
     // pub(crate) target_dir: Option<Utf8PathBuf>,
-    /// Path to Cargo.toml
-    #[clap(long, value_name = "PATH")]
-    pub(crate) manifest_path: Option<Utf8PathBuf>,
     /// Use verbose output
     #[clap(short, long, parse(from_occurrences))]
     pub(crate) verbose: u8,
     /// Coloring
     #[clap(long, arg_enum, value_name = "WHEN")]
     pub(crate) color: Option<Coloring>,
+    #[clap(flatten)]
+    pub(crate) manifest: ManifestOptions,
+}
+
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
+#[derive(Debug, Default, Clap)]
+pub(crate) struct ManifestOptions {
+    /// Path to Cargo.toml
+    #[clap(long, value_name = "PATH")]
+    pub(crate) manifest_path: Option<Utf8PathBuf>,
+    /// Require Cargo.lock and cache are up to date
+    #[clap(long)]
+    pub(crate) frozen: bool,
+    /// Require Cargo.lock is up to date
+    #[clap(long)]
+    pub(crate) locked: bool,
+    /// Run without accessing the network
+    #[clap(long)]
+    pub(crate) offline: bool,
+}
+
+impl ManifestOptions {
+    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
+        // Skip --manifest-path because it is set based on Workspace::current_manifest.
+        if self.frozen {
+            cmd.arg("--frozen");
+        }
+        if self.locked {
+            cmd.arg("--locked");
+        }
+        if self.offline {
+            cmd.arg("--offline");
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, clap::ArgEnum)]
@@ -389,7 +538,7 @@ mod tests {
         let Opts::LlvmCov(args) =
             Opts::try_parse_from(&["cargo", "llvm-cov", "--features", "a", "--features", "b"])
                 .unwrap();
-        assert_eq!(args.features, ["a", "b"]);
+        assert_eq!(args.build.features, ["a", "b"]);
 
         let Opts::LlvmCov(args) =
             Opts::try_parse_from(&["cargo", "llvm-cov", "--package", "a", "--package", "b"])
