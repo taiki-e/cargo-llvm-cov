@@ -363,6 +363,17 @@ You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://g
 brew install taiki-e/tap/cargo-llvm-cov
 ```
 
+<!-- omit in toc -->
+### Via AUR (ArchLinux)
+
+You can install [cargo-llvm-cov from AUR](https://aur.archlinux.org/packages/cargo-llvm-cov):
+
+```sh
+paru -S cargo-llvm-cov
+```
+
+NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
+
 ## Known limitations
 
 - Due to a bug of `-Z instrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
