@@ -210,14 +210,6 @@ impl fmt::Display for ProcessBuilder {
 struct ProcessError {
     /// A detailed description to show to the user why the process failed.
     desc: String,
-    /// The exit status of the process.
-    ///
-    /// This can be `None` if the process failed to launch (like process not found).
-    status: Option<ExitStatus>,
-    /// The output from the process.
-    ///
-    /// This can be `None` if the process failed to launch, or the output was not captured.
-    output: Option<Output>,
 }
 
 impl ProcessError {
@@ -249,7 +241,7 @@ impl ProcessError {
             }
         }
 
-        Self { desc, status, output: output.cloned() }
+        Self { desc }
     }
 }
 
