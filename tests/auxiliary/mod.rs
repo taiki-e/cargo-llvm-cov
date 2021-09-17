@@ -1,7 +1,12 @@
 mod json;
 
 use std::{
+    convert::TryInto,
     env,
+    ffi::OsStr,
+    io::{Read, Seek, Write},
+    mem::size_of,
+    path::{Path, PathBuf},
     process::{Command, ExitStatus},
     sync::atomic::{AtomicUsize, Ordering::Relaxed},
 };
@@ -112,6 +117,46 @@ pub fn test_project(model: &str, name: &str) -> Result<TempDir> {
     }
 
     Ok(tmpdir)
+}
+
+pub fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {
+    let target_dir = workspace_root.join("target").join("llvm-cov-target");
+    let read_dir = fs::read_dir(target_dir)?;
+    let path = itertools::process_results(read_dir, |mut iter| {
+        iter.find_map(|entry| {
+            let path = entry.path();
+            if path.extension() == Some(OsStr::new("profraw")) {
+                Some(path)
+            } else {
+                None
+            }
+        })
+    })?;
+    path.as_ref().map(perturb_header).transpose()?;
+    Ok(path)
+}
+
+const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
+    | ('l' as u64) << 48
+    | ('p' as u64) << 40
+    | ('r' as u64) << 32
+    | ('o' as u64) << 24
+    | ('f' as u64) << 16
+    | ('r' as u64) << 8
+    | (129_u64);
+
+fn perturb_header<P: AsRef<Path>>(path: P) -> Result<()> {
+    let mut file = fs::OpenOptions::new().read(true).write(true).open(path.as_ref())?;
+    let mut magic = {
+        let mut buf = vec![0_u8; size_of::<u64>()];
+        file.read_exact(&mut buf)?;
+        u64::from_ne_bytes(buf.try_into().unwrap())
+    };
+    assert_eq!(magic, INSTR_PROF_RAW_MAGIC_64);
+    magic += 1;
+    file.rewind()?;
+    file.write_all(&magic.to_ne_bytes())?;
+    Ok(())
 }
 
 #[ext(CommandExt)]
