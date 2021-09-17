@@ -74,6 +74,9 @@ OPTIONS:
             This flag can only be used together with --text, --html, or --open. See also --output-
             path.
 
+        --failure-mode <any|all>
+            Fail if `any` or `all` profiles cannot be merged (default to `any`)
+
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 

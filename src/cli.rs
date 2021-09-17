@@ -279,6 +279,9 @@ pub(crate) struct LlvmCovOptions {
     )]
     pub(crate) output_dir: Option<Utf8PathBuf>,
 
+    /// Fail if `any` or `all` profiles cannot be merged (default to `any`)
+    #[clap(long, value_name = "any|all", possible_values(&["any", "all"]), hide_possible_values = true)]
+    pub(crate) failure_mode: Option<String>,
     /// Skip source code files with file paths that match the given regular expression.
     #[clap(long, value_name = "PATTERN", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) ignore_filename_regex: Option<String>,
