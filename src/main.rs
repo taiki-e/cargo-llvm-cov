@@ -264,6 +264,9 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         )
         .arg("-o")
         .arg(&cx.ws.profdata_file);
+    if let Some(mode) = &cx.cov.failure_mode {
+        cmd.arg(format!("-failure-mode={}", mode));
+    }
     if let Some(jobs) = cx.build.jobs {
         cmd.arg(format!("-num-threads={}", jobs));
     }

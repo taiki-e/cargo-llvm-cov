@@ -5,8 +5,10 @@
 mod auxiliary;
 
 use anyhow::Context as _;
-use auxiliary::{cargo_llvm_cov, test_project, test_report, CommandExt};
+use auxiliary::{cargo_llvm_cov, perturb_one_header, test_project, test_report, CommandExt};
+use camino::Utf8Path;
 use fs_err as fs;
+use tempfile::tempdir;
 
 fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     vec![
@@ -114,8 +116,19 @@ fn no_coverage() {
 
 #[test]
 fn merge() {
+    let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join("merge");
+    merge_with_failure_mode(&output_dir, false);
+}
+
+#[test]
+fn merge_failure_mode_all() {
+    let tempdir = tempdir().unwrap();
+    let output_dir = Utf8Path::from_path(tempdir.path()).unwrap();
+    merge_with_failure_mode(output_dir, true);
+}
+
+fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
     let model = "merge";
-    let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
         let workspace_root = test_project(model, model).unwrap();
@@ -128,15 +141,23 @@ fn merge() {
             .args(["--color", "never", "--no-report", "--features", "b"])
             .current_dir(workspace_root.path())
             .assert_success();
-        cargo_llvm_cov()
-            .args(["--color", "never", "--no-run", "--output-path"])
+        let mut cmd = cargo_llvm_cov();
+        cmd.args(["--color", "never", "--no-run", "--output-path"])
             .arg(output_path)
             .args(args)
-            .current_dir(workspace_root.path())
-            .assert_success();
+            .current_dir(workspace_root.path());
+        cmd.assert_success();
 
-        auxiliary::normalize_output(output_path, args).unwrap();
-        auxiliary::assert_output(output_path).unwrap();
+        if failure_mode_all {
+            perturb_one_header(workspace_root.path()).unwrap().unwrap();
+            cmd.assert_failure()
+                .stderr_contains("unrecognized instrumentation profile encoding format");
+            cmd.args(&["--failure-mode", "all"]);
+            cmd.assert_success();
+        } else {
+            auxiliary::normalize_output(output_path, args).unwrap();
+            auxiliary::assert_output(output_path).unwrap();
+        }
     }
 }
 

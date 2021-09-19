@@ -42,6 +42,9 @@ OPTIONS:
         --output-dir <DIRECTORY>
             Specify a directory to write coverage report into (default to `target/llvm-cov`)
 
+        --failure-mode <any|all>
+            Fail if `any` or `all` profiles cannot be merged (default to `any`)
+
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
