@@ -59,7 +59,7 @@ jobs:
         range:
           # This is the minimum supported Rust version of this crate.
           # When updating this, the reminder to update the minimum supported
-          # Rust version in README.md and .clippy.toml.
+          # Rust version in README.md, Cargo.toml, and .clippy.toml.
           - 1.54..
     runs-on: ubuntu-18.04
     steps:
