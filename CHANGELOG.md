@@ -10,30 +10,34 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.8] - 2021-10-04
+
+- Fix an issue where some files were incorrectly ignored in reports. ([#94](https://github.com/taiki-e/cargo-llvm-cov/pull/94), thanks @larsluthman)
+
 ## [0.1.7] - 2021-09-19
 
-- [Add `--failure-mode` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/91)
+- Add `--failure-mode` option. ([#91](https://github.com/taiki-e/cargo-llvm-cov/pull/91), thanks @smoelius)
 
 ## [0.1.6] - 2021-09-03
 
-- [Add `cargo llvm-cov run` subcommand to get coverage of `cargo run`.](https://github.com/taiki-e/cargo-llvm-cov/pull/89)
+- Add `cargo llvm-cov run` subcommand to get coverage of `cargo run`. ([#89](https://github.com/taiki-e/cargo-llvm-cov/pull/89))
 
 ## [0.1.5] - 2021-09-01
 
-- [Add `--workspace` flag to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/85)
+- Add `--workspace` flag to `cargo llvm-cov clean` subcommand. ([#85](https://github.com/taiki-e/cargo-llvm-cov/pull/85))
 
-- [Fix bug around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/85)
+- Fix bug around artifact cleanup. ([#85](https://github.com/taiki-e/cargo-llvm-cov/pull/85))
 
 ## [0.1.4] - 2021-08-29
 
-- [Improve heuristics around artifact cleanup.](https://github.com/taiki-e/cargo-llvm-cov/pull/79)
+- Improve heuristics around artifact cleanup. ([#79](https://github.com/taiki-e/cargo-llvm-cov/pull/79))
   This removes the need to recompile dependencies in most cases.
 
-- [Fix an issue where `--package` option could not handle package specifications containing the version such as `futures:0.3.16`.](https://github.com/taiki-e/cargo-llvm-cov/pull/80)
+- Fix an issue where `--package` option could not handle package specifications containing the version such as `futures:0.3.16`. ([#80](https://github.com/taiki-e/cargo-llvm-cov/pull/80))
 
 ## [0.1.3] - 2021-08-26
 
-- [Add `--verbose` option to `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/75)
+- Add `--verbose` option to `cargo llvm-cov clean` subcommand. ([#75](https://github.com/taiki-e/cargo-llvm-cov/pull/75))
 
 - Fix regressions introduced in 0.1.2. ([#74](https://github.com/taiki-e/cargo-llvm-cov/pull/74), [#76](https://github.com/taiki-e/cargo-llvm-cov/pull/76))
 
@@ -41,27 +45,27 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 **Note: This release has been yanked due to regressions fixed in 0.1.3.**
 
-- [Set `cfg(coverage)` to easily use `#[no_coverage]`.](https://github.com/taiki-e/cargo-llvm-cov/pull/72)
+- Set `cfg(coverage)` to easily use `#[no_coverage]`. ([#72](https://github.com/taiki-e/cargo-llvm-cov/pull/72))
 
-- [Add `--quiet`, `--doc`, and `--jobs` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/70)
+- Add `--quiet`, `--doc`, and `--jobs` options. ([#70](https://github.com/taiki-e/cargo-llvm-cov/pull/70))
 
-- [Add `cargo llvm-cov clean` subcommand.](https://github.com/taiki-e/cargo-llvm-cov/pull/73)
+- Add `cargo llvm-cov clean` subcommand. ([#73](https://github.com/taiki-e/cargo-llvm-cov/pull/73))
 
 ## [0.1.1] - 2021-08-25
 
-- [Add `--lib`, `--bin`, `--bins`, `--example`, `--examples`, `--test`, `--tests`, `--bench`, `--benches`, `--all-targets`, `--profile`, and `--offline` options.](https://github.com/taiki-e/cargo-llvm-cov/pull/67)
+- Add `--lib`, `--bin`, `--bins`, `--example`, `--examples`, `--test`, `--tests`, `--bench`, `--benches`, `--all-targets`, `--profile`, and `--offline` options. ([#67](https://github.com/taiki-e/cargo-llvm-cov/pull/67))
 
-- [Respect `BROWSER` environment variable and `doc.browser` cargo config.](https://github.com/taiki-e/cargo-llvm-cov/pull/66)
+- Respect `BROWSER` environment variable and `doc.browser` cargo config. ([#66](https://github.com/taiki-e/cargo-llvm-cov/pull/66))
 
 ## [0.1.0] - 2021-08-15
 
-- [Update clap to fix build error.](https://github.com/taiki-e/cargo-llvm-cov/pull/59)
+- Update clap to fix build error. ([#59](https://github.com/taiki-e/cargo-llvm-cov/pull/59))
 
-- [Support latest version of trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/54)
+- Support latest version of trybuild. ([#54](https://github.com/taiki-e/cargo-llvm-cov/pull/54))
 
-- [Change output directory of `--html` and `--open` options from `target/llvm-cov` to `target/llvm-cov/html`.](https://github.com/taiki-e/cargo-llvm-cov/pull/62)
+- Change output directory of `--html` and `--open` options from `target/llvm-cov` to `target/llvm-cov/html`. ([#62](https://github.com/taiki-e/cargo-llvm-cov/pull/62))
 
-- [You can now merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.](https://github.com/taiki-e/cargo-llvm-cov/pull/55)
+- You can now merge the coverages generated under different test conditions by using `--no-report` and `--no-run`. ([#55](https://github.com/taiki-e/cargo-llvm-cov/pull/55))
 
   ```sh
   cargo clean
@@ -70,78 +74,79 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
   cargo llvm-cov --no-run --lcov
   ```
 
-- [Add environment variables to pass additional flags to llvm-cov/llvm-profdata.](https://github.com/taiki-e/cargo-llvm-cov/pull/58)
+- Add environment variables to pass additional flags to llvm-cov/llvm-profdata. ([#58](https://github.com/taiki-e/cargo-llvm-cov/pull/58))
 
   - `CARGO_LLVM_COV_FLAGS` to pass additional flags to llvm-cov. (value: space-separated list)
   - `CARGO_LLVM_PROFDATA_FLAGS` to pass additional flags to llvm-profdata. (value: space-separated list)
 
-- [Fix "Failed to load coverage" error when together used with trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/49)
+- Fix "Failed to load coverage" error when together used with trybuild. ([#49](https://github.com/taiki-e/cargo-llvm-cov/pull/49))
 
-- [Fix bug in `--exclude` and `--package` options](https://github.com/taiki-e/cargo-llvm-cov/pull/56)
+- Fix bug in `--exclude` and `--package` options. ([#56](https://github.com/taiki-e/cargo-llvm-cov/pull/56))
 
-- [Fix bug in color-detection when both `--text` and `--output-dir` used.](https://github.com/taiki-e/cargo-llvm-cov/pull/62)
+- Fix bug in color-detection when both `--text` and `--output-dir` used. ([#62](https://github.com/taiki-e/cargo-llvm-cov/pull/62))
 
-- [`--html` and `--open` options no longer outputs a summary at the same time.](https://github.com/taiki-e/cargo-llvm-cov/pull/61)
+- `--html` and `--open` options no longer outputs a summary at the same time. ([#61](https://github.com/taiki-e/cargo-llvm-cov/pull/61))
 
-- [Respect rustflags and rustdocflags set by cargo config file.](https://github.com/taiki-e/cargo-llvm-cov/pull/52)
+- Respect rustflags and rustdocflags set by cargo config file. ([#52](https://github.com/taiki-e/cargo-llvm-cov/pull/52))
 
 - Diagnostic improvements.
 
 ## [0.1.0-alpha.5] - 2021-08-07
 
-- [Support Windows.](https://github.com/taiki-e/cargo-llvm-cov/pull/41)
+- Support Windows. ([#41](https://github.com/taiki-e/cargo-llvm-cov/pull/41))
 
-- [Support trybuild.](https://github.com/taiki-e/cargo-llvm-cov/pull/44)
+- Support trybuild. ([#44](https://github.com/taiki-e/cargo-llvm-cov/pull/44))
 
-- [Fix mapping error in `--doctests` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/40)
+- Fix mapping error in `--doctests` option. ([#40](https://github.com/taiki-e/cargo-llvm-cov/pull/40))
 
-- [Fix bug in `--target` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/46)
+- Fix bug in `--target` option. ([#46](https://github.com/taiki-e/cargo-llvm-cov/pull/46))
 
-- [Add `--package` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/42)
+- Add `--package` option. ([#42](https://github.com/taiki-e/cargo-llvm-cov/pull/42))
 
 ## [0.1.0-alpha.4] - 2021-06-13
 
-- [cargo-llvm-cov no longer requires rustfilt.](https://github.com/taiki-e/cargo-llvm-cov/pull/29)
+- cargo-llvm-cov no longer requires rustfilt. ([#29](https://github.com/taiki-e/cargo-llvm-cov/pull/29))
 
-- [Acknowledge that procedural macros are supported.](https://github.com/taiki-e/cargo-llvm-cov/pull/27)
+- Acknowledge that procedural macros are supported. ([#27](https://github.com/taiki-e/cargo-llvm-cov/pull/27))
 
-- [Fix support of testing binary crate](https://github.com/taiki-e/cargo-llvm-cov/pull/23)
+- Fix support of testing binary crate. ([#23](https://github.com/taiki-e/cargo-llvm-cov/pull/23))
 
-- [Fix an issue where git dependencies were displayed in the coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
+- Fix an issue where git dependencies were displayed in the coverage report. ([#19](https://github.com/taiki-e/cargo-llvm-cov/pull/19))
 
-- [Fix an issue where path dependencies that not included in the workspace were displayed in coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/25)
+- Fix an issue where path dependencies that not included in the workspace were displayed in coverage report. ([#25](https://github.com/taiki-e/cargo-llvm-cov/pull/25))
 
-- [Fix bug in `--exclude` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/30)
+- Fix bug in `--exclude` option. ([#30](https://github.com/taiki-e/cargo-llvm-cov/pull/30))
 
 - Fix several bugs.
 
-- [Add `--output-path` option to specify a file to write coverage data into.](https://github.com/taiki-e/cargo-llvm-cov/pull/18)
+- Add `--output-path` option to specify a file to write coverage data into. ([#18](https://github.com/taiki-e/cargo-llvm-cov/pull/18))
 
-- [Add `--ignore-filename-regex` option to skip specified source code files from coverage report.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
+- Add `--ignore-filename-regex` option to skip specified source code files from coverage report. ([#19](https://github.com/taiki-e/cargo-llvm-cov/pull/19))
 
-- [Add `--color` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/15)
+- Add `--color` option. ([#15](https://github.com/taiki-e/cargo-llvm-cov/pull/15))
 
-- [Add `--no-fail-fast`, `--frozen`, and `--locked` option.](https://github.com/taiki-e/cargo-llvm-cov/pull/16)
+- Add `--no-fail-fast`, `--frozen`, and `--locked` option. ([#16](https://github.com/taiki-e/cargo-llvm-cov/pull/16))
 
-- [Add `--verbose` flag.](https://github.com/taiki-e/cargo-llvm-cov/pull/19)
+- Add `--verbose` flag. ([#19](https://github.com/taiki-e/cargo-llvm-cov/pull/19))
 
-- [Improve diagnostics when the required tools are not installed.](https://github.com/taiki-e/cargo-llvm-cov/pull/17)
+- Improve diagnostics when the required tools are not installed. ([#17](https://github.com/taiki-e/cargo-llvm-cov/pull/17))
 
 ## [0.1.0-alpha.3] - 2021-06-04
 
-- [cargo-llvm-cov no longer requires cargo-binutils.](https://github.com/taiki-e/cargo-llvm-cov/pull/11)
+- cargo-llvm-cov no longer requires cargo-binutils. ([#11](https://github.com/taiki-e/cargo-llvm-cov/pull/11))
 
-- [`--json` flag now exports all coverage data by default.](https://github.com/taiki-e/cargo-llvm-cov/pull/9) If you want to get only summary information, use `--summary-only` flag together.
+- `--json` flag now exports all coverage data by default. ([#9](https://github.com/taiki-e/cargo-llvm-cov/pull/9))
+  If you want to get only summary information, use `--summary-only` flag together.
 
-- [Enable `--html` flag automatically when `--open` flag is passed.](https://github.com/taiki-e/cargo-llvm-cov/pull/5)
+- Enable `--html` flag automatically when `--open` flag is passed. ([#5](https://github.com/taiki-e/cargo-llvm-cov/pull/5))
 
-- [Add `--lcov` flag for exporting coverage data in "lcov" format.](https://github.com/taiki-e/cargo-llvm-cov/pull/9)
+- Add `--lcov` flag for exporting coverage data in "lcov" format. ([#9](https://github.com/taiki-e/cargo-llvm-cov/pull/9))
 
-- [Add `--output-dir` flag for specifying a directory to write coverage reports generated by `--html` or `--text` flag.](https://github.com/taiki-e/cargo-llvm-cov/pull/9)
+- Add `--output-dir` flag for specifying a directory to write coverage reports generated by `--html` or `--text` flag. ([#9](https://github.com/taiki-e/cargo-llvm-cov/pull/9))
 
-- [Fix a bug in cargo version detection.](https://github.com/taiki-e/cargo-llvm-cov/pull/7)
+- Fix a bug in cargo version detection. ([#7](https://github.com/taiki-e/cargo-llvm-cov/pull/7))
 
-- [Fix an issue where llvm-cov's auto-detection of color output doesn't work.](https://github.com/taiki-e/cargo-llvm-cov/pull/11)
+- Fix an issue where llvm-cov's auto-detection of color output doesn't work. ([#11](https://github.com/taiki-e/cargo-llvm-cov/pull/11))
 
 - Fix several bugs.
 
@@ -149,13 +154,14 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.1.0-alpha.2] - 2021-02-12
 
-- [Add `--text` option to output full report in plain text.](https://github.com/taiki-e/cargo-llvm-cov/pull/3)
+- Add `--text` option to output full report in plain text. ([#3](https://github.com/taiki-e/cargo-llvm-cov/pull/3), thanks @romac)
 
 ## [0.1.0-alpha.1] - 2021-01-23
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.4...v0.1.5
