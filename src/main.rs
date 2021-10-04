@@ -639,7 +639,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
                 return true;
             }
             let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
-            excluded_path.push(p.to_owned().try_into().unwrap());
+            excluded_path.push(p.join("").try_into().unwrap());
             false
         }) {}
     }
