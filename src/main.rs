@@ -599,7 +599,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         for &manifest_dir in &excluded {
             let package_path =
                 manifest_dir.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(manifest_dir);
-            excluded_path.push(package_path.into());
+            excluded_path.push(package_path.join(""));
         }
         return excluded_path;
     }
@@ -610,7 +610,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
             None => {
                 let package_path =
                     excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
-                excluded_path.push(package_path.into());
+                excluded_path.push(package_path.join(""));
                 continue;
             }
         };
@@ -639,7 +639,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
                 return true;
             }
             let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
-            excluded_path.push(p.to_owned().try_into().unwrap());
+            excluded_path.push(p.join("").try_into().unwrap());
             false
         }) {}
     }
