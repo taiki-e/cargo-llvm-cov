@@ -181,7 +181,7 @@ pub(crate) enum Subcommand {
         setting = AppSettings::StrictUtf8,
         setting = AppSettings::UnifiedHelpMessage,
     )]
-    Run(RunOptions),
+    Run(Box<RunOptions>),
 
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     #[clap(
