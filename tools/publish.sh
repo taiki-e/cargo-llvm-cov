@@ -27,19 +27,19 @@ error() {
 version="${1:?}"
 tag="v${version}"
 if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z\.-]+)?(\+[0-9A-Za-z\.-]+)?$ ]]; then
-    error "invalid version format: ${version}"
+    error "invalid version format: '${version}'"
     exit 1
 fi
 if [[ "${2:-}" == "--dry-run" ]]; then
-    dryrun="--dry-run"
+    dry_run="--dry-run"
     shift
 fi
 if [[ -n "${2:-}" ]]; then
-    error "invalid argument: $2"
+    error "invalid argument: '$2'"
     exit 1
 fi
 
-if [[ -z "${dryrun:-}" ]]; then
+if [[ -z "${dry_run:-}" ]]; then
     git diff --exit-code
     git diff --exit-code --staged
 fi
@@ -47,14 +47,14 @@ fi
 # Make sure that the version number of the workspace members matches the specified version.
 for member in "${MEMBERS[@]}"; do
     if [[ ! -d "${member}" ]]; then
-        error "not found workspace member ${member}"
+        error "not found workspace member '${member}'"
         exit 1
     fi
     (
         cd "${member}"
         actual=$(cargo pkgid | sed 's/.*#//')
         if [[ "${actual}" != "${version}" ]] && [[ "${actual}" != *":${version}" ]]; then
-            error "expected to release version ${version}, but ${member}/Cargo.toml contained ${actual}"
+            error "expected to release version '${version}', but ${member}/Cargo.toml contained '${actual}'"
             exit 1
         fi
     )
@@ -73,11 +73,13 @@ if gh release view "${tag}" &>/dev/null; then
     exit 1
 fi
 
-# Create and push tag.
-if [[ -n "${dryrun:-}" ]]; then
+# Exit if dry run.
+if [[ -n "${dry_run:-}" ]]; then
     echo "warning: skip creating a new tag '${tag}' due to dry run"
-else
-    echo "info: creating and pushing a new tag '${tag}'"
-    git tag "${tag}"
-    git push origin --tags
+    exit 0
 fi
+
+echo "info: creating and pushing a new tag '${tag}'"
+
+git tag "${tag}"
+git push origin --tags
