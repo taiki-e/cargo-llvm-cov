@@ -46,6 +46,8 @@ jobs:
         if: matrix.target == ''
       - run: cargo install cross --debug
         if: matrix.target != ''
+      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+        if: startsWith(matrix.os, 'windows')
       - run: cross test --target ${{ matrix.target }}
         if: matrix.target != ''
       - run: cargo test
