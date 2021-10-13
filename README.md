@@ -371,7 +371,7 @@ Currently, installing cargo-llvm-cov requires rustc 1.54+.
 ### From prebuilt binaries
 
 You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
-Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows.
+Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows (static executable).
 
 <!-- omit in toc -->
 ### Via Homebrew
