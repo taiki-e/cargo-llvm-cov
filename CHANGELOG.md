@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.9] - 2021-10-13
+
 - Distribute statically linked binary on Windows MSVC. ([#95](https://github.com/taiki-e/cargo-llvm-cov/pull/95))
 
 ## [0.1.8] - 2021-10-04
@@ -162,7 +164,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.5...v0.1.6
