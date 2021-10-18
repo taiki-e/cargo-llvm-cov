@@ -42,8 +42,6 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           component: llvm-tools-preview
-      - run: cargo install cargo-hack --debug
-        if: matrix.target == ''
       - run: cargo install cross --debug
         if: matrix.target != ''
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
@@ -52,8 +50,6 @@ jobs:
         if: matrix.target != ''
       - run: cargo test
         if: matrix.target == ''
-      - run: tools/check-minimal-versions.sh
-        if: matrix.target == '' && !startsWith(matrix.os, 'windows')
 
   build:
     strategy:
@@ -80,8 +76,12 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           component: clippy,rustfmt
-      - run: cargo clippy --all --all-features --all-targets
+      - run: cargo install cargo-hack --debug
       - run: cargo fmt --all -- --check
+        if: always()
+      - run: cargo clippy --all --all-features --all-targets
+        if: always()
+      - run: tools/check-minimal-versions.sh
         if: always()
       - run: shellcheck **/*.sh
         if: always()
