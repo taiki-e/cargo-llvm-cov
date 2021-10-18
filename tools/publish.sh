@@ -64,7 +64,6 @@ done
 # https://github.com/taiki-e/parse-changelog
 echo "============== CHANGELOG =============="
 parse-changelog CHANGELOG.md "${version}"
-echo
 echo "======================================="
 
 # Make sure the same release has not been created in the past.
