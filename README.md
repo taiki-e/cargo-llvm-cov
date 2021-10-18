@@ -46,12 +46,6 @@ ARGS:
             Arguments for the test binary
 
 OPTIONS:
-    -h, --help
-            Print help information
-
-    -V, --version
-            Print version information
-
         --json
             Export coverage data in "json" format
 
@@ -172,7 +166,9 @@ OPTIONS:
             Package to run tests for
 
         --workspace
-            Test all packages in the workspace [aliases: all]
+            Test all packages in the workspace
+
+            [aliases: all]
 
         --exclude <SPEC>...
             Exclude packages from the test
@@ -207,7 +203,9 @@ OPTIONS:
             Use -vv (-vvv) to propagate verbosity to cargo.
 
         --color <WHEN>
-            Coloring [possible values: auto, always, never]
+            Coloring
+
+            [possible values: auto, always, never]
 
         --manifest-path <PATH>
             Path to Cargo.toml
@@ -223,6 +221,12 @@ OPTIONS:
 
     -Z <FLAG>...
             Unstable (nightly-only) flags to Cargo
+
+    -h, --help
+            Print help information
+
+    -V, --version
+            Print version information
 
 SUBCOMMANDS:
     run

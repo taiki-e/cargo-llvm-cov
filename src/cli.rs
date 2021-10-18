@@ -1,7 +1,7 @@
 use std::mem;
 
 use camino::Utf8PathBuf;
-use clap::{AppSettings, ArgSettings, Clap};
+use clap::{AppSettings, ArgSettings, Parser};
 use serde::Deserialize;
 
 use crate::process::ProcessBuilder;
@@ -13,29 +13,25 @@ Use -h for short descriptions and --help for more details.";
 
 const MAX_TERM_WIDTH: usize = 100;
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(
     bin_name = "cargo",
     version,
     max_term_width(MAX_TERM_WIDTH),
-    setting(AppSettings::DeriveDisplayOrder),
-    setting(AppSettings::StrictUtf8),
-    setting(AppSettings::UnifiedHelpMessage)
+    setting(AppSettings::DeriveDisplayOrder)
 )]
 pub(crate) enum Opts {
-    #[clap(about(ABOUT), version, setting(AppSettings::DisableVersionForSubcommands))]
+    #[clap(about(ABOUT), version)]
     LlvmCov(Args),
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 #[clap(
     bin_name = "cargo llvm-cov",
     about(ABOUT),
+    version,
     max_term_width(MAX_TERM_WIDTH),
-    setting(AppSettings::DeriveDisplayOrder),
-    setting(AppSettings::DisableVersionForSubcommands),
-    setting(AppSettings::StrictUtf8),
-    setting(AppSettings::UnifiedHelpMessage)
+    setting(AppSettings::DeriveDisplayOrder)
 )]
 pub(crate) struct Args {
     #[clap(subcommand)]
@@ -171,15 +167,13 @@ impl Args {
     }
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub(crate) enum Subcommand {
     /// Run a binary or example and generate coverage report.
     #[clap(
         bin_name = "cargo llvm-cov run",
         max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::StrictUtf8,
-        setting = AppSettings::UnifiedHelpMessage,
     )]
     Run(Box<RunOptions>),
 
@@ -188,8 +182,6 @@ pub(crate) enum Subcommand {
         bin_name = "cargo llvm-cov clean",
         max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::StrictUtf8,
-        setting = AppSettings::UnifiedHelpMessage,
     )]
     Clean(CleanOptions),
 
@@ -198,14 +190,12 @@ pub(crate) enum Subcommand {
         bin_name = "cargo llvm-cov demangle",
         max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::StrictUtf8,
-        setting = AppSettings::UnifiedHelpMessage,
         setting = AppSettings::Hidden,
     )]
     Demangle,
 }
 
-#[derive(Debug, Default, Clap)]
+#[derive(Debug, Default, Parser)]
 pub(crate) struct LlvmCovOptions {
     /// Export coverage data in "json" format
     ///
@@ -307,7 +297,7 @@ impl LlvmCovOptions {
     }
 }
 
-#[derive(Debug, Default, Clap)]
+#[derive(Debug, Default, Parser)]
 pub(crate) struct BuildOptions {
     /// Number of parallel jobs, defaults to # of CPUs
     // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/util/command_prelude.rs#L332
@@ -393,7 +383,7 @@ impl BuildOptions {
     }
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub(crate) struct RunOptions {
     #[clap(flatten)]
     cov: LlvmCovOptions,
@@ -440,7 +430,7 @@ impl RunOptions {
     }
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, Parser)]
 pub(crate) struct CleanOptions {
     /// Remove artifacts that may affect the coverage results of packages in the workspace.
     #[clap(long)]
@@ -462,7 +452,7 @@ pub(crate) struct CleanOptions {
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
-#[derive(Debug, Default, Clap)]
+#[derive(Debug, Default, Parser)]
 pub(crate) struct ManifestOptions {
     /// Path to Cargo.toml
     #[clap(long, value_name = "PATH")]
@@ -504,7 +494,11 @@ pub(crate) enum Coloring {
 
 impl Coloring {
     pub(crate) fn cargo_color(self) -> &'static str {
-        clap::ArgEnum::as_arg(&self).unwrap()
+        match self {
+            Self::Auto => "auto",
+            Self::Always => "always",
+            Self::Never => "never",
+        }
     }
 }
 
@@ -513,7 +507,7 @@ mod tests {
     use std::{env, panic, path::Path, process::Command};
 
     use anyhow::Result;
-    use clap::{Clap, IntoApp};
+    use clap::{IntoApp, Parser};
     use fs_err as fs;
     use tempfile::Builder;
 
