@@ -31,7 +31,7 @@ use std::{
 
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
-use clap::Clap;
+use clap::Parser;
 use cli::RunOptions;
 use regex::Regex;
 use walkdir::WalkDir;
