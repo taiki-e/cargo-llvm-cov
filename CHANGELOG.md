@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.10] - 2021-10-24
+
 - Fix a compatibility issue with `cc`. ([#98](https://github.com/taiki-e/cargo-llvm-cov/pull/98))
 
 ## [0.1.9] - 2021-10-13
@@ -166,7 +168,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.6...v0.1.7
