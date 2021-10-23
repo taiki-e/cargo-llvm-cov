@@ -287,7 +287,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             .filter_entry(|e| {
                 let p = e.path();
                 if p.is_dir()
-                    && p.file_name().map_or(false, |f| f == "incremental" || f == ".fingerprint")
+                    && p.file_name()
+                        .map_or(false, |f| f == "incremental" || f == ".fingerprint" || f == "out")
                 {
                     return false;
                 }
