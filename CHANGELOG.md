@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.1.11] - 2021-11-13
 
-- Fix ["conflicting weak extern definition" error](https://github.com/rust-lang/rust/issues/85461) on windows.
+- Fix ["conflicting weak extern definition" error](https://github.com/rust-lang/rust/issues/85461) on windows. ([#101](https://github.com/taiki-e/cargo-llvm-cov/pull/101))
 
 ## [0.1.10] - 2021-10-24
 
