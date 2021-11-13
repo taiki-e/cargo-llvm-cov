@@ -153,12 +153,21 @@ fn set_env(cx: &Context, cmd: &mut ProcessBuilder) {
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
     rustflags.push_str(" -Z instrument-coverage");
+    // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
+    rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
+    if cfg!(windows) {
+        // `-C codegen-units=1` is needed to work around link error on windows
+        // https://github.com/rust-lang/rust/issues/85461
+        // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
+        rustflags.push_str(" -C codegen-units=1");
+    }
     if !cx.cov.no_cfg_coverage {
         rustflags.push_str(" --cfg coverage");
     }
-    // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
-    rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
     if cx.build.target.is_none() {
+        // https://github.com/dtolnay/trybuild/pull/121
+        // https://github.com/dtolnay/trybuild/issues/122
+        // https://github.com/dtolnay/trybuild/pull/123
         rustflags.push_str(" --cfg trybuild_no_target");
     }
 
@@ -170,6 +179,9 @@ fn set_env(cx: &Context, cmd: &mut ProcessBuilder) {
             " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
             cx.ws.doctests_dir
         ));
+        if cfg!(windows) {
+            rustdocflags.push_str(" -C codegen-units=1");
+        }
         if !cx.cov.no_cfg_coverage {
             rustdocflags.push_str(" --cfg coverage");
         }
