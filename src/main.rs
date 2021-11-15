@@ -537,8 +537,9 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     fn default_ignore_filename_regex() -> String {
         // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
         //       We may have a directory like tests/support, so maybe we need both?
+        // TODO: Check CARGO_HOME and RUSTUP_HOME env var instead of hard coding (.)?cargo/(.)?rustup
         format!(
-            r"(^|{0})(rustc{0}[0-9a-f]+|.cargo{0}(registry|git)|.rustup{0}toolchains|tests|examples|benches|target{0}llvm-cov-target){0}",
+            r"(^|{0})(rustc{0}[0-9a-f]+|(\.)?cargo{0}(registry|git)|(\.)?rustup{0}toolchains|tests|examples|benches|target{0}llvm-cov-target){0}",
             SEPARATOR
         )
     }

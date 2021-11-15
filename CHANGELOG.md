@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Exclude `CARGO_HOME` and `RUSTUP_HOME` used in the official rust docker image from reports. ([#105](https://github.com/taiki-e/cargo-llvm-cov/pull/105))
+
 ## [0.1.11] - 2021-11-13
 
 - Fix ["conflicting weak extern definition" error](https://github.com/rust-lang/rust/issues/85461) on windows. ([#101](https://github.com/taiki-e/cargo-llvm-cov/pull/101))
