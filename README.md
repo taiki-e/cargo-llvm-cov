@@ -299,6 +299,12 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov --no-run --lcov
 ```
 
+To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
+
+```sh
+cargo llvm-cov --open --ignore-filename-regex build
+```
+
 ### Continuous Integration
 
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
