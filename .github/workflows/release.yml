@@ -11,9 +11,11 @@ on:
 
 env:
   CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
   RUST_BACKTRACE: 1
+  RUSTFLAGS: -D warnings
+  RUSTUP_MAX_RETRIES: 10
 
 defaults:
   run:
