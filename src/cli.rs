@@ -276,15 +276,15 @@ pub(crate) struct LlvmCovOptions {
     #[clap(long, value_name = "PATTERN", setting(ArgSettings::ForbidEmptyValues))]
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
-    #[clap(long, hidden = true)]
+    #[clap(long, hide = true)]
     pub(crate) disable_default_ignore_filename_regex: bool,
     // For debugging (unstable)
     /// Hide instantiations from report
-    #[clap(long, hidden = true)]
+    #[clap(long, hide = true)]
     pub(crate) hide_instantiations: bool,
     // For debugging (unstable)
     /// Unset cfg(coverage)
-    #[clap(long, hidden = true)]
+    #[clap(long, hide = true)]
     pub(crate) no_cfg_coverage: bool,
     /// Run tests, but don't generate coverage report
     #[clap(long)]
