@@ -1,1 +1,6 @@
 msrv = "1.54"
+disallowed-methods = [
+    # https://internals.rust-lang.org/t/synchronized-ffi-access-to-posix-environment-variable-functions/15475
+    "std::env::remove_var",
+    "std::env::set_var",
+]
