@@ -25,15 +25,9 @@ pub(crate) struct Env {
 
 impl Env {
     pub(crate) fn new() -> Result<Self> {
-        let cargo_llvm_cov_flags = var("CARGO_LLVM_COV_FLAGS")?;
-        let cargo_llvm_profdata_flags = var("CARGO_LLVM_PROFDATA_FLAGS")?;
-        env::remove_var("LLVM_COV_FLAGS");
-        env::remove_var("LLVM_PROFDATA_FLAGS");
-        env::set_var("CARGO_INCREMENTAL", "0");
-
         Ok(Self {
-            cargo_llvm_cov_flags,
-            cargo_llvm_profdata_flags,
+            cargo_llvm_cov_flags: var("CARGO_LLVM_COV_FLAGS")?,
+            cargo_llvm_profdata_flags: var("CARGO_LLVM_PROFDATA_FLAGS")?,
             cargo: env::var_os("CARGO"),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,

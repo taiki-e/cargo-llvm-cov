@@ -40,14 +40,16 @@ pub(crate) struct ProcessBuilder {
 impl ProcessBuilder {
     /// Creates a new `ProcessBuilder`.
     pub(crate) fn new(program: impl Into<OsString>) -> Self {
-        Self {
+        let mut this = Self {
             program: program.into(),
             args: Vec::new(),
             env: BTreeMap::new(),
             dir: None,
             stdout_to_stderr: false,
             display_env_vars: Cell::new(false),
-        }
+        };
+        this.env("CARGO_INCREMENTAL", "0");
+        this
     }
 
     /// Adds an argument to pass to the program.

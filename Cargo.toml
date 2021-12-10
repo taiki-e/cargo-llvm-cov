@@ -23,7 +23,7 @@ anyhow = "1.0.34"
 atty = "0.2.11"
 camino = "1.0.3"
 cargo_metadata = "0.14"
-clap = "=3.0.0-beta.5"
+clap = { version = "=3.0.0-rc.3", features = ["derive"] }
 duct = "0.13.1"
 fs-err = "2.5"
 glob = "0.3"
@@ -35,7 +35,7 @@ rustc-demangle = "0.1.21"
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1"
 shell-escape = "0.1.5"
-termcolor = "1.1"
+termcolor = "1.1.2"
 walkdir = "2"
 
 [dev-dependencies]
