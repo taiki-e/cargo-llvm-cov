@@ -1,6 +1,12 @@
 msrv = "1.54"
 disallowed-methods = [
+    # Since we are using fs-err crate, `fs::*` functions will output a better error.
+    { path = "std::path::Path::canonicalize", reason = "use `fs::canonicalize` instead" },
+    { path = "std::path::Path::metadata", reason = "use `fs::metadata` instead" },
+    { path = "std::path::Path::read_dir", reason = "use `fs::read_dir` instead" },
+    { path = "std::path::Path::read_link", reason = "use `fs::read_link` instead" },
+    { path = "std::path::Path::symlink_metadata", reason = "use `fs::symlink_metadata` instead" },
     # https://internals.rust-lang.org/t/synchronized-ffi-access-to-posix-environment-variable-functions/15475
-    "std::env::remove_var",
-    "std::env::set_var",
+    { path = "std::env::remove_var" },
+    { path = "std::env::set_var" },
 ]
