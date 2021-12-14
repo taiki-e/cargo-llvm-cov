@@ -23,7 +23,11 @@ impl Cargo {
     fn new(env: &Env, workspace_root: &Utf8Path) -> Result<Self> {
         let path = env.cargo();
         let version = cmd!(path, "--version").dir(workspace_root).read()?;
-        let nightly = version.contains("-nightly") || version.contains("-dev");
+        let nightly = version.contains("-nightly")
+            || version.contains("-dev")
+            // Check if `rustc -Z help` succeeds, to support custom built toolchains
+            // with nightly features enabled. 
+            || cmd!("rustc", "-Z", "help").run_with_output().is_ok();
 
         Ok(Self { path: path.into(), nightly })
     }
