@@ -27,7 +27,6 @@ pub fn cargo_llvm_cov() -> Command {
     cmd.arg("llvm-cov");
     cmd.env_remove("RUSTFLAGS")
         .env_remove("RUSTDOCFLAGS")
-        .env_remove("CARGO_TARGET_DIR")
         .env_remove("CARGO_BUILD_RUSTFLAGS")
         .env_remove("CARGO_BUILD_RUSTDOCFLAGS")
         .env_remove("CARGO_TERM_VERBOSE")
