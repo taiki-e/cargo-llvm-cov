@@ -196,6 +196,8 @@ OPTIONS:
 SUBCOMMANDS:
     run
             Run a binary or example and generate coverage report
+    show-env
+            Output the environment set by cargo-llvm-cov to build Rust projects
     clean
             Remove artifacts that cargo-llvm-cov has generated in the past
     help

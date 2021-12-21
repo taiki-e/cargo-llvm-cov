@@ -177,6 +177,14 @@ pub(crate) enum Subcommand {
     )]
     Run(Box<RunOptions>),
 
+    /// Output the environment set by cargo-llvm-cov to build Rust projects.
+    #[clap(
+        bin_name = "cargo llvm-cov show-env",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+    )]
+    ShowEnv,
+
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     #[clap(
         bin_name = "cargo llvm-cov clean",
