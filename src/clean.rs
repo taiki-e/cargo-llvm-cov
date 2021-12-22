@@ -135,7 +135,7 @@ fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
 }
 
 fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
-    let trybuild_dir = &ws.target_dir.join("tests");
+    let trybuild_dir = &ws.metadata.target_directory.join("tests");
     let trybuild_target = &trybuild_dir.join("target");
     let re = pkg_hash_re(ws, pkg_ids);
 

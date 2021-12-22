@@ -198,7 +198,6 @@ fn set_env(cx: &Context, cmd: &mut ProcessBuilder) {
     }
     cmd.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
     cmd.env("CARGO_INCREMENTAL", "0");
-    cmd.env("CARGO_TARGET_DIR", &cx.ws.target_dir);
 }
 
 fn run_test(cx: &Context, args: &Args) -> Result<()> {
@@ -341,7 +340,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     // trybuild
-    let trybuild_dir = &cx.ws.target_dir.join("tests");
+    let trybuild_dir = &cx.ws.metadata.target_directory.join("tests");
     let mut trybuild_target = trybuild_dir.join("target");
     if let Some(target) = &cx.build.target {
         trybuild_target.push(target);
@@ -350,7 +349,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     trybuild_target.push("debug");
     if trybuild_target.is_dir() {
         let mut trybuild_targets = vec![];
-        for metadata in trybuild_metadata(&cx.ws.target_dir)? {
+        for metadata in trybuild_metadata(&cx.ws.metadata.target_directory)? {
             for package in metadata.packages {
                 for target in package.targets {
                     trybuild_targets.push(target.name);

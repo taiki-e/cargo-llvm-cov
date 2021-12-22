@@ -254,6 +254,9 @@ pub(crate) fn test_args(cx: &Context, args: &Args, cmd: &mut ProcessBuilder) {
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
+    cmd.arg("--target-dir");
+    cmd.arg(&cx.ws.target_dir);
+
     cx.build.cargo_args(cmd);
     cx.manifest.cargo_args(cmd);
 
@@ -290,6 +293,9 @@ pub(crate) fn run_args(cx: &Context, args: &RunOptions, cmd: &mut ProcessBuilder
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
+    cmd.arg("--target-dir");
+    cmd.arg(&cx.ws.target_dir);
+
     cx.build.cargo_args(cmd);
     cx.manifest.cargo_args(cmd);
 
@@ -324,6 +330,12 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.arg("--color");
         cmd.arg(color.cargo_color());
     }
+
+    cmd.arg("--manifest-path");
+    cmd.arg(&cx.ws.current_manifest);
+
+    cmd.arg("--target-dir");
+    cmd.arg(&cx.ws.target_dir);
 
     cx.manifest.cargo_args(cmd);
 
