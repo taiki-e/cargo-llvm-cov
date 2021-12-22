@@ -1,5 +1,4 @@
 cargo-llvm-cov
-
 Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
