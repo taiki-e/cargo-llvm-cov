@@ -33,7 +33,6 @@ This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] a
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-
 Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
 
 Use -h for short descriptions and --help for more details.

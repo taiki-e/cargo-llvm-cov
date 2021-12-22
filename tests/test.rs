@@ -16,7 +16,8 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
         ("hide-instantiations.txt", &["--text", "--hide-instantiations"]),
         ("summary.txt", &[]),
         ("json", &["--json", "--summary-only"]),
-        ("full.json", &["--json"]),
+        // TODO: full JSON output is unstable between platform.
+        // ("full.json", &["--json"]),
         ("lcov.info", &["--lcov", "--summary-only"]),
     ]
 }
