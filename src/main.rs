@@ -37,7 +37,7 @@ use std::{
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use cli::RunOptions;
+use cli::{RunOptions, ShowEnvOptions};
 use regex::Regex;
 use walkdir::WalkDir;
 
@@ -57,6 +57,7 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::parse();
+    let cx = &context_from_args(&mut args)?;
 
     match args.subcommand {
         Some(Subcommand::Demangle) => {
@@ -92,9 +93,8 @@ fn try_main() -> Result<()> {
             }
         }
 
-        Some(Subcommand::ShowEnv) => {
-            let cx = &context_from_args(&mut args)?;
-            set_env(cx, &mut std::io::stdout());
+        Some(Subcommand::ShowEnv(options)) => {
+            set_env(cx, &mut ShowEnvWriter { target: std::io::stdout(), options });
         }
 
         None => {
@@ -106,8 +106,6 @@ fn try_main() -> Result<()> {
                 args.doctests = true;
                 warn!("--doc option is unstable");
             }
-
-            let cx = &context_from_args(&mut args)?;
 
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
@@ -172,10 +170,21 @@ impl EnvTarget for ProcessBuilder {
     }
 }
 
-impl EnvTarget for std::io::Stdout {
+struct ShowEnvWriter<W: std::io::Write> {
+    target: W,
+    options: ShowEnvOptions,
+}
+
+impl<W: std::io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) {
-        use std::io::Write;
-        writeln!(self, r#"{}="{}""#, key, value).expect("failed to write to stdout");
+        writeln!(
+            self.target,
+            r#"{prefix}{key}="{value}""#,
+            prefix = if self.options.export_prefix { "export " } else { "" },
+            key = key,
+            value = value,
+        )
+        .expect("failed to write to stdout");
     }
 }
 

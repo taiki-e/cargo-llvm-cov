@@ -183,7 +183,7 @@ pub(crate) enum Subcommand {
         max_term_width = MAX_TERM_WIDTH,
         setting = AppSettings::DeriveDisplayOrder,
     )]
-    ShowEnv,
+    ShowEnv(ShowEnvOptions),
 
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     #[clap(
@@ -436,6 +436,13 @@ impl RunOptions {
     pub(crate) fn manifest(&mut self) -> ManifestOptions {
         mem::take(&mut self.manifest)
     }
+}
+
+#[derive(Debug, Parser)]
+pub(crate) struct ShowEnvOptions {
+    /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
+    #[clap(long)]
+    pub(crate) export_prefix: bool,
 }
 
 #[derive(Debug, Parser)]
