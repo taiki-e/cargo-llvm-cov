@@ -23,7 +23,7 @@ anyhow = "1.0.34"
 atty = "0.2.11"
 camino = "1.0.3"
 cargo_metadata = "0.14"
-clap = { version = "=3.0.0-rc.7", features = ["derive"] }
+clap = { version = "=3.0.0-rc.8", features = ["derive"] }
 duct = "0.13.1"
 fs-err = "2.5"
 glob = "0.3"
