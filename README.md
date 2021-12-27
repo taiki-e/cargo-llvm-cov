@@ -302,7 +302,7 @@ In combination with the `show-env` subcommand, coverage can also be produced fro
 
 ```sh
 cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
-source (cargo llvm-cov show-env --export-prefix)
+source <(cargo llvm-cov show-env --export-prefix)
 cargo build # build rust binaries
 # commands using binaries in target/debug/*, including `cargo test`
 cargo llvm-cov --no-run --lcov
