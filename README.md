@@ -402,6 +402,16 @@ paru -S cargo-llvm-cov
 
 NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
+<!-- omit in toc -->
+### On GitHub Actions
+
+You can use [taiki-e/install-action](https://github.com/taiki-e/install-action) to install prebuilt binaries on Linux, macOS, and Windows.
+This makes the installation faster and may avoid the impact of [problems caused by upstream changes](https://github.com/tokio-rs/bytes/issues/506).
+
+```yaml
+- uses: taiki-e/install-action@cargo-llvm-cov
+```
+
 ## Known limitations
 
 - Due to a bug of `-Z instrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
@@ -410,12 +420,19 @@ NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
+## Related Projects
+
+- [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
+- [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
+
 [#1]: https://github.com/taiki-e/cargo-llvm-cov/issues/1
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
 [#26]: https://github.com/taiki-e/cargo-llvm-cov/issues/26
+[cargo-hack]: https://github.com/taiki-e/cargo-hack
+[cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
 [instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
