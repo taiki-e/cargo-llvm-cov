@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - dev
       - staging
   schedule:
     - cron: '0 1 * * *'
@@ -32,9 +33,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-18.04
-          - os: ubuntu-18.04
-            target: x86_64-unknown-linux-musl
-          - os: macos-latest
+          - os: macos-10.15
           - os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:
@@ -44,30 +43,39 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           component: llvm-tools-preview
-      - run: cargo install cross --debug
-        if: matrix.target != ''
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-minimal-versions
+        if: startsWith(matrix.rust, 'nightly')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: startsWith(matrix.os, 'windows')
+      - run: cargo test --workspace
+      - run: cargo minimal-versions build --workspace --all-features --ignore-private
+        if: startsWith(matrix.rust, 'nightly')
+
+  cross:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+    runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/install-action@cross
       - run: cross test --target ${{ matrix.target }}
-        if: matrix.target != ''
-      - run: cargo test
-        if: matrix.target == ''
 
   build:
-    strategy:
-      matrix:
-        range:
-          # This is the minimum supported Rust version of this crate.
-          # When updating this, the reminder to update the minimum supported
-          # Rust version in README.md, Cargo.toml, and .clippy.toml.
-          - 1.54..
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
         with:
           persist-credentials: false
-      - run: cargo install cargo-hack --debug
-      - run: cargo hack build --all --ignore-private --no-dev-deps --version-range ${{ matrix.range }} --version-step 2
+      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/install-action@cargo-hack
+      - run: cargo hack build --workspace --ignore-private --no-dev-deps --version-range .. --version-step 2
 
   tidy:
     runs-on: ubuntu-18.04
@@ -78,14 +86,12 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           component: clippy,rustfmt
-      - run: cargo install cargo-hack --debug
+      - uses: taiki-e/install-action@shellcheck
       - run: cargo fmt --all -- --check
         if: always()
-      - run: cargo clippy --all --all-features --all-targets
+      - run: cargo clippy --workspace --all-features --all-targets
         if: always()
-      - run: tools/check-minimal-versions.sh
-        if: always()
-      - run: shellcheck **/*.sh
+      - run: shellcheck $(git ls-files '*.sh')
         if: always()
 
   # This job doesn't actually test anything, but they're used to tell bors the

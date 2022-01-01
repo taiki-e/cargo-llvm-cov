@@ -57,7 +57,7 @@ jobs:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-18.04
           - target: x86_64-apple-darwin
-            os: macos-latest
+            os: macos-10.15
           - target: x86_64-pc-windows-msvc
             os: windows-latest
     runs-on: ${{ matrix.os }}
@@ -78,5 +78,5 @@ jobs:
           zip: windows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_PROFILE_RELEASE_LTO: true
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+          CARGO_PROFILE_RELEASE_LTO: true
