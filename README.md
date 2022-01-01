@@ -22,6 +22,7 @@ This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] a
   - [Exclude function from coverage](#exclude-function-from-coverage)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
+- [Related Projects](#related-projects)
 - [License](#license)
 
 ## Usage
@@ -332,7 +333,7 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install nightly --component llvm-tools-preview
       - name: Install cargo-llvm-cov
-        run: curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz | tar xzf - -C ~/.cargo/bin
+        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
