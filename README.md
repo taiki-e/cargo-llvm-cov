@@ -305,7 +305,8 @@ cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage
 source <(cargo llvm-cov show-env --export-prefix)
 cargo build # build rust binaries
 # commands using binaries in target/debug/*, including `cargo test`
-cargo llvm-cov --no-run --lcov
+# ...
+cargo llvm-cov --no-run --lcov # generate report without tests
 ```
 
 To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
