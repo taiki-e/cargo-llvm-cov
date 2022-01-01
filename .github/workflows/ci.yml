@@ -32,18 +32,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-18.04
-          - os: macos-10.15
-          - os: windows-latest
-    runs-on: ${{ matrix.os }}
+          - rust: nightly
+          - rust: nightly
+            os: macos-10.15
+          - rust: nightly
+            os: windows-latest
+    runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
     steps:
       - uses: actions/checkout@v2
         with:
           persist-credentials: false
       - uses: taiki-e/github-actions/install-rust@main
         with:
+          toolchain: ${{ matrix.rust }}
           component: llvm-tools-preview
       - uses: taiki-e/install-action@cargo-hack
+        if: startsWith(matrix.rust, 'nightly')
       - uses: taiki-e/install-action@cargo-minimal-versions
         if: startsWith(matrix.rust, 'nightly')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
