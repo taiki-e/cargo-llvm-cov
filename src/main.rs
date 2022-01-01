@@ -37,7 +37,7 @@ use std::{
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use cli::RunOptions;
+use cli::{RunOptions, ShowEnvOptions};
 use regex::Regex;
 use walkdir::WalkDir;
 
@@ -57,6 +57,7 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::parse();
+    let cx = &context_from_args(&mut args)?;
 
     match args.subcommand {
         Some(Subcommand::Demangle) => {
@@ -92,6 +93,10 @@ fn try_main() -> Result<()> {
             }
         }
 
+        Some(Subcommand::ShowEnv(options)) => {
+            set_env(cx, &mut ShowEnvWriter { target: std::io::stdout(), options });
+        }
+
         None => {
             term::set_quiet(args.quiet);
             if args.doctests {
@@ -101,18 +106,6 @@ fn try_main() -> Result<()> {
                 args.doctests = true;
                 warn!("--doc option is unstable");
             }
-
-            let cx = &Context::new(
-                args.build(),
-                args.manifest(),
-                args.cov(),
-                args.workspace,
-                &args.exclude,
-                &args.package,
-                args.quiet,
-                args.doctests,
-                args.no_run,
-            )?;
 
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
@@ -134,6 +127,20 @@ fn try_main() -> Result<()> {
     Ok(())
 }
 
+fn context_from_args(args: &mut Args) -> Result<Context> {
+    Context::new(
+        args.build(),
+        args.manifest(),
+        args.cov(),
+        args.workspace,
+        &args.exclude,
+        &args.package,
+        args.quiet,
+        args.doctests,
+        args.no_run,
+    )
+}
+
 fn create_dirs(cx: &Context) -> Result<()> {
     fs::create_dir_all(&cx.ws.target_dir)?;
 
@@ -153,7 +160,35 @@ fn create_dirs(cx: &Context) -> Result<()> {
     Ok(())
 }
 
-fn set_env(cx: &Context, cmd: &mut ProcessBuilder) {
+trait EnvTarget {
+    fn set(&mut self, key: &str, value: &str);
+}
+
+impl EnvTarget for ProcessBuilder {
+    fn set(&mut self, key: &str, value: &str) {
+        self.env(key, value);
+    }
+}
+
+struct ShowEnvWriter<W: std::io::Write> {
+    target: W,
+    options: ShowEnvOptions,
+}
+
+impl<W: std::io::Write> EnvTarget for ShowEnvWriter<W> {
+    fn set(&mut self, key: &str, value: &str) {
+        writeln!(
+            self.target,
+            r#"{prefix}{key}="{value}""#,
+            prefix = if self.options.export_prefix { "export " } else { "" },
+            key = key,
+            value = value,
+        )
+        .expect("failed to write to stdout");
+    }
+}
+
+fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.package_name));
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
@@ -192,12 +227,12 @@ fn set_env(cx: &Context, cmd: &mut ProcessBuilder) {
         }
     }
 
-    cmd.env("RUSTFLAGS", &rustflags);
+    target.set("RUSTFLAGS", rustflags);
     if let Some(rustdocflags) = rustdocflags {
-        cmd.env("RUSTDOCFLAGS", &rustdocflags);
+        target.set("RUSTDOCFLAGS", rustdocflags);
     }
-    cmd.env("LLVM_PROFILE_FILE", &*llvm_profile_file);
-    cmd.env("CARGO_INCREMENTAL", "0");
+    target.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
+    target.set("CARGO_INCREMENTAL", "0");
 }
 
 fn run_test(cx: &Context, args: &Args) -> Result<()> {

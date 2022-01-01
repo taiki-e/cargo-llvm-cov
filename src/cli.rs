@@ -177,6 +177,14 @@ pub(crate) enum Subcommand {
     )]
     Run(Box<RunOptions>),
 
+    /// Output the environment set by cargo-llvm-cov to build Rust projects.
+    #[clap(
+        bin_name = "cargo llvm-cov show-env",
+        max_term_width = MAX_TERM_WIDTH,
+        setting = AppSettings::DeriveDisplayOrder,
+    )]
+    ShowEnv(ShowEnvOptions),
+
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     #[clap(
         bin_name = "cargo llvm-cov clean",
@@ -428,6 +436,13 @@ impl RunOptions {
     pub(crate) fn manifest(&mut self) -> ManifestOptions {
         mem::take(&mut self.manifest)
     }
+}
+
+#[derive(Debug, Parser)]
+pub(crate) struct ShowEnvOptions {
+    /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
+    #[clap(long)]
+    pub(crate) export_prefix: bool,
 }
 
 #[derive(Debug, Parser)]
