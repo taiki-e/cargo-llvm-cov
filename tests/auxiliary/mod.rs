@@ -7,8 +7,7 @@ use std::{
     io::{Read, Seek, Write},
     mem::size_of,
     path::{Path, PathBuf},
-    process::{Command, ExitStatus},
-    sync::atomic::{AtomicUsize, Ordering::Relaxed},
+    process::{Command, ExitStatus, Stdio},
 };
 
 use anyhow::Result;
@@ -16,7 +15,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use easy_ext::ext;
 use fs_err as fs;
 use once_cell::sync::Lazy;
-use tempfile::{Builder, TempDir};
+use tempfile::TempDir;
 use walkdir::WalkDir;
 
 pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
@@ -46,10 +45,11 @@ pub fn test_report(
     args: &[&str],
     envs: &[(&str, &str)],
 ) -> Result<()> {
-    let workspace_root = test_project(model, name)?;
+    let workspace_root = test_project(model)?;
     let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
+    let expected = &fs::read_to_string(output_path).unwrap_or_default();
     let mut cmd = cargo_llvm_cov();
     if let Some(subcommand) = subcommand {
         cmd.arg(subcommand);
@@ -64,16 +64,19 @@ pub fn test_report(
     cmd.assert_success();
 
     normalize_output(output_path, args)?;
-    assert_output(output_path)
+    assert_output(output_path, expected)
 }
 
-pub fn assert_output(output_path: &Utf8Path) -> Result<()> {
+pub fn assert_output(output_path: &Utf8Path, expected: &str) -> Result<()> {
     if env::var_os("CI").is_some() {
-        assert!(Command::new("git")
-            .args(["--no-pager", "diff", "--exit-code"])
+        let mut child = Command::new("git")
+            .args(["--no-pager", "diff", "--no-index", "--"])
+            .arg("-")
             .arg(output_path)
-            .status()?
-            .success());
+            .stdin(Stdio::piped())
+            .spawn()?;
+        child.stdin.as_mut().unwrap().write_all(expected.as_bytes()).unwrap();
+        assert!(child.wait().unwrap().success());
     }
     Ok(())
 }
@@ -96,12 +99,8 @@ pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn test_project(model: &str, name: &str) -> Result<TempDir> {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-    let tmpdir = Builder::new()
-        .prefix(&format!("test_project_{}_{}_{}", model, name, COUNTER.fetch_add(1, Relaxed)))
-        .tempdir()?;
+pub fn test_project(model: &str) -> Result<TempDir> {
+    let tmpdir = tempfile::tempdir()?;
     let workspace_root = tmpdir.path();
     let model_path = FIXTURES_PATH.join("crates").join(model);
 

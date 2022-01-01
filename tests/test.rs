@@ -5,7 +5,10 @@
 mod auxiliary;
 
 use anyhow::Context as _;
-use auxiliary::{cargo_llvm_cov, perturb_one_header, test_project, test_report, CommandExt};
+use auxiliary::{
+    assert_output, cargo_llvm_cov, normalize_output, perturb_one_header, test_project, test_report,
+    CommandExt, FIXTURES_PATH,
+};
 use camino::Utf8Path;
 use fs_err as fs;
 use tempfile::tempdir;
@@ -117,7 +120,7 @@ fn no_coverage() {
 
 #[test]
 fn merge() {
-    let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join("merge");
+    let output_dir = FIXTURES_PATH.join("coverage-reports").join("merge");
     merge_with_failure_mode(&output_dir, false);
 }
 
@@ -132,8 +135,9 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
     let model = "merge";
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
-        let workspace_root = test_project(model, model).unwrap();
+        let workspace_root = test_project(model).unwrap();
         let output_path = &output_dir.join(model).with_extension(extension);
+        let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "a"])
             .current_dir(workspace_root.path())
@@ -156,8 +160,8 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
             cmd.args(&["--failure-mode", "all"]);
             cmd.assert_success();
         } else {
-            auxiliary::normalize_output(output_path, args).unwrap();
-            auxiliary::assert_output(output_path).unwrap();
+            normalize_output(output_path, args).unwrap();
+            assert_output(output_path, expected).unwrap();
         }
     }
 }
@@ -166,11 +170,12 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
 fn clean_ws() {
     let model = "merge";
     let name = "clean_ws";
-    let output_dir = auxiliary::FIXTURES_PATH.join("coverage-reports").join(model);
+    let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
-        let workspace_root = test_project(model, name).unwrap();
+        let workspace_root = test_project(model).unwrap();
         let output_path = &output_dir.join(name).with_extension(extension);
+        let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "a"])
             .current_dir(workspace_root.path())
@@ -182,8 +187,8 @@ fn clean_ws() {
             .current_dir(workspace_root.path())
             .assert_success();
 
-        auxiliary::normalize_output(output_path, args).unwrap();
-        auxiliary::assert_output(output_path).unwrap();
+        normalize_output(output_path, args).unwrap();
+        assert_output(output_path, expected).unwrap();
 
         cargo_llvm_cov()
             .args(["clean", "--color", "never", "--workspace"])
@@ -200,8 +205,8 @@ fn clean_ws() {
             .current_dir(workspace_root.path())
             .assert_success();
 
-        auxiliary::normalize_output(output_path, args).unwrap();
-        auxiliary::assert_output(output_path).unwrap();
+        normalize_output(output_path, args).unwrap();
+        assert_output(output_path, expected).unwrap();
     }
 }
 
@@ -209,7 +214,7 @@ fn clean_ws() {
 #[test]
 fn open_report() {
     let model = "real1";
-    let workspace_root = test_project(model, "open_report").unwrap();
+    let workspace_root = test_project(model).unwrap();
     cargo_llvm_cov()
         .args(["--color", "never", "--open"])
         .current_dir(workspace_root.path())

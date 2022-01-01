@@ -169,7 +169,6 @@ fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use rand::{distributions::Alphanumeric, Rng};
     use regex::Regex;
 
     fn pkg_hash_re(pkg_names: &[String]) -> Result<Regex, regex::Error> {
@@ -191,11 +190,7 @@ mod tests {
     fn pkg_hash_re_size_limit() {
         fn gen_pkg_names(num_pkg: usize, pkg_name_size: usize) -> Vec<String> {
             (0..num_pkg)
-                .map(|_| {
-                    (0..pkg_name_size)
-                        .map(|_| rand::thread_rng().sample(Alphanumeric) as char)
-                        .collect::<String>()
-                })
+                .map(|_| ('a'..='z').cycle().take(pkg_name_size).collect())
                 .collect::<Vec<_>>()
         }
 

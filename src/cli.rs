@@ -519,12 +519,17 @@ impl Coloring {
 
 #[cfg(test)]
 mod tests {
-    use std::{env, panic, path::Path, process::Command};
+    use std::{
+        env,
+        io::Write,
+        panic,
+        path::Path,
+        process::{Command, Stdio},
+    };
 
     use anyhow::Result;
     use clap::{IntoApp, Parser};
     use fs_err as fs;
-    use tempfile::Builder;
 
     use super::{Args, Opts, MAX_TERM_WIDTH};
 
@@ -644,15 +649,15 @@ mod tests {
         let expected = fs::read_to_string(expected_path).unwrap();
         if expected != actual {
             if env::var_os("CI").is_some() {
-                let outdir = Builder::new().prefix("assert_diff").tempdir().unwrap();
-                let actual_path = &outdir.path().join(expected_path.file_name().unwrap());
-                fs::write(actual_path, actual).unwrap();
-                let status = Command::new("git")
+                let mut child = Command::new("git")
                     .args(["--no-pager", "diff", "--no-index", "--"])
-                    .args([expected_path, actual_path])
-                    .status()
+                    .arg(expected_path)
+                    .arg("-")
+                    .stdin(Stdio::piped())
+                    .spawn()
                     .unwrap();
-                assert!(!status.success());
+                child.stdin.as_mut().unwrap().write_all(actual.as_bytes()).unwrap();
+                assert!(!child.wait().unwrap().success());
                 panic!("assertion failed");
             } else {
                 fs::write(expected_path, actual).unwrap();
