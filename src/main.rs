@@ -31,6 +31,7 @@ use std::{
     collections::HashMap,
     convert::TryInto,
     ffi::{OsStr, OsString},
+    path::Path,
     slice,
 };
 
@@ -42,24 +43,30 @@ use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
-    cli::{Args, Coloring, Opts, Subcommand},
+    cli::{Args, Opts, Subcommand},
     config::StringOrArray,
     context::Context,
     process::ProcessBuilder,
+    term::Coloring,
 };
 
 fn main() {
     if let Err(e) = try_main() {
         error!("{:#}", e);
+    }
+    if term::error()
+        || term::warn()
+            && env::var_os("CARGO_LLVM_COV_DENY_WARNINGS").filter(|v| v == "true").is_some()
+    {
         std::process::exit(1)
     }
 }
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::parse();
-    let cx = &context_from_args(&mut args)?;
+    term::quiet::set(args.quiet);
 
-    match args.subcommand {
+    match args.subcommand.take() {
         Some(Subcommand::Demangle) => {
             demangler::run()?;
         }
@@ -69,7 +76,7 @@ fn try_main() -> Result<()> {
         }
 
         Some(Subcommand::Run(mut args)) => {
-            term::set_quiet(args.quiet);
+            term::quiet::set(term::quiet() | args.quiet);
 
             let cx = &Context::new(
                 args.build(),
@@ -78,7 +85,6 @@ fn try_main() -> Result<()> {
                 false,
                 &[],
                 args.package.as_ref().map(slice::from_ref).unwrap_or_default(),
-                args.quiet,
                 false,
                 false,
             )?;
@@ -94,11 +100,13 @@ fn try_main() -> Result<()> {
         }
 
         Some(Subcommand::ShowEnv(options)) => {
+            let cx = &context_from_args(&mut args)?;
             set_env(cx, &mut ShowEnvWriter { target: std::io::stdout(), options });
         }
 
         None => {
-            term::set_quiet(args.quiet);
+            let cx = &context_from_args(&mut args)?;
+            let tmp = term::warn(); // The following warnings should not be promoted to an error.
             if args.doctests {
                 warn!("--doctests option is unstable");
             }
@@ -106,6 +114,7 @@ fn try_main() -> Result<()> {
                 args.doctests = true;
                 warn!("--doc option is unstable");
             }
+            term::warn::set(tmp);
 
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
@@ -135,7 +144,6 @@ fn context_from_args(args: &mut Args) -> Result<Context> {
         args.workspace,
         &args.exclude,
         &args.package,
-        args.quiet,
         args.doctests,
         args.no_run,
     )
@@ -189,7 +197,7 @@ impl<W: std::io::Write> EnvTarget for ShowEnvWriter<W> {
 }
 
 fn set_env(cx: &Context, target: &mut impl EnvTarget) {
-    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.package_name));
+    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.name));
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
     rustflags.push_str(" -Z instrument-coverage");
@@ -199,6 +207,8 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         // `-C codegen-units=1` is needed to work around link error on windows
         // https://github.com/rust-lang/rust/issues/85461
         // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
+        // This has been fixed in https://github.com/rust-lang/rust/pull/91470,
+        // but old nightly compilers still need this.
         rustflags.push_str(" -C codegen-units=1");
     }
     if !cx.cov.no_cfg_coverage {
@@ -235,20 +245,24 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     target.set("CARGO_INCREMENTAL", "0");
 }
 
+fn has_z_flag(args: &Args, name: &str) -> bool {
+    args.unstable_flags.iter().any(|f| f == name)
+}
+
 fn run_test(cx: &Context, args: &Args) -> Result<()> {
-    let mut cargo = cx.cargo_process();
+    let mut cargo = cx.cargo();
 
     set_env(cx, &mut cargo);
 
     cargo.arg("test");
-    if cx.doctests && !args.unstable_flags.iter().any(|f| f == "doctest-in-workspace") {
+    if cx.doctests && !has_z_flag(args, "doctest-in-workspace") {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
     cargo::test_args(cx, args, &mut cargo);
 
-    if cx.verbose {
+    if term::verbose() {
         status!("Running", "{}", cargo);
     }
     cargo.stdout_to_stderr().run()?;
@@ -256,14 +270,14 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
 }
 
 fn run_run(cx: &Context, args: &RunOptions) -> Result<()> {
-    let mut cargo = cx.cargo_process();
+    let mut cargo = cx.cargo();
 
     set_env(cx, &mut cargo);
 
     cargo.arg("run");
     cargo::run_args(cx, args, &mut cargo);
 
-    if cx.verbose {
+    if term::verbose() {
         status!("Running", "{}", cargo);
     }
     cargo.stdout_to_stderr().run()?;
@@ -308,10 +322,8 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     let mut cmd = cx.process(&cx.llvm_profdata);
     cmd.args(["merge", "-sparse"])
         .args(
-            glob::glob(
-                cx.ws.target_dir.join(format!("{}-*.profraw", cx.ws.package_name)).as_str(),
-            )?
-            .filter_map(Result::ok),
+            glob::glob(cx.ws.target_dir.join(format!("{}-*.profraw", cx.ws.name)).as_str())?
+                .filter_map(Result::ok),
         )
         .arg("-o")
         .arg(&cx.ws.profdata_file);
@@ -321,10 +333,10 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     if let Some(jobs) = cx.build.jobs {
         cmd.arg(format!("-num-threads={}", jobs));
     }
-    if let Some(flags) = &cx.env.cargo_llvm_profdata_flags {
+    if let Some(flags) = &cx.cargo_llvm_profdata_flags {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
-    if cx.verbose {
+    if term::verbose() {
         status!("Running", "{}", cmd);
     }
     cmd.stdout_to_stderr().run()?;
@@ -514,7 +526,7 @@ impl Format {
                     &format!("-show-instantiations={}", !cx.cov.hide_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
-                    &format!("-Xdemangler={}", cx.env.current_exe.display()),
+                    &format!("-Xdemangler={}", cx.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
                 ]);
@@ -534,12 +546,12 @@ impl Format {
             Self::None => {}
         }
 
-        if let Some(flags) = &cx.env.cargo_llvm_cov_flags {
+        if let Some(flags) = &cx.cargo_llvm_cov_flags {
             cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
         }
 
         if let Some(output_path) = &cx.cov.output_path {
-            if cx.verbose {
+            if term::verbose() {
                 status!("Running", "{}", cmd);
             }
             let out = cmd.read()?;
@@ -549,7 +561,7 @@ impl Format {
             return Ok(());
         }
 
-        if cx.verbose {
+        if term::verbose() {
             status!("Running", "{}", cmd);
         }
         cmd.run()?;
@@ -571,14 +583,13 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     #[cfg(not(windows))]
     const SEPARATOR: &str = "/";
     #[cfg(windows)]
-    const SEPARATOR: &str = "\\\\";
+    const SEPARATOR: &str = "\\\\"; // On windows, we should escape the separator.
 
     fn default_ignore_filename_regex() -> String {
         // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
         //       We may have a directory like tests/support, so maybe we need both?
-        // TODO: Check CARGO_HOME and RUSTUP_HOME env var instead of hard coding (.)?cargo/(.)?rustup
         format!(
-            r"(^|{0})(rustc{0}[0-9a-f]+|(\.)?cargo{0}(registry|git)|(\.)?rustup{0}toolchains|tests|examples|benches|target{0}llvm-cov-target){0}",
+            r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches|target{0}llvm-cov-target){0}",
             SEPARATOR
         )
     }
@@ -593,28 +604,34 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             }
             self.0.push_str(s.as_ref());
         }
+
+        fn push_abs_path(&mut self, path: impl AsRef<Path>) {
+            #[cfg(not(windows))]
+            let mut path = format!("^{}", path.as_ref().display());
+            #[cfg(windows)]
+            let mut path = format!(
+                "^{}",
+                path.as_ref().to_string_lossy().replace(std::path::MAIN_SEPARATOR, SEPARATOR),
+            );
+            path.push_str(&format!("($|{})", SEPARATOR));
+            self.push(path);
+        }
     }
 
     let mut out = Out::default();
 
-    if cx.cov.disable_default_ignore_filename_regex {
-        if let Some(ignore_filename) = &cx.cov.ignore_filename_regex {
-            out.push(ignore_filename);
-        }
-    } else {
+    if let Some(ignore_filename) = &cx.cov.ignore_filename_regex {
+        out.push(ignore_filename);
+    }
+    if !cx.cov.disable_default_ignore_filename_regex {
         out.push(default_ignore_filename_regex());
-        if let Some(ignore) = &cx.cov.ignore_filename_regex {
-            out.push(ignore);
+        for path in
+            [home::home_dir(), home::cargo_home().ok(), home::rustup_home().ok()].iter().flatten()
+        {
+            out.push_abs_path(path);
         }
-        if let Some(home) = home::home_dir() {
-            out.push(format!("^{}{}", home.display(), SEPARATOR));
-        }
-
         for path in resolve_excluded_paths(cx) {
-            #[cfg(not(windows))]
-            out.push(format!("^{}", path));
-            #[cfg(windows)]
-            out.push(format!("^{}", path.as_str().replace('\\', SEPARATOR)));
+            out.push_abs_path(path);
         }
     }
 
@@ -652,7 +669,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         for &manifest_dir in &excluded {
             let package_path =
                 manifest_dir.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(manifest_dir);
-            excluded_path.push(package_path.join(""));
+            excluded_path.push(package_path.to_owned());
         }
         return excluded_path;
     }
@@ -663,7 +680,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
             None => {
                 let package_path =
                     excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
-                excluded_path.push(package_path.join(""));
+                excluded_path.push(package_path.to_owned());
                 continue;
             }
         };
@@ -692,7 +709,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
                 return true;
             }
             let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
-            excluded_path.push(p.join("").try_into().unwrap());
+            excluded_path.push(p.to_owned().try_into().unwrap());
             false
         }) {}
     }

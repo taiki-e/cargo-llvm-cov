@@ -24,6 +24,7 @@ pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
 pub fn cargo_llvm_cov() -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
     cmd.arg("llvm-cov");
+    cmd.env("CARGO_LLVM_COV_DENY_WARNINGS", "true");
     cmd.env_remove("RUSTFLAGS")
         .env_remove("RUSTDOCFLAGS")
         .env_remove("CARGO_BUILD_RUSTFLAGS")

@@ -1,49 +1,7 @@
-use std::{
-    env,
-    ffi::{OsStr, OsString},
-    path::PathBuf,
-};
+pub(crate) use std::env::*;
+use std::{env, ffi::OsString};
 
 use anyhow::Result;
-
-#[derive(Debug)]
-pub(crate) struct Env {
-    /// `CARGO_LLVM_COV_FLAGS` environment variable to pass additional flags
-    /// to llvm-cov. (value: space-separated list)
-    pub(crate) cargo_llvm_cov_flags: Option<String>,
-    /// `CARGO_LLVM_PROFDATA_FLAGS` environment variable to pass additional flags
-    /// to llvm-profdata. (value: space-separated list)
-    pub(crate) cargo_llvm_profdata_flags: Option<String>,
-
-    // Environment variables Cargo sets for 3rd party subcommands
-    // https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-3rd-party-subcommands
-    /// `CARGO` environment variable.
-    pub(crate) cargo: Option<OsString>,
-
-    pub(crate) current_exe: PathBuf,
-}
-
-impl Env {
-    pub(crate) fn new() -> Result<Self> {
-        Ok(Self {
-            cargo_llvm_cov_flags: var("CARGO_LLVM_COV_FLAGS")?,
-            cargo_llvm_profdata_flags: var("CARGO_LLVM_PROFDATA_FLAGS")?,
-            cargo: env::var_os("CARGO"),
-            current_exe: match env::current_exe() {
-                Ok(exe) => exe,
-                Err(e) => {
-                    let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
-                    warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
-                    exe.into()
-                }
-            },
-        })
-    }
-
-    pub(crate) fn cargo(&self) -> &OsStr {
-        self.cargo.as_deref().unwrap_or_else(|| OsStr::new("cargo"))
-    }
-}
 
 pub(crate) fn var(key: &str) -> Result<Option<String>> {
     match env::var(key) {
@@ -52,4 +10,8 @@ pub(crate) fn var(key: &str) -> Result<Option<String>> {
         Err(env::VarError::NotPresent) => Ok(None),
         Err(e) => Err(e.into()),
     }
+}
+
+pub(crate) fn var_os(key: &str) -> Option<OsString> {
+    env::var_os(key).filter(|v| !v.is_empty())
 }

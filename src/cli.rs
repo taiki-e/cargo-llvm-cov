@@ -2,9 +2,8 @@ use std::mem;
 
 use camino::Utf8PathBuf;
 use clap::{AppSettings, ArgSettings, Parser};
-use serde::Deserialize;
 
-use crate::process::ProcessBuilder;
+use crate::{process::ProcessBuilder, term::Coloring};
 
 const ABOUT: &str =
     "Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
@@ -385,6 +384,7 @@ impl BuildOptions {
             cmd.arg(color.cargo_color());
         }
 
+        // If `-vv` is passed, propagate `-v` to cargo.
         if self.verbose > 1 {
             cmd.arg(format!("-{}", "v".repeat(self.verbose as usize - 1)));
         }
@@ -494,25 +494,6 @@ impl ManifestOptions {
         }
         if self.offline {
             cmd.arg("--offline");
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, clap::ArgEnum)]
-#[serde(rename_all = "kebab-case")]
-#[repr(u8)]
-pub(crate) enum Coloring {
-    Auto = 0,
-    Always,
-    Never,
-}
-
-impl Coloring {
-    pub(crate) fn cargo_color(self) -> &'static str {
-        match self {
-            Self::Auto => "auto",
-            Self::Always => "always",
-            Self::Never => "never",
         }
     }
 }
@@ -642,6 +623,8 @@ mod tests {
     fn assert_diff(expected_path: impl AsRef<Path>, actual: impl AsRef<str>) {
         let actual = actual.as_ref();
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let manifest_dir =
+            manifest_dir.strip_prefix(env::current_dir().unwrap()).unwrap_or(manifest_dir);
         let expected_path = &manifest_dir.join(expected_path);
         if !expected_path.is_file() {
             fs::write(expected_path, "").unwrap();
@@ -658,7 +641,8 @@ mod tests {
                     .unwrap();
                 child.stdin.as_mut().unwrap().write_all(actual.as_bytes()).unwrap();
                 assert!(!child.wait().unwrap().success());
-                panic!("assertion failed");
+                // patch -p1 <<'EOF' ... EOF
+                panic!("assertion failed; please run test locally and commit resulting changes, or apply above diff as patch");
             } else {
                 fs::write(expected_path, actual).unwrap();
             }

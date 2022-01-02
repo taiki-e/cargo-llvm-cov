@@ -1,7 +1,5 @@
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/reference/config.html
-// - https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
-// - https://github.com/rust-lang/cargo/issues/9301
 
 use std::{collections::BTreeMap, ffi::OsStr};
 
@@ -9,7 +7,7 @@ use anyhow::{format_err, Context as _, Result};
 use camino::Utf8Path;
 use serde::Deserialize;
 
-use crate::{cargo::Cargo, cli::Coloring, env};
+use crate::{env, process::ProcessBuilder, term::Coloring};
 
 // NOTE: We don't need to get configuration values like net.offline here,
 // because those are configuration that need to be applied only to cargo,
@@ -23,22 +21,26 @@ pub(crate) struct Config {
     #[serde(default)]
     pub(crate) doc: Doc,
     #[serde(default)]
-    pub(crate) term: Term,
+    term: Term,
 }
 
 impl Config {
     pub(crate) fn new(
-        cargo: &Cargo,
+        mut cargo: ProcessBuilder,
         workspace_root: &Utf8Path,
         target: Option<&str>,
         host: Option<&str>,
     ) -> Result<Self> {
-        let mut cmd = cargo.process();
-        cmd.args(["-Z", "unstable-options", "config", "get", "--format", "json"])
+        // Use unstable cargo-config because there is no other good way.
+        // However, it is unstable and can break, so allow errors.
+        // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
+        // https://github.com/rust-lang/cargo/issues/9301
+        cargo
+            .args(["-Z", "unstable-options", "config", "get", "--format", "json"])
             .dir(workspace_root);
-        let mut config = match cmd.read() {
+        let mut config = match cargo.read() {
             Ok(s) => serde_json::from_str(&s)
-                .with_context(|| format!("failed to parse output from {}", cmd))?,
+                .with_context(|| format!("failed to parse output from {}", cargo))?,
             Err(e) => {
                 // Allow error from cargo-config as it is an unstable feature.
                 warn!("{:#}", e);
@@ -122,8 +124,8 @@ impl Config {
         if target.is_none() {
             *target = self.build.target.clone();
         }
-        if *verbose == 0 && self.term.verbose.unwrap_or(false) {
-            *verbose = 1;
+        if *verbose == 0 {
+            *verbose = self.term.verbose.unwrap_or(false) as _;
         }
         if color.is_none() {
             *color = self.term.color;
@@ -168,11 +170,11 @@ pub(crate) struct Doc {
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#term
 #[derive(Debug, Default, Deserialize)]
-pub(crate) struct Term {
+struct Term {
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#termverbose
-    pub(crate) verbose: Option<bool>,
+    verbose: Option<bool>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#termcolor
-    pub(crate) color: Option<Coloring>,
+    color: Option<Coloring>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

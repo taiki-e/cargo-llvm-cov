@@ -1,4 +1,4 @@
-use std::{env, ffi::OsString};
+use std::{ffi::OsString, path::PathBuf};
 
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
@@ -7,29 +7,34 @@ use cargo_metadata::PackageId;
 use crate::{
     cargo::Workspace,
     cli::{BuildOptions, LlvmCovOptions, ManifestOptions},
-    env::Env,
+    env,
     process::ProcessBuilder,
     term,
 };
 
 pub(crate) struct Context {
-    pub(crate) env: Env,
     pub(crate) ws: Workspace,
 
     pub(crate) build: BuildOptions,
     pub(crate) manifest: ManifestOptions,
     pub(crate) cov: LlvmCovOptions,
 
-    pub(crate) verbose: bool,
-    pub(crate) quiet: bool,
     pub(crate) doctests: bool,
     pub(crate) no_run: bool,
 
     pub(crate) workspace_members: WorkspaceMembers,
 
     // Paths to executables.
+    pub(crate) current_exe: PathBuf,
     pub(crate) llvm_cov: Utf8PathBuf,
     pub(crate) llvm_profdata: Utf8PathBuf,
+
+    /// `CARGO_LLVM_COV_FLAGS` environment variable to pass additional flags
+    /// to llvm-cov. (value: space-separated list)
+    pub(crate) cargo_llvm_cov_flags: Option<String>,
+    /// `CARGO_LLVM_PROFDATA_FLAGS` environment variable to pass additional flags
+    /// to llvm-profdata. (value: space-separated list)
+    pub(crate) cargo_llvm_profdata_flags: Option<String>,
 }
 
 impl Context {
@@ -41,12 +46,10 @@ impl Context {
         workspace: bool,
         exclude: &[String],
         package: &[String],
-        quiet: bool,
         doctests: bool,
         no_run: bool,
     ) -> Result<Self> {
-        let env = Env::new()?;
-        let ws = Workspace::new(&env, &manifest, build.target.as_deref())?;
+        let ws = Workspace::new(&manifest, build.target.as_deref())?;
         ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
         term::set_coloring(&mut build.color);
 
@@ -55,6 +58,7 @@ impl Context {
             // If the format flag is not specified, this flag is no-op.
             cov.output_dir = None;
         }
+        let tmp = term::warn(); // The following warnings should not be promoted to an error.
         if cov.disable_default_ignore_filename_regex {
             warn!("--disable-default-ignore-filename-regex option is unstable");
         }
@@ -64,6 +68,7 @@ impl Context {
         if cov.no_cfg_coverage {
             warn!("--no-cfg-coverage option is unstable");
         }
+        term::warn::set(tmp);
         if build.target.is_some() {
             info!(
                 "when --target option is used, coverage for proc-macro and build script will \
@@ -88,7 +93,7 @@ impl Context {
         if !llvm_cov.exists() || !llvm_profdata.exists() {
             bail!(
                 "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
-                if ws.cargo.nightly { "" } else { " --toolchain nightly" }
+                if ws.nightly { "" } else { " --toolchain nightly" }
             );
         }
 
@@ -97,20 +102,27 @@ impl Context {
             bail!("no crates to be measured for coverage");
         }
 
-        let verbose = build.verbose != 0;
+        term::verbose::set(build.verbose != 0);
         Ok(Self {
-            env,
             ws,
             build,
             manifest,
             cov,
-            verbose,
-            quiet,
             doctests,
             no_run,
             workspace_members,
+            current_exe: match env::current_exe() {
+                Ok(exe) => exe,
+                Err(e) => {
+                    let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
+                    warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
+                    exe.into()
+                }
+            },
             llvm_cov,
             llvm_profdata,
+            cargo_llvm_cov_flags: env::var("CARGO_LLVM_COV_FLAGS")?,
+            cargo_llvm_profdata_flags: env::var("CARGO_LLVM_PROFDATA_FLAGS")?,
         })
     }
 
@@ -124,8 +136,8 @@ impl Context {
         cmd
     }
 
-    pub(crate) fn cargo_process(&self) -> ProcessBuilder {
-        self.ws.cargo_process(self.build.verbose)
+    pub(crate) fn cargo(&self) -> ProcessBuilder {
+        self.ws.cargo(self.build.verbose)
     }
 }
 

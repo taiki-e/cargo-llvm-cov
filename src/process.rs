@@ -97,12 +97,6 @@ impl ProcessBuilder {
         self
     }
 
-    // /// Enables working directory display.
-    // pub(crate) fn display_dir(&mut self) -> &mut Self {
-    //     self.display_dir.set(true);
-    //     self
-    // }
-
     /// Executes a process, waiting for completion, and mapping non-zero exit
     /// status to an error.
     pub(crate) fn run(&mut self) -> Result<Output> {

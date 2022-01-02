@@ -10,6 +10,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `show-env` subcommand. ([#115](https://github.com/taiki-e/cargo-llvm-cov/pull/115), thanks @davidhewitt)
+
+- cargo-llvm-cov no longer sets `CARGO_TARGET_DIR`. ([#112](https://github.com/taiki-e/cargo-llvm-cov/pull/112), thanks @smoelius)
+
+- cargo-llvm-cov can now properly exclude arbitrary `CARGO_HOME` and `RUSTUP_HOME` from reports.
+
 ## [0.1.13] - 2021-12-14
 
 - Support custom-built rust toolchain. ([#111](https://github.com/taiki-e/cargo-llvm-cov/pull/111), thanks @tofay)
@@ -63,7 +69,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.1.2] - 2021-08-26
 
-**Note: This release has been yanked due to regressions fixed in 0.1.3.**
+**NOTE:** This release has been yanked due to regressions fixed in 0.1.3.
 
 - Set `cfg(coverage)` to easily use `#[no_coverage]`. ([#72](https://github.com/taiki-e/cargo-llvm-cov/pull/72))
 

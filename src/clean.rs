@@ -13,13 +13,11 @@ use crate::{
     cargo::{self, Workspace},
     cli::{CleanOptions, ManifestOptions},
     context::Context,
-    env::Env,
     fs, term,
 };
 
 pub(crate) fn run(mut options: CleanOptions) -> Result<()> {
-    let env = Env::new()?;
-    let ws = Workspace::new(&env, &options.manifest, None)?;
+    let ws = Workspace::new(&options.manifest, None)?;
     ws.config.merge_to_args(&mut None, &mut options.verbose, &mut options.color);
     term::set_coloring(&mut options.color);
 
@@ -55,8 +53,8 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         .iter()
         .flat_map(|id| ["--package", &cx.ws.metadata[id].name])
         .collect();
-    let mut cmd = cx.cargo_process();
-    cmd.args(["clean", "--target-dir", cx.ws.target_dir.as_str()]).args(&package_args);
+    let mut cmd = cx.cargo();
+    cmd.arg("clean").args(&package_args);
     cargo::clean_args(cx, &mut cmd);
     if let Err(e) = if cx.build.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
         warn!("{:#}", e);
@@ -86,7 +84,7 @@ fn clean_ws(
         }
     }
     for args in args_set {
-        let mut cmd = ws.cargo_process(verbose);
+        let mut cmd = ws.cargo(verbose);
         cmd.args(["clean", "--target-dir", ws.target_dir.as_str()]).args(&package_args);
         cmd.args(args);
         if verbose > 0 {
