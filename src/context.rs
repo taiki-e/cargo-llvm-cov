@@ -52,6 +52,7 @@ impl Context {
         let ws = Workspace::new(&manifest, build.target.as_deref())?;
         ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
         term::set_coloring(&mut build.color);
+        term::verbose::set(build.verbose != 0);
 
         cov.html |= cov.open;
         if cov.output_dir.is_some() && !cov.show() {
@@ -102,7 +103,6 @@ impl Context {
             bail!("no crates to be measured for coverage");
         }
 
-        term::verbose::set(build.verbose != 0);
         Ok(Self {
             ws,
             build,

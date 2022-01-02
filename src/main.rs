@@ -64,7 +64,6 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let Opts::LlvmCov(mut args) = Opts::parse();
-    term::quiet::set(args.quiet);
 
     match args.subcommand.take() {
         Some(Subcommand::Demangle) => {
@@ -76,8 +75,6 @@ fn try_main() -> Result<()> {
         }
 
         Some(Subcommand::Run(mut args)) => {
-            term::quiet::set(term::quiet() | args.quiet);
-
             let cx = &Context::new(
                 args.build(),
                 args.manifest(),

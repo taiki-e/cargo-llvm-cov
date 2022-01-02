@@ -12,7 +12,6 @@ use crate::{
     context::Context,
     env,
     process::ProcessBuilder,
-    term,
 };
 
 pub(crate) struct Workspace {
@@ -294,9 +293,6 @@ pub(crate) fn run_args(cx: &Context, args: &RunOptions, cmd: &mut ProcessBuilder
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
 pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if term::quiet() {
-        cmd.arg("--quiet");
-    }
     if cx.build.release {
         cmd.arg("--release");
     }

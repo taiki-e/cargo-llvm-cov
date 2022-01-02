@@ -62,7 +62,6 @@ macro_rules! global_flag {
     };
 }
 global_flag!(verbose: bool = AtomicBool::new(false));
-global_flag!(quiet: bool = AtomicBool::new(false));
 global_flag!(error: bool = AtomicBool::new(false));
 global_flag!(warn: bool = AtomicBool::new(false));
 
@@ -102,19 +101,15 @@ macro_rules! warn {
 macro_rules! info {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        if !crate::term::quiet() {
-            let mut stream = crate::term::print_status("info", None, false);
-            let _ = writeln!(stream, $($msg),*);
-        }
+        let mut stream = crate::term::print_status("info", None, false);
+        let _ = writeln!(stream, $($msg),*);
     }};
 }
 
 macro_rules! status {
     ($status:expr, $($msg:expr),* $(,)?) => {{
         use std::io::Write;
-        if !crate::term::quiet() {
-            let mut stream = crate::term::print_status($status, Some(termcolor::Color::Cyan), true);
-            let _ = writeln!(stream, $($msg),*);
-        }
+        let mut stream = crate::term::print_status($status, Some(termcolor::Color::Cyan), true);
+        let _ = writeln!(stream, $($msg),*);
     }};
 }
