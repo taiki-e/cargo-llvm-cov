@@ -84,6 +84,7 @@ fn try_main() -> Result<()> {
                 args.package.as_ref().map(slice::from_ref).unwrap_or_default(),
                 false,
                 false,
+                false,
             )?;
 
             clean::clean_partial(cx)?;
@@ -97,12 +98,14 @@ fn try_main() -> Result<()> {
         }
 
         Some(Subcommand::ShowEnv(options)) => {
-            let cx = &context_from_args(&mut args)?;
-            set_env(cx, &mut ShowEnvWriter { target: std::io::stdout(), options });
+            let cx = &context_from_args(&mut args, true)?;
+            let writer = &mut ShowEnvWriter { target: std::io::stdout(), options };
+            set_env(cx, writer);
+            writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str());
         }
 
         None => {
-            let cx = &context_from_args(&mut args)?;
+            let cx = &context_from_args(&mut args, false)?;
             let tmp = term::warn(); // The following warnings should not be promoted to an error.
             if args.doctests {
                 warn!("--doctests option is unstable");
@@ -133,7 +136,7 @@ fn try_main() -> Result<()> {
     Ok(())
 }
 
-fn context_from_args(args: &mut Args) -> Result<Context> {
+fn context_from_args(args: &mut Args, show_env: bool) -> Result<Context> {
     Context::new(
         args.build(),
         args.manifest(),
@@ -143,6 +146,7 @@ fn context_from_args(args: &mut Args) -> Result<Context> {
         &args.package,
         args.doctests,
         args.no_run,
+        show_env,
     )
 }
 

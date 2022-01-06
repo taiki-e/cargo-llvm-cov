@@ -48,8 +48,9 @@ impl Context {
         package: &[String],
         doctests: bool,
         no_run: bool,
+        show_env: bool,
     ) -> Result<Self> {
-        let ws = Workspace::new(&manifest, build.target.as_deref())?;
+        let ws = Workspace::new(&manifest, build.target.as_deref(), show_env)?;
         ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
         term::set_coloring(&mut build.color);
         term::verbose::set(build.verbose != 0);

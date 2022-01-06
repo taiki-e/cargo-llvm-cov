@@ -31,7 +31,11 @@ pub(crate) struct Workspace {
 }
 
 impl Workspace {
-    pub(crate) fn new(options: &ManifestOptions, target: Option<&str>) -> Result<Self> {
+    pub(crate) fn new(
+        options: &ManifestOptions,
+        target: Option<&str>,
+        show_env: bool,
+    ) -> Result<Self> {
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
         let rustc = rustc_path(&cargo);
         let (nightly, ref host) = rustc_version(&rustc)?;
@@ -46,9 +50,15 @@ impl Workspace {
             Some(host),
         )?;
 
-        // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
-        // use a subdirectory of the target directory as the actual target directory.
-        let target_dir = metadata.target_directory.join("llvm-cov-target");
+        let target_dir = if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")? {
+            path.into()
+        } else if show_env {
+            metadata.target_directory.clone()
+        } else {
+            // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
+            // use a subdirectory of the target directory as the actual target directory.
+            metadata.target_directory.join("llvm-cov-target")
+        };
         let output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 

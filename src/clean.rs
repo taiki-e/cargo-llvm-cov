@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub(crate) fn run(mut options: CleanOptions) -> Result<()> {
-    let ws = Workspace::new(&options.manifest, None)?;
+    let ws = Workspace::new(&options.manifest, None, false)?;
     ws.config.merge_to_args(&mut None, &mut options.verbose, &mut options.color);
     term::set_coloring(&mut options.color);
 
