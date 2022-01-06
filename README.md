@@ -304,8 +304,8 @@ cargo llvm-cov --no-run --lcov
 In combination with the `show-env` subcommand, coverage can also be produced from arbitrary binaries:
 
 ```sh
-cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
 source <(cargo llvm-cov show-env --export-prefix)
+cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
 cargo build # build rust binaries
 # commands using binaries in target/debug/*, including `cargo test`
 # ...

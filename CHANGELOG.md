@@ -10,7 +10,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-## [0.1.14] - 2022-01-07
+- Fix bug in `show-env` subcommand.
+
+## [0.1.14] - 2022-01-06
 
 - Add `show-env` subcommand. ([#115](https://github.com/taiki-e/cargo-llvm-cov/pull/115), thanks @davidhewitt)
 
