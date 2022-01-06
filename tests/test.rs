@@ -59,6 +59,11 @@ fn virtual1() {
 }
 
 #[test]
+fn doctest() {
+    run("doctest", "workspace_root", &["--doctests"], &[]);
+}
+
+#[test]
 fn no_test() {
     // TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
     run("no_test", "no_test", &[], &[]);

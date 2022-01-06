@@ -230,6 +230,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
             " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
             cx.ws.doctests_dir
         ));
+        rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
         if cfg!(windows) {
             rustdocflags.push_str(" -C codegen-units=1");
         }
