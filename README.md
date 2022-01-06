@@ -397,6 +397,16 @@ You can download prebuilt binaries from the [Release page](https://github.com/ta
 Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows (static executable).
 
 <!-- omit in toc -->
+### On GitHub Actions
+
+You can use [taiki-e/install-action](https://github.com/taiki-e/install-action) to install prebuilt binaries on Linux, macOS, and Windows.
+This makes the installation faster and may avoid the impact of [problems caused by upstream changes](https://github.com/tokio-rs/bytes/issues/506).
+
+```yaml
+- uses: taiki-e/install-action@cargo-llvm-cov
+```
+
+<!-- omit in toc -->
 ### Via Homebrew
 
 You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
@@ -415,16 +425,6 @@ paru -S cargo-llvm-cov
 ```
 
 NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
-
-<!-- omit in toc -->
-### On GitHub Actions
-
-You can use [taiki-e/install-action](https://github.com/taiki-e/install-action) to install prebuilt binaries on Linux, macOS, and Windows.
-This makes the installation faster and may avoid the impact of [problems caused by upstream changes](https://github.com/tokio-rs/bytes/issues/506).
-
-```yaml
-- uses: taiki-e/install-action@cargo-llvm-cov
-```
 
 ## Known limitations
 
