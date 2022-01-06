@@ -51,6 +51,9 @@ echo "============== CHANGELOG =============="
 parse-changelog CHANGELOG.md "${version}"
 echo "======================================="
 
+if ! grep <CHANGELOG.md -E "^## \\[${version//./\\.}\\] - $(date --utc '+%Y-%m-%d')$" >/dev/null; then
+    bail "not found section '[${version}] - $(date --utc '+%Y-%m-%d')' in CHANGELOG.md"
+fi
 if ! grep <CHANGELOG.md -E "^\\[${version//./\\.}\\]: " >/dev/null; then
     bail "not found link to [${version}] in CHANGELOG.md"
 fi
