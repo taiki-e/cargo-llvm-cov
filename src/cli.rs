@@ -514,6 +514,11 @@ mod tests {
 
     use super::{Args, Opts, MAX_TERM_WIDTH};
 
+    #[test]
+    fn assert_app() {
+        Args::into_app().debug_assert();
+    }
+
     // https://github.com/clap-rs/clap/issues/751
     #[cfg(unix)]
     #[test]
@@ -690,7 +695,7 @@ mod tests {
             }
         }
         if start && end {
-            fs::write(path, out)?;
+            assert_diff(path, out);
         } else if start {
             panic!("missing `<!-- readme-long-help:end -->` comment in README.md");
         } else {
