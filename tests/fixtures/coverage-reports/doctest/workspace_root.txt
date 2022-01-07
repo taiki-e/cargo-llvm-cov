@@ -1,44 +1,14 @@
-/tmp/.tmpzVh4uE/src/lib.rs:
-    1|      1|/// ```
+    1|      1|/// ```/// ```
     2|      1|/// assert_eq!(crate1::generic_fn("doc", "doctest"), Ok("doctest"));
     3|      1|/// ```
-    4|      1|pub fn generic_fn<T>(s: &str, val: T) -> Result<&str, T> {
-    5|      1|    match s {
-    6|      1|        "unit" => Ok("unit-test"),
-                                ^0
+    4|      2|pub fn generic_fn<T>(s: &str, val: T) -> Result<&str, T> {
+    5|      2|    match s {
+    6|      2|        "unit" => Ok("unit-test"),
+                                ^1
     7|      1|        "doc" => Ok("doctest"),
     8|      0|        _ => Err(val),
     9|       |    }
-   10|      1|}
-   11|       |
-   12|      1|/// ```
-   13|      1|/// assert_eq!(crate1::non_generic_fn("doc"), "doctest");
-   14|      1|/// ```
-   15|       |pub fn non_generic_fn(s: &str) -> &str {
-   16|       |    match s {
-   17|       |        "unit" => "unit-test",
-   18|       |        "doc" => "doctest",
-   19|       |        val => val,
-   20|       |    }
-   21|       |}
-   22|       |
-   23|       |#[test]
-   24|       |fn unit_test() {
-   25|       |    assert_eq!(generic_fn("unit", 1), Ok("unit-test"));
-   26|       |    assert_eq!(non_generic_fn("unit"), "unit-test");
-   27|       |}
-
-src/lib.rs:
-    1|      1|/// ```/// ```
-    2|       |/// assert_eq!(crate1::generic_fn("doc", "doctest"), Ok("doctest"));
-    3|       |/// ```
-    4|      1|pub fn generic_fn<T>(s: &str, val: T) -> Result<&str, T> {
-    5|      1|    match s {
-    6|      1|        "unit" => Ok("unit-test"),
-    7|      0|        "doc" => Ok("doctest"),
-    8|      0|        _ => Err(val),
-    9|       |    }
-   10|      1|}
+   10|      2|}
   ------------------
   | crate1::generic_fn::<i32>:
   |    4|      1|pub fn generic_fn<T>(s: &str, val: T) -> Result<&str, T> {
@@ -51,10 +21,20 @@ src/lib.rs:
   ------------------
   | Unexecuted instantiation: crate1::generic_fn::<_>
   ------------------
+  | crate1::generic_fn::<&str>:
+  |    4|      1|pub fn generic_fn<T>(s: &str, val: T) -> Result<&str, T> {
+  |    5|      1|    match s {
+  |    6|      1|        "unit" => Ok("unit-test"),
+  |                                ^0
+  |    7|      1|        "doc" => Ok("doctest"),
+  |    8|      0|        _ => Err(val),
+  |    9|       |    }
+  |   10|      1|}
+  ------------------
    11|       |
-   12|       |/// ```
-   13|       |/// assert_eq!(crate1::non_generic_fn("doc"), "doctest");
-   14|       |/// ```
+   12|      1|/// ```
+   13|      1|/// assert_eq!(crate1::non_generic_fn("doc"), "doctest");
+   14|      1|/// ```
    15|      2|pub fn non_generic_fn(s: &str) -> &str {
    16|      2|    match s {
    17|      2|        "unit" => "unit-test",
