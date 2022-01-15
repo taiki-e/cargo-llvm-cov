@@ -428,7 +428,6 @@ NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 ## Known limitations
 
-- Due to a bug of `-Z instrument-coverage`, some files may be ignored. There is a known workaround for this issue, but note that the workaround is likely to cause another problem. See [rust-lang/rust#86177] and [#26] for more.
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
 
@@ -444,7 +443,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
-[#26]: https://github.com/taiki-e/cargo-llvm-cov/issues/26
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
@@ -452,7 +450,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
-[rust-lang/rust#86177]: https://github.com/rust-lang/rust/issues/86177
 
 ## License
 
