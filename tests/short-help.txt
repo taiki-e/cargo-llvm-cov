@@ -89,13 +89,13 @@ OPTIONS:
         --doc
             Test only this library's documentation (unstable)
 
-    -p, --package <SPEC>
+    -p, --package <SPEC>...
             Package to run tests for
 
         --workspace
             Test all packages in the workspace [aliases: all]
 
-        --exclude <SPEC>
+        --exclude <SPEC>...
             Exclude packages from the test
 
     -j, --jobs <N>

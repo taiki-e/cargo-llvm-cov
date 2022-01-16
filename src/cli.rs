@@ -126,6 +126,7 @@ pub(crate) struct Args {
         short,
         long,
         multiple_occurrences = true,
+        multiple_values = true,
         value_name = "SPEC",
         conflicts_with = "workspace"
     )]
@@ -134,7 +135,13 @@ pub(crate) struct Args {
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from the test
-    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
+    #[clap(
+        long,
+        multiple_occurrences = true,
+        multiple_values = true,
+        value_name = "SPEC",
+        requires = "workspace"
+    )]
     pub(crate) exclude: Vec<String>,
 
     #[clap(flatten)]
