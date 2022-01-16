@@ -375,7 +375,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     for f in walk_target_dir(&target_dir) {
         let f = f.path();
         if is_executable::is_executable(&f) {
-            files.push(make_relative(&f).to_owned());
+            files.push(make_relative(f).to_owned());
         }
     }
     if cx.doctests {
