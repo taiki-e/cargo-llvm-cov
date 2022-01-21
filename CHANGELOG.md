@@ -10,6 +10,16 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.1.16] - 2022-01-21
+
+- Alleviate an issue where "File name or extension is too long" error occurs in Windows. ([#126](https://github.com/taiki-e/cargo-llvm-cov/pull/126), thanks @aganders3)
+
+- Re-enable multiple values for `--package` and `--exclude`. ([#127](https://github.com/taiki-e/cargo-llvm-cov/pull/127), thanks @aganders3)
+
+  This behavior was unintentionally enabled in older versions and disabled in recent versions.
+
+  We will support this again in 0.1.x for compatibility, but will remove it in 0.2.x.
+
 - Distribute prebuilt binaries for aarch64 Linux (gnu and musl).
 
 ## [0.1.15] - 2022-01-06
@@ -194,7 +204,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.15...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.16...HEAD
+[0.1.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.12...v0.1.13
