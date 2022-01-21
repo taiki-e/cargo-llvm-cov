@@ -1,11 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(
-    clippy::default_trait_access,
-    clippy::disallowed_methods,
-    clippy::disallowed_types,
-    clippy::wildcard_imports
-)]
+#![warn(clippy::default_trait_access, clippy::wildcard_imports)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html

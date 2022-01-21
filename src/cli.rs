@@ -178,33 +178,33 @@ pub(crate) enum Subcommand {
     /// Run a binary or example and generate coverage report.
     #[clap(
         bin_name = "cargo llvm-cov run",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
+        max_term_width(MAX_TERM_WIDTH),
+        setting(AppSettings::DeriveDisplayOrder)
     )]
     Run(Box<RunOptions>),
 
     /// Output the environment set by cargo-llvm-cov to build Rust projects.
     #[clap(
         bin_name = "cargo llvm-cov show-env",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
+        max_term_width(MAX_TERM_WIDTH),
+        setting(AppSettings::DeriveDisplayOrder)
     )]
     ShowEnv(ShowEnvOptions),
 
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     #[clap(
         bin_name = "cargo llvm-cov clean",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
+        max_term_width(MAX_TERM_WIDTH),
+        setting(AppSettings::DeriveDisplayOrder)
     )]
     Clean(CleanOptions),
 
     // internal (unstable)
     #[clap(
         bin_name = "cargo llvm-cov demangle",
-        max_term_width = MAX_TERM_WIDTH,
-        setting = AppSettings::DeriveDisplayOrder,
-        setting = AppSettings::Hidden,
+        max_term_width(MAX_TERM_WIDTH),
+        setting(AppSettings::DeriveDisplayOrder),
+        setting(AppSettings::Hidden)
     )]
     Demangle,
 }

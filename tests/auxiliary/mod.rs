@@ -10,7 +10,7 @@ use std::{
     process::{Command, ExitStatus, Stdio},
 };
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use easy_ext::ext;
 use fs_err as fs;
@@ -162,7 +162,7 @@ fn perturb_header<P: AsRef<Path>>(path: P) -> Result<()> {
 impl Command {
     #[track_caller]
     pub fn assert_output(&mut self) -> AssertOutput {
-        let output = self.output().unwrap_or_else(|e| panic!("could not execute process: {}", e));
+        let output = self.output().context("could not execute process").unwrap();
         AssertOutput {
             stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
             stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
