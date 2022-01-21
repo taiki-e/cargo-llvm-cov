@@ -162,7 +162,7 @@ OPTIONS:
             This flag is unstable because it automatically enables --doctests flag. See
             <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
 
-    -p, --package <SPEC>
+    -p, --package <SPEC>...
             Package to run tests for
 
         --workspace
@@ -170,7 +170,7 @@ OPTIONS:
 
             [aliases: all]
 
-        --exclude <SPEC>
+        --exclude <SPEC>...
             Exclude packages from the test
 
     -j, --jobs <N>
