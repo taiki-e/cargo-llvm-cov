@@ -52,15 +52,18 @@ jobs:
         if: startsWith(matrix.rust, 'nightly')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: startsWith(matrix.os, 'windows')
-      - run: cargo test --workspace
+      - run: cargo test --workspace --all-features
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
         if: startsWith(matrix.rust, 'nightly')
 
   cross:
+    name: build (${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
         include:
+          - target: aarch64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-musl
           - target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
     steps:
@@ -69,7 +72,7 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/github-actions/install-rust@main
       - uses: taiki-e/install-action@cross
-      - run: cross test --target ${{ matrix.target }}
+      - run: cross build --target ${{ matrix.target }}
 
   build:
     runs-on: ubuntu-18.04
@@ -90,7 +93,7 @@ jobs:
         with:
           component: clippy,rustfmt
       - uses: taiki-e/install-action@shellcheck
-      - run: cargo fmt --all -- --check
+      - run: cargo fmt --all --check
         if: always()
       - run: cargo clippy --workspace --all-features --all-targets
         if: always()

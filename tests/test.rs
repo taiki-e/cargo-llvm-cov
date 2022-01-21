@@ -1,5 +1,3 @@
-// TODO: It seems rustup is not installed in the docker image provided by cross.
-#![cfg(not(target_env = "musl"))]
 #![warn(rust_2018_idioms)]
 
 mod auxiliary;
