@@ -26,7 +26,7 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
 }
 
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
-    let id = format!("{}/{}", model, name);
+    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
         test_report(model, name, extension, None, &[args, args2].concat(), envs)
             .context(id.clone())
@@ -75,7 +75,7 @@ fn bin_crate() {
 
     let model = "bin_crate";
     let name = "run";
-    let id = format!("{}/{}", model, name);
+    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
         test_report(model, name, extension, Some("run"), &[args2, &["--", "1"]].concat(), &[])
             .context(id.clone())
@@ -98,7 +98,7 @@ fn cargo_config() {
 #[test]
 fn no_coverage() {
     let model = "no_coverage";
-    let id = format!("{}/{}", model, model);
+    let id = format!("{model}/{model}");
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
         if extension == "full.json" && cfg!(windows) {
@@ -108,7 +108,7 @@ fn no_coverage() {
     }
 
     let name = "no_cfg_coverage";
-    let id = format!("{}/{}", model, name);
+    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
         if extension == "full.json" && cfg!(windows) {
