@@ -16,7 +16,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   Support for `-Z instrument-coverage` in the old nightly will also be kept for compatibility.
 
-  **Compatibility Note:** In 0.2, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly (this is almost the same behavior as 0.1). This behavior will be changed in 0.3 to always select the default toolchain. If you are likely to be affected by the change in 0.3, cargo-llvm-cov will emit a warning.
+  **Compatibility Note:** In 0.2, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly (this is almost the same behavior as 0.1). This behavior is necessary because only the recent nightly currently supports `-C instrument-coverage`. This behavior will be changed in 0.3 to always select the default toolchain. If you are likely to be affected by the change in 0.3, cargo-llvm-cov will emit a warning. 0.3 is planned to be released after `-C instrument-coverage` is available in the stable toolchain.
 
 - Remove support of multiple values in `--package` and `--exclude`. ([#133](https://github.com/taiki-e/cargo-llvm-cov/pull/133))
 
