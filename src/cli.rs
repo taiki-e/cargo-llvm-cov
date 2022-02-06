@@ -6,7 +6,7 @@ use clap::{AppSettings, ArgSettings, Parser};
 use crate::{process::ProcessBuilder, term::Coloring};
 
 const ABOUT: &str =
-    "Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
+    "Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
 
 Use -h for short descriptions and --help for more details.";
 
