@@ -134,7 +134,7 @@ pub(crate) struct Args {
     /// Test all packages in the workspace
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
-    /// Exclude packages from the test
+    /// Exclude packages from both the test and report
     #[clap(
         long,
         multiple_occurrences = true,
@@ -143,6 +143,12 @@ pub(crate) struct Args {
         requires = "workspace"
     )]
     pub(crate) exclude: Vec<String>,
+    /// Exclude packages from the test (but not from the report)
+    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
+    pub(crate) exclude_from_test: Vec<String>,
+    /// Exclude packages from the report (but not from the test)
+    #[clap(long, multiple_occurrences = true, value_name = "SPEC")]
+    pub(crate) exclude_from_report: Vec<String>,
 
     #[clap(flatten)]
     build: BuildOptions,
