@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 IFS=$'\n\t'
+cd "$(dirname "$0")"/..
 
 # Publish a new release.
 #
@@ -9,8 +10,6 @@ IFS=$'\n\t'
 #
 # NOTE:
 # - This script requires parse-changelog <https://github.com/taiki-e/parse-changelog>
-
-cd "$(cd "$(dirname "$0")" && pwd)"/..
 
 bail() {
     echo >&2 "error: $*"
