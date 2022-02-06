@@ -54,14 +54,22 @@ fn virtual1() {
     run("virtual1", "package4", &["--package", "member3"], &[]);
     run("virtual1", "package5", &["--package", "member4"], &[]);
     run("virtual1", "package6", &["--package", "member3", "--package", "member4"], &[]);
-    run("virtual1", "exclude", &["--workspace", "--exclude", "member2"], &[]);
+    run("virtual1", "exclude1", &["--workspace", "--exclude", "member1"], &[]);
+    run("virtual1", "exclude2", &["--workspace", "--exclude", "member2"], &[]);
     run(
         "virtual1",
-        "exclude-from-report",
+        "exclude-from-report1",
+        &["--workspace", "--exclude-from-report", "member1"],
+        &[],
+    );
+    run(
+        "virtual1",
+        "exclude-from-report2",
         &["--workspace", "--exclude-from-report", "member2"],
         &[],
     );
-    run("virtual1", "exclude-from-test", &["--workspace", "--exclude-from-test", "member2"], &[]);
+    run("virtual1", "exclude-from-test1", &["--workspace", "--exclude-from-test", "member1"], &[]);
+    run("virtual1", "exclude-from-test2", &["--workspace", "--exclude-from-test", "member2"], &[]);
     run("virtual1", "exclude-multi-val", &["--workspace", "--exclude", "member1", "member2"], &[]);
 }
 
