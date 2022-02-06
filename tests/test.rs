@@ -73,7 +73,6 @@ fn virtual1() {
 
 #[test]
 fn no_test() {
-    // TODO: we should fix this: https://github.com/taiki-e/cargo-llvm-cov/issues/21
     run("no_test", "no_test", &[], &[]);
     if !(cfg!(windows) && cfg!(target_env = "msvc")) {
         run("no_test", "link_dead_code", &[], &[("RUSTFLAGS", "-C link-dead-code")]);
