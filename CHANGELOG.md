@@ -18,11 +18,15 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   **Compatibility Note:** In 0.2, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly (this is almost the same behavior as 0.1). This behavior will be changed in 0.3 to always select the default toolchain. If you are likely to be affected by the change in 0.3, cargo-llvm-cov will emit a warning.
 
-- Add `--exclude-from-test` option to exclude specific packages from the test but not from the report.
+- Remove support of multiple values in `--package` and `--exclude`. ([#133](https://github.com/taiki-e/cargo-llvm-cov/pull/133))
 
-- Add `--exclude-from-report` option to exclude specific packages from the report but not from the test.
+  [This behavior was unintentionally enabled in the older version of 0.1 and was deprecated in the recent version of 0.1.](https://github.com/taiki-e/cargo-llvm-cov/pull/127#issuecomment-1018204521)
 
-- Workspace members are now always included in the report unless specified by `--exclude` or `--exclude-from-report`.
+- Add `--exclude-from-test` option to exclude specific packages from the test but not from the report. ([#131](https://github.com/taiki-e/cargo-llvm-cov/pull/131))
+
+- Add `--exclude-from-report` option to exclude specific packages from the report but not from the test. ([#131](https://github.com/taiki-e/cargo-llvm-cov/pull/131))
+
+- Workspace members are now always included in the report unless specified by `--exclude` or `--exclude-from-report`. ([#131](https://github.com/taiki-e/cargo-llvm-cov/pull/131))
 
 ## [0.1.16] - 2022-01-21
 

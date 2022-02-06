@@ -126,7 +126,6 @@ pub(crate) struct Args {
         short,
         long,
         multiple_occurrences = true,
-        multiple_values = true,
         value_name = "SPEC",
         conflicts_with = "workspace"
     )]
@@ -135,13 +134,7 @@ pub(crate) struct Args {
     #[clap(long, visible_alias = "all")]
     pub(crate) workspace: bool,
     /// Exclude packages from both the test and report
-    #[clap(
-        long,
-        multiple_occurrences = true,
-        multiple_values = true,
-        value_name = "SPEC",
-        requires = "workspace"
-    )]
+    #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
     pub(crate) exclude: Vec<String>,
     /// Exclude packages from the test (but not from the report)
     #[clap(long, multiple_occurrences = true, value_name = "SPEC", requires = "workspace")]
@@ -580,6 +573,15 @@ mod tests {
         let Opts::LlvmCov(args) =
             Opts::try_parse_from(&["cargo", "llvm-cov", "--", "a", "b"]).unwrap();
         assert_eq!(args.args, ["a", "b"]);
+    }
+
+    // https://github.com/taiki-e/cargo-llvm-cov/pull/127#issuecomment-1018204521
+    #[test]
+    fn multiple_values() {
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--features", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--package", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "--exclude", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", "a", "b"]).unwrap_err();
     }
 
     // https://github.com/clap-rs/clap/issues/1740
