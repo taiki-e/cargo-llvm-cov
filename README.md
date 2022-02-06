@@ -7,12 +7,12 @@
 
 Cargo subcommand to easily use LLVM source-based code coverage.
 
-This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] and provides:
+This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] and provides:
 
 - Generate very precise coverage data. (line coverage and region coverage)
 - Support both `cargo test` and `cargo run`.
 - Support for proc-macro, including coverage of UI tests.
-- Support for doc tests. (this is currently optional, see [#2] for more)
+- Support for doc tests. (this is currently optional and requires nightly, see [#2] for more)
 - Command-line interface compatible with cargo.
 
 **Table of Contents:**
@@ -34,7 +34,7 @@ This is a wrapper around rustc [`-Z instrument-coverage`][instrument-coverage] a
 ```console
 $ cargo llvm-cov --help
 cargo-llvm-cov
-Cargo subcommand to easily use LLVM source-based code coverage (-Z instrument-coverage).
+Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
 
 Use -h for short descriptions and --help for more details.
 
@@ -382,11 +382,7 @@ rustup component add llvm-tools-preview --toolchain nightly
 cargo install cargo-llvm-cov
 ```
 
-cargo-llvm-cov relies on unstable compiler flags so it requires a nightly
-toolchain to be installed, though does not require nightly to be the default
-toolchain or the one with which cargo-llvm-cov itself is executed. If the
-default toolchain is one other than nightly, running `cargo llvm-cov` will find
-and use nightly.
+If `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly. This behavior will be changed in 0.2 to always select the default toolchain.
 
 Currently, installing cargo-llvm-cov requires rustc 1.54+.
 
@@ -409,7 +405,7 @@ This makes the installation faster and may avoid the impact of [problems caused 
 <!-- omit in toc -->
 ### Via Homebrew
 
-You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/main/Formula/cargo-llvm-cov.rb):
+You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb):
 
 ```sh
 brew install taiki-e/tap/cargo-llvm-cov
@@ -446,7 +442,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
-[instrument-coverage]: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
+[instrument-coverage]: https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605

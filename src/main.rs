@@ -3,7 +3,7 @@
 #![warn(clippy::default_trait_access, clippy::wildcard_imports)]
 
 // Refs:
-// - https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html
+// - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
 // - https://llvm.org/docs/CommandGuide/llvm-profdata.html
 // - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
@@ -196,17 +196,22 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.name));
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
-    rustflags.push_str(" -Z instrument-coverage");
+    if cx.ws.stable_coverage {
+        rustflags.push_str(" -C instrument-coverage");
+    } else {
+        // TODO: drop support for `-Z instrument-coverage` in 0.2.
+        rustflags.push_str(" -Z instrument-coverage");
+        if cfg!(windows) {
+            // `-C codegen-units=1` is needed to work around link error on windows
+            // https://github.com/rust-lang/rust/issues/85461
+            // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
+            // This has been fixed in https://github.com/rust-lang/rust/pull/91470,
+            // but old nightly compilers still need this.
+            rustflags.push_str(" -C codegen-units=1");
+        }
+    }
     // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
     rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
-    if cfg!(windows) {
-        // `-C codegen-units=1` is needed to work around link error on windows
-        // https://github.com/rust-lang/rust/issues/85461
-        // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
-        // This has been fixed in https://github.com/rust-lang/rust/pull/91470,
-        // but old nightly compilers still need this.
-        rustflags.push_str(" -C codegen-units=1");
-    }
     if !cx.cov.no_cfg_coverage {
         rustflags.push_str(" --cfg coverage");
     }
@@ -217,14 +222,18 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         rustflags.push_str(" --cfg trybuild_no_target");
     }
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
+    // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
     let rustdocflags = &mut cx.ws.config.rustdocflags();
     if cx.doctests {
         let rustdocflags = rustdocflags.get_or_insert_with(String::new);
-        rustdocflags.push_str(&format!(
-            " -Z instrument-coverage -Z unstable-options --persist-doctests {}",
-            cx.ws.doctests_dir
-        ));
+        if cx.ws.stable_coverage {
+            rustdocflags.push_str(" -C instrument-coverage");
+        } else {
+            // TODO: drop support for `-Z instrument-coverage` in 0.2.
+            rustdocflags.push_str(" -Z instrument-coverage");
+        }
+        rustdocflags
+            .push_str(&format!(" -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir));
         if cfg!(windows) {
             rustdocflags.push_str(" -C codegen-units=1");
         }
@@ -360,7 +369,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
     // This is not the ideal way, but the way unstable book says it is cannot support them.
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#tips-for-listing-the-binaries-automatically
+    // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
     // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
     if let Some(target) = &cx.build.target {

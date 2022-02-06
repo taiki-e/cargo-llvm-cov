@@ -27,24 +27,53 @@ pub(crate) struct Workspace {
 
     cargo: PathBuf,
     rustc: PathBuf,
-    pub(crate) nightly: bool,
+    /// Whether use `cargo +nightly`.
+    pub(crate) force_nightly: bool,
+    /// Whether `-C instrument-coverage` is available.
+    pub(crate) stable_coverage: bool,
 }
 
 impl Workspace {
     pub(crate) fn new(
         options: &ManifestOptions,
         target: Option<&str>,
+        doctests: bool,
         show_env: bool,
     ) -> Result<Self> {
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
         let rustc = rustc_path(&cargo);
         let (nightly, ref host) = rustc_version(&rustc)?;
 
+        let stable_coverage;
+        let force_nightly;
+        if (nightly || !doctests)
+            && cmd!(&rustc, "-C", "help").read()?.contains("instrument-coverage")
+        {
+            stable_coverage = true;
+            force_nightly = false;
+        } else if nightly {
+            stable_coverage = false;
+            force_nightly = false;
+        } else if cmd!("rustc", "+nightly", "-C", "help").read()?.contains("instrument-coverage") {
+            stable_coverage = true;
+            force_nightly = true;
+        } else {
+            stable_coverage = false;
+            force_nightly = true;
+        }
+        if force_nightly && doctests {
+            warn!(
+                "cargo-llvm-cov will be changed to always select default toolchain in the future \
+                 major version, but --doctests requires nightly toolchain; \
+                 consider using `cargo +nightly llvm-cov`"
+            )
+        }
+
         // Metadata and config
         let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
         let metadata = metadata(&cargo, &current_manifest, options)?;
         let config = Config::new(
-            if nightly { cmd!(&cargo) } else { cmd!("cargo", "+nightly") },
+            if force_nightly { cmd!("cargo", "+nightly") } else { cmd!(&cargo) },
             &metadata.workspace_root,
             target,
             Some(host),
@@ -76,12 +105,14 @@ impl Workspace {
             profdata_file,
             cargo: cargo.into(),
             rustc,
-            nightly,
+            force_nightly,
+            stable_coverage,
         })
     }
 
     pub(crate) fn cargo(&self, verbose: u8) -> ProcessBuilder {
-        let mut cmd = if self.nightly { cmd!(&self.cargo) } else { cmd!("cargo", "+nightly") };
+        let mut cmd =
+            if self.force_nightly { cmd!("cargo", "+nightly") } else { cmd!(&self.cargo) };
         cmd.dir(&self.metadata.workspace_root);
         // cargo displays env vars only with -vv.
         if verbose > 1 {
@@ -91,7 +122,8 @@ impl Workspace {
     }
 
     pub(crate) fn rustc(&self) -> ProcessBuilder {
-        let mut cmd = if self.nightly { cmd!(&self.rustc) } else { cmd!("rustc", "+nightly") };
+        let mut cmd =
+            if self.force_nightly { cmd!("rustc", "+nightly") } else { cmd!(&self.rustc) };
         cmd.dir(&self.metadata.workspace_root);
         cmd
     }

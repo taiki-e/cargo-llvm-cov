@@ -10,6 +10,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update to stabilized `-C instrument-coverage`. ([#130](https://github.com/taiki-e/cargo-llvm-cov/pull/130))
+
+  Support for `-Z instrument-coverage` in the old nightly will also be kept for compatibility.
+
+  **Compatibility Note:** In 0.1, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly. This behavior will be changed in 0.2 to always select the default toolchain. If you are likely to be affected by the change in 0.2, cargo-llvm-cov will emit a warning.
+
 ## [0.1.16] - 2022-01-21
 
 - Alleviate an issue where "File name or extension is too long" error occurs in Windows. ([#126](https://github.com/taiki-e/cargo-llvm-cov/pull/126), thanks @aganders3)

@@ -36,8 +36,9 @@ impl Config {
         // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
         // https://github.com/rust-lang/cargo/issues/9301
         cargo
-            .args(["-Z", "unstable-options", "config", "get", "--format", "json"])
-            .dir(workspace_root);
+            .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
+            .dir(workspace_root)
+            .env("RUSTC_BOOTSTRAP", "1");
         let mut config = match cargo.read() {
             Ok(s) => serde_json::from_str(&s)
                 .with_context(|| format!("failed to parse output from {}", cargo))?,

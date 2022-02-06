@@ -50,7 +50,7 @@ impl Context {
         no_run: bool,
         show_env: bool,
     ) -> Result<Self> {
-        let ws = Workspace::new(&manifest, build.target.as_deref(), show_env)?;
+        let ws = Workspace::new(&manifest, build.target.as_deref(), doctests, show_env)?;
         ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
         term::set_coloring(&mut build.color);
         term::verbose::set(build.verbose != 0);
@@ -95,7 +95,7 @@ impl Context {
         if !llvm_cov.exists() || !llvm_profdata.exists() {
             bail!(
                 "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
-                if ws.nightly { "" } else { " --toolchain nightly" }
+                if ws.force_nightly { " --toolchain nightly" } else { "" }
             );
         }
 
