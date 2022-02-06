@@ -10,7 +10,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2022-02-06
 
 - Update to stabilized `-C instrument-coverage`. ([#130](https://github.com/taiki-e/cargo-llvm-cov/pull/130))
 
@@ -222,7 +222,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.16...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.16...v0.2.0
 [0.1.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.13...v0.1.14
