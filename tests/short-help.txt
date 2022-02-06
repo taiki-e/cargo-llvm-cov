@@ -96,7 +96,13 @@ OPTIONS:
             Test all packages in the workspace [aliases: all]
 
         --exclude <SPEC>...
-            Exclude packages from the test
+            Exclude packages from both the test and report
+
+        --exclude-from-test <SPEC>
+            Exclude packages from the test (but not from the report)
+
+        --exclude-from-report <SPEC>
+            Exclude packages from the report (but not from the test)
 
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs

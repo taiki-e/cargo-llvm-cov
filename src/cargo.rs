@@ -273,6 +273,10 @@ pub(crate) fn test_args(cx: &Context, args: &Args, cmd: &mut ProcessBuilder) {
         cmd.arg("--exclude");
         cmd.arg(exclude);
     }
+    for exclude in &args.exclude_from_test {
+        cmd.arg("--exclude");
+        cmd.arg(exclude);
+    }
 
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);

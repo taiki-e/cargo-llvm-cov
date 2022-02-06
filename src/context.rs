@@ -43,9 +43,8 @@ impl Context {
         mut build: BuildOptions,
         manifest: ManifestOptions,
         mut cov: LlvmCovOptions,
-        workspace: bool,
         exclude: &[String],
-        package: &[String],
+        exclude_from_report: &[String],
         doctests: bool,
         no_run: bool,
         show_env: bool,
@@ -99,7 +98,7 @@ impl Context {
             );
         }
 
-        let workspace_members = WorkspaceMembers::new(workspace, exclude, package, &ws.metadata);
+        let workspace_members = WorkspaceMembers::new(exclude, exclude_from_report, &ws.metadata);
         if workspace_members.included.is_empty() {
             bail!("no crates to be measured for coverage");
         }
@@ -149,45 +148,26 @@ pub(crate) struct WorkspaceMembers {
 
 impl WorkspaceMembers {
     fn new(
-        workspace: bool,
         exclude: &[String],
-        package: &[String],
+        exclude_from_report: &[String],
         metadata: &cargo_metadata::Metadata,
     ) -> Self {
-        let workspace =
-            workspace || (metadata.resolve.as_ref().unwrap().root.is_none() && package.is_empty());
         let mut excluded = vec![];
         let mut included = vec![];
-        if workspace {
-            // with --workspace
+        if !exclude.is_empty() || !exclude_from_report.is_empty() {
             for id in &metadata.workspace_members {
                 // --exclude flag doesn't handle `name:version` format
-                if exclude.contains(&metadata[id].name) {
-                    excluded.push(id.clone());
-                } else {
-                    included.push(id.clone());
-                }
-            }
-        } else if !package.is_empty() {
-            // with --package
-            for id in &metadata.workspace_members {
-                let pkg = &metadata[id];
-                if package.contains(&pkg.name)
-                    || package.contains(&format!("{}:{}", &pkg.name, &pkg.version))
+                if exclude.contains(&metadata[id].name)
+                    || exclude_from_report.contains(&metadata[id].name)
                 {
-                    included.push(id.clone());
-                } else {
                     excluded.push(id.clone());
+                } else {
+                    included.push(id.clone());
                 }
             }
         } else {
-            let current_package = metadata.resolve.as_ref().unwrap().root.as_ref().unwrap();
             for id in &metadata.workspace_members {
-                if current_package == id {
-                    included.push(id.clone());
-                } else {
-                    excluded.push(id.clone());
-                }
+                included.push(id.clone());
             }
         }
 

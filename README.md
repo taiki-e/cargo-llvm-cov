@@ -171,7 +171,13 @@ OPTIONS:
             [aliases: all]
 
         --exclude <SPEC>...
-            Exclude packages from the test
+            Exclude packages from both the test and report
+
+        --exclude-from-test <SPEC>
+            Exclude packages from the test (but not from the report)
+
+        --exclude-from-report <SPEC>
+            Exclude packages from the report (but not from the test)
 
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs
@@ -346,7 +352,7 @@ jobs:
           fail_ci_if_error: true
 ```
 
-**NOTE:** Currently, only line coverage is available on Codecov. This is because `-Z instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+**NOTE:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
 
 ### Exclude function from coverage
 
@@ -382,7 +388,7 @@ rustup component add llvm-tools-preview --toolchain nightly
 cargo install cargo-llvm-cov
 ```
 
-If `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly. This behavior will be changed in 0.2 to always select the default toolchain.
+If `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly. This behavior will be changed in 0.3 to always select the default toolchain.
 
 Currently, installing cargo-llvm-cov requires rustc 1.54+.
 

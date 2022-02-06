@@ -27,7 +27,6 @@ use std::{
     convert::TryInto,
     ffi::{OsStr, OsString},
     path::Path,
-    slice,
 };
 
 use anyhow::{Context as _, Result};
@@ -74,9 +73,8 @@ fn try_main() -> Result<()> {
                 args.build(),
                 args.manifest(),
                 args.cov(),
-                false,
                 &[],
-                args.package.as_ref().map(slice::from_ref).unwrap_or_default(),
+                &[],
                 false,
                 false,
                 false,
@@ -136,9 +134,8 @@ fn context_from_args(args: &mut Args, show_env: bool) -> Result<Context> {
         args.build(),
         args.manifest(),
         args.cov(),
-        args.workspace,
         &args.exclude,
-        &args.package,
+        &args.exclude_from_report,
         args.doctests,
         args.no_run,
         show_env,
@@ -199,7 +196,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     if cx.ws.stable_coverage {
         rustflags.push_str(" -C instrument-coverage");
     } else {
-        // TODO: drop support for `-Z instrument-coverage` in 0.2.
+        // TODO: drop support for `-Z instrument-coverage` in 0.3.
         rustflags.push_str(" -Z instrument-coverage");
         if cfg!(windows) {
             // `-C codegen-units=1` is needed to work around link error on windows
@@ -229,7 +226,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         if cx.ws.stable_coverage {
             rustdocflags.push_str(" -C instrument-coverage");
         } else {
-            // TODO: drop support for `-Z instrument-coverage` in 0.2.
+            // TODO: drop support for `-Z instrument-coverage` in 0.3.
             rustdocflags.push_str(" -Z instrument-coverage");
         }
         rustdocflags

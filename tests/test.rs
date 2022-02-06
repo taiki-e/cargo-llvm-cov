@@ -55,6 +55,13 @@ fn virtual1() {
     run("virtual1", "package5", &["--package", "member4"], &[]);
     run("virtual1", "package6", &["--package", "member3", "--package", "member4"], &[]);
     run("virtual1", "exclude", &["--workspace", "--exclude", "member2"], &[]);
+    run(
+        "virtual1",
+        "exclude-from-report",
+        &["--workspace", "--exclude-from-report", "member2"],
+        &[],
+    );
+    run("virtual1", "exclude-from-test", &["--workspace", "--exclude-from-test", "member2"], &[]);
     run("virtual1", "exclude-multi-val", &["--workspace", "--exclude", "member1", "member2"], &[]);
 }
 
