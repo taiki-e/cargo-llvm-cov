@@ -126,7 +126,7 @@ impl Config {
             *target = self.build.target.clone();
         }
         if *verbose == 0 {
-            *verbose = self.term.verbose.unwrap_or(false) as _;
+            *verbose = u8::from(self.term.verbose.unwrap_or(false));
         }
         if color.is_none() {
             *color = self.term.color;

@@ -66,7 +66,7 @@ impl Workspace {
                 "cargo-llvm-cov will be changed to always select default toolchain in the future \
                  major version, but --doctests requires nightly toolchain; \
                  consider using `cargo +nightly llvm-cov`"
-            )
+            );
         }
 
         // Metadata and config

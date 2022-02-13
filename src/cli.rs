@@ -32,6 +32,7 @@ pub(crate) enum Opts {
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder)
 )]
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct Args {
     #[clap(subcommand)]
     pub(crate) subcommand: Option<Subcommand>,
@@ -209,6 +210,7 @@ pub(crate) enum Subcommand {
 }
 
 #[derive(Debug, Default, Parser)]
+#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct LlvmCovOptions {
     /// Export coverage data in "json" format
     ///
@@ -305,7 +307,7 @@ pub(crate) struct LlvmCovOptions {
 }
 
 impl LlvmCovOptions {
-    pub(crate) fn show(&self) -> bool {
+    pub(crate) const fn show(&self) -> bool {
         self.text || self.html
     }
 }

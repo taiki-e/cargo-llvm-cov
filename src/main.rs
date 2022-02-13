@@ -477,7 +477,7 @@ impl Format {
         }
     }
 
-    fn llvm_cov_args(self) -> &'static [&'static str] {
+    const fn llvm_cov_args(self) -> &'static [&'static str] {
         match self {
             Self::None => &["report"],
             Self::Json => &["export", "-format=text"],
