@@ -173,28 +173,26 @@ impl Command {
     #[track_caller]
     pub fn assert_success(&mut self) -> AssertOutput {
         let output = self.assert_output();
-        if !output.status.success() {
-            panic!(
-                "assertion failed: `self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-                "-".repeat(60),
-                output.stdout,
-                output.stderr,
-            );
-        }
+        assert!(
+            output.status.success(),
+            "assertion failed: `self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+            "-".repeat(60),
+            output.stdout,
+            output.stderr,
+        );
         output
     }
 
     #[track_caller]
     pub fn assert_failure(&mut self) -> AssertOutput {
         let output = self.assert_output();
-        if output.status.success() {
-            panic!(
-                "assertion failed: `!self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-                "-".repeat(60),
-                output.stdout,
-                output.stderr,
-            );
-        }
+        assert!(
+            !output.status.success(),
+            "assertion failed: `!self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+            "-".repeat(60),
+            output.stdout,
+            output.stderr,
+        );
         output
     }
 }
@@ -214,13 +212,12 @@ impl AssertOutput {
     #[track_caller]
     pub fn stderr_contains(&self, pats: &str) -> &Self {
         line_separated(pats, |pat| {
-            if !self.stderr.contains(pat) {
-                panic!(
-                    "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
-                    "-".repeat(60),
-                    self.stderr
-                );
-            }
+            assert!(
+                self.stderr.contains(pat),
+                "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
+                "-".repeat(60),
+                self.stderr
+            );
         });
         self
     }
@@ -229,13 +226,12 @@ impl AssertOutput {
     #[track_caller]
     pub fn stdout_contains(&self, pats: &str) -> &Self {
         line_separated(pats, |pat| {
-            if !self.stdout.contains(pat) {
-                panic!(
-                    "assertion failed: `self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
-                    "-".repeat(60),
-                    self.stdout
-                );
-            }
+            assert!(
+                self.stdout.contains(pat),
+                "assertion failed: `self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
+                "-".repeat(60),
+                self.stdout
+            );
         });
         self
     }
