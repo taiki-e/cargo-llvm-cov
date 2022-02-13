@@ -20,7 +20,7 @@ impl Coloring {
     const ALWAYS: u8 = Self::Always as _;
     const NEVER: u8 = Self::Never as _;
 
-    pub(crate) fn cargo_color(self) -> &'static str {
+    pub(crate) const fn cargo_color(self) -> &'static str {
         match self {
             Self::Auto => "auto",
             Self::Always => "always",

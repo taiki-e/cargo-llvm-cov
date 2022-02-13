@@ -305,7 +305,7 @@ pub(crate) struct LlvmCovOptions {
 }
 
 impl LlvmCovOptions {
-    pub(crate) fn show(&self) -> bool {
+    pub(crate) const fn show(&self) -> bool {
         self.text || self.html
     }
 }
