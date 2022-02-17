@@ -1,7 +1,7 @@
 use std::mem;
 
 use camino::Utf8PathBuf;
-use clap::{AppSettings, ArgSettings, Parser};
+use clap::{AppSettings, Parser};
 
 use crate::{process::ProcessBuilder, term::Coloring};
 
@@ -203,8 +203,8 @@ pub(crate) enum Subcommand {
     #[clap(
         bin_name = "cargo llvm-cov demangle",
         max_term_width(MAX_TERM_WIDTH),
-        setting(AppSettings::DeriveDisplayOrder),
-        setting(AppSettings::Hidden)
+        hide = true,
+        setting(AppSettings::DeriveDisplayOrder)
     )]
     Demangle,
 }
@@ -266,7 +266,7 @@ pub(crate) struct LlvmCovOptions {
         value_name = "PATH",
         conflicts_with = "html",
         conflicts_with = "open",
-        setting(ArgSettings::ForbidEmptyValues)
+        forbid_empty_values = true
     )]
     pub(crate) output_path: Option<Utf8PathBuf>,
     /// Specify a directory to write coverage report into (default to `target/llvm-cov`).
@@ -280,7 +280,7 @@ pub(crate) struct LlvmCovOptions {
         conflicts_with = "json",
         conflicts_with = "lcov",
         conflicts_with = "output-path",
-        setting(ArgSettings::ForbidEmptyValues)
+        forbid_empty_values = true
     )]
     pub(crate) output_dir: Option<Utf8PathBuf>,
 
@@ -288,7 +288,7 @@ pub(crate) struct LlvmCovOptions {
     #[clap(long, value_name = "any|all", possible_values(&["any", "all"]), hide_possible_values = true)]
     pub(crate) failure_mode: Option<String>,
     /// Skip source code files with file paths that match the given regular expression.
-    #[clap(long, value_name = "PATTERN", setting(ArgSettings::ForbidEmptyValues))]
+    #[clap(long, value_name = "PATTERN", forbid_empty_values = true)]
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
     #[clap(long, hide = true)]
@@ -517,14 +517,14 @@ mod tests {
     };
 
     use anyhow::Result;
-    use clap::{IntoApp, Parser};
+    use clap::{CommandFactory, Parser};
     use fs_err as fs;
 
     use super::{Args, Opts, MAX_TERM_WIDTH};
 
     #[test]
     fn assert_app() {
-        Args::into_app().debug_assert();
+        Args::command().debug_assert();
     }
 
     // https://github.com/clap-rs/clap/issues/751
@@ -626,9 +626,9 @@ mod tests {
     fn get_help(long: bool) -> Result<String> {
         let mut buf = vec![];
         if long {
-            Args::into_app().term_width(MAX_TERM_WIDTH).write_long_help(&mut buf)?;
+            Args::command().term_width(MAX_TERM_WIDTH).write_long_help(&mut buf)?;
         } else {
-            Args::into_app().term_width(MAX_TERM_WIDTH).write_help(&mut buf)?;
+            Args::command().term_width(MAX_TERM_WIDTH).write_help(&mut buf)?;
         }
         let mut out = String::new();
         for mut line in String::from_utf8(buf)?.lines() {
