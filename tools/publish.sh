@@ -8,7 +8,7 @@ cd "$(dirname "$0")"/..
 # USAGE:
 #    ./tools/publish.sh
 #
-# NOTE:
+# Note:
 # - This script requires parse-changelog <https://github.com/taiki-e/parse-changelog>
 
 bail() {
@@ -44,22 +44,23 @@ tag="v${version}"
 git diff --exit-code
 git diff --exit-code --staged
 
+# Make sure the same release has not been created in the past.
+if gh release view "${tag}" >/dev/null; then
+    bail "tag '${tag}' has already been created and pushed"
+fi
+
 # Make sure that a valid release note for this version exists.
 # https://github.com/taiki-e/parse-changelog
 echo "============== CHANGELOG =============="
 parse-changelog CHANGELOG.md "${version}"
 echo "======================================="
 
-if ! grep <CHANGELOG.md -E "^## \\[${version//./\\.}\\] - $(date --utc '+%Y-%m-%d')$" >/dev/null; then
-    bail "not found section '[${version}] - $(date --utc '+%Y-%m-%d')' in CHANGELOG.md"
+release_date=$(date --utc '+%Y-%m-%d')
+if ! grep -Eq "^## \\[${version//./\\.}\\] - ${release_date}$" CHANGELOG.md; then
+    bail "not found section '[${version}] - ${release_date}' in CHANGELOG.md"
 fi
-if ! grep <CHANGELOG.md -E "^\\[${version//./\\.}\\]: " >/dev/null; then
+if ! grep -Eq "^\\[${version//./\\.}\\]: " CHANGELOG.md; then
     bail "not found link to [${version}] in CHANGELOG.md"
-fi
-
-# Make sure the same release has not been created in the past.
-if gh release view "${tag}" &>/dev/null; then
-    bail "tag '${tag}' has already been created and pushed"
 fi
 
 set -x
