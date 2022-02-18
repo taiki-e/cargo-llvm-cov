@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.2.1] - 2022-02-18
+
+- Update clap to 3.1. ([#136](https://github.com/taiki-e/cargo-llvm-cov/pull/136))
+
 ## [0.2.0] - 2022-02-06
 
 - Update to stabilized `-C instrument-coverage`. ([#130](https://github.com/taiki-e/cargo-llvm-cov/pull/130))
@@ -222,7 +226,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.16...v0.2.0
 [0.1.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.14...v0.1.15
