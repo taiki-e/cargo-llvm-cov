@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{env, process::ProcessBuilder, term::Coloring};
 
-// NOTE: We don't need to get configuration values like net.offline here,
+// Note: We don't need to get configuration values like net.offline here,
 // because those are configuration that need to be applied only to cargo,
 // and such configuration will be handled properly by cargo itself.
 #[derive(Debug, Default, Deserialize)]
@@ -69,7 +69,7 @@ impl Config {
         // 1. RUSTFLAGS
         // 2. target.<triple>.rustflags (CARGO_TARGET_<triple>_RUSTFLAGS) and target.<cfg>.rustflags
         // 3. build.rustflags (CARGO_BUILD_RUSTFLAGS)
-        // NOTE: target.<cfg>.rustflags is currently ignored
+        // Note: target.<cfg>.rustflags is currently ignored
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
         if let Some(rustflags) = env::var("RUSTFLAGS")? {
             self.build.rustflags = Some(StringOrArray::String(rustflags));

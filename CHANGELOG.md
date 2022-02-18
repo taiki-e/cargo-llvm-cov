@@ -105,7 +105,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.1.2] - 2021-08-26
 
-**NOTE:** This release has been yanked due to regressions fixed in 0.1.3.
+**Note:** This release has been yanked due to regressions fixed in 0.1.3.
 
 - Set `cfg(coverage)` to easily use `#[no_coverage]`. ([#72](https://github.com/taiki-e/cargo-llvm-cov/pull/72))
 

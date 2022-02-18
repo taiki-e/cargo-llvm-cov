@@ -352,7 +352,7 @@ jobs:
           fail_ci_if_error: true
 ```
 
-**NOTE:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+**Note:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
 
 ### Exclude function from coverage
 
@@ -426,7 +426,7 @@ You can install [cargo-llvm-cov from AUR](https://aur.archlinux.org/packages/car
 paru -S cargo-llvm-cov
 ```
 
-NOTE: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
+Note: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 ## Known limitations
 
