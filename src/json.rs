@@ -3,16 +3,18 @@ use serde::{Deserialize, Serialize};
 // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
+#[allow(unreachable_pub)]
 pub struct LlvmCovJsonExport {
     /// List of one or more export objects
-    pub data: Vec<Export>,
+    pub(crate) data: Vec<Export>,
     // llvm.coverage.json.export
     #[serde(rename = "type")]
-    pub type_: String,
-    pub version: String,
+    pub(crate) type_: String,
+    pub(crate) version: String,
 }
 
 impl LlvmCovJsonExport {
+    #[allow(unreachable_pub, dead_code)]
     pub fn demangle(&mut self) {
         for data in &mut self.data {
             if let Some(functions) = &mut data.functions {
@@ -24,114 +26,111 @@ impl LlvmCovJsonExport {
     }
 }
 
-/// Json representation of one CoverageMapping
+/// Json representation of one `CoverageMapping`
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct Export {
+pub(crate) struct Export {
     /// List of objects describing coverage for files
-    pub files: Vec<File>,
+    pub(crate) files: Vec<File>,
     /// List of objects describing coverage for functions
     ///
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub functions: Option<Vec<Function>>,
-    #[cfg(test)]
-    pub totals: serde_json::Value,
+    pub(crate) functions: Option<Vec<Function>>,
+    pub(crate) totals: serde_json::Value,
 }
 
 /// Coverage for a single file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct File {
+pub(crate) struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
     // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L93
-    #[cfg(test)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub branches: Option<Vec<serde_json::Value>>,
+    pub(crate) branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
     ///
     /// This is None if report is summary-only.
-    #[cfg(test)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expansions: Option<Vec<serde_json::Value>>,
-    pub filename: String,
+    pub(crate) expansions: Option<Vec<serde_json::Value>>,
+    pub(crate) filename: String,
     /// List of Segments contained in the file
     ///
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub segments: Option<Vec<Segment>>,
+    pub(crate) segments: Option<Vec<Segment>>,
     /// Object summarizing the coverage for this file
-    pub summary: Summary,
+    pub(crate) summary: Summary,
 }
 
 /// Describes a segment of the file with a counter
 // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L80
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct Segment(
-    /* Line */ pub u64,
-    /* Col */ pub u64,
-    /* Count */ pub u64,
-    /* HasCount */ pub bool,
-    /* IsRegionEntry */ pub bool,
-    /* IsGapRegion */ pub bool,
+pub(crate) struct Segment(
+    /* Line */ pub(crate) u64,
+    /* Col */ pub(crate) u64,
+    /* Count */ pub(crate) u64,
+    /* HasCount */ pub(crate) bool,
+    /* IsRegionEntry */ pub(crate) bool,
+    /* IsGapRegion */ pub(crate) bool,
 );
 
 // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L259
 /// Coverage info for a single function
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct Function {
-    #[cfg(test)]
-    pub branches: Vec<serde_json::Value>,
-    pub count: u64,
+pub(crate) struct Function {
+    pub(crate) branches: Vec<serde_json::Value>,
+    pub(crate) count: u64,
     /// List of filenames that the function relates to
-    pub filenames: Vec<String>,
-    pub name: String,
-    pub regions: Vec<Region>,
+    pub(crate) filenames: Vec<String>,
+    pub(crate) name: String,
+    pub(crate) regions: Vec<Region>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct Region(
-    /* LineStart */ pub u64,
-    /* ColumnStart */ pub u64,
-    /* LineEnd */ pub u64,
-    /* ColumnEnd */ pub u64,
-    /* ExecutionCount */ pub u64,
-    /* FileID */ pub u64,
-    /* ExpandedFileID */ pub u64,
-    /* Kind */ pub u64,
+pub(crate) struct Region(
+    /* LineStart */ pub(crate) u64,
+    /* ColumnStart */ pub(crate) u64,
+    /* LineEnd */ pub(crate) u64,
+    /* ColumnEnd */ pub(crate) u64,
+    /* ExecutionCount */ pub(crate) u64,
+    /* FileID */ pub(crate) u64,
+    /* ExpandedFileID */ pub(crate) u64,
+    /* Kind */ pub(crate) u64,
 );
 
 /// Object summarizing the coverage for this file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct Summary {
+pub(crate) struct Summary {
     /// Object summarizing branch coverage
-    pub branches: CoverageCounts,
+    pub(crate) branches: CoverageCounts,
     /// Object summarizing function coverage
-    pub functions: CoverageCounts,
-    pub instantiations: CoverageCounts,
+    pub(crate) functions: CoverageCounts,
+    pub(crate) instantiations: CoverageCounts,
     /// Object summarizing line coverage
-    pub lines: CoverageCounts,
+    pub(crate) lines: CoverageCounts,
     /// Object summarizing region coverage
-    pub regions: CoverageCounts,
+    pub(crate) regions: CoverageCounts,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub struct CoverageCounts {
-    pub count: u64,
-    pub covered: u64,
+pub(crate) struct CoverageCounts {
+    pub(crate) count: u64,
+    pub(crate) covered: u64,
     // Currently only branches and regions has this field.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub notcovered: Option<u64>,
-    pub percent: f64,
+    pub(crate) notcovered: Option<u64>,
+    pub(crate) percent: f64,
 }
 
+#[cfg(test)]
 mod tests {
     use fs_err as fs;
 

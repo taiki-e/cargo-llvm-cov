@@ -22,6 +22,7 @@ mod context;
 mod demangler;
 mod env;
 mod fs;
+mod json;
 
 use std::{
     collections::HashMap,
