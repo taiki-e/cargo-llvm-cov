@@ -1,5 +1,3 @@
-mod json;
-
 use std::{
     convert::TryInto,
     env,
@@ -85,7 +83,7 @@ pub fn assert_output(output_path: &Utf8Path, expected: &str) -> Result<()> {
 pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
     if args.contains(&"--json") {
         let s = fs::read_to_string(output_path)?;
-        let mut json = serde_json::from_str::<json::LlvmCovJsonExport>(&s).unwrap();
+        let mut json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&s).unwrap();
         if !args.contains(&"--summary-only") {
             json.demangle();
         }
