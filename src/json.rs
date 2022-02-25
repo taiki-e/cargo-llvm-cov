@@ -1,3 +1,4 @@
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 
 // https://github.com/llvm/llvm-project/blob/c0db8d50ca3ceb1301b2ade2fb86c591a5b64e5c/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
@@ -23,6 +24,25 @@ impl LlvmCovJsonExport {
                 }
             }
         }
+    }
+
+    /// Gets the minimal lines coverage of all files.
+    #[allow(unreachable_pub, dead_code)]
+    pub fn get_lines_percent(&self) -> Result<f64> {
+        let mut count = 0_f64;
+        let mut covered = 0_f64;
+        for data in &self.data {
+            let totals = &data.totals.as_object().context("totals is not an object")?;
+            let lines = &totals["lines"].as_object().context("no lines")?;
+            count += lines["count"].as_f64().context("no count")?;
+            covered += lines["covered"].as_f64().context("no covered")?;
+        }
+
+        if count == 0_f64 {
+            return Ok(0_f64);
+        }
+
+        Ok(covered * 100_f64 / count)
     }
 }
 
@@ -154,5 +174,21 @@ mod tests {
             assert!(json.version.starts_with("2.0."));
             serde_json::to_string(&json).unwrap();
         }
+    }
+
+    #[test]
+    fn test_get_lines_percent() {
+        // There are 5 different percentages, make sure we pick the correct one.
+        let file = format!(
+            "{}/tests/fixtures/coverage-reports/no_coverage/no_coverage.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        let percent = json.get_lines_percent().unwrap();
+
+        let error_margin = f64::EPSILON;
+        assert!((percent - 69.565_217_391_304_34).abs() < error_margin);
     }
 }

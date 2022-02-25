@@ -299,6 +299,19 @@ fn generate_report(cx: &Context) -> Result<()> {
             .context("failed to generate report")?;
     }
 
+    if let Some(fail_under_lines) = cx.cov.fail_under_lines {
+        // Handle --fail-under-lines.
+        let format = Format::Json;
+        if let Some(lines_percent) = format
+            .get_lines_percent(cx, &object_files, ignore_filename_regex.as_ref())
+            .context("failed to get lines percentage")?
+        {
+            if lines_percent < fail_under_lines {
+                term::error::set(true);
+            }
+        }
+    }
+
     if cx.cov.open {
         let path = &cx.cov.output_dir.as_ref().unwrap().join("html/index.html");
         status!("Opening", "{}", path);
@@ -581,6 +594,39 @@ impl Format {
             }
         }
         Ok(())
+    }
+
+    /// Generates JSON to look up the line coverage percentage.
+    fn get_lines_percent(
+        self,
+        cx: &Context,
+        object_files: &[OsString],
+        ignore_filename_regex: Option<&String>,
+    ) -> Result<Option<f64>> {
+        if let Self::Json = self {
+        } else {
+            return Ok(None);
+        }
+
+        let mut cmd = cx.process(&cx.llvm_cov);
+        cmd.args(self.llvm_cov_args());
+        cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
+        cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
+        if let Some(jobs) = cx.build.jobs {
+            cmd.arg(format!("-num-threads={}", jobs));
+        }
+        if let Some(ignore_filename_regex) = ignore_filename_regex {
+            cmd.arg("-ignore-filename-regex");
+            cmd.arg(ignore_filename_regex);
+        }
+        cmd.arg("-summary-only");
+        if term::verbose() {
+            status!("Running", "{}", cmd);
+        }
+        let cmd_out = cmd.read()?;
+        let json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&cmd_out)
+            .context("failed to parse json from llvm-cov")?;
+        Ok(Some(json.get_lines_percent().context("failed to get line coverage")?))
     }
 }
 
