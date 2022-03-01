@@ -111,6 +111,9 @@ OPTIONS:
         --no-report
             Run tests, but don't generate coverage report
 
+        --fail-under-lines <MIN>
+            Exit with a status of 1 if the total line coverage is less than MIN percent
+
         --doctests
             Including doc tests (unstable)
 

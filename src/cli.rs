@@ -304,6 +304,9 @@ pub(crate) struct LlvmCovOptions {
     /// Run tests, but don't generate coverage report
     #[clap(long)]
     pub(crate) no_report: bool,
+    /// Exit with a status of 1 if the total line coverage is less than MIN percent.
+    #[clap(long, value_name = "MIN")]
+    pub(crate) fail_under_lines: Option<f64>,
 }
 
 impl LlvmCovOptions {
