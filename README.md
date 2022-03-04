@@ -114,6 +114,9 @@ OPTIONS:
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 
+        --show-missing-lines
+            Show lines with no coverage
+
         --doctests
             Including doc tests (unstable)
 
