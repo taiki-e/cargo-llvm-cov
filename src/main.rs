@@ -42,6 +42,7 @@ use crate::{
     cli::{Args, Opts, Subcommand},
     config::StringOrArray,
     context::Context,
+    json::LlvmCovJsonExport,
     process::ProcessBuilder,
     term::Coloring,
 };
@@ -299,15 +300,29 @@ fn generate_report(cx: &Context) -> Result<()> {
             .context("failed to generate report")?;
     }
 
-    if let Some(fail_under_lines) = cx.cov.fail_under_lines {
-        // Handle --fail-under-lines.
+    if cx.cov.fail_under_lines.is_some() || cx.cov.show_missing_lines {
         let format = Format::Json;
-        if let Some(lines_percent) = format
-            .get_lines_percent(cx, &object_files, ignore_filename_regex.as_ref())
-            .context("failed to get lines percentage")?
-        {
+        let json = format
+            .get_json(cx, &object_files, ignore_filename_regex.as_ref())
+            .context("failed to get json")?;
+
+        if let Some(fail_under_lines) = cx.cov.fail_under_lines {
+            // Handle --fail-under-lines.
+            let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
                 term::error::set(true);
+            }
+        }
+
+        if cx.cov.show_missing_lines {
+            // Handle --show-missing-lines.
+            let uncovered_files = json.get_uncovered_lines();
+            if !uncovered_files.is_empty() {
+                println!("Uncovered Lines:");
+            }
+            for (file, lines) in &uncovered_files {
+                let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
+                println!("{}: {}", file, lines.join(", "));
             }
         }
     }
@@ -596,16 +611,16 @@ impl Format {
         Ok(())
     }
 
-    /// Generates JSON to look up the line coverage percentage.
-    fn get_lines_percent(
+    /// Generates JSON to perform further analysis on it.
+    fn get_json(
         self,
         cx: &Context,
         object_files: &[OsString],
         ignore_filename_regex: Option<&String>,
-    ) -> Result<Option<f64>> {
+    ) -> Result<LlvmCovJsonExport> {
         if let Self::Json = self {
         } else {
-            return Ok(None);
+            return Err(anyhow::anyhow!("requested JSON for non-JSON type"));
         }
 
         let mut cmd = cx.process(&cx.llvm_cov);
@@ -619,14 +634,13 @@ impl Format {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
         }
-        cmd.arg("-summary-only");
         if term::verbose() {
             status!("Running", "{}", cmd);
         }
         let cmd_out = cmd.read()?;
-        let json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&cmd_out)
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&cmd_out)
             .context("failed to parse json from llvm-cov")?;
-        Ok(Some(json.get_lines_percent().context("failed to get line coverage")?))
+        Ok(json)
     }
 }
 

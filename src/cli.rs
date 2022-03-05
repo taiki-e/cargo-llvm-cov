@@ -307,6 +307,9 @@ pub(crate) struct LlvmCovOptions {
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
     #[clap(long, value_name = "MIN")]
     pub(crate) fail_under_lines: Option<f64>,
+    /// Show lines with no coverage.
+    #[clap(long)]
+    pub(crate) show_missing_lines: bool,
 }
 
 impl LlvmCovOptions {

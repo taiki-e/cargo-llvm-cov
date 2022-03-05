@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +15,9 @@ pub struct LlvmCovJsonExport {
     pub(crate) type_: String,
     pub(crate) version: String,
 }
+
+/// Files -> list of uncovered lines.
+pub(crate) type UncoveredLines = BTreeMap<String, Vec<u64>>;
 
 impl LlvmCovJsonExport {
     #[allow(unreachable_pub, dead_code)]
@@ -43,6 +48,45 @@ impl LlvmCovJsonExport {
         }
 
         Ok(covered * 100_f64 / count)
+    }
+
+    /// Gets the list of uncovered lines of all files.
+    #[allow(unreachable_pub, dead_code)]
+    #[must_use]
+    pub fn get_uncovered_lines(&self) -> UncoveredLines {
+        let mut uncovered_files: UncoveredLines = BTreeMap::new();
+        for data in &self.data {
+            for file in &data.files {
+                // Detect lines which have matching segments but all of them are has_count and
+                // count is 0.
+                let file_name = &file.filename;
+                if let Some(ref segments) = file.segments {
+                    let mut lines: BTreeMap<u64, bool> = BTreeMap::new();
+                    // Check all segments and see if lines are covered at least once.
+                    for segment in segments {
+                        let line = segment.0;
+                        let count = segment.2;
+                        let has_count = segment.3;
+                        if !has_count {
+                            continue;
+                        }
+
+                        // If any segments covers the line, the line is covered.
+                        *lines.entry(line).or_insert(false) |= count > 0;
+                    }
+
+                    let uncovered_lines: Vec<u64> = lines
+                        .iter()
+                        .filter(|(_line, covered)| !*covered)
+                        .map(|(line, _covered)| *line)
+                        .collect();
+                    if !uncovered_lines.is_empty() {
+                        uncovered_files.insert(file_name.clone(), uncovered_lines);
+                    }
+                }
+            }
+        }
+        uncovered_files
     }
 }
 
@@ -154,7 +198,7 @@ pub(crate) struct CoverageCounts {
 mod tests {
     use fs_err as fs;
 
-    use super::LlvmCovJsonExport;
+    use super::*;
 
     #[test]
     fn parse_llvm_cov_json() {
@@ -190,5 +234,24 @@ mod tests {
 
         let error_margin = f64::EPSILON;
         assert!((percent - 69.565_217_391_304_34).abs() < error_margin);
+    }
+
+    #[test]
+    fn test_get_uncovered_lines() {
+        // Given a coverage report which includes segments:
+        // There are 5 different percentages, make sure we pick the correct one.
+        let file = format!("{}/tests/fixtures/show-missing-lines.json", env!("CARGO_MANIFEST_DIR"));
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        // When finding uncovered lines in that report:
+        let uncovered_lines = json.get_uncovered_lines();
+
+        // Then make sure the file / line data matches the expected value:
+        let expected: UncoveredLines =
+            vec![("src/lib.rs".to_string(), vec![22, 26]), ("src/m.rs".to_string(), vec![5])]
+                .into_iter()
+                .collect();
+        assert_eq!(uncovered_lines, expected);
     }
 }
