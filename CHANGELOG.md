@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.2.3] - 2022-03-05
+
+- Add `--show-missing-lines` option to show uncovered lines in the command-line output. ([#143](https://github.com/taiki-e/cargo-llvm-cov/pull/143), thanks @vmiklos)
+
 ## [0.2.2] - 2022-03-01
 
 - Add `--fail-under-lines` option to set the exit code based on coverage percentage. ([#139](https://github.com/taiki-e/cargo-llvm-cov/pull/139), thanks @vmiklos)
@@ -230,7 +234,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.1.16...v0.2.0
