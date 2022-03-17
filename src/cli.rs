@@ -199,6 +199,19 @@ pub(crate) enum Subcommand {
     )]
     Clean(CleanOptions),
 
+    /// Run tests with cargo nextest
+    #[clap(
+        bin_name = "cargo llvm-cov nextest",
+        max_term_width(MAX_TERM_WIDTH),
+        setting(AppSettings::DeriveDisplayOrder),
+        trailing_var_arg = true,
+        allow_hyphen_values = true
+    )]
+    Nextest {
+        #[clap(multiple_values = true)]
+        passthrough_options: Vec<String>,
+    },
+
     // internal (unstable)
     #[clap(
         bin_name = "cargo llvm-cov demangle",
