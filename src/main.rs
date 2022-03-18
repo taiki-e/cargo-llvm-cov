@@ -100,6 +100,37 @@ fn try_main() -> Result<()> {
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str());
         }
 
+        Some(Subcommand::Nextest { passthrough_options }) => {
+            let cx = &context_from_args(
+                &mut Args::try_parse_from(
+                    [
+                        // fake argv[0] to help clap parse
+                        "nextest".to_string(),
+                    ]
+                    .iter()
+                    // real pass-through args
+                    .chain(passthrough_options.iter()),
+                )?,
+                false,
+            )?;
+
+            clean::clean_partial(cx)?;
+            create_dirs(cx)?;
+            match (args.no_run, cx.cov.no_report) {
+                (false, false) => {
+                    run_nextest(cx, &args)?;
+                    generate_report(cx)?;
+                }
+                (false, true) => {
+                    run_nextest(cx, &args)?;
+                }
+                (true, false) => {
+                    generate_report(cx)?;
+                }
+                (true, true) => unreachable!(),
+            }
+        }
+
         None => {
             let cx = &context_from_args(&mut args, false)?;
             let tmp = term::warn(); // The following warnings should not be promoted to an error.
@@ -265,6 +296,26 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
+    cargo::test_args(cx, args, &mut cargo);
+
+    if term::verbose() {
+        status!("Running", "{}", cargo);
+    }
+    cargo.stdout_to_stderr().run()?;
+    Ok(())
+}
+
+fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
+    let mut cargo = cx.cargo();
+
+    set_env(cx, &mut cargo);
+
+    cargo.arg("nextest").arg("run");
+
+    if cx.doctests {
+        return Err(anyhow::anyhow!("doctest is not supported for nextest"));
+    }
+
     cargo::test_args(cx, args, &mut cargo);
 
     if term::verbose() {

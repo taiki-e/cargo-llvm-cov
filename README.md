@@ -247,6 +247,8 @@ SUBCOMMANDS:
             Output the environment set by cargo-llvm-cov to build Rust projects
     clean
             Remove artifacts that cargo-llvm-cov has generated in the past
+    nextest
+            Run tests with cargo nextest
     help
             Print this message or the help of the given subcommand(s)
 ```
