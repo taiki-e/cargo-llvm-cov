@@ -50,9 +50,14 @@ jobs:
         if: startsWith(matrix.rust, 'nightly')
       - uses: taiki-e/install-action@cargo-minimal-versions
         if: startsWith(matrix.rust, 'nightly')
+      - uses: taiki-e/install-action@nextest
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: startsWith(matrix.os, 'windows')
       - run: cargo test --workspace --all-features
+      # TODO: move this test to tests/test.rs
+      - run: cargo install --path . --debug
+      - run: cargo llvm-cov nextest --text
+        working-directory: tests/fixtures/crates/bin_crate
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
         if: startsWith(matrix.rust, 'nightly')
 
