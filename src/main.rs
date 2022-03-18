@@ -312,6 +312,10 @@ fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
 
     cargo.arg("nextest").arg("run");
 
+    if cx.doctests {
+        return Err(anyhow::anyhow!("doctest is not supported for nextest"));
+    }
+
     cargo::test_args(cx, args, &mut cargo);
 
     if term::verbose() {
