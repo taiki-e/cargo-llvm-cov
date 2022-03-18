@@ -416,6 +416,13 @@ This makes the installation faster and may avoid the impact of [problems caused 
 - uses: taiki-e/install-action@cargo-llvm-cov
 ```
 
+When used with [nextest]:
+
+```yml
+- uses: taiki-e/install-action@cargo-llvm-cov
+- uses: taiki-e/install-action@nextest
+```
+
 <!-- omit in toc -->
 ### Via Homebrew
 
@@ -457,6 +464,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
 [instrument-coverage]: https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
+[nextest]: https://nexte.st
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
