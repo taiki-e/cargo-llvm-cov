@@ -92,9 +92,14 @@ impl Context {
 
         // Check if required tools are installed.
         if !llvm_cov.exists() || !llvm_profdata.exists() {
+            let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
+            let toolchain = sysroot.file_name().unwrap();
+            // Include --toolchain flag in the suggestion because the user may be
+            // using toolchain override shorthand (+toolchain).
             bail!(
-                "failed to find llvm-tools-preview, please install llvm-tools-preview with `rustup component add llvm-tools-preview{}`",
-                if ws.force_nightly { " --toolchain nightly" } else { "" }
+                "failed to find llvm-tools-preview, please install llvm-tools-preview with \
+                 `rustup component add llvm-tools-preview --toolchain {}`",
+                toolchain,
             );
         }
 

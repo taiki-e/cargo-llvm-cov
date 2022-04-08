@@ -399,14 +399,14 @@ cargo-llvm-cov requires llvm-tools-preview:
 rustup component add llvm-tools-preview
 ```
 
+Running cargo-llvm-cov requires rustc 1.60+.
+
 <!-- omit in toc -->
 ### From source
 
 ```sh
 cargo install cargo-llvm-cov
 ```
-
-If `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly. This behavior will be changed in 0.3 to always select the default toolchain.
 
 Currently, installing cargo-llvm-cov requires rustc 1.54+.
 
