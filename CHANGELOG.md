@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.3.0] - 2022-04-08
+
 - cargo-llvm-cov now always select the current toolchain. ([#148](https://github.com/taiki-e/cargo-llvm-cov/pull/148))
 
   Previously, if `-C instrument-coverage` is not available in the current toolchain, the nightly toolchain was used. (See [release note of 0.2.0](https://github.com/taiki-e/cargo-llvm-cov/releases/tag/v0.2.0) for more information on the previous behavior.)
@@ -17,6 +19,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 - Make `--remap-path-prefix` optional. ([#141](https://github.com/taiki-e/cargo-llvm-cov/pull/141))
 
   Previously this flag was always used, but due to some bugs discovered we decided to disable it by default. If you were dependent on the behavior provided by this flag, you can use the same behavior by passing the `--remap-path-prefix` flag to cargo-llvm-cov.
+
+- Stabilize a few unstable options.
 
 ## [0.2.4] - 2022-03-18
 
@@ -246,7 +250,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.1...v0.2.2

@@ -63,12 +63,6 @@ impl Context {
         if cov.disable_default_ignore_filename_regex {
             warn!("--disable-default-ignore-filename-regex option is unstable");
         }
-        if cov.hide_instantiations {
-            warn!("--hide-instantiations option is unstable");
-        }
-        if cov.no_cfg_coverage {
-            warn!("--no-cfg-coverage option is unstable");
-        }
         term::warn::set(tmp);
         if build.target.is_some() {
             info!(
