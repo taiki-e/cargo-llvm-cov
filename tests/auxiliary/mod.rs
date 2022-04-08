@@ -55,6 +55,7 @@ pub fn test_report(
     }
     cmd.args(["--color", "never", "--output-path"])
         .arg(output_path)
+        .arg("--remap-path-prefix")
         .args(args)
         .current_dir(workspace_root.path());
     for (key, val) in envs {
