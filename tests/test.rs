@@ -105,6 +105,7 @@ fn cargo_config() {
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
+#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
     let model = "no_coverage";

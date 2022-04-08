@@ -230,7 +230,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     if cx.ws.stable_coverage {
         rustflags.push_str(" -C instrument-coverage");
     } else {
-        // TODO: drop support for `-Z instrument-coverage` in 0.3.
+        // TODO: drop support for `-Z instrument-coverage` in the future major release.
         rustflags.push_str(" -Z instrument-coverage");
         if cfg!(windows) {
             // `-C codegen-units=1` is needed to work around link error on windows
@@ -261,7 +261,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         if cx.ws.stable_coverage {
             rustdocflags.push_str(" -C instrument-coverage");
         } else {
-            // TODO: drop support for `-Z instrument-coverage` in 0.3.
+            // TODO: drop support for `-Z instrument-coverage` in the future major release.
             rustdocflags.push_str(" -Z instrument-coverage");
         }
         rustdocflags

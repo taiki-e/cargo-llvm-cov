@@ -10,7 +10,13 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- cargo-llvm-cov now always select the current toolchain. ([#148](https://github.com/taiki-e/cargo-llvm-cov/pull/148))
+
+  Previously, if `-C instrument-coverage` is not available in the current toolchain, the nightly toolchain was used. (See [release note of 0.2.0](https://github.com/taiki-e/cargo-llvm-cov/releases/tag/v0.2.0) for more information on the previous behavior.)
+
 - Make `--remap-path-prefix` optional. ([#141](https://github.com/taiki-e/cargo-llvm-cov/pull/141))
+
+  Previously this flag was always used, but due to some bugs discovered we decided to disable it by default. If you were dependent on the behavior provided by this flag, you can use the same behavior by passing the `--remap-path-prefix` flag to cargo-llvm-cov.
 
 ## [0.2.4] - 2022-03-18
 
@@ -34,7 +40,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   Support for `-Z instrument-coverage` in the old nightly will also be kept for compatibility.
 
-  **Compatibility Note:** In 0.2, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly (this is almost the same behavior as 0.1). This behavior is necessary because only the recent nightly currently supports `-C instrument-coverage`. This behavior will be changed in 0.3 to always select the default toolchain. If you are likely to be affected by the change in 0.3, cargo-llvm-cov will emit a warning. 0.3 is planned to be released after `-C instrument-coverage` is available in the stable toolchain.
+  **Compatibility Note:** In 0.2, if `-C instrument-coverage` or `-Z instrument-coverage` is not available in the default toolchain, running `cargo llvm-cov` will find and use nightly (this is almost the same behavior as 0.1). This behavior is necessary because only the recent nightly currently supports `-C instrument-coverage` (and also for compatibility with 0.1). This behavior will be changed in 0.3 to always select the default toolchain. If you are likely to be affected by the change in 0.3, cargo-llvm-cov will emit a warning. 0.3 is planned to be released after `-C instrument-coverage` is available in the stable toolchain.
 
 - Remove support of multiple values in `--package` and `--exclude`. ([#133](https://github.com/taiki-e/cargo-llvm-cov/pull/133))
 

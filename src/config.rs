@@ -7,7 +7,7 @@ use anyhow::{format_err, Context as _, Result};
 use camino::Utf8Path;
 use serde::Deserialize;
 
-use crate::{env, process::ProcessBuilder, term::Coloring};
+use crate::{env, term::Coloring};
 
 // Note: We don't need to get configuration values like net.offline here,
 // because those are configuration that need to be applied only to cargo,
@@ -26,7 +26,7 @@ pub(crate) struct Config {
 
 impl Config {
     pub(crate) fn new(
-        mut cargo: ProcessBuilder,
+        cargo: &OsStr,
         workspace_root: &Utf8Path,
         target: Option<&str>,
         host: Option<&str>,
@@ -35,10 +35,8 @@ impl Config {
         // However, it is unstable and can break, so allow errors.
         // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
         // https://github.com/rust-lang/cargo/issues/9301
-        cargo
-            .args(&["-Z", "unstable-options", "config", "get", "--format", "json"])
-            .dir(workspace_root)
-            .env("RUSTC_BOOTSTRAP", "1");
+        let mut cargo = cmd!(cargo, "-Z", "unstable-options", "config", "get", "--format", "json");
+        cargo.dir(workspace_root).env("RUSTC_BOOTSTRAP", "1");
         let mut config = match cargo.read() {
             Ok(s) => serde_json::from_str(&s)
                 .with_context(|| format!("failed to parse output from {}", cargo))?,
