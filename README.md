@@ -347,7 +347,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust
-        run: rustup toolchain install nightly --component llvm-tools-preview
+        run: rustup toolchain install stable --component llvm-tools-preview
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
@@ -382,11 +382,10 @@ fn exclude_from_coverage() {
 <!-- omit in toc -->
 ### Prerequisites
 
-cargo-llvm-cov requires nightly
-toolchain and llvm-tools-preview:
+cargo-llvm-cov requires llvm-tools-preview:
 
 ```sh
-rustup component add llvm-tools-preview --toolchain nightly
+rustup component add llvm-tools-preview
 ```
 
 <!-- omit in toc -->
@@ -463,7 +462,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
-[instrument-coverage]: https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
+[instrument-coverage]: https://doc.rust-lang.org/stable/rustc/instrument-coverage.html
 [nextest]: https://nexte.st
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
