@@ -152,15 +152,18 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "a"])
+            .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "b"])
+            .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
         let mut cmd = cargo_llvm_cov();
         cmd.args(["--color", "never", "--no-run", "--output-path"])
             .arg(output_path)
+            .arg("--remap-path-prefix")
             .args(args)
             .current_dir(workspace_root.path());
         cmd.assert_success();
@@ -190,11 +193,13 @@ fn clean_ws() {
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "a"])
+            .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-run", "--output-path"])
             .arg(output_path)
+            .arg("--remap-path-prefix")
             .args(args)
             .current_dir(workspace_root.path())
             .assert_success();
@@ -208,11 +213,13 @@ fn clean_ws() {
             .assert_success();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-report", "--features", "a"])
+            .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
         cargo_llvm_cov()
             .args(["--color", "never", "--no-run", "--output-path"])
             .arg(output_path)
+            .arg("--remap-path-prefix")
             .args(args)
             .current_dir(workspace_root.path())
             .assert_success();

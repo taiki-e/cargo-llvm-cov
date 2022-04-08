@@ -32,7 +32,6 @@ pub(crate) enum Opts {
     max_term_width(MAX_TERM_WIDTH),
     setting(AppSettings::DeriveDisplayOrder)
 )]
-#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct Args {
     #[clap(subcommand)]
     pub(crate) subcommand: Option<Subcommand>,
@@ -223,7 +222,6 @@ pub(crate) enum Subcommand {
 }
 
 #[derive(Debug, Default, Parser)]
-#[allow(clippy::struct_excessive_bools)]
 pub(crate) struct LlvmCovOptions {
     /// Export coverage data in "json" format
     ///
@@ -306,13 +304,11 @@ pub(crate) struct LlvmCovOptions {
     // For debugging (unstable)
     #[clap(long, hide = true)]
     pub(crate) disable_default_ignore_filename_regex: bool,
-    // For debugging (unstable)
     /// Hide instantiations from report
-    #[clap(long, hide = true)]
+    #[clap(long)]
     pub(crate) hide_instantiations: bool,
-    // For debugging (unstable)
     /// Unset cfg(coverage)
-    #[clap(long, hide = true)]
+    #[clap(long)]
     pub(crate) no_cfg_coverage: bool,
     /// Run tests, but don't generate coverage report
     #[clap(long)]
@@ -376,6 +372,12 @@ pub(crate) struct BuildOptions {
     // This flag will be propagated to both cargo and llvm-cov.
     #[clap(long, arg_enum, value_name = "WHEN")]
     pub(crate) color: Option<Coloring>,
+
+    /// Use --remap-path-prefix for workspace root
+    ///
+    /// Note that this does not fully compatible with doctest.
+    #[clap(long)]
+    pub(crate) remap_path_prefix: bool,
 }
 
 impl BuildOptions {

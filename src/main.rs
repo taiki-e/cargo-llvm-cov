@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::single_match_else)]
+#![allow(clippy::single_match_else, clippy::struct_excessive_bools)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
@@ -241,8 +241,9 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
             rustflags.push_str(" -C codegen-units=1");
         }
     }
-    // --remap-path-prefix is needed because sometimes macros are displayed with absolute path
-    rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
+    if cx.build.remap_path_prefix {
+        rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
+    }
     if !cx.cov.no_cfg_coverage {
         rustflags.push_str(" --cfg coverage");
     }
@@ -741,10 +742,17 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     }
     if !cx.cov.disable_default_ignore_filename_regex {
         out.push(default_ignore_filename_regex());
-        for path in
-            [home::home_dir(), home::cargo_home().ok(), home::rustup_home().ok()].iter().flatten()
-        {
-            out.push_abs_path(path);
+        if cx.build.remap_path_prefix {
+            for path in [home::home_dir(), home::cargo_home().ok(), home::rustup_home().ok()]
+                .iter()
+                .flatten()
+            {
+                out.push_abs_path(path);
+            }
+        } else {
+            for path in [home::cargo_home().ok(), home::rustup_home().ok()].iter().flatten() {
+                out.push_abs_path(path);
+            }
         }
         for path in resolve_excluded_paths(cx) {
             out.push_abs_path(path);

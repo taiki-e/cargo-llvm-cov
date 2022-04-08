@@ -108,6 +108,12 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
+        --hide-instantiations
+            Hide instantiations from report
+
+        --no-cfg-coverage
+            Unset cfg(coverage)
+
         --no-report
             Run tests, but don't generate coverage report
 
@@ -218,6 +224,11 @@ OPTIONS:
             Coloring
 
             [possible values: auto, always, never]
+
+        --remap-path-prefix
+            Use --remap-path-prefix for workspace root
+
+            Note that this does not fully compatible with doctest.
 
         --manifest-path <PATH>
             Path to Cargo.toml

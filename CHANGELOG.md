@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Make `--remap-path-prefix` optional. ([#141](https://github.com/taiki-e/cargo-llvm-cov/pull/141))
+
 ## [0.2.4] - 2022-03-18
 
 - Add support for `nextest`. ([#144](https://github.com/taiki-e/cargo-llvm-cov/pull/144), thanks @skyzh)
