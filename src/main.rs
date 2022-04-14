@@ -274,7 +274,14 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         }
     }
 
-    target.set("RUSTFLAGS", rustflags);
+    match (cx.build.coverage_target_only, &cx.build.target) {
+        (true, Some(coverage_target)) => target.set(
+            &format!("CARGO_TARGET_{}_RUSTFLAGS", coverage_target.to_uppercase().replace('-', "_")),
+            rustflags,
+        ),
+        _ => target.set("RUSTFLAGS", rustflags),
+    }
+
     if let Some(rustdocflags) = rustdocflags {
         target.set("RUSTDOCFLAGS", rustdocflags);
     }

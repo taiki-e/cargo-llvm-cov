@@ -357,6 +357,14 @@ pub(crate) struct BuildOptions {
     /// not be displayed because cargo does not pass RUSTFLAGS to them.
     #[clap(long, value_name = "TRIPLE")]
     pub(crate) target: Option<String>,
+    /// Activate coverage reporting only for the target triple
+    ///
+    /// Activate coverage reporting only for the target triple specified via `--target`.
+    /// This is important, if the project uses multiple targets via the cargo
+    /// bindeps feature, and not all targets can use `instrument-coverage`,
+    /// e.g. a microkernel, or an embedded binary.
+    #[clap(long, requires = "target")]
+    pub(crate) coverage_target_only: bool,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
     //       on its behavior?
