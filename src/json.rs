@@ -53,32 +53,42 @@ impl LlvmCovJsonExport {
     /// Gets the list of uncovered lines of all files.
     #[allow(unreachable_pub, dead_code)]
     #[must_use]
-    pub fn get_uncovered_lines(&self) -> UncoveredLines {
+    pub fn get_uncovered_lines(&self, ignore_filename_regex: &Option<String>) -> UncoveredLines {
         let mut uncovered_files: UncoveredLines = BTreeMap::new();
+        let mut re: Option<regex::Regex> = None;
+        if let Some(ref ignore_filename_regex) = *ignore_filename_regex {
+            re = Some(regex::Regex::new(ignore_filename_regex).unwrap());
+        }
         for data in &self.data {
-            for file in &data.files {
-                // Detect lines which have matching segments but all of them are has_count and
-                // count is 0.
-                let file_name = &file.filename;
-                if let Some(ref segments) = file.segments {
-                    let mut lines: BTreeMap<u64, bool> = BTreeMap::new();
-                    // Check all segments and see if lines are covered at least once.
-                    for segment in segments {
-                        let line = segment.0;
-                        let count = segment.2;
-                        let has_count = segment.3;
-                        if !has_count {
+            if let Some(ref functions) = data.functions {
+                // Iterate over all functions inside the coverage data.
+                for function in functions {
+                    if function.filenames.is_empty() {
+                        continue;
+                    }
+                    let file_name = &function.filenames[0];
+                    if let Some(ref re) = re {
+                        if re.is_match(file_name) {
                             continue;
                         }
-
-                        // If any segments covers the line, the line is covered.
-                        *lines.entry(line).or_insert(false) |= count > 0;
+                    }
+                    let mut lines: BTreeMap<u64, u64> = BTreeMap::new();
+                    // Iterate over all possible regions inside a function:
+                    for region in &function.regions {
+                        // LineStart, ColumnStart, LineEnd, ColumnEnd, ExecutionCount, FileID, ExpandedFileID, Kind
+                        let line_start = region.0;
+                        let line_end = region.2;
+                        let exec_count = region.4;
+                        // Remember the execution count for each line of that region:
+                        for line in line_start..=line_end {
+                            *lines.entry(line).or_insert(0) += exec_count;
+                        }
                     }
 
                     let uncovered_lines: Vec<u64> = lines
                         .iter()
-                        .filter(|(_line, covered)| !*covered)
-                        .map(|(line, _covered)| *line)
+                        .filter(|(_line, exec_count)| **exec_count == 0)
+                        .map(|(line, _exec_count)| *line)
                         .collect();
                     if !uncovered_lines.is_empty() {
                         uncovered_files.insert(file_name.clone(), uncovered_lines);
@@ -238,20 +248,38 @@ mod tests {
 
     #[test]
     fn test_get_uncovered_lines() {
-        // Given a coverage report which includes segments:
+        // Given a coverage report which includes function regions:
         // There are 5 different percentages, make sure we pick the correct one.
         let file = format!("{}/tests/fixtures/show-missing-lines.json", env!("CARGO_MANIFEST_DIR"));
         let s = fs::read_to_string(file).unwrap();
         let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
 
         // When finding uncovered lines in that report:
-        let uncovered_lines = json.get_uncovered_lines();
+        let ignore_filename_regex = None;
+        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
 
-        // Then make sure the file / line data matches the expected value:
+        // Then make sure the file / line data matches the `llvm-cov report` output:
         let expected: UncoveredLines =
-            vec![("src/lib.rs".to_string(), vec![22, 26]), ("src/m.rs".to_string(), vec![5])]
-                .into_iter()
-                .collect();
+            vec![("src/lib.rs".to_string(), vec![7, 8, 9])].into_iter().collect();
+        assert_eq!(uncovered_lines, expected);
+    }
+
+    #[test]
+    /// This was a case when counting line coverage based on the segments in files lead to
+    /// incorrect results but doing it based on regions inside functions (the way `llvm-cov
+    /// report`) leads to complete line coverage.
+    fn test_get_uncovered_lines_complete() {
+        let file = format!(
+            "{}/tests/fixtures/show-missing-lines-complete.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        let ignore_filename_regex = None;
+        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
+
+        let expected: UncoveredLines = UncoveredLines::new();
         assert_eq!(uncovered_lines, expected);
     }
 }

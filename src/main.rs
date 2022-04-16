@@ -368,7 +368,7 @@ fn generate_report(cx: &Context) -> Result<()> {
 
         if cx.cov.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines();
+            let uncovered_files = json.get_uncovered_lines(&ignore_filename_regex);
             if !uncovered_files.is_empty() {
                 println!("Uncovered Lines:");
             }
