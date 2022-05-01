@@ -77,7 +77,7 @@ impl Context {
         // target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
         // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
         // https://github.com/rust-lang/rust/issues/85658
-        // https://github.com/rust-lang/rust/blob/595088d602049d821bf9a217f2d79aea40715208/src/bootstrap/dist.rs#L2009
+        // https://github.com/rust-lang/rust/blob/1.60.0/src/bootstrap/dist.rs#L2005
         let mut rustlib: Utf8PathBuf = ws.rustc_print("target-libdir")?.into();
         rustlib.pop(); // lib
         rustlib.push("bin");

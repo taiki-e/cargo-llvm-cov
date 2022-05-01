@@ -1,12 +1,12 @@
 // Based on rust-lang/rust's rust-demangler.
 //
 // Source:
-// - https://github.com/rust-lang/rust/tree/eab201df7028ebb6812c0b1a01702ac6ecfcceed/src/tools/rust-demangler
+// - https://github.com/rust-lang/rust/tree/1.60.0/src/tools/rust-demangler
 //
 // Copyright & License:
-// - https://github.com/rust-lang/rust/blob/eab201df7028ebb6812c0b1a01702ac6ecfcceed/COPYRIGHT
-// - https://github.com/rust-lang/rust/blob/eab201df7028ebb6812c0b1a01702ac6ecfcceed/LICENSE-APACHE
-// - https://github.com/rust-lang/rust/blob/eab201df7028ebb6812c0b1a01702ac6ecfcceed/LICENSE-MIT
+// - https://github.com/rust-lang/rust/blob/1.60.0/COPYRIGHT
+// - https://github.com/rust-lang/rust/blob/1.60.0/LICENSE-APACHE
+// - https://github.com/rust-lang/rust/blob/1.60.0/LICENSE-MIT
 
 use std::{
     io::{self, Read, Write},
