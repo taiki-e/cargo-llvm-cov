@@ -45,7 +45,7 @@ git diff --exit-code
 git diff --exit-code --staged
 
 # Make sure the same release has not been created in the past.
-if gh release view "${tag}" >/dev/null; then
+if gh release view "${tag}" &>/dev/null; then
     bail "tag '${tag}' has already been created and pushed"
 fi
 
@@ -63,8 +63,12 @@ if ! grep -Eq "^\\[${version//./\\.}\\]: " CHANGELOG.md; then
     bail "not found link to [${version}] in CHANGELOG.md"
 fi
 
+if ! git branch | grep -q '\* main'; then
+    bail "current branch is not 'main'"
+fi
+
 set -x
 
-git push origin main
 git tag "${tag}"
+git push origin main
 git push origin --tags

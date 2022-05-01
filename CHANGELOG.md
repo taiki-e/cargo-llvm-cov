@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.3.1] - 2022-05-01
+
+- Calculate `--show-missing-lines` based on function regions. ([#150](https://github.com/taiki-e/cargo-llvm-cov/pull/150), thanks @vmiklos)
+
 ## [0.3.0] - 2022-04-08
 
 - cargo-llvm-cov now always select the current toolchain. ([#148](https://github.com/taiki-e/cargo-llvm-cov/pull/148))
@@ -250,7 +254,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.4...v0.3.0
 [0.2.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.2.2...v0.2.3
