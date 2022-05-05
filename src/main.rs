@@ -445,9 +445,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                 } else if let Some(stem) = p.file_stem() {
                     let stem = stem.to_string_lossy();
                     if stem == "build-script-build" || stem.starts_with("build_script_build-") {
-                        let dir = p.parent().unwrap().file_name().unwrap().to_string_lossy();
-                        if !cx.build_script_re.is_match(&dir) {
-                            return false;
+                        let p = p.parent().unwrap();
+                        if p.parent().unwrap().file_name().unwrap() == "build" {
+                            let dir = p.file_name().unwrap().to_string_lossy();
+                            if !cx.build_script_re.is_match(&dir) {
+                                return false;
+                            }
                         }
                     }
                 }
