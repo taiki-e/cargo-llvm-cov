@@ -428,16 +428,28 @@ fn merge_profraw(cx: &Context) -> Result<()> {
 }
 
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
-    fn walk_target_dir(target_dir: &Utf8Path) -> impl Iterator<Item = walkdir::DirEntry> {
+    fn walk_target_dir<'a>(
+        cx: &'a Context,
+        target_dir: &Utf8Path,
+    ) -> impl Iterator<Item = walkdir::DirEntry> + 'a {
         WalkDir::new(target_dir)
             .into_iter()
-            .filter_entry(|e| {
+            .filter_entry(move |e| {
                 let p = e.path();
-                if p.is_dir()
-                    && p.file_name()
+                if p.is_dir() {
+                    if p.file_name()
                         .map_or(false, |f| f == "incremental" || f == ".fingerprint" || f == "out")
-                {
-                    return false;
+                    {
+                        return false;
+                    }
+                } else if let Some(stem) = p.file_stem() {
+                    let stem = stem.to_string_lossy();
+                    if stem == "build-script-build" || stem.starts_with("build_script_build-") {
+                        let dir = p.parent().unwrap().file_name().unwrap().to_string_lossy();
+                        if !cx.build_script_re.is_match(&dir) {
+                            return false;
+                        }
+                    }
                 }
                 true
             })
@@ -455,7 +467,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         target_dir.push(target);
     }
     target_dir.push(if cx.build.release { "release" } else { "debug" });
-    for f in walk_target_dir(&target_dir) {
+    for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
         if is_executable::is_executable(&f) {
             files.push(make_relative(f).to_owned().into_os_string());
@@ -490,7 +502,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !trybuild_targets.is_empty() {
             let re =
                 Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|"))).unwrap();
-            for entry in walk_target_dir(&trybuild_target) {
+            for entry in walk_target_dir(cx, &trybuild_target) {
                 let path = make_relative(entry.path());
                 if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                     if re.is_match(file_stem) {
