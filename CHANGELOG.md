@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Alleviate an issue where "File name or extension is too long" error occurs in Windows. ([#155](https://github.com/taiki-e/cargo-llvm-cov/pull/155))
+
 ## [0.3.1] - 2022-05-01
 
 - Calculate `--show-missing-lines` based on function regions. ([#150](https://github.com/taiki-e/cargo-llvm-cov/pull/150), thanks @vmiklos)
