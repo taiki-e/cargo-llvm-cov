@@ -3,6 +3,7 @@ use std::{ffi::OsString, path::PathBuf};
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
 use cargo_metadata::PackageId;
+use regex::Regex;
 
 use crate::{
     cargo::Workspace,
@@ -23,6 +24,7 @@ pub(crate) struct Context {
     pub(crate) no_run: bool,
 
     pub(crate) workspace_members: WorkspaceMembers,
+    pub(crate) build_script_re: Regex,
 
     // Paths to executables.
     pub(crate) current_exe: PathBuf,
@@ -102,6 +104,8 @@ impl Context {
             bail!("no crates to be measured for coverage");
         }
 
+        let build_script_re = pkg_hash_re(&ws, &workspace_members.included);
+
         Ok(Self {
             ws,
             build,
@@ -110,6 +114,7 @@ impl Context {
             doctests,
             no_run,
             workspace_members,
+            build_script_re,
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,
                 Err(e) => {
@@ -138,6 +143,23 @@ impl Context {
     pub(crate) fn cargo(&self) -> ProcessBuilder {
         self.ws.cargo(self.build.verbose)
     }
+}
+
+fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
+    let mut re = String::from("^(");
+    let mut first = true;
+    for id in pkg_ids {
+        if first {
+            first = false;
+        } else {
+            re.push('|');
+        }
+        re.push_str(&ws.metadata[id].name);
+    }
+    re.push_str(")-[0-9a-f]+$");
+    // unwrap -- it is not realistic to have a case where there are more than
+    // 5000 members in a workspace. see also pkg_hash_re_size_limit test in clean.rs.
+    Regex::new(&re).unwrap()
 }
 
 pub(crate) struct WorkspaceMembers {
