@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where codes in the target directory are not being properly excluded from reports when using `show-env` subcommand. ([#156](https://github.com/taiki-e/cargo-llvm-cov/pull/156))
+
 ## [0.3.2] - 2022-05-05
 
 - Alleviate an issue where "File name or extension is too long" error occurs in Windows. ([#155](https://github.com/taiki-e/cargo-llvm-cov/pull/155))
