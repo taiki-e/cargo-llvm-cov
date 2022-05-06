@@ -18,7 +18,10 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 **Table of Contents:**
 
 - [Usage](#usage)
+  - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
+  - [Get coverage of external tests](#get-coverage-of-external-tests)
   - [Continuous Integration](#continuous-integration)
+  - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
@@ -317,13 +320,15 @@ cargo llvm-cov --html          # run tests and generate html report
 cargo llvm-cov --no-run --lcov # generate lcov report
 ```
 
+### Merge coverages generated under different test conditions
+
 You can merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
 
 ```sh
 cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
 cargo llvm-cov --no-report --features a
 cargo llvm-cov --no-report --features b
-cargo llvm-cov --no-run --lcov
+cargo llvm-cov --no-run --lcov # generate report without tests
 ```
 
 ### Get coverage of external tests
