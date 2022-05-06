@@ -10,10 +10,10 @@ Cargo subcommand to easily use LLVM source-based code coverage.
 This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] and provides:
 
 - Generate very precise coverage data. (line coverage and region coverage)
-- Support both `cargo test` and `cargo run`.
+- Support `cargo test`, `cargo run`, and [`cargo nextest`][nextest] with command-line interface compatible with cargo.
 - Support for proc-macro, including coverage of UI tests.
 - Support for doc tests. (this is currently optional and requires nightly, see [#2] for more)
-- Command-line interface compatible with cargo.
+- Fast because it does not introduce extra layers between rustc, cargo, and llvm-tools.
 
 **Table of Contents:**
 
@@ -326,21 +326,17 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov --no-run --lcov
 ```
 
-In combination with the `show-env` subcommand, coverage can also be produced from arbitrary binaries:
+### Get coverage of external tests
+
+`cargo test`, `cargo run`, and [`cargo nextest`][nextest] are available as builtin, but cargo-llvm-cov can also be used for arbitrary binaries built using cargo (including other cargo subcommands or external tests that use make, [xtask], etc.)
 
 ```sh
-source <(cargo llvm-cov show-env --export-prefix)
+source <(cargo llvm-cov show-env --export-prefix) # Set the environment variables needed to get coverage.
 cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
 cargo build # build rust binaries
-# commands using binaries in target/debug/*, including `cargo test`
+# commands using binaries in target/debug/*, including `cargo test` and other cargo subcommands
 # ...
 cargo llvm-cov --no-run --lcov # generate report without tests
-```
-
-To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
-
-```sh
-cargo llvm-cov --open --ignore-filename-regex build
 ```
 
 ### Continuous Integration
@@ -372,6 +368,14 @@ jobs:
 ```
 
 **Note:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+
+### Exclude file from coverage
+
+To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
+
+```sh
+cargo llvm-cov --open --ignore-filename-regex build
+```
 
 ### Exclude function from coverage
 
@@ -478,6 +482,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
+[xtask]: https://github.com/matklad/cargo-xtask
 
 ## License
 
