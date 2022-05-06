@@ -18,17 +18,20 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 **Table of Contents:**
 
 - [Usage](#usage)
+  - [Basic usage](#basic-usage)
   - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
   - [Get coverage of external tests](#get-coverage-of-external-tests)
-  - [Continuous Integration](#continuous-integration)
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
+  - [Continuous Integration](#continuous-integration)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [Related Projects](#related-projects)
 - [License](#license)
 
 ## Usage
+
+### Basic usage
 
 <details>
 <summary>Click to show a complete list of options</summary>
@@ -344,6 +347,29 @@ cargo build # build rust binaries
 cargo llvm-cov --no-run --lcov # generate report without tests
 ```
 
+### Exclude file from coverage
+
+To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
+
+```sh
+cargo llvm-cov --open --ignore-filename-regex build
+```
+
+### Exclude function from coverage
+
+To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
+
+Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` set by cargo-llvm-cov.
+
+```rust
+#![cfg_attr(coverage, feature(no_coverage))]
+
+#[cfg_attr(coverage, no_coverage)]
+fn exclude_from_coverage() {
+    // ...
+}
+```
+
 ### Continuous Integration
 
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
@@ -373,29 +399,6 @@ jobs:
 ```
 
 **Note:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
-
-### Exclude file from coverage
-
-To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.
-
-```sh
-cargo llvm-cov --open --ignore-filename-regex build
-```
-
-### Exclude function from coverage
-
-To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
-
-Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` set by cargo-llvm-cov.
-
-```rust
-#![cfg_attr(coverage, feature(no_coverage))]
-
-#[cfg_attr(coverage, no_coverage)]
-fn exclude_from_coverage() {
-    // ...
-}
-```
 
 ## Installation
 
