@@ -64,8 +64,8 @@ OPTIONS:
         --output-dir <DIRECTORY>
             Specify a directory to write coverage report into (default to `target/llvm-cov`).
 
-            This flag can only be used together with --text, --html, or --open. See also --output-
-            path.
+            This flag can only be used together with --text, --html, or --open. See also
+            --output-path.
 
         --failure-mode <any|all>
             Fail if `any` or `all` profiles cannot be merged (default to `any`)
