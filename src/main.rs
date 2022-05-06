@@ -28,6 +28,7 @@ use std::{
     collections::HashMap,
     convert::TryInto,
     ffi::{OsStr, OsString},
+    fmt::Write as _,
     path::Path,
 };
 
@@ -242,7 +243,7 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         }
     }
     if cx.build.remap_path_prefix {
-        rustflags.push_str(&format!(" --remap-path-prefix {}/=", cx.ws.metadata.workspace_root));
+        let _ = write!(rustflags, " --remap-path-prefix {}/=", cx.ws.metadata.workspace_root);
     }
     if !cx.cov.no_cfg_coverage {
         rustflags.push_str(" --cfg coverage");
@@ -264,8 +265,8 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
             // TODO: drop support for `-Z instrument-coverage` in the future major release.
             rustdocflags.push_str(" -Z instrument-coverage");
         }
-        rustdocflags
-            .push_str(&format!(" -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir));
+        let _ =
+            write!(rustdocflags, " -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir);
         if cfg!(windows) {
             rustdocflags.push_str(" -C codegen-units=1");
         }
@@ -745,7 +746,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
                 "^{}",
                 path.as_ref().to_string_lossy().replace(std::path::MAIN_SEPARATOR, SEPARATOR),
             );
-            path.push_str(&format!("($|{})", SEPARATOR));
+            let _ = write!(path, "($|{})", SEPARATOR);
             self.push(path);
         }
     }
