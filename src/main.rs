@@ -721,10 +721,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     fn default_ignore_filename_regex() -> String {
         // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
         //       We may have a directory like tests/support, so maybe we need both?
-        format!(
-            r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches|target{0}llvm-cov-target){0}",
-            SEPARATOR
-        )
+        format!(r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches){0}", SEPARATOR)
     }
 
     #[derive(Default)]
@@ -758,6 +755,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     }
     if !cx.cov.disable_default_ignore_filename_regex {
         out.push(default_ignore_filename_regex());
+        out.push_abs_path(&cx.ws.target_dir);
         if cx.build.remap_path_prefix {
             for path in [home::home_dir(), home::cargo_home().ok(), home::rustup_home().ok()]
                 .iter()
