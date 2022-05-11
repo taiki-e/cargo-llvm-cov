@@ -56,7 +56,7 @@ impl Workspace {
         // Metadata and config
         let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
         let metadata = metadata(&cargo, &current_manifest, options)?;
-        let config = Config::new(&cargo, &metadata.workspace_root, target, Some(host))?;
+        let config = Config::new(&cargo, target, Some(host))?;
 
         let target_dir = if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")? {
             path.into()
@@ -90,7 +90,6 @@ impl Workspace {
 
     pub(crate) fn cargo(&self, verbose: u8) -> ProcessBuilder {
         let mut cmd = cmd!(&self.cargo);
-        cmd.dir(&self.metadata.workspace_root);
         // cargo displays env vars only with -vv.
         if verbose > 1 {
             cmd.display_env_vars();
@@ -99,9 +98,7 @@ impl Workspace {
     }
 
     pub(crate) fn rustc(&self) -> ProcessBuilder {
-        let mut cmd = cmd!(&self.rustc);
-        cmd.dir(&self.metadata.workspace_root);
-        cmd
+        cmd!(&self.rustc)
     }
 
     // https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--print-print-compiler-information

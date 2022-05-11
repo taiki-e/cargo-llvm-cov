@@ -474,14 +474,14 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
         if is_executable::is_executable(&f) {
-            files.push(make_relative(f).to_owned().into_os_string());
+            files.push(make_relative(cx, f).to_owned().into_os_string());
         }
     }
     if cx.doctests {
         for f in glob::glob(cx.ws.doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok)
         {
             if is_executable::is_executable(&f) {
-                files.push(make_relative(&f).to_owned().into_os_string());
+                files.push(make_relative(cx, &f).to_owned().into_os_string());
             }
         }
     }
@@ -507,7 +507,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             let re =
                 Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|"))).unwrap();
             for entry in walk_target_dir(cx, &trybuild_target) {
-                let path = make_relative(entry.path());
+                let path = make_relative(cx, entry.path());
                 if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                     if re.is_match(file_stem) {
                         continue;
@@ -856,6 +856,6 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
 
 /// Make the path relative if it's a descendent of the current working dir, otherwise just return
 /// the original path
-fn make_relative(p: &Path) -> &Path {
-    p.strip_prefix(env::current_dir().unwrap()).unwrap_or(p)
+fn make_relative<'a>(cx: &Context, p: &'a Path) -> &'a Path {
+    p.strip_prefix(&cx.current_dir).unwrap_or(p)
 }

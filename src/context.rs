@@ -25,6 +25,7 @@ pub(crate) struct Context {
 
     pub(crate) workspace_members: WorkspaceMembers,
     pub(crate) build_script_re: Regex,
+    pub(crate) current_dir: PathBuf,
 
     // Paths to executables.
     pub(crate) current_exe: PathBuf,
@@ -115,6 +116,7 @@ impl Context {
             no_run,
             workspace_members,
             build_script_re,
+            current_dir: env::current_dir().unwrap(),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,
                 Err(e) => {
@@ -132,7 +134,6 @@ impl Context {
 
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
         let mut cmd = cmd!(program);
-        cmd.dir(&self.ws.metadata.workspace_root);
         // cargo displays env vars only with -vv.
         if self.build.verbose > 1 {
             cmd.display_env_vars();

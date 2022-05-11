@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- cargo-llvm-cov no longer changes the current directory when running cargo. ([#161](https://github.com/taiki-e/cargo-llvm-cov/pull/161))
+
 ## [0.3.3] - 2022-05-06
 
 - Fix an issue where codes in the target directory are not being properly excluded from reports when using `show-env` subcommand. ([#156](https://github.com/taiki-e/cargo-llvm-cov/pull/156))
