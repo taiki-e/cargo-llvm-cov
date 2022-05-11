@@ -340,7 +340,7 @@ pub(crate) struct BuildOptions {
     #[clap(short, long, value_name = "N")]
     pub(crate) jobs: Option<u32>,
     /// Build artifacts in release mode, with optimizations
-    #[clap(long)]
+    #[clap(short, long)]
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
     // TODO: this option is not fully handled yet
@@ -349,7 +349,7 @@ pub(crate) struct BuildOptions {
     #[clap(long, value_name = "PROFILE-NAME")]
     pub(crate) profile: Option<String>,
     /// Space or comma separated list of features to activate
-    #[clap(long, multiple_occurrences = true, value_name = "FEATURES")]
+    #[clap(short = 'F', long, multiple_occurrences = true, value_name = "FEATURES")]
     pub(crate) features: Vec<String>,
     /// Activate all available features
     #[clap(long)]
