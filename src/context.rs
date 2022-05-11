@@ -25,6 +25,7 @@ pub(crate) struct Context {
 
     pub(crate) workspace_members: WorkspaceMembers,
     pub(crate) build_script_re: Regex,
+    pub(crate) current_dir: PathBuf,
 
     // Paths to executables.
     pub(crate) current_exe: PathBuf,
@@ -115,6 +116,7 @@ impl Context {
             no_run,
             workspace_members,
             build_script_re,
+            current_dir: env::current_dir().unwrap(),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,
                 Err(e) => {
