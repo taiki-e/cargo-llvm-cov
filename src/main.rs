@@ -248,6 +248,9 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     if !cx.cov.no_cfg_coverage {
         rustflags.push_str(" --cfg coverage");
     }
+    if cx.ws.nightly && !cx.cov.no_cfg_coverage_nightly {
+        rustflags.push_str(" --cfg coverage_nightly");
+    }
     if cx.build.target.is_none() {
         // https://github.com/dtolnay/trybuild/pull/121
         // https://github.com/dtolnay/trybuild/issues/122
@@ -272,6 +275,9 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
         }
         if !cx.cov.no_cfg_coverage {
             rustdocflags.push_str(" --cfg coverage");
+        }
+        if cx.ws.nightly && !cx.cov.no_cfg_coverage_nightly {
+            rustdocflags.push_str(" --cfg coverage_nightly");
         }
     }
 
