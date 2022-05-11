@@ -132,7 +132,6 @@ impl Context {
 
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
         let mut cmd = cmd!(program);
-        cmd.dir(&self.ws.metadata.workspace_root);
         // cargo displays env vars only with -vv.
         if self.build.verbose > 1 {
             cmd.display_env_vars();
