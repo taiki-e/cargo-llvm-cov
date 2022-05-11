@@ -17,6 +17,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - Set `cfg(coverage_nightly)` when nightly compiler is used. ([#164](https://github.com/taiki-e/cargo-llvm-cov/pull/164))
 
+- Support short flags of `--release` (`-r`) and `--features` (`-F`). ([#165](https://github.com/taiki-e/cargo-llvm-cov/pull/165))
+
 ## [0.3.3] - 2022-05-06
 
 - Fix an issue where codes in the target directory are not being properly excluded from reports when using `show-env` subcommand. ([#156](https://github.com/taiki-e/cargo-llvm-cov/pull/156))

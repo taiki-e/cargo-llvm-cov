@@ -166,13 +166,13 @@ OPTIONS:
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs
 
-        --release
+    -r, --release
             Build artifacts in release mode, with optimizations
 
         --profile <PROFILE-NAME>
             Build artifacts with the specified profile
 
-        --features <FEATURES>
+    -F, --features <FEATURES>
             Space or comma separated list of features to activate
 
         --all-features
