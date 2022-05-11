@@ -319,6 +319,9 @@ pub(crate) struct LlvmCovOptions {
     /// Show lines with no coverage.
     #[clap(long)]
     pub(crate) show_missing_lines: bool,
+    /// Include build script in coverage report.
+    #[clap(long)]
+    pub(crate) include_build_script: bool,
 }
 
 impl LlvmCovOptions {

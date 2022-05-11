@@ -11,6 +11,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 ## [Unreleased]
 
 - cargo-llvm-cov no longer changes the current directory when running cargo. ([#161](https://github.com/taiki-e/cargo-llvm-cov/pull/161))
+- Exclude build script from report by default. ([#163](https://github.com/taiki-e/cargo-llvm-cov/pull/163))
+  You can use `--include-build-script` flag to include build script in report.
 
 ## [0.3.3] - 2022-05-06
 
