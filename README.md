@@ -129,6 +129,9 @@ OPTIONS:
         --show-missing-lines
             Show lines with no coverage
 
+        --include-build-script
+            Include build script in coverage report
+
         --doctests
             Including doc tests (unstable)
 
