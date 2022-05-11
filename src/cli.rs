@@ -307,9 +307,12 @@ pub(crate) struct LlvmCovOptions {
     /// Hide instantiations from report
     #[clap(long)]
     pub(crate) hide_instantiations: bool,
-    /// Unset cfg(coverage)
+    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
     #[clap(long)]
     pub(crate) no_cfg_coverage: bool,
+    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
+    #[clap(long)]
+    pub(crate) no_cfg_coverage_nightly: bool,
     /// Run tests, but don't generate coverage report
     #[clap(long)]
     pub(crate) no_report: bool,

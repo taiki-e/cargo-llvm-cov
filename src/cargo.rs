@@ -27,6 +27,7 @@ pub(crate) struct Workspace {
 
     cargo: PathBuf,
     rustc: PathBuf,
+    pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
 }
@@ -84,6 +85,7 @@ impl Workspace {
             profdata_file,
             cargo: cargo.into(),
             rustc,
+            nightly,
             stable_coverage,
         })
     }

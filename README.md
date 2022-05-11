@@ -118,7 +118,11 @@ OPTIONS:
             Hide instantiations from report
 
         --no-cfg-coverage
-            Unset cfg(coverage)
+            Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
+
+        --no-cfg-coverage-nightly
+            Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov
+            and nightly compiler
 
         --no-report
             Run tests, but don't generate coverage report
@@ -362,12 +366,14 @@ cargo llvm-cov --open --ignore-filename-regex build
 
 To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
 
-Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` set by cargo-llvm-cov.
+Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
-#![cfg_attr(coverage, feature(no_coverage))]
+// cfg(coverage) is true when code is built using cargo-llvm-cov
+// cfg(coverage_nightly) is true when code is built using cargo-llvm-cov and nightly compiler
+#![cfg_attr(coverage_nightly, feature(no_coverage))]
 
-#[cfg_attr(coverage, no_coverage)]
+#[cfg_attr(coverage_nightly, no_coverage)]
 fn exclude_from_coverage() {
     // ...
 }
