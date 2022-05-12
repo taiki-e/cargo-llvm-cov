@@ -480,7 +480,15 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     if let Some(target) = &cx.build.target {
         target_dir.push(target);
     }
-    target_dir.push(if cx.build.release { "release" } else { "debug" });
+    // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
+    let profile = match cx.build.profile.as_deref() {
+        None if cx.build.release => "release",
+        None => "debug",
+        Some(p) if matches!(p, "release" | "bench") => "release",
+        Some(p) if matches!(p, "dev" | "test") => "debug",
+        Some(p) => p,
+    };
+    target_dir.push(profile);
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
         if is_executable::is_executable(&f) {
