@@ -343,9 +343,6 @@ pub(crate) struct BuildOptions {
     #[clap(short, long)]
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
-    // TODO: this option is not fully handled yet
-    // https://github.com/rust-lang/cargo/issues/6988
-    // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#custom-named-profiles
     #[clap(long, value_name = "PROFILE-NAME")]
     pub(crate) profile: Option<String>,
     /// Space or comma separated list of features to activate
