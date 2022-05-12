@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.0] - 2022-05-12
+
 - cargo-llvm-cov no longer changes the current directory when running cargo. ([#161](https://github.com/taiki-e/cargo-llvm-cov/pull/161))
 
 - Exclude build script from report by default. ([#163](https://github.com/taiki-e/cargo-llvm-cov/pull/163))
@@ -273,7 +275,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.0...v0.3.1
