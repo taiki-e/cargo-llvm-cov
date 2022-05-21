@@ -144,6 +144,9 @@ OPTIONS:
         --target <TRIPLE>
             Build for the target triple
 
+        --coverage-target-only
+            Activate coverage reporting only for the target triple
+
     -v, --verbose
             Use verbose output
 

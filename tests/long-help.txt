@@ -187,6 +187,13 @@ OPTIONS:
             When this option is used, coverage for proc-macro and build script will not be displayed
             because cargo does not pass RUSTFLAGS to them.
 
+        --coverage-target-only
+            Activate coverage reporting only for the target triple
+
+            Activate coverage reporting only for the target triple specified via `--target`. This is
+            important, if the project uses multiple targets via the cargo bindeps feature, and not
+            all targets can use `instrument-coverage`, e.g. a microkernel, or an embedded binary.
+
     -v, --verbose
             Use verbose output
 
