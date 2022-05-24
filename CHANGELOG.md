@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--coverage-target-only` flag. ([#167](https://github.com/taiki-e/cargo-llvm-cov/pull/167), thanks @haraldh)
+
 ## [0.4.0] - 2022-05-12
 
 - cargo-llvm-cov no longer changes the current directory when running cargo. ([#161](https://github.com/taiki-e/cargo-llvm-cov/pull/161))
