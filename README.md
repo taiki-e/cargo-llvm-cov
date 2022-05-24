@@ -376,8 +376,6 @@ To exclude the specific function from coverage, use the [`#[no_coverage]` attrib
 Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
-// cfg(coverage) is true when code is built using cargo-llvm-cov
-// cfg(coverage_nightly) is true when code is built using cargo-llvm-cov and nightly compiler
 #![cfg_attr(coverage_nightly, feature(no_coverage))]
 
 #[cfg_attr(coverage_nightly, no_coverage)]
@@ -385,6 +383,11 @@ fn exclude_from_coverage() {
     // ...
 }
 ```
+
+cfgs are set under the following conditions:
+
+- `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
+- `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
 ### Continuous Integration
 
