@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.4.1] - 2022-05-24
 
-- Add `--coverage-target-only` flag. ([#167](https://github.com/taiki-e/cargo-llvm-cov/pull/167), thanks @haraldh)
+- Add `--coverage-target-only` flag to use rustflags only for target. ([#167](https://github.com/taiki-e/cargo-llvm-cov/pull/167), thanks @haraldh)
 
 ## [0.4.0] - 2022-05-12
 
