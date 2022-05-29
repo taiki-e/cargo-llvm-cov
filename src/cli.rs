@@ -336,7 +336,7 @@ impl LlvmCovOptions {
 #[derive(Debug, Default, Parser)]
 pub(crate) struct BuildOptions {
     /// Number of parallel jobs, defaults to # of CPUs
-    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/util/command_prelude.rs#L332
+    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
     #[clap(short, long, value_name = "N")]
     pub(crate) jobs: Option<u32>,
     /// Build artifacts in release mode, with optimizations

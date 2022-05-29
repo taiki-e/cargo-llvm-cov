@@ -1,6 +1,6 @@
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
-// - https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/ops/cargo_clean.rs
+// - https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/ops/cargo_clean.rs
 
 use std::path::Path;
 

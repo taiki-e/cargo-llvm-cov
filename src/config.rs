@@ -90,7 +90,7 @@ impl Config {
         }
 
         // doc.browser config value is prefer over BROWSER environment variable.
-        // https://github.com/rust-lang/cargo/blob/0.55.0/src/cargo/ops/cargo_doc.rs#L58-L59
+        // https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/ops/cargo_doc.rs#L52-L53
         if self.doc.browser.is_none() {
             if let Some(browser) = env::var("BROWSER")? {
                 self.doc.browser = Some(StringOrArray::String(browser));
