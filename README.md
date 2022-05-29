@@ -389,6 +389,8 @@ cfgs are set under the following conditions:
 - `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
 - `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
+If you want ignore all `#[test]`-related code, consider using [coverage-helper] crate.
+
 ### Continuous Integration
 
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
@@ -493,6 +495,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 
 ## Related Projects
 
+- [coverage-helper]: Helper for [#123].
 - [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
 - [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
 
@@ -501,9 +504,11 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
+[#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
+[coverage-helper]: https://github.com/taiki-e/coverage-helper
 [instrument-coverage]: https://doc.rust-lang.org/stable/rustc/instrument-coverage.html
 [nextest]: https://nexte.st
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417

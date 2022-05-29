@@ -1,0 +1,9 @@
+[package]
+name = "no_coverage_coverage_helper"
+version = "0.0.0"
+edition = "2018"
+
+[workspace]
+
+[dependencies]
+coverage-helper = "0.1"

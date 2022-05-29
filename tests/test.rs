@@ -131,6 +131,20 @@ fn no_coverage() {
     }
 }
 
+#[rustversion::attr(not(nightly), ignore)]
+#[test]
+fn coverage_helper() {
+    let model = "coverage_helper";
+    let id = format!("{model}/{model}");
+    for (extension, args2) in test_set() {
+        // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
+        if extension == "full.json" && cfg!(windows) {
+            continue;
+        }
+        test_report(model, model, extension, None, args2, &[]).context(id.clone()).unwrap();
+    }
+}
+
 #[test]
 fn merge() {
     let output_dir = FIXTURES_PATH.join("coverage-reports").join("merge");
