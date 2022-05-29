@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add metadata for cargo binstall. ([#175](https://github.com/taiki-e/cargo-llvm-cov/pull/175), thanks @vmiklos)
+
 ## [0.4.1] - 2022-05-24
 
 - Add `--coverage-target-only` flag to use rustflags only for target. ([#167](https://github.com/taiki-e/cargo-llvm-cov/pull/167), thanks @haraldh)
