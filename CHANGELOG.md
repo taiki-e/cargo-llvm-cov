@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix metadata for cargo binstall. ([#176](https://github.com/taiki-e/cargo-llvm-cov/pull/176))
+
 ## [0.4.2] - 2022-05-29
 
 - Add metadata for cargo binstall. ([#175](https://github.com/taiki-e/cargo-llvm-cov/pull/175), thanks @vmiklos)
