@@ -389,7 +389,7 @@ cfgs are set under the following conditions:
 - `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
 - `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
-If you want ignore all `#[test]`-related code, consider using [coverage-helper] crate.
+If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate.
 
 ### Continuous Integration
 
