@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.3] - 2022-05-29
+
 - Fix metadata for cargo binstall. ([#176](https://github.com/taiki-e/cargo-llvm-cov/pull/176))
 
 ## [0.4.2] - 2022-05-29
@@ -285,7 +287,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.3.3...v0.4.0
