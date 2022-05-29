@@ -319,6 +319,15 @@ pub(crate) struct LlvmCovOptions {
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
     #[clap(long, value_name = "MIN")]
     pub(crate) fail_under_lines: Option<f64>,
+    /// Exit with a status of 1 if the uncovered lines are greater than MAX.
+    #[clap(long, value_name = "MAX")]
+    pub(crate) fail_uncovered_lines: Option<u64>,
+    /// Exit with a status of 1 if the uncovered regions are greater than MAX.
+    #[clap(long, value_name = "MAX")]
+    pub(crate) fail_uncovered_regions: Option<u64>,
+    /// Exit with a status of 1 if the uncovered functions are greater than MAX.
+    #[clap(long, value_name = "MAX")]
+    pub(crate) fail_uncovered_functions: Option<u64>,
     /// Show lines with no coverage.
     #[clap(long)]
     pub(crate) show_missing_lines: bool,
