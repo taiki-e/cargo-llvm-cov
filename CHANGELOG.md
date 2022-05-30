@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.4] - 2022-05-30
+
 - Add `--fail-uncovered-{lines,regions,functions}` options to set the exit code based on uncovered {lines,regions,functions}. ([#173](https://github.com/taiki-e/cargo-llvm-cov/pull/173))
 
 - Add `--ignore-run-fail` option to generate coverage even if tests fail. ([#174](https://github.com/taiki-e/cargo-llvm-cov/pull/174))
@@ -291,7 +293,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.0...v0.4.1
