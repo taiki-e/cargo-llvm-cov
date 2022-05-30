@@ -22,7 +22,6 @@ mod context;
 mod demangler;
 mod env;
 mod fs;
-mod json;
 
 use std::{
     collections::HashMap,
@@ -34,6 +33,7 @@ use std::{
 
 use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use cargo_llvm_cov::json;
 use clap::Parser;
 use cli::{RunOptions, ShowEnvOptions};
 use regex::Regex;
@@ -311,12 +311,38 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
-    cargo::test_args(cx, args, &mut cargo);
 
-    if term::verbose() {
-        status!("Running", "{}", cargo);
+    if args.ignore_run_fail {
+        let mut cargo_no_run = cargo.clone();
+        if !args.no_run {
+            cargo_no_run.arg("--no-run");
+        }
+        cargo::test_args(cx, args, &mut cargo_no_run);
+        if term::verbose() {
+            status!("Running", "{}", cargo_no_run);
+            cargo_no_run.stdout_to_stderr().run()?;
+        } else {
+            // Capture output to prevent duplicate warnings from appearing in two runs.
+            cargo_no_run.run_with_output()?;
+        }
+        drop(cargo_no_run);
+
+        cargo.arg("--no-fail-fast");
+        cargo::test_args(cx, args, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{}", cargo);
+        }
+        if let Err(e) = cargo.stdout_to_stderr().run() {
+            warn!("{}", e);
+        }
+    } else {
+        cargo::test_args(cx, args, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{}", cargo);
+        }
+        cargo.stdout_to_stderr().run()?;
     }
-    cargo.stdout_to_stderr().run()?;
+
     Ok(())
 }
 
@@ -366,7 +392,12 @@ fn generate_report(cx: &Context) -> Result<()> {
             .context("failed to generate report")?;
     }
 
-    if cx.cov.fail_under_lines.is_some() || cx.cov.show_missing_lines {
+    if cx.cov.fail_under_lines.is_some()
+        || cx.cov.fail_uncovered_functions.is_some()
+        || cx.cov.fail_uncovered_lines.is_some()
+        || cx.cov.fail_uncovered_regions.is_some()
+        || cx.cov.show_missing_lines
+    {
         let format = Format::Json;
         let json = format
             .get_json(cx, &object_files, ignore_filename_regex.as_ref())
@@ -376,6 +407,31 @@ fn generate_report(cx: &Context) -> Result<()> {
             // Handle --fail-under-lines.
             let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
+                term::error::set(true);
+            }
+        }
+
+        if let Some(fail_uncovered_functions) = cx.cov.fail_uncovered_functions {
+            // Handle --fail-uncovered-functions.
+            let uncovered =
+                json.count_uncovered_functions().context("failed to count uncovered functions")?;
+            if uncovered > fail_uncovered_functions {
+                term::error::set(true);
+            }
+        }
+        if let Some(fail_uncovered_lines) = cx.cov.fail_uncovered_lines {
+            // Handle --fail-uncovered-lines.
+            let uncovered =
+                json.count_uncovered_lines().context("failed to count uncovered lines")?;
+            if uncovered > fail_uncovered_lines {
+                term::error::set(true);
+            }
+        }
+        if let Some(fail_uncovered_regions) = cx.cov.fail_uncovered_regions {
+            // Handle --fail-uncovered-regions.
+            let uncovered =
+                json.count_uncovered_regions().context("failed to count uncovered regions")?;
+            if uncovered > fail_uncovered_regions {
                 term::error::set(true);
             }
         }

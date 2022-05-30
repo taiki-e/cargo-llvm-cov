@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 // https://github.com/llvm/llvm-project/blob/llvmorg-14.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-#[allow(unreachable_pub)]
 pub struct LlvmCovJsonExport {
     /// List of one or more export objects
     pub(crate) data: Vec<Export>,
@@ -20,7 +19,6 @@ pub struct LlvmCovJsonExport {
 pub(crate) type UncoveredLines = BTreeMap<String, Vec<u64>>;
 
 impl LlvmCovJsonExport {
-    #[allow(unreachable_pub, dead_code)]
     pub fn demangle(&mut self) {
         for data in &mut self.data {
             if let Some(functions) = &mut data.functions {
@@ -32,7 +30,6 @@ impl LlvmCovJsonExport {
     }
 
     /// Gets the minimal lines coverage of all files.
-    #[allow(unreachable_pub, dead_code)]
     pub fn get_lines_percent(&self) -> Result<f64> {
         let mut count = 0_f64;
         let mut covered = 0_f64;
@@ -51,7 +48,6 @@ impl LlvmCovJsonExport {
     }
 
     /// Gets the list of uncovered lines of all files.
-    #[allow(unreachable_pub, dead_code)]
     #[must_use]
     pub fn get_uncovered_lines(&self, ignore_filename_regex: &Option<String>) -> UncoveredLines {
         let mut uncovered_files: UncoveredLines = BTreeMap::new();
@@ -97,6 +93,42 @@ impl LlvmCovJsonExport {
             }
         }
         uncovered_files
+    }
+
+    pub fn count_uncovered_functions(&self) -> Result<u64> {
+        let mut count = 0_u64;
+        let mut covered = 0_u64;
+        for data in &self.data {
+            let totals = &data.totals.as_object().context("totals is not an object")?;
+            let functions = &totals["functions"].as_object().context("no functions")?;
+            count += functions["count"].as_u64().context("no count")?;
+            covered += functions["covered"].as_u64().context("no covered")?;
+        }
+        Ok(count.saturating_sub(covered))
+    }
+
+    pub fn count_uncovered_lines(&self) -> Result<u64> {
+        let mut count = 0_u64;
+        let mut covered = 0_u64;
+        for data in &self.data {
+            let totals = &data.totals.as_object().context("totals is not an object")?;
+            let lines = &totals["lines"].as_object().context("no lines")?;
+            count += lines["count"].as_u64().context("no count")?;
+            covered += lines["covered"].as_u64().context("no covered")?;
+        }
+        Ok(count.saturating_sub(covered))
+    }
+
+    pub fn count_uncovered_regions(&self) -> Result<u64> {
+        let mut count = 0_u64;
+        let mut covered = 0_u64;
+        for data in &self.data {
+            let totals = &data.totals.as_object().context("totals is not an object")?;
+            let regions = &totals["regions"].as_object().context("no regions")?;
+            count += regions["count"].as_u64().context("no count")?;
+            covered += regions["covered"].as_u64().context("no covered")?;
+        }
+        Ok(count.saturating_sub(covered))
     }
 }
 
@@ -206,6 +238,8 @@ pub(crate) struct CoverageCounts {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use fs_err as fs;
 
     use super::*;
@@ -244,6 +278,26 @@ mod tests {
 
         let error_margin = f64::EPSILON;
         assert!((percent - 69.565_217_391_304_34).abs() < error_margin);
+    }
+
+    #[test]
+    fn test_count_uncovered() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        let cases = &[
+            // (path, uncovered_functions, uncovered_lines, uncovered_regions)
+            ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 0, 7, 6),
+            ("tests/fixtures/coverage-reports/no_test/no_test.json", 1, 7, 6),
+        ];
+
+        for &(file, uncovered_functions, uncovered_lines, uncovered_regions) in cases {
+            let file = manifest_dir.join(file);
+            let s = fs::read_to_string(file).unwrap();
+            let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+            assert_eq!(json.count_uncovered_functions().unwrap(), uncovered_functions);
+            assert_eq!(json.count_uncovered_lines().unwrap(), uncovered_lines);
+            assert_eq!(json.count_uncovered_regions().unwrap(), uncovered_regions);
+        }
     }
 
     #[test]

@@ -23,6 +23,7 @@ macro_rules! cmd {
 
 // A builder for an external process, inspired by https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 #[must_use]
+#[derive(Clone)]
 pub(crate) struct ProcessBuilder {
     /// The program to execute.
     program: OsString,

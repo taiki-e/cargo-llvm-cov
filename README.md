@@ -130,6 +130,15 @@ OPTIONS:
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 
+        --fail-uncovered-lines <MAX>
+            Exit with a status of 1 if the uncovered lines are greater than MAX
+
+        --fail-uncovered-regions <MAX>
+            Exit with a status of 1 if the uncovered regions are greater than MAX
+
+        --fail-uncovered-functions <MAX>
+            Exit with a status of 1 if the uncovered functions are greater than MAX
+
         --show-missing-lines
             Show lines with no coverage
 
@@ -147,6 +156,11 @@ OPTIONS:
 
         --no-fail-fast
             Run all tests regardless of failure
+
+        --ignore-run-fail
+            Run all tests regardless of failure and generate report
+
+            If tests failed but report generation succeeded, exit with a status of 0.
 
     -q, --quiet
             Display one character per test instead of one line
