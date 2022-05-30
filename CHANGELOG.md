@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--fail-uncovered-{lines,regions,functions}` options to set the exit code based on uncovered {lines,regions,functions}. ([#173](https://github.com/taiki-e/cargo-llvm-cov/pull/173))
+
+- Add `--ignore-run-fail` option to generate coverage even if tests fail. ([#174](https://github.com/taiki-e/cargo-llvm-cov/pull/174))
+
 ## [0.4.3] - 2022-05-29
 
 - Fix metadata for cargo binstall. ([#176](https://github.com/taiki-e/cargo-llvm-cov/pull/176))
