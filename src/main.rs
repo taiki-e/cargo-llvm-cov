@@ -311,12 +311,38 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
-    cargo::test_args(cx, args, &mut cargo);
 
-    if term::verbose() {
-        status!("Running", "{}", cargo);
+    if args.ignore_run_fail {
+        let mut cargo_no_run = cargo.clone();
+        if !args.no_run {
+            cargo_no_run.arg("--no-run");
+        }
+        cargo::test_args(cx, args, &mut cargo_no_run);
+        if term::verbose() {
+            status!("Running", "{}", cargo_no_run);
+            cargo_no_run.stdout_to_stderr().run()?;
+        } else {
+            // Capture output to prevent duplicate warnings from appearing in two runs.
+            cargo_no_run.run_with_output()?;
+        }
+        drop(cargo_no_run);
+
+        cargo.arg("--no-fail-fast");
+        cargo::test_args(cx, args, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{}", cargo);
+        }
+        if let Err(e) = cargo.stdout_to_stderr().run() {
+            warn!("{}", e);
+        }
+    } else {
+        cargo::test_args(cx, args, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{}", cargo);
+        }
+        cargo.stdout_to_stderr().run()?;
     }
-    cargo.stdout_to_stderr().run()?;
+
     Ok(())
 }
 

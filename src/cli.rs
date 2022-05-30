@@ -56,6 +56,15 @@ pub(crate) struct Args {
     /// Run all tests regardless of failure
     #[clap(long)]
     pub(crate) no_fail_fast: bool,
+    /// Run all tests regardless of failure and generate report
+    ///
+    /// If tests failed but report generation succeeded, exit with a status of 0.
+    #[clap(
+        long,
+        // --ignore-run-fail implicitly enable --no-fail-fast.
+        conflicts_with = "no-fail-fast",
+    )]
+    pub(crate) ignore_run_fail: bool,
     /// Display one character per test instead of one line
     #[clap(short, long, conflicts_with = "verbose")]
     pub(crate) quiet: bool,

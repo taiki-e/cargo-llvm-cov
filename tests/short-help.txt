@@ -72,6 +72,9 @@ OPTIONS:
         --no-fail-fast
             Run all tests regardless of failure
 
+        --ignore-run-fail
+            Run all tests regardless of failure and generate report
+
     -q, --quiet
             Display one character per test instead of one line
 

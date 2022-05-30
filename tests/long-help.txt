@@ -107,6 +107,11 @@ OPTIONS:
         --no-fail-fast
             Run all tests regardless of failure
 
+        --ignore-run-fail
+            Run all tests regardless of failure and generate report
+
+            If tests failed but report generation succeeded, exit with a status of 0.
+
     -q, --quiet
             Display one character per test instead of one line
 
