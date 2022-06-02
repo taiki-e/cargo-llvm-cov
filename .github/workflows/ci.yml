@@ -69,6 +69,8 @@ jobs:
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl
+          - target: aarch64-apple-darwin
+            os: macos-11
           - target: x86_64-unknown-linux-musl
     runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
     steps:
@@ -76,8 +78,14 @@ jobs:
         with:
           persist-credentials: false
       - uses: taiki-e/github-actions/install-rust@main
+        with:
+          target: ${{ matrix.target }}
       - uses: taiki-e/install-action@cross
+        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: cross build --target ${{ matrix.target }}
+        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
+      - run: cargo build --target ${{ matrix.target }}
+        if: startsWith(matrix.os, 'macos') || startsWith(matrix.os, 'windows')
 
   msrv:
     runs-on: ubuntu-18.04
