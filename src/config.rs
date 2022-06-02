@@ -14,7 +14,7 @@ use crate::{env, term::Coloring};
 #[derive(Debug, Default, Deserialize)]
 pub(crate) struct Config {
     #[serde(default)]
-    build: Build,
+    pub(crate) build: Build,
     #[serde(default)]
     target: BTreeMap<String, Target>,
     #[serde(default)]
@@ -48,6 +48,32 @@ impl Config {
     fn apply_env(&mut self, target: Option<&str>, host: Option<&str>) -> Result<()> {
         // Environment variables are prefer over config values.
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#environment-variables
+
+        // The following priorities are not documented, but at as of cargo
+        // 1.63.0-nightly (2022-05-31), `RUSTC*` are preferred over `CARGO_BUILD_RUSTC*`.
+        // 1. RUSTC
+        // 2. build.rustc (CARGO_BUILD_RUSTC)
+        if let Some(rustc) = env::var("RUSTC")? {
+            self.build.rustc = Some(rustc);
+        } else if let Some(rustc) = env::var("CARGO_BUILD_RUSTC")? {
+            self.build.rustc = Some(rustc);
+        }
+        // 1. RUSTC_WRAPPER
+        // 2. build.rustc-wrapper (CARGO_BUILD_RUSTC_WRAPPER)
+        if let Some(rustc_wrapper) = env::var("RUSTC_WRAPPER")? {
+            self.build.rustc_wrapper = Some(rustc_wrapper);
+        } else if let Some(rustc_wrapper) = env::var("CARGO_BUILD_RUSTC_WRAPPER")? {
+            self.build.rustc_wrapper = Some(rustc_wrapper);
+        }
+        // 1. RUSTC_WORKSPACE_WRAPPER
+        // 2. build.rustc-workspace-wrapper (CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER)
+        if let Some(rustc_workspace_wrapper) = env::var("RUSTC_WORKSPACE_WRAPPER")? {
+            self.build.rustc_workspace_wrapper = Some(rustc_workspace_wrapper);
+        } else if let Some(rustc_workspace_wrapper) =
+            env::var("CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER")?
+        {
+            self.build.rustc_workspace_wrapper = Some(rustc_workspace_wrapper);
+        }
 
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildtarget
         // TODO: Handles the case where this is a relative path to the target spec file.
@@ -138,7 +164,14 @@ impl Config {
 
 // https://doc.rust-lang.org/nightly/cargo/reference/config.html#build
 #[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) struct Build {
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc
+    pub(crate) rustc: Option<String>,
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc-wrapper
+    pub(crate) rustc_wrapper: Option<String>,
+    // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustc-workspace-wrapper
+    pub(crate) rustc_workspace_wrapper: Option<String>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
     rustflags: Option<StringOrArray>,
     // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustdocflags

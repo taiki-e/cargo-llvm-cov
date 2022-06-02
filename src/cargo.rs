@@ -26,7 +26,7 @@ pub(crate) struct Workspace {
     pub(crate) profdata_file: Utf8PathBuf,
 
     cargo: PathBuf,
-    rustc: PathBuf,
+    rustc: ProcessBuilder,
     pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
@@ -40,24 +40,39 @@ impl Workspace {
         show_env: bool,
     ) -> Result<Self> {
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-        let rustc = rustc_path(&cargo);
-        let (nightly, ref host) = rustc_version(&rustc)?;
+        let host = &host_triple(&cargo)?;
+
+        // Metadata and config
+        let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
+        let metadata = metadata(&cargo, &current_manifest, options)?;
+        let config = Config::new(&cargo, target, Some(host))?;
+
+        // The following priorities are not documented, but at as of cargo
+        // 1.63.0-nightly (2022-05-31), `RUSTC_WRAPPER` is preferred over `RUSTC_WORKSPACE_WRAPPER`.
+        let rustc = config.build.rustc.clone().map_or_else(|| rustc_path(&cargo), PathBuf::from);
+        let rustc = match config
+            .build
+            .rustc_wrapper
+            .as_ref()
+            .or(config.build.rustc_workspace_wrapper.as_ref())
+        {
+            // The wrapper's first argument is supposed to be the path to rustc.
+            Some(wrapper) => cmd!(wrapper, rustc),
+            None => cmd!(rustc),
+        };
+        let nightly = rustc_version(&rustc)?;
 
         if doctests && !nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
         }
-        let stable_coverage = cmd!(&rustc, "-C", "help").read()?.contains("instrument-coverage");
+        let stable_coverage =
+            rustc.clone().args(&["-C", "help"]).read()?.contains("instrument-coverage");
         if !stable_coverage && !nightly {
             bail!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
             );
         }
-
-        // Metadata and config
-        let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
-        let metadata = metadata(&cargo, &current_manifest, options)?;
-        let config = Config::new(&cargo, target, Some(host))?;
 
         let target_dir = if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")? {
             path.into()
@@ -100,7 +115,7 @@ impl Workspace {
     }
 
     pub(crate) fn rustc(&self) -> ProcessBuilder {
-        cmd!(&self.rustc)
+        self.rustc.clone()
     }
 
     // https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--print-print-compiler-information
@@ -130,8 +145,9 @@ fn rustc_path(cargo: impl AsRef<Path>) -> PathBuf {
     }
 }
 
-fn rustc_version(rustc: &Path) -> Result<(bool, String)> {
-    let mut cmd = cmd!(rustc, "--version", "--verbose");
+fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
+    let mut cmd = rustc.clone();
+    cmd.args(&["--version", "--verbose"]);
     let verbose_version = cmd.read()?;
     let version =
         verbose_version.lines().find_map(|line| line.strip_prefix("release: ")).ok_or_else(
@@ -139,6 +155,12 @@ fn rustc_version(rustc: &Path) -> Result<(bool, String)> {
         )?;
     let (_version, channel) = version.split_once('-').unwrap_or_default();
     let nightly = channel == "nightly" || version == "dev";
+    Ok(nightly)
+}
+
+fn host_triple(cargo: &OsStr) -> Result<String> {
+    let mut cmd = cmd!(cargo, "--version", "--verbose");
+    let verbose_version = cmd.read()?;
     let host = verbose_version
         .lines()
         .find_map(|line| line.strip_prefix("host: "))
@@ -146,7 +168,7 @@ fn rustc_version(rustc: &Path) -> Result<(bool, String)> {
             format_err!("unexpected version output from `{}`: {}", cmd, verbose_version)
         })?
         .to_owned();
-    Ok((nightly, host))
+    Ok(host)
 }
 
 fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
