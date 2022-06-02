@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Handle `RUSTC_WRAPPER`, `RUSTC`, and similar environment variables and configs properly. ([#180](https://github.com/taiki-e/cargo-llvm-cov/pull/180))
+
 - Distribute prebuilt binaries for aarch64 macOS. ([#179](https://github.com/taiki-e/cargo-llvm-cov/pull/179))
 
 ## [0.4.4] - 2022-05-30
