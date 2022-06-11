@@ -51,6 +51,7 @@ impl LlvmCovJsonExport {
     #[must_use]
     pub fn get_uncovered_lines(&self, ignore_filename_regex: &Option<String>) -> UncoveredLines {
         let mut uncovered_files: UncoveredLines = BTreeMap::new();
+        let mut covered_files: UncoveredLines = BTreeMap::new();
         let mut re: Option<regex::Regex> = None;
         if let Some(ref ignore_filename_regex) = *ignore_filename_regex {
             re = Some(regex::Regex::new(ignore_filename_regex).unwrap());
@@ -81,17 +82,48 @@ impl LlvmCovJsonExport {
                         }
                     }
 
-                    let uncovered_lines: Vec<u64> = lines
+                    let mut uncovered_lines: Vec<u64> = lines
                         .iter()
                         .filter(|(_line, exec_count)| **exec_count == 0)
                         .map(|(line, _exec_count)| *line)
                         .collect();
+                    let mut covered_lines: Vec<u64> = lines
+                        .iter()
+                        .filter(|(_line, exec_count)| **exec_count > 0)
+                        .map(|(line, _exec_count)| *line)
+                        .collect();
                     if !uncovered_lines.is_empty() {
-                        uncovered_files.insert(file_name.clone(), uncovered_lines);
+                        uncovered_files
+                            .entry(file_name.clone())
+                            .or_insert_with(Vec::new)
+                            .append(&mut uncovered_lines);
+                    }
+                    if !covered_lines.is_empty() {
+                        covered_files
+                            .entry(file_name.clone())
+                            .or_insert_with(Vec::new)
+                            .append(&mut covered_lines);
                     }
                 }
             }
         }
+
+        for uncovered_file in &mut uncovered_files {
+            // Check if a line is both covered and non-covered. It's covered in this case.
+            let file_name = uncovered_file.0;
+            let uncovered_lines = uncovered_file.1;
+            if let Some(covered_lines) = covered_files.get(file_name) {
+                uncovered_lines.retain(|&x| !covered_lines.contains(&x));
+            }
+
+            // Remove duplicates.
+            uncovered_lines.sort_unstable();
+            uncovered_lines.dedup();
+        }
+
+        // Remove empty keys.
+        uncovered_files.retain(|_, v| !v.is_empty());
+
         uncovered_files
     }
 
@@ -334,6 +366,31 @@ mod tests {
         let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
 
         let expected: UncoveredLines = UncoveredLines::new();
+        assert_eq!(uncovered_lines, expected);
+    }
+
+    #[test]
+    fn test_get_uncovered_lines_multi_missing() {
+        // Given a coverage report which includes a line with multiple functions via macros + two
+        // other uncovered lines:
+        let file = format!(
+            "{}/tests/fixtures/show-missing-lines-multi-missing.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        // When finding uncovered lines in that report:
+        let ignore_filename_regex = None;
+        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
+
+        // Then make sure the file / line data matches the `llvm-cov report` output:
+        let expected: UncoveredLines =
+            vec![("src/lib.rs".to_string(), vec![15, 17])].into_iter().collect();
+        // This was just '11', i.e. there were two problems:
+        // 1) line 11 has a serde macro which expands to multiple functions; some of those were
+        //    covered, which should be presented as a "covered" 11th line.
+        // 2) only the last function with missing lines were reported, so 15 and 17 was missing.
         assert_eq!(uncovered_lines, expected);
     }
 }
