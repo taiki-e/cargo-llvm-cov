@@ -50,7 +50,7 @@ fi
 tags=$(git --no-pager tag)
 if [[ -n "${tags}" ]]; then
     # Make sure the same release does not exist in CHANGELOG.md.
-    release_date=$(date --utc '+%Y-%m-%d')
+    release_date=$(date -u '+%Y-%m-%d')
     if grep -Eq "^## \\[${version//./\\.}\\] - ${release_date}$" CHANGELOG.md; then
         bail "release ${version} already exist in CHANGELOG.md"
     fi
