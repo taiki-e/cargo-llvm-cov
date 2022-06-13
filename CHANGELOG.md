@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.7] - 2022-06-13
+
 - Pin clap to 3.1. ([#185](https://github.com/taiki-e/cargo-llvm-cov/pull/185))
 
 ## [0.4.6] - 2022-06-13
@@ -307,7 +309,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.7...HEAD
+[0.4.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.3...v0.4.4
