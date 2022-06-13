@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve `--show-missing-lines` for multiple functions in a single line. ([#183](https://github.com/taiki-e/cargo-llvm-cov/pull/183), thanks @vmiklos)
+
 - Limit the number of test threads to work around [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#184](https://github.com/taiki-e/cargo-llvm-cov/pull/184))
 
 ## [0.4.5] - 2022-06-02
