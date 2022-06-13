@@ -294,6 +294,8 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     }
     target.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
     target.set("CARGO_INCREMENTAL", "0");
+    // Workaround for https://github.com/rust-lang/rust/issues/91092
+    target.set("RUST_TEST_THREADS", "1");
 }
 
 fn has_z_flag(args: &Args, name: &str) -> bool {
