@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Pin clap to 3.1. ([#185](https://github.com/taiki-e/cargo-llvm-cov/pull/185))
+
 ## [0.4.6] - 2022-06-13
 
 - Improve `--show-missing-lines` for multiple functions in a single line. ([#183](https://github.com/taiki-e/cargo-llvm-cov/pull/183), thanks @vmiklos)
