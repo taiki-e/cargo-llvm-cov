@@ -1,5 +1,4 @@
 use std::{
-    convert::TryInto,
     env,
     ffi::OsStr,
     io::{Read, Seek, Write},

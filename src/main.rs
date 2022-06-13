@@ -25,7 +25,6 @@ mod fs;
 
 use std::{
     collections::HashMap,
-    convert::TryInto,
     ffi::{OsStr, OsString},
     fmt::Write as _,
     path::Path,
