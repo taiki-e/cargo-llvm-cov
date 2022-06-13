@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.6] - 2022-06-13
+
 - Improve `--show-missing-lines` for multiple functions in a single line. ([#183](https://github.com/taiki-e/cargo-llvm-cov/pull/183), thanks @vmiklos)
 
 - Limit the number of test threads to work around [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#184](https://github.com/taiki-e/cargo-llvm-cov/pull/184))
@@ -303,7 +305,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.2...v0.4.3
