@@ -818,14 +818,8 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         }
 
         fn push_abs_path(&mut self, path: impl AsRef<Path>) {
-            #[cfg(not(windows))]
-            let mut path = format!("^{}", path.as_ref().display());
-            #[cfg(windows)]
-            let mut path = format!(
-                "^{}",
-                path.as_ref().to_string_lossy().replace(std::path::MAIN_SEPARATOR, SEPARATOR),
-            );
-            let _ = write!(path, "($|{})", SEPARATOR);
+            let path = regex::escape(path.as_ref().to_string_lossy().as_ref());
+            let path = format!("^{}($|{})", path, SEPARATOR);
             self.push(path);
         }
     }
