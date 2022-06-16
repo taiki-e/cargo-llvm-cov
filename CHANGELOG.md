@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Correctly escape regular expressions passed to `-ignore-filename-regex`. ([#188](https://github.com/taiki-e/cargo-llvm-cov/pull/188), thanks @rhysd)
+
 ## [0.4.7] - 2022-06-13
 
 - Pin clap to 3.1. ([#185](https://github.com/taiki-e/cargo-llvm-cov/pull/185))
