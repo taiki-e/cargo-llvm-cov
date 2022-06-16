@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.8] - 2022-06-16
+
 - Correctly escape regular expressions passed to `-ignore-filename-regex`. ([#188](https://github.com/taiki-e/cargo-llvm-cov/pull/188), thanks @rhysd)
 
 ## [0.4.7] - 2022-06-13
@@ -311,7 +313,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.8...HEAD
+[0.4.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.4...v0.4.5
