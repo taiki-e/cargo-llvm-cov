@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where some files were incorrectly ignored in reports. ([#191](https://github.com/taiki-e/cargo-llvm-cov/pull/191))
+
 ## [0.4.8] - 2022-06-16
 
 - Correctly escape regular expressions passed to `-ignore-filename-regex`. ([#188](https://github.com/taiki-e/cargo-llvm-cov/pull/188), thanks @rhysd)

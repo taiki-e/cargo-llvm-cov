@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 pub fn func(x: u32) {
     match x {
         0 => {}
