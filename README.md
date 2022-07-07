@@ -485,10 +485,29 @@ When used with [nextest]:
 <!-- omit in toc -->
 ### Via Homebrew
 
-You can install cargo-llvm-cov using [Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb):
+You can install [cargo-llvm-cov using Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb):
 
 ```sh
 brew install taiki-e/tap/cargo-llvm-cov
+```
+
+<!-- omit in toc -->
+### Via Scoop (Windows)
+
+You can install [cargo-llvm-cov using Scoop](https://github.com/taiki-e/scoop-bucket/blob/HEAD/bucket/cargo-llvm-cov.json):
+
+```sh
+scoop bucket add taiki-e https://github.com/taiki-e/scoop-bucket
+scoop install cargo-llvm-cov
+```
+
+<!-- omit in toc -->
+### Via cargo-binstall
+
+You can install cargo-llvm-cov using [cargo-binstall](https://github.com/ryankurte/cargo-binstall):
+
+```sh
+cargo binstall cargo-llvm-cov
 ```
 
 <!-- omit in toc -->
