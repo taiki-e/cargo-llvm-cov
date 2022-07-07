@@ -800,12 +800,6 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
     #[cfg(windows)]
     const SEPARATOR: &str = "\\\\"; // On windows, we should escape the separator.
 
-    fn default_ignore_filename_regex() -> String {
-        // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
-        //       We may have a directory like tests/support, so maybe we need both?
-        format!(r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches){0}", SEPARATOR)
-    }
-
     #[derive(Default)]
     struct Out(String);
 
@@ -830,19 +824,30 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         out.push(ignore_filename);
     }
     if !cx.cov.disable_default_ignore_filename_regex {
-        out.push(default_ignore_filename_regex());
+        // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
+        //       We may have a directory like tests/support, so maybe we need both?
+        if cx.build.remap_path_prefix {
+            out.push(format!(r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches){0}", SEPARATOR));
+        } else {
+            out.push(format!(
+                r"{0}rustc{0}[0-9a-f]+{0}|^{1}({0}.*)?{0}(tests|examples|benches){0}",
+                SEPARATOR,
+                regex::escape(cx.ws.metadata.workspace_root.as_str())
+            ));
+        }
         out.push_abs_path(&cx.ws.target_dir);
         if cx.build.remap_path_prefix {
-            for path in [home::home_dir(), home::cargo_home().ok(), home::rustup_home().ok()]
-                .iter()
-                .flatten()
-            {
+            if let Some(path) = home::home_dir() {
                 out.push_abs_path(path);
             }
-        } else {
-            for path in [home::cargo_home().ok(), home::rustup_home().ok()].iter().flatten() {
-                out.push_abs_path(path);
-            }
+        }
+        if let Ok(path) = home::cargo_home() {
+            let path = regex::escape(path.as_os_str().to_string_lossy().as_ref());
+            let path = format!("^{1}{0}(registry|git){0}", SEPARATOR, path);
+            out.push(path);
+        }
+        if let Ok(path) = home::rustup_home() {
+            out.push_abs_path(path.join("toolchains"));
         }
         for path in resolve_excluded_paths(cx) {
             out.push_abs_path(path);
