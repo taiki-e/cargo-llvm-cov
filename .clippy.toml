@@ -1,4 +1,3 @@
-msrv = "1.56"
 disallowed-methods = [
     # https://internals.rust-lang.org/t/synchronized-ffi-access-to-posix-environment-variable-functions/15475
     { path = "std::env::remove_var", reason = "this function should be considered `unsafe`" },
