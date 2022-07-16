@@ -42,10 +42,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           persist-credentials: false
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
-          component: llvm-tools-preview
+          components: llvm-tools-preview
       - uses: taiki-e/install-action@cargo-hack
         if: startsWith(matrix.rust, 'nightly')
       - uses: taiki-e/install-action@cargo-minimal-versions
@@ -77,7 +77,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           persist-credentials: false
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           target: ${{ matrix.target }}
       - uses: taiki-e/install-action@cross
@@ -102,9 +102,9 @@ jobs:
       - uses: actions/checkout@v3
         with:
           persist-credentials: false
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          component: clippy,rustfmt
+          components: clippy,rustfmt
       - uses: taiki-e/install-action@shellcheck
       - run: cargo fmt --all --check
         if: always()
