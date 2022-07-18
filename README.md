@@ -20,6 +20,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 - [Usage](#usage)
   - [Basic usage](#basic-usage)
   - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
+  - [Get coverage of C/C++ code linked to Rust library/binary](#get-coverage-of-cc-code-linked-to-rust-librarybinary)
   - [Get coverage of external tests](#get-coverage-of-external-tests)
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
