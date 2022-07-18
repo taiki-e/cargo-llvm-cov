@@ -29,8 +29,10 @@ pub(crate) struct Context {
 
     // Paths to executables.
     pub(crate) current_exe: PathBuf,
-    pub(crate) llvm_cov: Utf8PathBuf,
-    pub(crate) llvm_profdata: Utf8PathBuf,
+    // Path to llvm-cov, can be overridden with `LLVM_COV` environment variable.
+    pub(crate) llvm_cov: PathBuf,
+    // Path to llvm-profdata, can be overridden with `LLVM_PROFDATA` environment variable.
+    pub(crate) llvm_profdata: PathBuf,
 
     /// `CARGO_LLVM_COV_FLAGS` environment variable to pass additional flags
     /// to llvm-cov. (value: space-separated list)
@@ -84,21 +86,45 @@ impl Context {
         let mut rustlib: Utf8PathBuf = ws.rustc_print("target-libdir")?.into();
         rustlib.pop(); // lib
         rustlib.push("bin");
-        let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
-        let llvm_profdata = rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
-
-        // Check if required tools are installed.
-        if !llvm_cov.exists() || !llvm_profdata.exists() {
-            let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
-            let toolchain = sysroot.file_name().unwrap();
-            // Include --toolchain flag in the suggestion because the user may be
-            // using toolchain override shorthand (+toolchain).
-            bail!(
-                "failed to find llvm-tools-preview, please install llvm-tools-preview with \
-                 `rustup component add llvm-tools-preview --toolchain {}`",
-                toolchain,
-            );
-        }
+        let llvm_cov: PathBuf = match env::var_os("LLVM_COV") {
+            Some(llvm_cov) => llvm_cov.into(),
+            None => {
+                let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
+                // Check if required tools are installed.
+                if !llvm_cov.exists() {
+                    let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
+                    let toolchain = sysroot.file_name().unwrap();
+                    // Include --toolchain flag in the suggestion because the user may be
+                    // using toolchain override shorthand (+toolchain).
+                    bail!(
+                        "failed to find llvm-tools-preview, please install llvm-tools-preview \
+                         with `rustup component add llvm-tools-preview --toolchain {}`",
+                        toolchain,
+                    );
+                }
+                llvm_cov.into()
+            }
+        };
+        let llvm_profdata: PathBuf = match env::var_os("LLVM_PROFDATA") {
+            Some(llvm_profdata) => llvm_profdata.into(),
+            None => {
+                let llvm_profdata =
+                    rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
+                // Check if required tools are installed.
+                if !llvm_profdata.exists() {
+                    let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
+                    let toolchain = sysroot.file_name().unwrap();
+                    // Include --toolchain flag in the suggestion because the user may be
+                    // using toolchain override shorthand (+toolchain).
+                    bail!(
+                        "failed to find llvm-tools-preview, please install llvm-tools-preview \
+                         with `rustup component add llvm-tools-preview --toolchain {}`",
+                        toolchain,
+                    );
+                }
+                llvm_profdata.into()
+            }
+        };
 
         let workspace_members = WorkspaceMembers::new(exclude, exclude_from_report, &ws.metadata);
         if workspace_members.included.is_empty() {

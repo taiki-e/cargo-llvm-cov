@@ -223,6 +223,12 @@ OPTIONS:
 
             Note that this does not fully compatible with doctest.
 
+        --include-ffi
+            Include coverage of C/C++ code linked to Rust library/binary
+
+            Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables must be set to
+            Clang/LLVM compatible with the LLVM version used in rustc.
+
         --manifest-path <PATH>
             Path to Cargo.toml
 
