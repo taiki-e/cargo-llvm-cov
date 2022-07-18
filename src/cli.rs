@@ -407,6 +407,13 @@ pub(crate) struct BuildOptions {
     /// Note that this does not fully compatible with doctest.
     #[clap(long)]
     pub(crate) remap_path_prefix: bool,
+    /// Include coverage of C/C++ code linked to Rust library/binary
+    ///
+    /// Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables
+    /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
+    // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
+    #[clap(long)]
+    pub(crate) include_ffi: bool,
 }
 
 impl BuildOptions {

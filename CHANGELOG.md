@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support coverage of C/C++ code linked to Rust library/binary.
+
 ## [0.4.9] - 2022-07-07
 
 - Fix an issue where some files were incorrectly ignored in reports. ([#191](https://github.com/taiki-e/cargo-llvm-cov/pull/191))

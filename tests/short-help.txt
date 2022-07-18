@@ -168,6 +168,9 @@ OPTIONS:
         --remap-path-prefix
             Use --remap-path-prefix for workspace root
 
+        --include-ffi
+            Include coverage of C/C++ code linked to Rust library/binary
+
         --manifest-path <PATH>
             Path to Cargo.toml
 

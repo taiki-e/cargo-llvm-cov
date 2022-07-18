@@ -291,6 +291,17 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     if let Some(rustdocflags) = rustdocflags {
         target.set("RUSTDOCFLAGS", rustdocflags);
     }
+    if cx.build.include_ffi {
+        let clang_flags = "-fprofile-instr-generate -fcoverage-mapping";
+        if let Some(build_target) = &cx.build.target {
+            let target_lower = build_target.replace('.', "_").replace('-', "_");
+            target.set(&format!("CFLAGS_{}", target_lower), clang_flags);
+            target.set(&format!("CXXFLAGS_{}", target_lower), clang_flags);
+        } else {
+            target.set("CFLAGS", clang_flags);
+            target.set("CXXFLAGS", clang_flags);
+        }
+    }
     target.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
     target.set("CARGO_INCREMENTAL", "0");
     // Workaround for https://github.com/rust-lang/rust/issues/91092

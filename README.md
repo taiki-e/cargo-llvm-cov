@@ -264,6 +264,12 @@ OPTIONS:
 
             Note that this does not fully compatible with doctest.
 
+        --include-ffi
+            Include coverage of C/C++ code linked to Rust library/binary
+
+            Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables must be set to
+            Clang/LLVM compatible with the LLVM version used in rustc.
+
         --manifest-path <PATH>
             Path to Cargo.toml
 
@@ -360,6 +366,18 @@ cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage
 cargo llvm-cov --no-report --features a
 cargo llvm-cov --no-report --features b
 cargo llvm-cov --no-run --lcov # generate report without tests
+```
+
+### Get coverage of C/C++ code linked to Rust library/binary
+
+Set `CC`, `CXX`, `LLVM_COV`, and `LLVM_PROFDATA` environment variables to Clang/LLVM compatible with the LLVM version used in rustc, and run cargo-llvm-cov with `--include-ffi` flag.
+
+```sh
+CC=<clang-path> \
+CXX=<clang++-path> \
+LLVM_COV=<llvm-cov-path> \
+LLVM_PROFDATA=<llvm-profdata-path> \
+  cargo llvm-cov --lcov --include-ffi
 ```
 
 ### Get coverage of external tests
