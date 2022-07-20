@@ -223,7 +223,7 @@ impl<W: std::io::Write> EnvTarget for ShowEnvWriter<W> {
     }
 }
 
-fn set_env(cx: &Context, target: &mut impl EnvTarget) {
+fn set_env(cx: &Context, env: &mut impl EnvTarget) {
     let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.name));
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
@@ -281,31 +281,48 @@ fn set_env(cx: &Context, target: &mut impl EnvTarget) {
     }
 
     match (cx.build.coverage_target_only, &cx.build.target) {
-        (true, Some(coverage_target)) => target.set(
+        (true, Some(coverage_target)) => env.set(
             &format!("CARGO_TARGET_{}_RUSTFLAGS", coverage_target.to_uppercase().replace('-', "_")),
             rustflags,
         ),
-        _ => target.set("RUSTFLAGS", rustflags),
+        _ => env.set("RUSTFLAGS", rustflags),
     }
 
     if let Some(rustdocflags) = rustdocflags {
-        target.set("RUSTDOCFLAGS", rustdocflags);
+        env.set("RUSTDOCFLAGS", rustdocflags);
     }
     if cx.build.include_ffi {
-        let clang_flags = "-fprofile-instr-generate -fcoverage-mapping";
-        if let Some(build_target) = &cx.build.target {
-            let target_lower = build_target.replace('.', "_").replace('-', "_");
-            target.set(&format!("CFLAGS_{}", target_lower), clang_flags);
-            target.set(&format!("CXXFLAGS_{}", target_lower), clang_flags);
-        } else {
-            target.set("CFLAGS", clang_flags);
-            target.set("CXXFLAGS", clang_flags);
-        }
+        // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
+        // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
+        let target_u = cx.build.target.as_ref().unwrap_or(&cx.ws.host_triple).replace('-', "_");
+        let cflags_key = &format!("CFLAGS_{}", target_u);
+        // Use std::env instead of crate::env to match cc-rs's behavior.
+        // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740
+        let mut cflags = match std::env::var(cflags_key) {
+            Ok(cflags) => cflags,
+            Err(_) => match std::env::var("TARGET_CFLAGS") {
+                Ok(cflags) => cflags,
+                Err(_) => std::env::var("CFLAGS").unwrap_or_default(),
+            },
+        };
+        let cxxflags_key = &format!("CXXFLAGS_{}", target_u);
+        let mut cxxflags = match std::env::var(cxxflags_key) {
+            Ok(cxxflags) => cxxflags,
+            Err(_) => match std::env::var("TARGET_CXXFLAGS") {
+                Ok(cxxflags) => cxxflags,
+                Err(_) => std::env::var("CXXFLAGS").unwrap_or_default(),
+            },
+        };
+        let clang_flags = " -fprofile-instr-generate -fcoverage-mapping";
+        cflags.push_str(clang_flags);
+        cxxflags.push_str(clang_flags);
+        env.set(cflags_key, &cflags);
+        env.set(cxxflags_key, &cxxflags);
     }
-    target.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
-    target.set("CARGO_INCREMENTAL", "0");
+    env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
+    env.set("CARGO_INCREMENTAL", "0");
     // Workaround for https://github.com/rust-lang/rust/issues/91092
-    target.set("RUST_TEST_THREADS", "1");
+    env.set("RUST_TEST_THREADS", "1");
 }
 
 fn has_z_flag(args: &Args, name: &str) -> bool {
