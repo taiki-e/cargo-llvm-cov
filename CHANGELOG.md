@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.11] - 2022-07-20
+
 - Fix handling of existing CFLAGS/CXXFLAGS when `--include-ffi` flag is passed. ([#196](https://github.com/taiki-e/cargo-llvm-cov/pull/196))
 
 ## [0.4.10] - 2022-07-18
@@ -323,7 +325,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.10...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.11...HEAD
+[0.4.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.10...v0.4.11
 [0.4.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.9...v0.4.10
 [0.4.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.7...v0.4.8
