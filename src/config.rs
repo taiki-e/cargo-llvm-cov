@@ -29,6 +29,8 @@ impl Config {
         // However, it is unstable and can break, so allow errors.
         // https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cargo-config
         // https://github.com/rust-lang/cargo/issues/9301
+        // This is the same as what the rust-analyzer does.
+        // https://github.com/rust-lang/rust-analyzer/blob/5c88d9344c5b32988bfbfc090f50aba5de1db062/crates/project-model/src/cargo_workspace.rs#L488
         let mut cargo = cmd!(cargo, "-Z", "unstable-options", "config", "get", "--format", "json");
         cargo.env("RUSTC_BOOTSTRAP", "1");
         let mut config = match cargo.read() {
