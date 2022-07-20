@@ -27,6 +27,7 @@ pub(crate) struct Workspace {
 
     cargo: PathBuf,
     rustc: ProcessBuilder,
+    pub(crate) host_triple: String,
     pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
@@ -40,12 +41,12 @@ impl Workspace {
         show_env: bool,
     ) -> Result<Self> {
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-        let host = &host_triple(&cargo)?;
+        let host_triple = host_triple(&cargo)?;
 
         // Metadata and config
         let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
         let metadata = metadata(&cargo, &current_manifest, options)?;
-        let config = Config::new(&cargo, target, Some(host))?;
+        let config = Config::new(&cargo, target, Some(&host_triple))?;
 
         // The following priorities are not documented, but at as of cargo
         // 1.63.0-nightly (2022-05-31), `RUSTC_WRAPPER` is preferred over `RUSTC_WORKSPACE_WRAPPER`.
@@ -100,6 +101,7 @@ impl Workspace {
             profdata_file,
             cargo: cargo.into(),
             rustc,
+            host_triple,
             nightly,
             stable_coverage,
         })

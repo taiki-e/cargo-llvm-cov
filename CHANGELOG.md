@@ -10,9 +10,11 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix handling of existing CFLAGS/CXXFLAGS when `--include-ffi` flag is passed. ([#196](https://github.com/taiki-e/cargo-llvm-cov/pull/196))
+
 ## [0.4.10] - 2022-07-18
 
-- Support coverage of C/C++ code linked to Rust library/binary.
+- Support coverage of C/C++ code linked to Rust library/binary. ([#194](https://github.com/taiki-e/cargo-llvm-cov/pull/194))
 
 ## [0.4.9] - 2022-07-07
 
