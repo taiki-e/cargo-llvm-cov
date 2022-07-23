@@ -27,6 +27,7 @@ use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
     fmt::Write as _,
+    io,
     path::Path,
 };
 
@@ -95,7 +96,8 @@ fn try_main() -> Result<()> {
 
         Some(Subcommand::ShowEnv(options)) => {
             let cx = &context_from_args(&mut args, true)?;
-            let writer = &mut ShowEnvWriter { target: std::io::stdout(), options };
+            let stdout = io::stdout();
+            let writer = &mut ShowEnvWriter { target: stdout.lock(), options };
             set_env(cx, writer);
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str());
         }
@@ -205,12 +207,12 @@ impl EnvTarget for ProcessBuilder {
     }
 }
 
-struct ShowEnvWriter<W: std::io::Write> {
+struct ShowEnvWriter<W: io::Write> {
     target: W,
     options: ShowEnvOptions,
 }
 
-impl<W: std::io::Write> EnvTarget for ShowEnvWriter<W> {
+impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) {
         writeln!(
             self.target,
