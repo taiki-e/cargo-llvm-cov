@@ -79,7 +79,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@nightly
         with:
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
       - uses: taiki-e/install-action@cross
         if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: cross build --target ${{ matrix.target }}
