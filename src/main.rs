@@ -268,12 +268,12 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
         } else {
             // TODO: drop support for `-Z instrument-coverage` in the future major release.
             rustdocflags.push_str(" -Z instrument-coverage");
+            if cfg!(windows) {
+                rustdocflags.push_str(" -C codegen-units=1");
+            }
         }
         let _ =
             write!(rustdocflags, " -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir);
-        if cfg!(windows) {
-            rustdocflags.push_str(" -C codegen-units=1");
-        }
         if !cx.cov.no_cfg_coverage {
             rustdocflags.push_str(" --cfg coverage");
         }
