@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `target.<cfg>.rustflags`. ([#200](https://github.com/taiki-e/cargo-llvm-cov/pull/200))
+
+- Remove workaround for an old rustc bug on Windows if unnecessary. ([#199](https://github.com/taiki-e/cargo-llvm-cov/pull/199), thanks @ldm0)
+
 ## [0.4.11] - 2022-07-20
 
 - Fix handling of existing CFLAGS/CXXFLAGS when `--include-ffi` flag is passed. ([#196](https://github.com/taiki-e/cargo-llvm-cov/pull/196))
