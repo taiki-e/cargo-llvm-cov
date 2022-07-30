@@ -1,0 +1,8 @@
+[target.'cfg(target_os = "macos")']
+rustflags = "--cfg a"
+
+[target.aarch64-apple-darwin]
+rustflags = "--cfg b"
+
+[build]
+rustflags = "--cfg d"
