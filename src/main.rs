@@ -24,6 +24,7 @@ mod env;
 mod fs;
 
 use std::{
+    borrow::Cow,
     collections::HashMap,
     ffi::{OsStr, OsString},
     fmt::Write as _,
@@ -228,7 +229,7 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
 fn set_env(cx: &Context, env: &mut impl EnvTarget) {
     let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.name));
 
-    let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default();
+    let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default().into_owned();
     if cx.ws.stable_coverage {
         rustflags.push_str(" -C instrument-coverage");
     } else {
@@ -260,7 +261,7 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
     }
 
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
-    let rustdocflags = &mut cx.ws.config.rustdocflags();
+    let rustdocflags = &mut cx.ws.config.rustdocflags().map(Cow::into_owned);
     if cx.doctests {
         let rustdocflags = rustdocflags.get_or_insert_with(String::new);
         if cx.ws.stable_coverage {
@@ -284,7 +285,10 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
 
     match (cx.build.coverage_target_only, &cx.build.target) {
         (true, Some(coverage_target)) => env.set(
-            &format!("CARGO_TARGET_{}_RUSTFLAGS", coverage_target.to_uppercase().replace('-', "_")),
+            &format!(
+                "CARGO_TARGET_{}_RUSTFLAGS",
+                coverage_target.to_uppercase().replace(['-', '.'], "_")
+            ),
             rustflags,
         ),
         _ => env.set("RUSTFLAGS", rustflags),
@@ -296,7 +300,8 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
     if cx.build.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
-        let target_u = cx.build.target.as_ref().unwrap_or(&cx.ws.host_triple).replace('-', "_");
+        let target_u =
+            cx.build.target.as_ref().unwrap_or(&cx.ws.host_triple).replace(['-', '.'], "_");
         let cflags_key = &format!("CFLAGS_{}", target_u);
         // Use std::env instead of crate::env to match cc-rs's behavior.
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740

@@ -2,7 +2,7 @@
 name = "cargo-llvm-cov"
 version = "0.4.11" #publish:version
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.58"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
@@ -40,6 +40,7 @@ rustc-demangle = "0.1.21"
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1"
 shell-escape = "0.1.5"
+target-spec = "1"
 termcolor = "1.1.2"
 walkdir = "2.2.3"
 

@@ -1,7 +1,7 @@
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/reference/config.html
 
-use std::{collections::BTreeMap, ffi::OsStr};
+use std::{borrow::Cow, collections::BTreeMap, ffi::OsStr};
 
 use anyhow::{format_err, Context as _, Result};
 use serde::Deserialize;
@@ -89,18 +89,40 @@ impl Config {
         // 1. RUSTFLAGS
         // 2. target.<triple>.rustflags (CARGO_TARGET_<triple>_RUSTFLAGS) and target.<cfg>.rustflags
         // 3. build.rustflags (CARGO_BUILD_RUSTFLAGS)
-        // Note: target.<cfg>.rustflags is currently ignored
         // https://doc.rust-lang.org/nightly/cargo/reference/config.html#buildrustflags
         if let Some(rustflags) = env::var("RUSTFLAGS")? {
             self.build.rustflags = Some(StringOrArray::String(rustflags));
         } else if let Some(target) = target {
+            let mut target_rustflags: Option<String> = None;
+            for (target_cfg, target_config) in &self.target {
+                if let Ok(Some(true)) = target_spec::eval(target_cfg, target) {
+                    if let Some(rustflags) = target_config
+                        .rustflags
+                        .as_ref()
+                        .map(StringOrArray::to_string)
+                        // cargo ignore empty rustflags field
+                        .filter(|s| !s.is_empty())
+                    {
+                        let target_rustflags = target_rustflags.get_or_insert_with(String::new);
+                        if !target_rustflags.is_empty() {
+                            target_rustflags.push(' ');
+                        }
+                        target_rustflags.push_str(&rustflags);
+                    }
+                }
+            }
             if let Some(rustflags) = env::var(&format!(
                 "CARGO_TARGET_{}_RUSTFLAGS",
-                target.to_uppercase().replace('-', "_")
+                target.to_uppercase().replace(['-', '.'], "_")
             ))? {
+                let target_rustflags = target_rustflags.get_or_insert_with(String::new);
+                if !target_rustflags.is_empty() {
+                    target_rustflags.push(' ');
+                }
+                target_rustflags.push_str(&rustflags);
+            }
+            if let Some(rustflags) = target_rustflags {
                 self.build.rustflags = Some(StringOrArray::String(rustflags));
-            } else if let Some(Target { rustflags: Some(rustflags) }) = self.target.get(target) {
-                self.build.rustflags = Some(rustflags.clone());
             } else if let Some(rustflags) = env::var("CARGO_BUILD_RUSTFLAGS")? {
                 self.build.rustflags = Some(StringOrArray::String(rustflags));
             }
@@ -153,14 +175,14 @@ impl Config {
         }
     }
 
-    pub(crate) fn rustflags(&self) -> Option<String> {
+    pub(crate) fn rustflags(&self) -> Option<Cow<'_, str>> {
         // Refer only build.rustflags because Self::apply_env update build.rustflags
         // based on target.<..>.rustflags.
-        self.build.rustflags.as_ref().map(ToString::to_string)
+        self.build.rustflags.as_ref().map(StringOrArray::to_string)
     }
 
-    pub(crate) fn rustdocflags(&self) -> Option<String> {
-        self.build.rustdocflags.as_ref().map(ToString::to_string)
+    pub(crate) fn rustdocflags(&self) -> Option<Cow<'_, str>> {
+        self.build.rustdocflags.as_ref().map(StringOrArray::to_string)
     }
 }
 
@@ -226,13 +248,11 @@ impl StringOrArray {
             }
         }
     }
-}
 
-impl ToString for StringOrArray {
-    fn to_string(&self) -> String {
+    pub(crate) fn to_string(&self) -> Cow<'_, str> {
         match self {
-            Self::String(s) => s.clone(),
-            Self::Array(v) => v.join(" "),
+            Self::String(s) => Cow::Borrowed(s),
+            Self::Array(v) => Cow::Owned(v.join(" ")),
         }
     }
 }
