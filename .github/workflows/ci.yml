@@ -94,7 +94,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: taiki-e/install-action@cargo-hack
+      # Make sure this crate can be built with MSRV and all later versions.
+      # However, this takes time, so for PR, set the version interval.
+      - run: cargo hack build --workspace --ignore-private --no-dev-deps --version-range ..
+        if: github.event_name != 'pull_request'
       - run: cargo hack build --workspace --ignore-private --no-dev-deps --version-range .. --version-step 2
+        if: github.event_name == 'pull_request'
 
   tidy:
     runs-on: ubuntu-18.04
