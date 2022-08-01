@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where merging of multiple `cargo llvm-cov run` coverage did not work.
+
 ## [0.4.12] - 2022-07-30
 
 - Support `target.<cfg>.rustflags`. ([#200](https://github.com/taiki-e/cargo-llvm-cov/pull/200))

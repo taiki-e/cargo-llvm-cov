@@ -227,7 +227,7 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
 }
 
 fn set_env(cx: &Context, env: &mut impl EnvTarget) {
-    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%m.profraw", cx.ws.name));
+    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name));
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default().into_owned();
     if cx.ws.stable_coverage {
