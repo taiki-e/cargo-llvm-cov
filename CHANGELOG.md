@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.13] - 2022-08-01
+
 - Fix an issue where merging of multiple `cargo llvm-cov run` coverage did not work.
 
 ## [0.4.12] - 2022-07-30
@@ -333,7 +335,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.12...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...HEAD
+[0.4.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.12...v0.4.13
 [0.4.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.11...v0.4.12
 [0.4.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.10...v0.4.11
 [0.4.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.9...v0.4.10
