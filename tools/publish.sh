@@ -8,8 +8,9 @@ cd "$(dirname "$0")"/..
 # USAGE:
 #    ./tools/publish.sh <VERSION>
 #
-# Note:
-# - This script requires parse-changelog <https://github.com/taiki-e/parse-changelog>
+# Note: This script requires the following tools:
+# - parse-changelog <https://github.com/taiki-e/parse-changelog>
+# - cargo-workspaces <https://github.com/pksunkara/cargo-workspaces>
 
 x() {
     local cmd="$1"
@@ -98,11 +99,12 @@ for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
         bail "publishable workspace members must be version '${prev_version}', but package '${name}' is version '${actual_version}'"
     fi
 
-    # Update version.
     manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
     manifest_paths+=("${manifest_path}")
-    sed -i -e "s/version = \"${prev_version}\" #publish:version/version = \"${version}\" #publish:version/g" "${manifest_path}"
 done
+
+# Update version.
+x cargo workspaces version --force '*' --no-git-commit --exact -y custom "${version}"
 
 if [[ -n "${tags}" ]]; then
     # Create a release commit.
