@@ -28,7 +28,7 @@ use std::{
     collections::HashMap,
     ffi::{OsStr, OsString},
     fmt::Write as _,
-    io,
+    io::{self, Write},
     path::Path,
 };
 
@@ -509,12 +509,17 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
 
 fn merge_profraw(cx: &Context) -> Result<()> {
     // Convert raw profile data.
+    let profraw_files =
+        glob::glob(cx.ws.target_dir.join(format!("{}-*.profraw", cx.ws.name)).as_str())?
+            .filter_map(Result::ok);
+    let mut input_files = tempfile::NamedTempFile::new()?;
+    for path in profraw_files {
+        writeln!(input_files, "{}", path.display())?;
+    }
     let mut cmd = cx.process(&cx.llvm_profdata);
     cmd.args(["merge", "-sparse"])
-        .args(
-            glob::glob(cx.ws.target_dir.join(format!("{}-*.profraw", cx.ws.name)).as_str())?
-                .filter_map(Result::ok),
-        )
+        .arg("-f")
+        .arg(input_files.path())
         .arg("-o")
         .arg(&cx.ws.profdata_file);
     if let Some(mode) = &cx.cov.failure_mode {
