@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.4.14] - 2022-08-06
+
 - Fix an issue where "File name or extension is too long" error occurs in Windows. ([#203](https://github.com/taiki-e/cargo-llvm-cov/pull/203), thanks @messense)
 
 ## [0.4.13] - 2022-08-01
@@ -337,7 +339,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...HEAD
+[0.4.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...v0.4.14
 [0.4.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.12...v0.4.13
 [0.4.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.11...v0.4.12
 [0.4.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.10...v0.4.11
