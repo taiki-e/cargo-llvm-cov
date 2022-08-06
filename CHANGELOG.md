@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where "File name or extension is too long" error occurs in Windows. ([#203](https://github.com/taiki-e/cargo-llvm-cov/pull/203), thanks @messense)
+
 ## [0.4.13] - 2022-08-01
 
 - Fix an issue where merging of multiple `cargo llvm-cov run` coverage did not work.
