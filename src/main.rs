@@ -514,7 +514,9 @@ fn merge_profraw(cx: &Context) -> Result<()> {
             .filter_map(Result::ok);
     let mut input_files = tempfile::NamedTempFile::new()?;
     for path in profraw_files {
-        writeln!(input_files, "{}", path.display())?;
+        let path_str =
+            path.to_str().with_context(|| format!("{:?} contains invalid utf-8 data", path))?;
+        writeln!(input_files, "{}", path_str)?;
     }
     let mut cmd = cx.process(&cx.llvm_profdata);
     cmd.args(["merge", "-sparse"])
