@@ -49,6 +49,7 @@ jobs:
       - create-release
     strategy:
       matrix:
+        # When updating this list, the reminder to update the target list in ci.yml.
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl
@@ -66,6 +67,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cross
+        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
       - uses: taiki-e/upload-rust-binary-action@v1
@@ -76,5 +79,3 @@ jobs:
           zip: windows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
-          CARGO_PROFILE_RELEASE_LTO: true

@@ -61,17 +61,25 @@ jobs:
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
         if: startsWith(matrix.rust, 'nightly')
 
-  cross:
+  build:
     name: build (${{ matrix.target }})
+    env:
+      cargo: cargo
     strategy:
       fail-fast: false
       matrix:
+        # When updating this list, the reminder to update the target list in release.yml.
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl
           - target: aarch64-apple-darwin
             os: macos-11
+          - target: x86_64-unknown-linux-gnu
           - target: x86_64-unknown-linux-musl
+          - target: x86_64-apple-darwin
+            os: macos-11
+          - target: x86_64-pc-windows-msvc
+            os: windows-2019
     runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
     steps:
       - uses: actions/checkout@v3
@@ -82,10 +90,12 @@ jobs:
           target: ${{ matrix.target }}
       - uses: taiki-e/install-action@cross
         if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
-      - run: cross build --target ${{ matrix.target }}
-        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
-      - run: cargo build --target ${{ matrix.target }}
-        if: startsWith(matrix.os, 'macos') || startsWith(matrix.os, 'windows')
+      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
+        if: endsWith(matrix.target, 'windows-msvc')
+      - run: echo "cargo=cross" >>"${GITHUB_ENV}"
+        if: matrix.target != 'x86_64-unknown-linux-gnu' && (matrix.os == '' || startsWith(matrix.os, 'ubuntu'))
+      - run: $cargo build --target ${{ matrix.target }}
+      - run: $cargo build --target ${{ matrix.target }} --release
 
   msrv:
     runs-on: ubuntu-18.04
@@ -111,27 +121,22 @@ jobs:
         with:
           components: clippy,rustfmt
       - uses: taiki-e/install-action@shellcheck
+      - run: pip3 install yq
       - run: cargo fmt --all --check
         if: always()
       - run: cargo clippy --workspace --all-features --all-targets
         if: always()
       - run: shellcheck $(git ls-files '*.sh')
         if: always()
+      - run: tools/check-workflow.sh
+        if: always()
 
-  # This job doesn't actually test anything, but they're used to tell bors the
-  # build completed, as there is no practical way to detect when a workflow is
-  # successful listening to webhooks only.
-  #
   # ALL THE PREVIOUS JOBS NEEDS TO BE ADDED TO THE `needs` SECTION OF THIS JOB!
 
   ci-success:
     name: ci
     if: github.event_name == 'push' && success()
-    needs:
-      - test
-      - cross
-      - msrv
-      - tidy
+    needs: [test, build, msrv, tidy] # tidy:needs
     runs-on: ubuntu-18.04
     steps:
       - name: Mark the job as a success
