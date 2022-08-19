@@ -473,7 +473,7 @@ Running cargo-llvm-cov requires rustc 1.60+.
 ### From source
 
 ```sh
-cargo install cargo-llvm-cov
+cargo +stable install cargo-llvm-cov
 ```
 
 Currently, installing cargo-llvm-cov requires rustc 1.58+.
@@ -483,6 +483,18 @@ Currently, installing cargo-llvm-cov requires rustc 1.58+.
 
 You can download prebuilt binaries from the [Release page](https://github.com/taiki-e/cargo-llvm-cov/releases).
 Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows (static executable).
+
+<details>
+<summary>Example of script to download cargo-llvm-cov</summary>
+
+```sh
+# Get host target
+host=$(rustc -Vv | grep host | sed 's/host: //')
+# Download binary and install to $HOME/.cargo/bin
+curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz | tar xzf - -C $HOME/.cargo/bin
+```
+
+</details>
 
 <!-- omit in toc -->
 ### On GitHub Actions
