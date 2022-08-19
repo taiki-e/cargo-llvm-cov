@@ -48,6 +48,7 @@ impl Workspace {
         let metadata = metadata(&cargo, &current_manifest, options)?;
         let config = Config::new(&cargo, target, Some(&host_triple))?;
 
+        // TODO: Update comment based on https://github.com/rust-lang/cargo/pull/10896?
         // The following priorities are not documented, but at as of cargo
         // 1.63.0-nightly (2022-05-31), `RUSTC_WRAPPER` is preferred over `RUSTC_WORKSPACE_WRAPPER`.
         let rustc = config.build.rustc.clone().map_or_else(|| rustc_path(&cargo), PathBuf::from);
