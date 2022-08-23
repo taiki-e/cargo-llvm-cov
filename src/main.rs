@@ -36,12 +36,11 @@ use anyhow::{Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_llvm_cov::json;
 use clap::Parser;
-use cli::{RunOptions, ShowEnvOptions};
 use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
-    cli::{Args, Opts, Subcommand},
+    cli::{Args, Opts, RunOptions, ShowEnvOptions, Subcommand},
     config::StringOrArray,
     context::Context,
     json::LlvmCovJsonExport,
@@ -398,7 +397,8 @@ fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
     if term::verbose() {
         status!("Running", "{}", cargo);
     }
-    cargo.stdout_to_stderr().run()?;
+    stdout_to_stderr(cx, &mut cargo);
+    cargo.run()?;
     Ok(())
 }
 
@@ -413,8 +413,18 @@ fn run_run(cx: &Context, args: &RunOptions) -> Result<()> {
     if term::verbose() {
         status!("Running", "{}", cargo);
     }
-    cargo.stdout_to_stderr().run()?;
+    stdout_to_stderr(cx, &mut cargo);
+    cargo.run()?;
     Ok(())
+}
+
+fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
+    if cx.cov.no_report || cx.cov.output_dir.is_some() || cx.cov.output_path.is_some() {
+        // Do not redirect if unnecessary.
+    } else {
+        // Redirect stdout to stderr as the report is output to stdout by default.
+        cargo.stdout_to_stderr();
+    }
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
