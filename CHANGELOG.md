@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- cargo-llvm-cov no longer redirects output from stdout to stderr if unnecessary. ([#206](https://github.com/taiki-e/cargo-llvm-cov/pull/206))
+
 ## [0.4.14] - 2022-08-06
 
 - Fix an issue where "File name or extension is too long" error occurs in Windows. ([#203](https://github.com/taiki-e/cargo-llvm-cov/pull/203), thanks @messense)
