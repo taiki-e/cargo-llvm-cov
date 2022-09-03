@@ -68,7 +68,7 @@ impl Workspace {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
         }
         let stable_coverage =
-            rustc.clone().args(&["-C", "help"]).read()?.contains("instrument-coverage");
+            rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
         if !stable_coverage && !nightly {
             bail!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
@@ -150,7 +150,7 @@ fn rustc_path(cargo: impl AsRef<Path>) -> PathBuf {
 
 fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
     let mut cmd = rustc.clone();
-    cmd.args(&["--version", "--verbose"]);
+    cmd.args(["--version", "--verbose"]);
     let verbose_version = cmd.read()?;
     let version =
         verbose_version.lines().find_map(|line| line.strip_prefix("release: ")).ok_or_else(

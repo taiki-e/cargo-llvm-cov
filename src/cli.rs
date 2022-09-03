@@ -591,7 +591,7 @@ mod tests {
         use std::{ffi::OsStr, os::unix::prelude::OsStrExt};
 
         // `cargo llvm-cov -- $'fo\x80o'`
-        Opts::try_parse_from(&[
+        Opts::try_parse_from([
             "cargo".as_ref(),
             "llvm-cov".as_ref(),
             "--".as_ref(),
@@ -604,16 +604,16 @@ mod tests {
     #[test]
     fn multiple_occurrences() {
         let Opts::LlvmCov(args) =
-            Opts::try_parse_from(&["cargo", "llvm-cov", "--features", "a", "--features", "b"])
+            Opts::try_parse_from(["cargo", "llvm-cov", "--features", "a", "--features", "b"])
                 .unwrap();
         assert_eq!(args.build.features, ["a", "b"]);
 
         let Opts::LlvmCov(args) =
-            Opts::try_parse_from(&["cargo", "llvm-cov", "--package", "a", "--package", "b"])
+            Opts::try_parse_from(["cargo", "llvm-cov", "--package", "a", "--package", "b"])
                 .unwrap();
         assert_eq!(args.package, ["a", "b"]);
 
-        let Opts::LlvmCov(args) = Opts::try_parse_from(&[
+        let Opts::LlvmCov(args) = Opts::try_parse_from([
             "cargo",
             "llvm-cov",
             "--exclude",
@@ -626,21 +626,21 @@ mod tests {
         assert_eq!(args.exclude, ["a", "b"]);
 
         let Opts::LlvmCov(args) =
-            Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", "a", "-Zb"]).unwrap();
+            Opts::try_parse_from(["cargo", "llvm-cov", "-Z", "a", "-Zb"]).unwrap();
         assert_eq!(args.unstable_flags, ["a", "b"]);
 
         let Opts::LlvmCov(args) =
-            Opts::try_parse_from(&["cargo", "llvm-cov", "--", "a", "b"]).unwrap();
+            Opts::try_parse_from(["cargo", "llvm-cov", "--", "a", "b"]).unwrap();
         assert_eq!(args.args, ["a", "b"]);
     }
 
     // https://github.com/taiki-e/cargo-llvm-cov/pull/127#issuecomment-1018204521
     #[test]
     fn multiple_values() {
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--features", "a", "b"]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--package", "a", "b"]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "--exclude", "a", "b"]).unwrap_err();
-        Opts::try_parse_from(&["cargo", "llvm-cov", "-Z", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(["cargo", "llvm-cov", "--features", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(["cargo", "llvm-cov", "--package", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(["cargo", "llvm-cov", "--exclude", "a", "b"]).unwrap_err();
+        Opts::try_parse_from(["cargo", "llvm-cov", "-Z", "a", "b"]).unwrap_err();
     }
 
     // https://github.com/clap-rs/clap/issues/1740
@@ -669,13 +669,13 @@ mod tests {
         ];
 
         for &flag in forbidden {
-            Opts::try_parse_from(&["cargo", "llvm-cov", flag, ""]).unwrap_err();
+            Opts::try_parse_from(["cargo", "llvm-cov", flag, ""]).unwrap_err();
         }
         for &flag in allowed {
             if flag == "--exclude" {
-                Opts::try_parse_from(&["cargo", "llvm-cov", flag, "", "--workspace"]).unwrap();
+                Opts::try_parse_from(["cargo", "llvm-cov", flag, "", "--workspace"]).unwrap();
             } else {
-                Opts::try_parse_from(&["cargo", "llvm-cov", flag, ""]).unwrap();
+                Opts::try_parse_from(["cargo", "llvm-cov", flag, ""]).unwrap();
             }
         }
     }

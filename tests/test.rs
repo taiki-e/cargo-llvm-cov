@@ -160,7 +160,7 @@ fn merge_failure_mode_all() {
 
 fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
     let model = "merge";
-    fs::create_dir_all(&output_dir).unwrap();
+    fs::create_dir_all(output_dir).unwrap();
     for (extension, args) in test_set() {
         let workspace_root = test_project(model).unwrap();
         let output_path = &output_dir.join(model).with_extension(extension);
@@ -187,7 +187,7 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
             perturb_one_header(workspace_root.path()).unwrap().unwrap();
             cmd.assert_failure()
                 .stderr_contains("unrecognized instrumentation profile encoding format");
-            cmd.args(&["--failure-mode", "all"]);
+            cmd.args(["--failure-mode", "all"]);
             cmd.assert_success();
         } else {
             normalize_output(output_path, args).unwrap();

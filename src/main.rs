@@ -607,7 +607,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     target_dir.push(profile);
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
-        if is_executable::is_executable(&f) {
+        if is_executable::is_executable(f) {
             files.push(make_relative(cx, f).to_owned().into_os_string());
         }
     }
