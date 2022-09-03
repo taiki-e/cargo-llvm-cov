@@ -556,7 +556,8 @@ Note: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
-
+- All the tests are run with `RUST_TEST_THREADS=1` to work around [rust-lang/rust#91092]. You can pass `--test-threads` (e.g., `--test-threads=$(nproc)`) to override this behavior.  
+ 
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
 ## Related Projects
