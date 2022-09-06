@@ -78,16 +78,8 @@ fn try_main() -> Result<()> {
         }
 
         Subcommand::Run => {
-            let cx = &Context::new(
-                args.build(),
-                &args.manifest(),
-                args.cov(),
-                &[],
-                &[],
-                false,
-                false,
-                false,
-            )?;
+            let cx =
+                &Context::new(args.build(), &args.manifest(), args.cov(), &[], &[], false, false)?;
 
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
@@ -167,7 +159,6 @@ fn context_from_args(args: &mut Args, show_env: bool) -> Result<Context> {
         &args.exclude,
         &args.exclude_from_report,
         args.doctests,
-        args.no_run,
         show_env,
     )
 }
