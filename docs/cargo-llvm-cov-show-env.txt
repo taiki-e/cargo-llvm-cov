@@ -1,0 +1,10 @@
+cargo-llvm-cov-show-env
+Output the environment set by cargo-llvm-cov to build Rust projects
+
+USAGE:
+    cargo llvm-cov show-env [OPTIONS]
+
+OPTIONS:
+        --export-prefix    Prepend "export " to each line, so that the output is suitable to be
+                           sourced by bash
+    -h, --help             Print help information

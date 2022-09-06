@@ -3,7 +3,7 @@
 
 use std::{borrow::Cow, collections::BTreeMap, ffi::OsStr};
 
-use anyhow::{format_err, Context as _, Result};
+use anyhow::{Context as _, Result};
 use serde::Deserialize;
 
 use crate::{env, term::Coloring};
@@ -151,8 +151,7 @@ impl Config {
             self.term.verbose = Some(verbose.parse()?);
         }
         if let Some(color) = env::var("CARGO_TERM_COLOR")? {
-            self.term.color =
-                Some(clap::ArgEnum::from_str(&color, false).map_err(|e| format_err!("{}", e))?);
+            self.term.color = Some(color.parse()?);
         }
         Ok(())
     }

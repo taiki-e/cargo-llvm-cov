@@ -37,6 +37,8 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 <details>
 <summary>Click to show a complete list of options</summary>
 
+(See [docs](docs) directory for options of subcommands)
+
 <!-- readme-long-help:start -->
 ```console
 $ cargo llvm-cov --help
@@ -301,8 +303,6 @@ SUBCOMMANDS:
             Remove artifacts that cargo-llvm-cov has generated in the past
     nextest
             Run tests with cargo nextest
-    help
-            Print this message or the help of the given subcommand(s)
 ```
 <!-- readme-long-help:end -->
 
@@ -556,8 +556,8 @@ Note: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
-- All the tests are run with `RUST_TEST_THREADS=1` to work around [rust-lang/rust#91092]. You can pass `--test-threads` (e.g., `--test-threads=$(nproc)`) to override this behavior.  
- 
+- All the tests are run with `RUST_TEST_THREADS=1` to work around [rust-lang/rust#91092]. You can pass `--test-threads` (e.g., `--test-threads=$(nproc)`) to override this behavior.
+
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
 ## Related Projects
@@ -566,7 +566,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 - [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
 - [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
 
-[#1]: https://github.com/taiki-e/cargo-llvm-cov/issues/1
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12

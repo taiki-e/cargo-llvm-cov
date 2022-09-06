@@ -1,10 +1,8 @@
-cargo-llvm-cov
-Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
-
-Use -h for short descriptions and --help for more details.
+cargo-llvm-cov-run
+Run a binary or example and generate coverage report
 
 USAGE:
-    cargo llvm-cov [OPTIONS] [-- <ARGS>...] [SUBCOMMAND]
+    cargo llvm-cov run [OPTIONS] [-- <ARGS>...]
 
 ARGS:
     <ARGS>...
@@ -104,78 +102,17 @@ OPTIONS:
         --include-build-script
             Include build script in coverage report
 
-        --doctests
-            Including doc tests (unstable)
-
-            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
-            more.
-
-        --no-run
-            Generate coverage report without running tests
-
-        --no-fail-fast
-            Run all tests regardless of failure
-
-        --ignore-run-fail
-            Run all tests regardless of failure and generate report
-
-            If tests failed but report generation succeeded, exit with a status of 0.
-
     -q, --quiet
-            Display one character per test instead of one line
-
-        --lib
-            Test only this package's library unit tests
+            No output printed to stdout
 
         --bin <NAME>
-            Test only the specified binary
-
-        --bins
-            Test all binaries
+            Name of the bin target to run
 
         --example <NAME>
-            Test only the specified example
-
-        --examples
-            Test all examples
-
-        --test <NAME>
-            Test only the specified test target
-
-        --tests
-            Test all tests
-
-        --bench <NAME>
-            Test only the specified bench target
-
-        --benches
-            Test all benches
-
-        --all-targets
-            Test all targets
-
-        --doc
-            Test only this library's documentation (unstable)
-
-            This flag is unstable because it automatically enables --doctests flag. See
-            <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
+            Name of the example target to run
 
     -p, --package <SPEC>
-            Package to run tests for
-
-        --workspace
-            Test all packages in the workspace
-
-            [aliases: all]
-
-        --exclude <SPEC>
-            Exclude packages from both the test and report
-
-        --exclude-from-test <SPEC>
-            Exclude packages from the test (but not from the report)
-
-        --exclude-from-report <SPEC>
-            Exclude packages from the report (but not from the test)
+            Package with the target to run
 
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs
@@ -246,18 +183,3 @@ OPTIONS:
 
     -h, --help
             Print help information
-
-    -V, --version
-            Print version information
-
-SUBCOMMANDS:
-    run
-            Run a binary or example and generate coverage report
-    show-env
-            Output the environment set by cargo-llvm-cov to build Rust projects
-    clean
-            Remove artifacts that cargo-llvm-cov has generated in the past
-    nextest
-            Run tests with cargo nextest
-    help
-            Print this message or the help of the given subcommand(s)

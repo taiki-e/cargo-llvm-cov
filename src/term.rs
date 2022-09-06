@@ -1,12 +1,14 @@
 use std::{
     io::Write,
+    str::FromStr,
     sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
 
+use anyhow::{bail, Error};
 use serde::Deserialize;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, clap::ArgEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 #[repr(u8)]
 pub(crate) enum Coloring {
@@ -25,6 +27,19 @@ impl Coloring {
             Self::Auto => "auto",
             Self::Always => "always",
             Self::Never => "never",
+        }
+    }
+}
+
+impl FromStr for Coloring {
+    type Err = Error;
+
+    fn from_str(color: &str) -> Result<Self, Self::Err> {
+        match color {
+            "auto" => Ok(Self::Auto),
+            "always" => Ok(Self::Always),
+            "never" => Ok(Self::Never),
+            other => bail!("must be auto, always, or never, but found `{}`", other),
         }
     }
 }

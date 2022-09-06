@@ -201,36 +201,50 @@ pub struct AssertOutput {
     status: ExitStatus,
 }
 
-fn line_separated(lines: &str, f: impl FnMut(&str)) {
-    lines.split('\n').map(str::trim).filter(|line| !line.is_empty()).for_each(f);
+fn line_separated(lines: &str) -> impl Iterator<Item = &'_ str> {
+    lines.split('\n').map(str::trim).filter(|line| !line.is_empty())
 }
 
 impl AssertOutput {
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
     #[track_caller]
     pub fn stderr_contains(&self, pats: &str) -> &Self {
-        line_separated(pats, |pat| {
+        for pat in line_separated(pats) {
             assert!(
                 self.stderr.contains(pat),
                 "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
                 "-".repeat(60),
                 self.stderr
             );
-        });
+        }
         self
     }
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]
     pub fn stdout_contains(&self, pats: &str) -> &Self {
-        line_separated(pats, |pat| {
+        for pat in line_separated(pats) {
             assert!(
                 self.stdout.contains(pat),
                 "assertion failed: `self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
                 "-".repeat(60),
                 self.stdout
             );
-        });
+        }
+        self
+    }
+
+    /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
+    #[track_caller]
+    pub fn stdout_not_contains(&self, pats: &str) -> &Self {
+        for pat in line_separated(pats) {
+            assert!(
+                !self.stdout.contains(pat),
+                "assertion failed: `!self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
+                "-".repeat(60),
+                self.stdout
+            );
+        }
         self
     }
 }
