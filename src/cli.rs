@@ -411,14 +411,18 @@ impl Args {
             unexpected("--export-prefix")?;
         }
         // TODO: check
-        // match subcommand {
-        //     Subcommand::Test => {}
-        //     Subcommand::Run => {}
-        //     Subcommand::ShowEnv => {}
-        //     Subcommand::Clean => {}
-        //     Subcommand::Nextest => {}
-        //     Subcommand::Demangle => {}
-        // }
+        match subcommand {
+            Subcommand::Test => {}
+            Subcommand::Run => {}
+            Subcommand::ShowEnv => {}
+            Subcommand::Clean => {}
+            Subcommand::Nextest => {
+                if doc || doctests {
+                    bail!("doctest is not supported for nextest");
+                }
+            }
+            Subcommand::Demangle => {}
+        }
 
         // requires
         if !exclude.is_empty() && !workspace {
