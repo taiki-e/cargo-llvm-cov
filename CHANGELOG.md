@@ -10,9 +10,14 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix various CLI-related bugs. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
+  In particular, `nextest`-specific options are now fully supported.
+
 - Add `--no-clean` flag to build without cleaning any old build artifacts. See [#214](https://github.com/taiki-e/cargo-llvm-cov/pull/214) for more.
 
 - cargo-llvm-cov no longer redirects output from stdout to stderr if unnecessary. ([#206](https://github.com/taiki-e/cargo-llvm-cov/pull/206))
+
+- Improve compile time. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
 ## [0.4.14] - 2022-08-06
 
