@@ -35,10 +35,10 @@ impl Config {
         cargo.env("RUSTC_BOOTSTRAP", "1");
         let mut config = match cargo.read() {
             Ok(s) => serde_json::from_str(&s)
-                .with_context(|| format!("failed to parse output from {}", cargo))?,
+                .with_context(|| format!("failed to parse output from {cargo}"))?,
             Err(e) => {
                 // Allow error from cargo-config as it is an unstable feature.
-                warn!("{:#}", e);
+                warn!("{e:#}");
                 Self::default()
             }
         };

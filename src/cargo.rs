@@ -89,7 +89,7 @@ impl Workspace {
         let doctests_dir = target_dir.join("doctestbins");
 
         let name = metadata.workspace_root.file_name().unwrap().to_owned();
-        let profdata_file = target_dir.join(format!("{}.profdata", name));
+        let profdata_file = target_dir.join(format!("{name}.profdata"));
 
         Ok(Self {
             name,
@@ -127,7 +127,7 @@ impl Workspace {
             .rustc()
             .args(["--print", kind])
             .read()
-            .with_context(|| format!("failed to get {}", kind))?
+            .with_context(|| format!("failed to get {kind}"))?
             .trim()
             .into())
     }
@@ -152,10 +152,10 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
     let mut cmd = rustc.clone();
     cmd.args(["--version", "--verbose"]);
     let verbose_version = cmd.read()?;
-    let version =
-        verbose_version.lines().find_map(|line| line.strip_prefix("release: ")).ok_or_else(
-            || format_err!("unexpected version output from `{}`: {}", cmd, verbose_version),
-        )?;
+    let version = verbose_version
+        .lines()
+        .find_map(|line| line.strip_prefix("release: "))
+        .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?;
     let (_version, channel) = version.split_once('-').unwrap_or_default();
     let nightly = channel == "nightly" || version == "dev";
     Ok(nightly)
@@ -167,9 +167,7 @@ fn host_triple(cargo: &OsStr) -> Result<String> {
     let host = verbose_version
         .lines()
         .find_map(|line| line.strip_prefix("host: "))
-        .ok_or_else(|| {
-            format_err!("unexpected version output from `{}`: {}", cmd, verbose_version)
-        })?
+        .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?
         .to_owned();
     Ok(host)
 }
@@ -191,8 +189,7 @@ fn locate_project(cargo: &OsStr) -> Result<String> {
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-metadata.html
 fn metadata(cargo: &OsStr, manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
     let mut cmd = cmd!(cargo, "metadata", "--format-version=1", "--manifest-path", manifest_path);
-    serde_json::from_str(&cmd.read()?)
-        .with_context(|| format!("failed to parse output from {}", cmd))
+    serde_json::from_str(&cmd.read()?).with_context(|| format!("failed to parse output from {cmd}"))
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html

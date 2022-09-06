@@ -39,7 +39,7 @@ impl FromStr for Coloring {
             "auto" => Ok(Self::Auto),
             "always" => Ok(Self::Always),
             "never" => Ok(Self::Never),
-            other => bail!("must be auto, always, or never, but found `{}`", other),
+            other => bail!("must be auto, always, or never, but found `{other}`"),
         }
     }
 }
@@ -85,9 +85,9 @@ pub(crate) fn print_status(status: &str, color: Option<Color>, justified: bool) 
     let mut stream = StandardStream::stderr(coloring());
     let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
     if justified {
-        let _ = write!(stream, "{:>12}", status);
+        let _ = write!(stream, "{status:>12}");
     } else {
-        let _ = write!(stream, "{}", status);
+        let _ = write!(stream, "{status}");
         let _ = stream.set_color(ColorSpec::new().set_bold(true));
         let _ = write!(stream, ":");
     }

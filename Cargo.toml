@@ -24,7 +24,7 @@ pkg-fmt = "tgz"
 resolver = "2"
 
 [dependencies]
-anyhow = "1.0.34"
+anyhow = "1.0.47"
 atty = "0.2.11"
 camino = "1.0.3"
 cargo_metadata = "0.14"

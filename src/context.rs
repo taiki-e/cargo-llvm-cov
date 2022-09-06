@@ -86,7 +86,7 @@ impl Context {
         let llvm_cov: PathBuf = match env::var_os("LLVM_COV") {
             Some(llvm_cov) => llvm_cov.into(),
             None => {
-                let llvm_cov = rustlib.join(format!("{}{}", "llvm-cov", env::consts::EXE_SUFFIX));
+                let llvm_cov = rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX));
                 // Check if required tools are installed.
                 if !llvm_cov.exists() {
                     let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
@@ -95,8 +95,7 @@ impl Context {
                     // using toolchain override shorthand (+toolchain).
                     bail!(
                         "failed to find llvm-tools-preview, please install llvm-tools-preview \
-                         with `rustup component add llvm-tools-preview --toolchain {}`",
-                        toolchain,
+                         with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
                     );
                 }
                 llvm_cov.into()
@@ -106,7 +105,7 @@ impl Context {
             Some(llvm_profdata) => llvm_profdata.into(),
             None => {
                 let llvm_profdata =
-                    rustlib.join(format!("{}{}", "llvm-profdata", env::consts::EXE_SUFFIX));
+                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX));
                 // Check if required tools are installed.
                 if !llvm_profdata.exists() {
                     let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
@@ -115,8 +114,7 @@ impl Context {
                     // using toolchain override shorthand (+toolchain).
                     bail!(
                         "failed to find llvm-tools-preview, please install llvm-tools-preview \
-                         with `rustup component add llvm-tools-preview --toolchain {}`",
-                        toolchain,
+                         with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
                     );
                 }
                 llvm_profdata.into()
@@ -142,7 +140,7 @@ impl Context {
                 Ok(exe) => exe,
                 Err(e) => {
                     let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
-                    warn!("failed to get current executable, assuming {} in PATH as current executable: {}", exe, e);
+                    warn!("failed to get current executable, assuming {exe} in PATH as current executable: {e}");
                     exe.into()
                 }
             },

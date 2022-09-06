@@ -96,18 +96,18 @@ impl Args {
             args: impl IntoIterator<Item = impl Into<OsString>>,
         ) -> impl Iterator<Item = Result<String>> {
             args.into_iter().enumerate().map(|(i, arg)| {
-                arg.into().into_string().map_err(|arg| {
-                    format_err!("argument {} is not valid Unicode: {:?}", i + 1, arg)
-                })
+                arg.into()
+                    .into_string()
+                    .map_err(|arg| format_err!("argument {} is not valid Unicode: {arg:?}", i + 1))
             })
         }
 
         let mut raw_args = handle_args(env::args_os());
         raw_args.next(); // cargo
         match raw_args.next().transpose()? {
-            Some(a) if a == SUBCMD => {}
-            Some(a) => bail!("expected subcommand '{}', found argument '{}'", SUBCMD, a),
-            None => bail!("expected subcommand '{}'", SUBCMD),
+            Some(arg) if arg == SUBCMD => {}
+            Some(arg) => bail!("expected subcommand '{SUBCMD}', found argument '{arg}'"),
+            None => bail!("expected subcommand '{SUBCMD}'"),
         }
         let mut args = vec![];
         for arg in &mut raw_args {
@@ -379,7 +379,7 @@ impl Args {
                     if matches!(flag, 'q' | 'r') {
                         // To handle combined short flags properly, handle known
                         // short flags without value as special cases.
-                        cargo_args.push(format!("-{}", flag));
+                        cargo_args.push(format!("-{flag}"));
                     } else {
                         passthrough!();
                     }
@@ -681,7 +681,7 @@ impl FromStr for Subcommand {
             "clean" => Ok(Self::Clean),
             "nextest" => Ok(Self::Nextest),
             "demangle" => Ok(Self::Demangle),
-            _ => bail!("unrecognized subcommand {}", s),
+            _ => bail!("unrecognized subcommand {s}"),
         }
     }
 }
@@ -844,8 +844,8 @@ pub(crate) struct ManifestOptions {
 
 fn format_flag(flag: &lexopt::Arg<'_>) -> String {
     match flag {
-        Long(flag) => format!("--{}", flag),
-        Short(flag) => format!("-{}", flag),
+        Long(flag) => format!("--{flag}"),
+        Short(flag) => format!("-{flag}"),
         Value(_) => unreachable!(),
     }
 }
@@ -854,7 +854,7 @@ fn format_flag(flag: &lexopt::Arg<'_>) -> String {
 #[inline(never)]
 fn multi_arg(flag: &lexopt::Arg<'_>) -> Result<()> {
     let flag = &format_flag(flag);
-    bail!("The argument '{}' was provided more than once, but cannot be used multiple times", flag);
+    bail!("The argument '{flag}' was provided more than once, but cannot be used multiple times");
 }
 
 // `flag` requires one of `requires`.
@@ -876,19 +876,19 @@ fn requires(flag: &str, requires: &[&str]) -> Result<()> {
             with
         }
     };
-    bail!("{} can only be used together with {}", flag, with);
+    bail!("{flag} can only be used together with {with}");
 }
 
 #[cold]
 #[inline(never)]
 fn conflicts(a: &str, b: &str) -> Result<()> {
-    bail!("{} may not be used together with {}", a, b);
+    bail!("{a} may not be used together with {b}");
 }
 
 #[cold]
 #[inline(never)]
 fn unexpected(arg: &str) -> Result<()> {
-    bail!("found argument '{}' which wasn't expected, or isn't valid in this context", arg);
+    bail!("found argument '{arg}' which wasn't expected, or isn't valid in this context");
 }
 
 #[cfg(test)]

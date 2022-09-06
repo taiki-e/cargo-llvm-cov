@@ -38,7 +38,7 @@ use std::{
     path::Path,
 };
 
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_llvm_cov::json;
 use regex::Regex;
@@ -55,7 +55,7 @@ use crate::{
 
 fn main() {
     if let Err(e) = try_main() {
-        error!("{:#}", e);
+        error!("{e:#}");
     }
     if term::error()
         || term::warn()
@@ -200,14 +200,8 @@ struct ShowEnvWriter<W: io::Write> {
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
-        writeln!(
-            self.target,
-            r#"{prefix}{key}="{value}""#,
-            prefix = if self.options.export_prefix { "export " } else { "" },
-            key = key,
-            value = value,
-        )
-        .context("failed to write env to stdout")
+        let prefix = if self.options.export_prefix { "export " } else { "" };
+        writeln!(self.target, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
     }
 }
 
@@ -276,7 +270,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
         let target_u =
             cx.build.target.as_ref().unwrap_or(&cx.ws.host_triple).replace(['-', '.'], "_");
-        let cflags_key = &format!("CFLAGS_{}", target_u);
+        let cflags_key = &format!("CFLAGS_{target_u}");
         // Use std::env instead of crate::env to match cc-rs's behavior.
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740
         let mut cflags = match std::env::var(cflags_key) {
@@ -286,7 +280,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
                 Err(_) => std::env::var("CFLAGS").unwrap_or_default(),
             },
         };
-        let cxxflags_key = &format!("CXXFLAGS_{}", target_u);
+        let cxxflags_key = &format!("CXXFLAGS_{target_u}");
         let mut cxxflags = match std::env::var(cxxflags_key) {
             Ok(cxxflags) => cxxflags,
             Err(_) => match std::env::var("TARGET_CXXFLAGS") {
@@ -345,7 +339,7 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
         }
         cargo::test_or_run_args(cx, args, &mut cargo_no_run);
         if term::verbose() {
-            status!("Running", "{}", cargo_no_run);
+            status!("Running", "{cargo_no_run}");
             cargo_no_run.stdout_to_stderr().run()?;
         } else {
             // Capture output to prevent duplicate warnings from appearing in two runs.
@@ -356,15 +350,15 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
         cargo.arg("--no-fail-fast");
         cargo::test_or_run_args(cx, args, &mut cargo);
         if term::verbose() {
-            status!("Running", "{}", cargo);
+            status!("Running", "{cargo}");
         }
         if let Err(e) = cargo.stdout_to_stderr().run() {
-            warn!("{}", e);
+            warn!("{e:#}");
         }
     } else {
         cargo::test_or_run_args(cx, args, &mut cargo);
         if term::verbose() {
-            status!("Running", "{}", cargo);
+            status!("Running", "{cargo}");
         }
         cargo.stdout_to_stderr().run()?;
     }
@@ -382,7 +376,7 @@ fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
     cargo::test_or_run_args(cx, args, &mut cargo);
 
     if term::verbose() {
-        status!("Running", "{}", cargo);
+        status!("Running", "{cargo}");
     }
     stdout_to_stderr(cx, &mut cargo);
     cargo.run()?;
@@ -398,7 +392,7 @@ fn run_run(cx: &Context, args: &Args) -> Result<()> {
     cargo::test_or_run_args(cx, args, &mut cargo);
 
     if term::verbose() {
-        status!("Running", "{}", cargo);
+        status!("Running", "{cargo}");
     }
     stdout_to_stderr(cx, &mut cargo);
     cargo.run()?;
@@ -475,14 +469,14 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
             for (file, lines) in &uncovered_files {
                 let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
-                println!("{}: {}", file, lines.join(", "));
+                println!("{file}: {}", lines.join(", "));
             }
         }
     }
 
     if cx.cov.open {
         let path = &cx.cov.output_dir.as_ref().unwrap().join("html/index.html");
-        status!("Opening", "{}", path);
+        status!("Opening", "{path}");
         open_report(cx, path)?;
     }
     Ok(())
@@ -510,8 +504,8 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     let mut input_files = tempfile::NamedTempFile::new()?;
     for path in profraw_files {
         let path_str =
-            path.to_str().with_context(|| format!("{:?} contains invalid utf-8 data", path))?;
-        writeln!(input_files, "{}", path_str)?;
+            path.to_str().with_context(|| format!("{path:?} contains invalid utf-8 data"))?;
+        writeln!(input_files, "{path_str}")?;
     }
     let mut cmd = cx.process(&cx.llvm_profdata);
     cmd.args(["merge", "-sparse"])
@@ -520,16 +514,16 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         .arg("-o")
         .arg(&cx.ws.profdata_file);
     if let Some(mode) = &cx.cov.failure_mode {
-        cmd.arg(format!("-failure-mode={}", mode));
+        cmd.arg(format!("-failure-mode={mode}"));
     }
     if let Some(jobs) = cx.build.jobs {
-        cmd.arg(format!("-num-threads={}", jobs));
+        cmd.arg(format!("-num-threads={jobs}"));
     }
     if let Some(flags) = &cx.cargo_llvm_profdata_flags {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
     if term::verbose() {
-        status!("Running", "{}", cmd);
+        status!("Running", "{cmd}");
     }
     cmd.stdout_to_stderr().run()?;
     Ok(())
@@ -733,7 +727,7 @@ impl Format {
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
         if let Some(jobs) = cx.build.jobs {
-            cmd.arg(format!("-num-threads={}", jobs));
+            cmd.arg(format!("-num-threads={jobs}"));
         }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
@@ -772,17 +766,17 @@ impl Format {
 
         if let Some(output_path) = &cx.cov.output_path {
             if term::verbose() {
-                status!("Running", "{}", cmd);
+                status!("Running", "{cmd}");
             }
             let out = cmd.read()?;
             fs::write(output_path, out)?;
             eprintln!();
-            status!("Finished", "report saved to {}", output_path);
+            status!("Finished", "report saved to {output_path}");
             return Ok(());
         }
 
         if term::verbose() {
-            status!("Running", "{}", cmd);
+            status!("Running", "{cmd}");
         }
         cmd.run()?;
         if matches!(self, Self::Html | Self::Text) {
@@ -807,7 +801,7 @@ impl Format {
     ) -> Result<LlvmCovJsonExport> {
         if let Self::Json = self {
         } else {
-            return Err(anyhow::anyhow!("requested JSON for non-JSON type"));
+            bail!("requested JSON for non-JSON type");
         }
 
         let mut cmd = cx.process(&cx.llvm_cov);
@@ -815,14 +809,14 @@ impl Format {
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
         if let Some(jobs) = cx.build.jobs {
-            cmd.arg(format!("-num-threads={}", jobs));
+            cmd.arg(format!("-num-threads={jobs}"));
         }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
         }
         if term::verbose() {
-            status!("Running", "{}", cmd);
+            status!("Running", "{cmd}");
         }
         let cmd_out = cmd.read()?;
         let json = serde_json::from_str::<LlvmCovJsonExport>(&cmd_out)
@@ -850,7 +844,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
 
         fn push_abs_path(&mut self, path: impl AsRef<Path>) {
             let path = regex::escape(path.as_ref().to_string_lossy().as_ref());
-            let path = format!("^{}($|{})", path, SEPARATOR);
+            let path = format!("^{path}($|{SEPARATOR})");
             self.push(path);
         }
     }
@@ -880,7 +874,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         }
         if let Ok(path) = home::cargo_home() {
             let path = regex::escape(path.as_os_str().to_string_lossy().as_ref());
-            let path = format!("^{1}{0}(registry|git){0}", SEPARATOR, path);
+            let path = format!("^{path}{0}(registry|git){0}", SEPARATOR);
             out.push(path);
         }
         if let Ok(path) = home::rustup_home() {

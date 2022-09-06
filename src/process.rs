@@ -102,13 +102,13 @@ impl ProcessBuilder {
     /// status to an error.
     pub(crate) fn run(&mut self) -> Result<Output> {
         let output = self.build().unchecked().run().with_context(|| {
-            ProcessError::new(&format!("could not execute process {}", self), None, None)
+            ProcessError::new(&format!("could not execute process {self}"), None, None)
         })?;
         if output.status.success() {
             Ok(output)
         } else {
             Err(ProcessError::new(
-                &format!("process didn't exit successfully: {}", self),
+                &format!("process didn't exit successfully: {self}"),
                 Some(output.status),
                 Some(&output),
             )
@@ -121,13 +121,13 @@ impl ProcessBuilder {
     pub(crate) fn run_with_output(&mut self) -> Result<Output> {
         let output =
             self.build().stdout_capture().stderr_capture().unchecked().run().with_context(
-                || ProcessError::new(&format!("could not execute process {}", self), None, None),
+                || ProcessError::new(&format!("could not execute process {self}"), None, None),
             )?;
         if output.status.success() {
             Ok(output)
         } else {
             Err(ProcessError::new(
-                &format!("process didn't exit successfully: {}", self),
+                &format!("process didn't exit successfully: {self}"),
                 Some(output.status),
                 Some(&output),
             )
@@ -140,7 +140,7 @@ impl ProcessBuilder {
     pub(crate) fn read(&mut self) -> Result<String> {
         assert!(!self.stdout_to_stderr);
         let mut output = String::from_utf8(self.run_with_output()?.stdout)
-            .with_context(|| format!("failed to parse output from {}", self))?;
+            .with_context(|| format!("failed to parse output from {self}"))?;
         while output.ends_with('\n') || output.ends_with('\r') {
             output.pop();
         }
@@ -182,9 +182,9 @@ impl fmt::Display for ProcessBuilder {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
                     if cfg!(windows) {
-                        write!(f, "set {}={}&& ", key, val)?;
+                        write!(f, "set {key}={val}&& ")?;
                     } else {
-                        write!(f, "{}={} ", key, val)?;
+                        write!(f, "{key}={val} ")?;
                     }
                 }
             }
@@ -219,7 +219,7 @@ impl ProcessError {
             Some(s) => s.to_string(),
             None => "never executed".to_string(),
         };
-        let mut desc = format!("{} ({})", &msg, exit);
+        let mut desc = format!("{msg} ({exit})");
 
         if let Some(out) = output {
             match str::from_utf8(&out.stdout) {

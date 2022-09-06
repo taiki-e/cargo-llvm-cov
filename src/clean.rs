@@ -58,7 +58,7 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
     cmd.arg("clean").args(&package_args);
     cargo::clean_args(cx, &mut cmd);
     if let Err(e) = if cx.build.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
-        warn!("{:#}", e);
+        warn!("{e:#}");
     }
 
     Ok(())
@@ -88,7 +88,7 @@ fn clean_ws(ws: &Workspace, pkg_ids: &[PackageId], verbose: u8) -> Result<()> {
         }
         cmd.dir(&ws.metadata.workspace_root);
         if let Err(e) = if verbose > 0 { cmd.run() } else { cmd.run_with_output() } {
-            warn!("{:#}", e);
+            warn!("{e:#}");
         }
     }
     Ok(())
