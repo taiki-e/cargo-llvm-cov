@@ -2,19 +2,15 @@
 // - https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
 // - https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/ops/cargo_clean.rs
 
-use std::path::Path;
+use std::{collections::BTreeSet, path::Path};
 
 use anyhow::Result;
 use cargo_metadata::PackageId;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
 
-use crate::{
-    cargo::{self, Workspace},
-    cli::Args,
-    context::Context,
-    fs, term,
-};
+use crate::{cargo::Workspace, cli::Args, context::Context, fs, term};
 
 pub(crate) fn run(options: &mut Args) -> Result<()> {
     let ws = Workspace::new(&options.manifest, None, false, false)?;
@@ -28,7 +24,7 @@ pub(crate) fn run(options: &mut Args) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws(&ws, &ws.metadata.workspace_members, options.build.verbose)?;
+    clean_ws(&ws, &ws.metadata.workspace_members, options.build.verbose != 0)?;
 
     Ok(())
 }
@@ -46,71 +42,58 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.build.verbose > 1)?;
-
-    let package_args: Vec<_> = cx
-        .workspace_members
-        .included
-        .iter()
-        .flat_map(|id| ["--package", &cx.ws.metadata[id].name])
-        .collect();
-    let mut cmd = cx.cargo();
-    cmd.arg("clean").args(&package_args);
-    cargo::clean_args(cx, &mut cmd);
-    if let Err(e) = if cx.build.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
-        warn!("{e:#}");
-    }
+    clean_ws(&cx.ws, &cx.workspace_members.included, cx.build.verbose > 1)?;
 
     Ok(())
 }
 
-fn clean_ws(ws: &Workspace, pkg_ids: &[PackageId], verbose: u8) -> Result<()> {
-    clean_ws_inner(ws, pkg_ids, verbose != 0)?;
+fn clean_ws(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
+    let mut current_info = CargoLlvmCovInfo::current(ws);
+    let info_file = ws.target_dir.join(".cargo_llvm_cov_info.json");
+    let mut prev_info = None;
+    if info_file.is_file() {
+        if let Ok(info) = serde_json::from_str::<CargoLlvmCovInfo>(&fs::read_to_string(&info_file)?)
+        {
+            prev_info = Some(info);
+        }
+    }
+    fs::create_dir_all(&ws.target_dir)?;
+    fs::write(info_file, serde_json::to_vec(&current_info).unwrap())?;
+    match prev_info {
+        Some(prev_info) => {
+            current_info.packages.extend(prev_info.packages);
+            current_info.targets.extend(prev_info.targets);
+        }
+        None => {
+            // TODO: warn if there are old artifacts and the info file is not valid
+        }
+    }
 
-    let package_args: Vec<_> =
-        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata[id].name]).collect();
-    let mut args_set = vec![vec![]];
-    if ws.target_dir.join("release").exists() {
-        args_set.push(vec!["--release"]);
-    }
-    let target_list = ws.rustc_print("target-list")?;
-    for target in target_list.lines().map(str::trim).filter(|s| !s.is_empty()) {
-        if ws.target_dir.join(target).exists() {
-            args_set.push(vec!["--target", target]);
-        }
-    }
-    for args in args_set {
-        let mut cmd = ws.cargo(verbose);
-        cmd.args(["clean", "--target-dir", ws.target_dir.as_str()]).args(&package_args);
-        cmd.args(args);
-        if verbose > 0 {
-            cmd.arg(format!("-{}", "v".repeat(verbose as usize)));
-        }
-        cmd.dir(&ws.metadata.workspace_root);
-        if let Err(e) = if verbose > 0 { cmd.run() } else { cmd.run_with_output() } {
-            warn!("{e:#}");
-        }
-    }
-    Ok(())
-}
-
-fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
     for format in &["html", "text"] {
         rm_rf(ws.output_dir.join(format), verbose)?;
     }
 
-    for path in glob::glob(ws.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
-        rm_rf(path, verbose)?;
+    for entry in fs::read_dir(&ws.target_dir)?.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_file() && path.extension().map_or(false, |e| e == "profraw") {
+            rm_rf(path, verbose)?;
+        }
     }
 
     rm_rf(&ws.doctests_dir, verbose)?;
     rm_rf(&ws.profdata_file, verbose)?;
 
+    let re = &current_info.pkg_hash_re();
+    clean_matched(&ws.target_dir, re, verbose)?;
+
     clean_trybuild_artifacts(ws, pkg_ids, verbose)?;
     Ok(())
 }
 
-fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
+fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
+    let trybuild_dir = &ws.metadata.target_directory.join("tests");
+    let trybuild_target = &trybuild_dir.join("target");
+
     let mut re = String::from("^(lib)?(");
     let mut first = true;
     for id in pkg_ids {
@@ -124,18 +107,16 @@ fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
     re.push_str(")(-[0-9a-f]+)?$");
     // unwrap -- it is not realistic to have a case where there are more than
     // 5000 members in a workspace. see also pkg_hash_re_size_limit test.
-    Regex::new(&re).unwrap()
+    let re = &Regex::new(&re).unwrap();
+
+    clean_matched(trybuild_target, re, verbose)
 }
 
-fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
-    let trybuild_dir = &ws.metadata.target_directory.join("tests");
-    let trybuild_target = &trybuild_dir.join("target");
-    let re = pkg_hash_re(ws, pkg_ids);
-
-    for e in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {
+fn clean_matched(dir: impl AsRef<Path>, re: &Regex, verbose: bool) -> Result<()> {
+    for e in WalkDir::new(dir.as_ref()).into_iter().filter_map(Result::ok) {
         let path = e.path();
         if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
-            if re.is_match(file_stem) {
+            if file_stem != "build-script-build" && re.is_match(file_stem) {
                 rm_rf(path, verbose)?;
             }
         }
@@ -158,6 +139,49 @@ fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
         fs::remove_file(path)?;
     }
     Ok(())
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CargoLlvmCovInfo {
+    packages: BTreeSet<String>,
+    targets: BTreeSet<String>,
+}
+
+impl CargoLlvmCovInfo {
+    fn current(ws: &Workspace) -> Self {
+        let mut packages = BTreeSet::new();
+        let mut targets = BTreeSet::new();
+        for id in &ws.metadata.workspace_members {
+            let pkg = &ws.metadata[id];
+            packages.insert(pkg.name.clone());
+            for t in &pkg.targets {
+                targets.insert(t.name.clone());
+            }
+        }
+        Self { packages, targets }
+    }
+
+    fn pkg_hash_re(&self) -> Regex {
+        let mut re = String::from("^(lib)?(");
+        let mut first = true;
+        for pkg in &self.packages {
+            if first {
+                first = false;
+            } else {
+                re.push('|');
+            }
+            re.push_str(&pkg.replace('-', "(-|_)"));
+        }
+        for t in &self.targets {
+            re.push('|');
+            re.push_str(t);
+        }
+        re.push_str(")(-[0-9a-f]+)?$");
+        // unwrap -- it is not realistic to have a case where there are more than
+        // 5000 members in a workspace. see also pkg_hash_re_size_limit test.
+        Regex::new(&re).unwrap()
+    }
 }
 
 #[cfg(test)]

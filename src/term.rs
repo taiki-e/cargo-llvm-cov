@@ -21,14 +21,6 @@ impl Coloring {
     const AUTO: u8 = Self::Auto as _;
     const ALWAYS: u8 = Self::Always as _;
     const NEVER: u8 = Self::Never as _;
-
-    pub(crate) const fn cargo_color(self) -> &'static str {
-        match self {
-            Self::Auto => "auto",
-            Self::Always => "always",
-            Self::Never => "never",
-        }
-    }
 }
 
 impl FromStr for Coloring {

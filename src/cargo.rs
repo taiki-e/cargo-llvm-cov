@@ -232,33 +232,3 @@ pub(crate) fn test_or_run_args(cx: &Context, args: &Args, cmd: &mut ProcessBuild
         cmd.args(&args.rest);
     }
 }
-
-// https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
-pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if cx.build.release {
-        cmd.arg("--release");
-    }
-    if let Some(profile) = &cx.build.profile {
-        cmd.arg("--profile");
-        cmd.arg(profile);
-    }
-    if let Some(target) = &cx.build.target {
-        cmd.arg("--target");
-        cmd.arg(target);
-    }
-    if let Some(color) = cx.build.color {
-        cmd.arg("--color");
-        cmd.arg(color.cargo_color());
-    }
-
-    cmd.arg("--manifest-path");
-    cmd.arg(&cx.ws.current_manifest);
-
-    cmd.arg("--target-dir");
-    cmd.arg(&cx.ws.target_dir);
-
-    // If `-vv` is passed, propagate `-v` to cargo.
-    if cx.build.verbose > 1 {
-        cmd.arg(format!("-{}", "v".repeat(cx.build.verbose as usize - 1)));
-    }
-}

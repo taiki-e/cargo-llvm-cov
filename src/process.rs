@@ -80,11 +80,11 @@ impl ProcessBuilder {
     //     self
     // }
 
-    /// Set the working directory where the process will execute.
-    pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
-        self.dir = Some(path.into());
-        self
-    }
+    // /// Set the working directory where the process will execute.
+    // pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {
+    //     self.dir = Some(path.into());
+    //     self
+    // }
 
     /// Enables [`duct::Expression::stdout_to_stderr`].
     pub(crate) fn stdout_to_stderr(&mut self) -> &mut Self {

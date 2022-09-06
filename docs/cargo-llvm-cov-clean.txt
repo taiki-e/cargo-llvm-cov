@@ -10,7 +10,4 @@ OPTIONS:
     -v, --verbose                 Use verbose output
         --color <WHEN>            Coloring [possible values: auto, always, never]
         --manifest-path <PATH>    Path to Cargo.toml
-        --frozen                  Require Cargo.lock and cache are up to date
-        --locked                  Require Cargo.lock is up to date
-        --offline                 Run without accessing the network
     -h, --help                    Print help information

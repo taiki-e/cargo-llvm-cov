@@ -5,6 +5,7 @@
     clippy::match_same_arms,
     clippy::similar_names,
     clippy::single_match_else,
+    clippy::single_match,
     clippy::struct_excessive_bools,
     clippy::too_many_lines
 )]
