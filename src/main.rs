@@ -95,8 +95,8 @@ fn try_main() -> Result<()> {
             let cx = &context_from_args(&mut args, true)?;
             let stdout = io::stdout();
             let writer = &mut ShowEnvWriter { target: stdout.lock(), options: args.show_env };
-            set_env(cx, writer);
-            writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str());
+            set_env(cx, writer)?;
+            writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
 
         Subcommand::Nextest => {
@@ -183,12 +183,13 @@ fn create_dirs(cx: &Context) -> Result<()> {
 }
 
 trait EnvTarget {
-    fn set(&mut self, key: &str, value: &str);
+    fn set(&mut self, key: &str, value: &str) -> Result<()>;
 }
 
 impl EnvTarget for ProcessBuilder {
-    fn set(&mut self, key: &str, value: &str) {
+    fn set(&mut self, key: &str, value: &str) -> Result<()> {
         self.env(key, value);
+        Ok(())
     }
 }
 
@@ -198,7 +199,7 @@ struct ShowEnvWriter<W: io::Write> {
 }
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
-    fn set(&mut self, key: &str, value: &str) {
+    fn set(&mut self, key: &str, value: &str) -> Result<()> {
         writeln!(
             self.target,
             r#"{prefix}{key}="{value}""#,
@@ -206,11 +207,11 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
             key = key,
             value = value,
         )
-        .expect("failed to write to stdout");
+        .context("failed to write env to stdout")
     }
 }
 
-fn set_env(cx: &Context, env: &mut impl EnvTarget) {
+fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
     fn push_common_flags(cx: &Context, flags: &mut String) {
         if cx.ws.stable_coverage {
             flags.push_str(" -C instrument-coverage");
@@ -263,12 +264,12 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
                 coverage_target.to_uppercase().replace(['-', '.'], "_")
             ),
             rustflags,
-        ),
-        _ => env.set("RUSTFLAGS", rustflags),
+        )?,
+        _ => env.set("RUSTFLAGS", rustflags)?,
     }
 
     if let Some(rustdocflags) = rustdocflags {
-        env.set("RUSTDOCFLAGS", rustdocflags);
+        env.set("RUSTDOCFLAGS", rustdocflags)?;
     }
     if cx.build.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
@@ -296,13 +297,14 @@ fn set_env(cx: &Context, env: &mut impl EnvTarget) {
         let clang_flags = " -fprofile-instr-generate -fcoverage-mapping";
         cflags.push_str(clang_flags);
         cxxflags.push_str(clang_flags);
-        env.set(cflags_key, &cflags);
-        env.set(cxxflags_key, &cxxflags);
+        env.set(cflags_key, &cflags)?;
+        env.set(cxxflags_key, &cxxflags)?;
     }
-    env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str());
-    env.set("CARGO_INCREMENTAL", "0");
+    env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
+    env.set("CARGO_INCREMENTAL", "0")?;
     // Workaround for https://github.com/rust-lang/rust/issues/91092
-    env.set("RUST_TEST_THREADS", "1");
+    env.set("RUST_TEST_THREADS", "1")?;
+    Ok(())
 }
 
 fn has_z_flag(args: &[String], name: &str) -> bool {
@@ -327,7 +329,7 @@ fn has_z_flag(args: &[String], name: &str) -> bool {
 fn run_test(cx: &Context, args: &Args) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo);
+    set_env(cx, &mut cargo)?;
 
     cargo.arg("test");
     if cx.doctests && !has_z_flag(&args.cargo_args, "doctest-in-workspace") {
@@ -373,7 +375,7 @@ fn run_test(cx: &Context, args: &Args) -> Result<()> {
 fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo);
+    set_env(cx, &mut cargo)?;
 
     cargo.arg("nextest").arg("run");
 
@@ -390,7 +392,7 @@ fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
 fn run_run(cx: &Context, args: &Args) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo);
+    set_env(cx, &mut cargo)?;
 
     cargo.arg("run");
     cargo::test_or_run_args(cx, args, &mut cargo);
