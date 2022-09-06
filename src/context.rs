@@ -20,7 +20,6 @@ pub(crate) struct Context {
     pub(crate) cov: LlvmCovOptions,
 
     pub(crate) doctests: bool,
-    pub(crate) no_run: bool,
 
     pub(crate) workspace_members: WorkspaceMembers,
     pub(crate) build_script_re: Regex,
@@ -50,7 +49,6 @@ impl Context {
         exclude: &[String],
         exclude_from_report: &[String],
         doctests: bool,
-        no_run: bool,
         show_env: bool,
     ) -> Result<Self> {
         let ws = Workspace::new(manifest, build.target.as_deref(), doctests, show_env)?;
@@ -137,7 +135,6 @@ impl Context {
             build,
             cov,
             doctests,
-            no_run,
             workspace_members,
             build_script_re,
             current_dir: env::current_dir().unwrap(),

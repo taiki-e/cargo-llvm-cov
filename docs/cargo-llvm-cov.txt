@@ -86,6 +86,9 @@ OPTIONS:
         --no-report
             Run tests, but don't generate coverage report
 
+        --no-clean
+            Build without cleaning any old build artifacts
+
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 

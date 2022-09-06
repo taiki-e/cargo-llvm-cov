@@ -130,6 +130,9 @@ OPTIONS:
         --no-report
             Run tests, but don't generate coverage report
 
+        --no-clean
+            Build without cleaning any old build artifacts
+
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 
@@ -356,6 +359,15 @@ You can get a coverage report in a different format based on the results of a pr
 ```sh
 cargo llvm-cov --html          # run tests and generate html report
 cargo llvm-cov --no-run --lcov # generate lcov report
+```
+
+cargo-llvm-cov cleans some build artifacts by default to avoid false positives/false negatives due to old build artifacts.
+This behavior is disabled when `--no-clean`, `--no-report`, or `--no-run` is passed, and old build artifacts are retained.
+When using these flags, it is recommended to first run `cargo llvm-cov clean --workspace` to remove artifacts that may affect the coverage results.
+
+```sh
+cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
+cargo llvm-cov --no-clean
 ```
 
 ### Merge coverages generated under different test conditions

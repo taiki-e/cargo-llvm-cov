@@ -179,6 +179,7 @@ impl Args {
         let mut remap_path_prefix = false;
         let mut include_ffi = false;
         let mut verbose: usize = 0;
+        let mut no_clean = false;
 
         // show-env options
         let mut export_prefix = false;
@@ -329,6 +330,7 @@ impl Args {
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
                 Short('v') | Long("verbose") => verbose += 1,
+                Long("no-clean") => parse_flag!(no_clean),
 
                 // llvm-cov options
                 Long("json") => parse_flag!(json),
@@ -435,8 +437,16 @@ impl Args {
         }
 
         // conflicts
-        if no_run && no_report {
-            conflicts("--no-run", "--no-report")?;
+        if no_report && no_run {
+            conflicts("--no-report", "--no-run")?;
+        }
+        if no_report || no_run {
+            let flag = if no_report { "--no-report" } else { "--no-run" };
+            if no_clean {
+                // --no-report/--no-run implicitly enable --no-clean.
+                conflicts(flag, "--no-clean")?;
+            }
+            no_clean = true;
         }
         if ignore_run_fail && no_fail_fast {
             // --ignore-run-fail implicitly enable --no-fail-fast.
@@ -600,6 +610,7 @@ impl Args {
                 color,
                 remap_path_prefix,
                 include_ffi,
+                no_clean,
             },
             manifest: ManifestOptions { manifest_path },
             cargo_args,
@@ -812,6 +823,10 @@ pub(crate) struct BuildOptions {
     /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
     // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
     pub(crate) include_ffi: bool,
+    /// Build without cleaning any old build artifacts.
+    ///
+    /// Note that this can cause false positives/false negatives due to old build artifacts.
+    pub(crate) no_clean: bool,
 }
 
 #[derive(Debug)]

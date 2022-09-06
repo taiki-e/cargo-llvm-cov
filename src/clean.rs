@@ -33,7 +33,8 @@ pub(crate) fn run(options: &mut Args) -> Result<()> {
     Ok(())
 }
 
-// If --no-run or --no-report is used: do not remove artifacts
+// TODO: remove need for this.
+// If --no-clean, --no-run, or --no-report is used: do not remove artifacts
 // Otherwise, remove the followings to avoid false positives/false negatives:
 // - build artifacts of crates to be measured for coverage
 // - profdata
@@ -41,7 +42,7 @@ pub(crate) fn run(options: &mut Args) -> Result<()> {
 // - doctest bins
 // - old reports
 pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
-    if cx.no_run || cx.cov.no_report {
+    if cx.build.no_clean {
         return Ok(());
     }
 
