@@ -260,9 +260,33 @@ fn open_report() {
 }
 
 #[test]
+fn show_env() {
+    cargo_llvm_cov().args(["show-env"]).assert_success().stdout_not_contains("export");
+    cargo_llvm_cov()
+        .args(["show-env", "--export-prefix"])
+        .assert_success()
+        .stdout_contains("export");
+}
+
+#[test]
+fn help() {
+    for subcommand in ["", "run", "clean", "show-env", "nextest"] {
+        if subcommand.is_empty() {
+            cargo_llvm_cov().arg("--help").assert_success().stdout_contains("cargo llvm-cov");
+        } else {
+            cargo_llvm_cov()
+                .arg(subcommand)
+                .arg("--help")
+                .assert_success()
+                .stdout_contains(&format!("cargo llvm-cov {subcommand}"));
+        }
+    }
+}
+
+#[test]
 fn version() {
     cargo_llvm_cov().arg("--version").assert_success().stdout_contains(env!("CARGO_PKG_VERSION"));
     cargo_llvm_cov().args(["clean", "--version"]).assert_failure().stderr_contains(
-        "Found argument '--version' which wasn't expected, or isn't valid in this context",
+        "found argument '--version' which wasn't expected, or isn't valid in this context",
     );
 }

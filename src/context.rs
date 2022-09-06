@@ -17,7 +17,6 @@ pub(crate) struct Context {
     pub(crate) ws: Workspace,
 
     pub(crate) build: BuildOptions,
-    pub(crate) manifest: ManifestOptions,
     pub(crate) cov: LlvmCovOptions,
 
     pub(crate) doctests: bool,
@@ -46,7 +45,7 @@ impl Context {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         mut build: BuildOptions,
-        manifest: ManifestOptions,
+        manifest: &ManifestOptions,
         mut cov: LlvmCovOptions,
         exclude: &[String],
         exclude_from_report: &[String],
@@ -54,7 +53,7 @@ impl Context {
         no_run: bool,
         show_env: bool,
     ) -> Result<Self> {
-        let ws = Workspace::new(&manifest, build.target.as_deref(), doctests, show_env)?;
+        let ws = Workspace::new(manifest, build.target.as_deref(), doctests, show_env)?;
         ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
         term::set_coloring(&mut build.color);
         term::verbose::set(build.verbose != 0);
@@ -136,7 +135,6 @@ impl Context {
         Ok(Self {
             ws,
             build,
-            manifest,
             cov,
             doctests,
             no_run,
