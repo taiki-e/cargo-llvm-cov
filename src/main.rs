@@ -426,11 +426,9 @@ fn generate_report(cx: &Context) -> Result<()> {
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx);
-    for format in Format::from_args(cx) {
-        format
-            .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
-            .context("failed to generate report")?;
-    }
+    Format::from_args(cx)
+        .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
+        .context("failed to generate report")?;
 
     if cx.cov.fail_under_lines.is_some()
         || cx.cov.fail_uncovered_functions.is_some()
@@ -689,17 +687,17 @@ enum Format {
 }
 
 impl Format {
-    fn from_args(cx: &Context) -> Vec<Self> {
+    fn from_args(cx: &Context) -> Self {
         if cx.cov.json {
-            vec![Self::Json]
+            Self::Json
         } else if cx.cov.lcov {
-            vec![Self::LCov]
+            Self::LCov
         } else if cx.cov.text {
-            vec![Self::Text]
+            Self::Text
         } else if cx.cov.html {
-            vec![Self::Html]
+            Self::Html
         } else {
-            vec![Self::None]
+            Self::None
         }
     }
 
