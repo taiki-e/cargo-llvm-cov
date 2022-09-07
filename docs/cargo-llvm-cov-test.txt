@@ -1,12 +1,17 @@
-cargo-llvm-cov-run
-Run a binary or example and generate coverage report
+cargo-llvm-cov-test
+Run tests and generate coverage report
+
+This is equivalent to `cargo llvm-cov` without subcommand, except that test name
+filtering is supported.
 
 USAGE:
-    cargo llvm-cov run [OPTIONS] [-- <args>...]
+    cargo llvm-cov test [OPTIONS] [TESTNAME] [-- <args>...]
 
 ARGS:
+    <TESTNAME>
+            If specified, only run tests containing this string in their names
     <args>...
-            Arguments for the binary
+            Arguments for the test binary
 
 OPTIONS:
         --json
@@ -105,25 +110,76 @@ OPTIONS:
         --include-build-script
             Include build script in coverage report
 
+        --doctests
+            Including doc tests (unstable)
+
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
+            more.
+
+        --no-fail-fast
+            Run all tests regardless of failure
+
         --ignore-run-fail
             Run all tests regardless of failure and generate report
 
             If tests failed but report generation succeeded, exit with a status of 0.
 
     -q, --quiet
-            No output printed to stdout
+            Display one character per test instead of one line
+
+        --lib
+            Test only this package's library unit tests
 
         --bin <NAME>
-            Name of the bin target to run
+            Test only the specified binary
+
+        --bins
+            Test all binaries
 
         --example <NAME>
-            Name of the example target to run
+            Test only the specified example
 
-        --exclude-from-report <SPEC>
-            Exclude packages from the report
+        --examples
+            Test all examples
+
+        --test <NAME>
+            Test only the specified test target
+
+        --tests
+            Test all tests
+
+        --bench <NAME>
+            Test only the specified bench target
+
+        --benches
+            Test all benches
+
+        --all-targets
+            Test all targets
+
+        --doc
+            Test only this library's documentation (unstable)
+
+            This flag is unstable because it automatically enables --doctests flag. See
+            <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
 
     -p, --package <SPEC>
-            Package with the target to run
+            Package to run tests for
+
+        --workspace
+            Test all packages in the workspace
+
+        --all
+            Alias for --workspace (deprecated)
+
+        --exclude <SPEC>
+            Exclude packages from both the test and report
+
+        --exclude-from-test <SPEC>
+            Exclude packages from the test (but not from the report)
+
+        --exclude-from-report <SPEC>
+            Exclude packages from the report (but not from the test)
 
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs

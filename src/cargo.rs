@@ -7,7 +7,7 @@ use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{
-    cli::{Args, ManifestOptions, Subcommand},
+    cli::{ManifestOptions, Subcommand},
     config::Config,
     context::Context,
     env,
@@ -199,25 +199,25 @@ fn metadata(cargo: &OsStr, manifest_path: &Utf8Path) -> Result<cargo_metadata::M
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-run.html
-pub(crate) fn test_or_run_args(cx: &Context, args: &Args, cmd: &mut ProcessBuilder) {
-    if args.subcommand == Subcommand::Test && !cx.doctests {
-        let has_target_selection_options = args.lib
-            | args.bins
-            | args.examples
-            | args.tests
-            | args.benches
-            | args.all_targets
-            | args.doc
-            | !args.bin.is_empty()
-            | !args.example.is_empty()
-            | !args.test.is_empty()
-            | !args.bench.is_empty();
+pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
+    if matches!(cx.args.subcommand, Subcommand::None | Subcommand::Test) && !cx.args.doctests {
+        let has_target_selection_options = cx.args.lib
+            | cx.args.bins
+            | cx.args.examples
+            | cx.args.tests
+            | cx.args.benches
+            | cx.args.all_targets
+            | cx.args.doc
+            | !cx.args.bin.is_empty()
+            | !cx.args.example.is_empty()
+            | !cx.args.test.is_empty()
+            | !cx.args.bench.is_empty();
         if !has_target_selection_options {
             cmd.arg("--tests");
         }
     }
 
-    for exclude in &args.exclude_from_test {
+    for exclude in &cx.args.exclude_from_test {
         cmd.arg("--exclude");
         cmd.arg(exclude);
     }
@@ -228,30 +228,33 @@ pub(crate) fn test_or_run_args(cx: &Context, args: &Args, cmd: &mut ProcessBuild
     cmd.arg("--target-dir");
     cmd.arg(&cx.ws.target_dir);
 
-    for cargo_arg in &args.cargo_args {
+    for cargo_arg in &cx.args.cargo_args {
         cmd.arg(cargo_arg);
     }
 
-    if !args.rest.is_empty() {
+    if !cx.args.rest.is_empty() {
         cmd.arg("--");
-        cmd.args(&args.rest);
+        cmd.args(&cx.args.rest);
     }
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
 pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if cx.build.release {
+    if cx.args.release {
         cmd.arg("--release");
     }
-    if let Some(profile) = &cx.build.profile {
-        cmd.arg("--profile");
-        cmd.arg(profile);
+    // nextest's --profile option is different from cargo.
+    if cx.args.subcommand != Subcommand::Nextest {
+        if let Some(profile) = &cx.args.profile {
+            cmd.arg("--profile");
+            cmd.arg(profile);
+        }
     }
-    if let Some(target) = &cx.build.target {
+    if let Some(target) = &cx.args.target {
         cmd.arg("--target");
         cmd.arg(target);
     }
-    if let Some(color) = cx.build.color {
+    if let Some(color) = cx.args.color {
         cmd.arg("--color");
         cmd.arg(color.cargo_color());
     }
@@ -262,8 +265,10 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     cmd.arg("--target-dir");
     cmd.arg(&cx.ws.target_dir);
 
+    cx.args.manifest.cargo_args(cmd);
+
     // If `-vv` is passed, propagate `-v` to cargo.
-    if cx.build.verbose > 1 {
-        cmd.arg(format!("-{}", "v".repeat(cx.build.verbose as usize - 1)));
+    if cx.args.verbose > 1 {
+        cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
     }
 }

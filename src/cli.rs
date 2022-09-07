@@ -9,6 +9,7 @@ use lexopt::{
 
 use crate::{
     env,
+    process::ProcessBuilder,
     term::{self, Coloring},
 };
 
@@ -18,7 +19,7 @@ use crate::{
 pub(crate) struct Args {
     pub(crate) subcommand: Subcommand,
 
-    cov: LlvmCovOptions,
+    pub(crate) cov: LlvmCovOptions,
     pub(crate) show_env: ShowEnvOptions,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
@@ -31,8 +32,8 @@ pub(crate) struct Args {
     // =========================================================================
     // `cargo test` options
     // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
-    /// Generate coverage report without running tests
-    pub(crate) no_run: bool,
+    // /// Generate coverage report without running tests
+    // pub(crate) no_run: bool,
     // /// Run all tests regardless of failure
     // pub(crate) no_fail_fast: bool,
     /// Run all tests regardless of failure and generate report
@@ -77,7 +78,58 @@ pub(crate) struct Args {
     /// Exclude packages from the report (but not from the test)
     pub(crate) exclude_from_report: Vec<String>,
 
-    pub(crate) build: BuildOptions,
+    /// Number of parallel jobs, defaults to # of CPUs
+    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
+    pub(crate) jobs: Option<u32>,
+    /// Build artifacts in release mode, with optimizations
+    pub(crate) release: bool,
+    /// Build artifacts with the specified profile
+    pub(crate) profile: Option<String>,
+    // /// Space or comma separated list of features to activate
+    // pub(crate) features: Vec<String>,
+    // /// Activate all available features
+    // pub(crate) all_features: bool,
+    // /// Do not activate the `default` feature
+    // pub(crate) no_default_features: bool,
+    /// Build for the target triple
+    ///
+    /// When this option is used, coverage for proc-macro and build script will
+    /// not be displayed because cargo does not pass RUSTFLAGS to them.
+    pub(crate) target: Option<String>,
+    /// Activate coverage reporting only for the target triple
+    ///
+    /// Activate coverage reporting only for the target triple specified via `--target`.
+    /// This is important, if the project uses multiple targets via the cargo
+    /// bindeps feature, and not all targets can use `instrument-coverage`,
+    /// e.g. a microkernel, or an embedded binary.
+    pub(crate) coverage_target_only: bool,
+    // TODO: Currently, we are using a subdirectory of the target directory as
+    //       the actual target directory. What effect should this option have
+    //       on its behavior?
+    // /// Directory for all generated artifacts
+    // target_dir: Option<Utf8PathBuf>,
+    /// Use verbose output
+    ///
+    /// Use -vv (-vvv) to propagate verbosity to cargo.
+    pub(crate) verbose: u8,
+    /// Coloring
+    // This flag will be propagated to both cargo and llvm-cov.
+    pub(crate) color: Option<Coloring>,
+
+    /// Use --remap-path-prefix for workspace root
+    ///
+    /// Note that this does not fully compatible with doctest.
+    pub(crate) remap_path_prefix: bool,
+    /// Include coverage of C/C++ code linked to Rust library/binary
+    ///
+    /// Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables
+    /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
+    // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
+    pub(crate) include_ffi: bool,
+    /// Build without cleaning any old build artifacts.
+    ///
+    /// Note that this can cause false positives/false negatives due to old build artifacts.
+    pub(crate) no_clean: bool,
 
     pub(crate) manifest: ManifestOptions,
 
@@ -87,6 +139,7 @@ pub(crate) struct Args {
 }
 
 impl Args {
+    #[allow(clippy::collapsible_if)]
     pub(crate) fn parse() -> Result<Self> {
         const SUBCMD: &str = "llvm-cov";
 
@@ -120,9 +173,12 @@ impl Args {
         let rest = raw_args.collect::<Result<Vec<_>>>()?;
 
         let mut cargo_args = vec![];
-        let mut subcommand: Option<Subcommand> = None;
+        let mut subcommand = Subcommand::None;
 
         let mut manifest_path = None;
+        let mut frozen = false;
+        let mut locked = false;
+        let mut offline = false;
         let mut color = None;
 
         let mut doctests = false;
@@ -184,72 +240,43 @@ impl Args {
         // show-env options
         let mut export_prefix = false;
 
-        let mut parser = lexopt::Parser::from_args(args);
+        let mut parser = lexopt::Parser::from_args(args.clone());
         while let Some(arg) = parser.next()? {
             macro_rules! parse_opt {
-                ($opt:ident[] $(,)?) => {{
-                    $opt.push(parser.value()?.parse()?);
-                }};
-                ($opt:ident $(,)?) => {{
-                    if $opt.is_some() {
+                ($opt:tt $(,)?) => {{
+                    if Store::is_full(&$opt) {
                         multi_arg(&arg)?;
                     }
-                    $opt = Some(parser.value()?.parse()?);
+                    Store::push(&mut $opt, &parser.value()?.into_string().unwrap())?;
                 }};
             }
             macro_rules! parse_opt_passthrough {
-                ($opt:ident[] $(,)?) => {{
-                    match arg {
-                        Long(flag) => {
-                            let flag = format!("--{}", flag);
-                            if let Some(val) = parser.optional_value() {
-                                $opt.push(val.parse()?);
-                                cargo_args.push(format!("{}={}", flag, val.into_string().unwrap()));
-                            } else {
-                                let val = parser.value()?.into_string().unwrap();
-                                $opt.push(val.parse()?);
-                                cargo_args.push(flag);
-                                cargo_args.push(val);
-                            }
-                        }
-                        Short(flag) => {
-                            if let Some(val) = parser.optional_value() {
-                                $opt.push(val.parse()?);
-                                cargo_args.push(format!("-{}{}", flag, val.into_string().unwrap()));
-                            } else {
-                                let val = parser.value()?.into_string().unwrap();
-                                $opt.push(val.parse()?);
-                                cargo_args.push(format!("-{}", flag));
-                                cargo_args.push(val);
-                            }
-                        }
-                        Value(_) => unreachable!(),
-                    }
-                }};
-                ($opt:ident $(,)?) => {{
-                    if $opt.is_some() {
+                ($opt:tt $(,)?) => {{
+                    if Store::is_full(&$opt) {
                         multi_arg(&arg)?;
                     }
                     match arg {
                         Long(flag) => {
                             let flag = format!("--{}", flag);
                             if let Some(val) = parser.optional_value() {
-                                $opt = Some(val.parse()?);
-                                cargo_args.push(format!("{}={}", flag, val.into_string().unwrap()));
+                                let val = val.into_string().unwrap();
+                                Store::push(&mut $opt, &val)?;
+                                cargo_args.push(format!("{}={}", flag, val));
                             } else {
                                 let val = parser.value()?.into_string().unwrap();
-                                $opt = Some(val.parse()?);
+                                Store::push(&mut $opt, &val)?;
                                 cargo_args.push(flag);
                                 cargo_args.push(val);
                             }
                         }
                         Short(flag) => {
                             if let Some(val) = parser.optional_value() {
-                                $opt = Some(val.parse()?);
-                                cargo_args.push(format!("-{}{}", flag, val.into_string().unwrap()));
+                                let val = val.into_string().unwrap();
+                                Store::push(&mut $opt, &val)?;
+                                cargo_args.push(format!("-{}{}", flag, val));
                             } else {
                                 let val = parser.value()?.into_string().unwrap();
-                                $opt = Some(val.parse()?);
+                                Store::push(&mut $opt, &val)?;
                                 cargo_args.push(format!("-{}", flag));
                                 cargo_args.push(val);
                             }
@@ -297,6 +324,9 @@ impl Args {
             match arg {
                 Long("color") => parse_opt_passthrough!(color),
                 Long("manifest-path") => parse_opt!(manifest_path),
+                Long("frozen") => parse_flag_passthrough!(frozen),
+                Long("locked") => parse_flag_passthrough!(locked),
+                Long("offline") => parse_flag_passthrough!(offline),
 
                 Long("doctests") => parse_flag!(doctests),
                 Long("ignore-run-fail") => parse_flag!(ignore_run_fail),
@@ -304,22 +334,22 @@ impl Args {
                 Long("no-fail-fast") => parse_flag_passthrough!(no_fail_fast),
 
                 Long("lib") => parse_flag_passthrough!(lib),
-                Long("bin") => parse_opt_passthrough!(bin[]),
+                Long("bin") => parse_opt_passthrough!(bin),
                 Long("bins") => parse_flag_passthrough!(bins),
-                Long("example") => parse_opt_passthrough!(example[]),
+                Long("example") => parse_opt_passthrough!(example),
                 Long("examples") => parse_flag_passthrough!(examples),
-                Long("test") => parse_opt_passthrough!(test[]),
+                Long("test") => parse_opt_passthrough!(test),
                 Long("tests") => parse_flag_passthrough!(tests),
-                Long("bench") => parse_opt_passthrough!(bench[]),
+                Long("bench") => parse_opt_passthrough!(bench),
                 Long("benches") => parse_flag_passthrough!(benches),
                 Long("all-targets") => parse_flag_passthrough!(all_targets),
                 Long("doc") => parse_flag_passthrough!(doc),
 
-                Short('p') | Long("package") => parse_opt_passthrough!(package[]),
+                Short('p') | Long("package") => parse_opt_passthrough!(package),
                 Long("workspace" | "all") => parse_flag_passthrough!(workspace),
-                Long("exclude") => parse_opt_passthrough!(exclude[]),
-                Long("exclude-from-test") => parse_opt!(exclude_from_test[]),
-                Long("exclude-from-report") => parse_opt!(exclude_from_report[]),
+                Long("exclude") => parse_opt_passthrough!(exclude),
+                Long("exclude-from-test") => parse_opt!(exclude_from_test),
+                Long("exclude-from-report") => parse_opt!(exclude_from_report),
 
                 // build options
                 Short('j') | Long("jobs") => parse_opt_passthrough!(jobs),
@@ -329,10 +359,9 @@ impl Args {
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
-                Short('v') | Long("verbose") => verbose += 1,
                 Long("no-clean") => parse_flag!(no_clean),
 
-                // llvm-cov options
+                // report options
                 Long("json") => parse_flag!(json),
                 Long("lcov") => parse_flag!(lcov),
                 Long("text") => parse_flag!(text),
@@ -360,77 +389,195 @@ impl Args {
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
 
+                Short('v') | Long("verbose") => verbose += 1,
                 Short('h') | Long("help") => {
                     print!("{}", Subcommand::help_text(subcommand));
                     std::process::exit(0);
                 }
                 Short('V') | Long("version") => {
-                    if subcommand.is_none() {
+                    if subcommand == Subcommand::None {
                         println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
                         std::process::exit(0);
                     } else {
-                        unexpected("--version")?;
+                        unexpected("--version", subcommand)?;
                     }
                 }
 
-                // passthrough
-                Long(_) => passthrough!(),
-                Short(flag) => {
-                    if matches!(flag, 'q' | 'r') {
-                        // To handle combined short flags properly, handle known
-                        // short flags without value as special cases.
-                        cargo_args.push(format!("-{flag}"));
-                    } else {
-                        passthrough!();
-                    }
+                // TODO: Currently, we are using a subdirectory of the target directory as
+                //       the actual target directory. What effect should this option have
+                //       on its behavior?
+                Long("target-dir") => unexpected(&format_arg(&arg), subcommand)?,
+
+                // Handle known options for can_passthrough=false subcommands
+                Short('Z') => {
+                    parse_opt_passthrough!(());
                 }
-                Value(val) => {
-                    let val = val.parse::<String>()?;
-                    if subcommand.is_none() {
-                        if let Ok(v) = val.parse() {
-                            subcommand = Some(v);
-                            if subcommand == Some(Subcommand::Demangle) {
-                                if let Some(arg) = parser.next()? {
-                                    return Err(arg.unexpected().into());
-                                }
+                Short('F') | Long("features")
+                    if matches!(
+                        subcommand,
+                        Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest
+                    ) =>
+                {
+                    parse_opt_passthrough!(());
+                }
+                Short('q') | Long("quiet") => passthrough!(),
+                Long(
+                    "all-features"
+                    | "no-default-features"
+                    | "--keep-going"
+                    | "--ignore-rust-version",
+                ) if matches!(
+                    subcommand,
+                    Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest
+                ) =>
+                {
+                    passthrough!();
+                }
+
+                // passthrough
+                Long(_) | Short(_) if Subcommand::can_passthrough(subcommand) => passthrough!(),
+                Value(val)
+                    if subcommand == Subcommand::None
+                        || Subcommand::can_passthrough(subcommand) =>
+                {
+                    let val = val.into_string().unwrap();
+                    if subcommand == Subcommand::None {
+                        subcommand = val.parse::<Subcommand>()?;
+                        if subcommand == Subcommand::Demangle {
+                            if args.len() != 1 {
+                                unexpected(
+                                    args.iter().find(|&arg| arg != "demangle").unwrap(),
+                                    subcommand,
+                                )?;
                             }
-                        } else {
-                            cargo_args.push(val);
                         }
                     } else {
                         cargo_args.push(val);
                     }
                 }
+                _ => unexpected(&format_arg(&arg), subcommand)?,
             }
         }
 
         term::set_coloring(&mut color);
 
-        let subcommand = subcommand.unwrap_or(Subcommand::Test);
-
         // unexpected options
-        if export_prefix && subcommand != Subcommand::ShowEnv {
-            unexpected("--export-prefix")?;
-        }
-        // TODO: check
         match subcommand {
-            Subcommand::Test => {}
-            Subcommand::Run => {}
             Subcommand::ShowEnv => {}
-            Subcommand::Clean => {}
-            Subcommand::Nextest => {
-                if doc || doctests {
-                    bail!("doctest is not supported for nextest");
+            _ => {
+                if export_prefix {
+                    unexpected("--export-prefix", subcommand)?;
                 }
             }
-            Subcommand::Demangle => {}
         }
+        if doc || doctests {
+            let flag = if doc { "--doc" } else { "--doctests" };
+            match subcommand {
+                Subcommand::None | Subcommand::Test => {}
+                Subcommand::Nextest => bail!("doctest is not supported for nextest"),
+                _ => unexpected(flag, subcommand)?,
+            }
+        }
+        match subcommand {
+            Subcommand::None | Subcommand::Nextest => {}
+            Subcommand::Test => {
+                if no_run {
+                    unexpected("--no-run", subcommand)?;
+                }
+            }
+            _ => {
+                if lib {
+                    unexpected("--lib", subcommand)?;
+                }
+                if bins {
+                    unexpected("--bins", subcommand)?;
+                }
+                if examples {
+                    unexpected("--examples", subcommand)?;
+                }
+                if !test.is_empty() {
+                    unexpected("--test", subcommand)?;
+                }
+                if tests {
+                    unexpected("--tests", subcommand)?;
+                }
+                if !bench.is_empty() {
+                    unexpected("--bench", subcommand)?;
+                }
+                if benches {
+                    unexpected("--benches", subcommand)?;
+                }
+                if all_targets {
+                    unexpected("--all-targets", subcommand)?;
+                }
+                if no_run {
+                    unexpected("--no-run", subcommand)?;
+                }
+                if no_fail_fast {
+                    unexpected("--no-fail-fast", subcommand)?;
+                }
+                if !exclude.is_empty() {
+                    unexpected("--exclude", subcommand)?;
+                }
+                if !exclude_from_test.is_empty() {
+                    unexpected("--exclude-from-test", subcommand)?;
+                }
+            }
+        }
+        match subcommand {
+            Subcommand::None | Subcommand::Test | Subcommand::Run => {}
+            Subcommand::Nextest => {
+                if ignore_run_fail {
+                    bail!("--ignore-run-fail is not supported for nextest");
+                }
+            }
+            _ => {
+                if !bin.is_empty() {
+                    unexpected("--bin", subcommand)?;
+                }
+                if !example.is_empty() {
+                    unexpected("--example", subcommand)?;
+                }
+                if !exclude_from_report.is_empty() {
+                    unexpected("--exclude-from-report", subcommand)?;
+                }
+                if no_cfg_coverage {
+                    unexpected("--no-cfg-coverage", subcommand)?;
+                }
+                if no_cfg_coverage_nightly {
+                    unexpected("--no-cfg-coverage-nightly", subcommand)?;
+                }
+                if no_report {
+                    unexpected("--no-report", subcommand)?;
+                }
+                if no_clean {
+                    unexpected("--no-clean", subcommand)?;
+                }
+                if ignore_run_fail {
+                    unexpected("--ignore-run-fail", subcommand)?;
+                }
+            }
+        }
+        match subcommand {
+            Subcommand::None | Subcommand::Test | Subcommand::Nextest | Subcommand::Clean => {}
+            _ => {
+                if workspace {
+                    unexpected("--workspace", subcommand)?;
+                }
+            }
+        }
+        // TODO: check more
 
         // requires
-        if !exclude.is_empty() && !workspace {
+        if !workspace {
             // TODO: This is the same behavior as cargo, but should we allow it to be used
             // in the root of a virtual workspace as well?
-            requires("--exclude", &["--workspace"])?;
+            if !exclude.is_empty() {
+                requires("--exclude", &["--workspace"])?;
+            }
+            if !exclude_from_test.is_empty() {
+                requires("--exclude-from-test", &["--workspace"])?;
+            }
         }
         if coverage_target_only && target.is_none() {
             requires("--coverage-target-only", &["--target"])?;
@@ -446,7 +593,6 @@ impl Args {
                 // --no-report/--no-run implicitly enable --no-clean.
                 conflicts(flag, "--no-clean")?;
             }
-            no_clean = true;
         }
         if ignore_run_fail && no_fail_fast {
             // --ignore-run-fail implicitly enable --no-fail-fast.
@@ -550,10 +696,29 @@ impl Args {
             bail!("empty string is not allowed in --output-dir")
         }
 
-        term::verbose::set(verbose != 0);
+        if no_run {
+            // The following warnings should not be promoted to an error.
+            let _guard = term::warn::ignore();
+            warn!("--no-run is deprecated, use `cargo llvm-cov report` subcommand instead");
+        }
+
         // If `-vv` is passed, propagate `-v` to cargo.
         if verbose > 1 {
             cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
+        }
+
+        // For subsequent processing
+        if no_report || no_run {
+            // --no-report and --no-run implies --no-clean
+            no_clean = true;
+        }
+        if doc {
+            // --doc implies --doctests
+            doctests = true;
+        }
+        if no_run {
+            // --no-run is deprecated alias for report
+            subcommand = Subcommand::Report;
         }
 
         Ok(Self {
@@ -583,7 +748,6 @@ impl Args {
             },
             show_env: ShowEnvOptions { export_prefix },
             doctests,
-            no_run,
             ignore_run_fail,
             lib,
             bin,
@@ -600,43 +764,36 @@ impl Args {
             exclude,
             exclude_from_test,
             exclude_from_report,
-            build: BuildOptions {
-                jobs,
-                release,
-                profile,
-                target,
-                coverage_target_only,
-                verbose: verbose.try_into().unwrap_or(u8::MAX),
-                color,
-                remap_path_prefix,
-                include_ffi,
-                no_clean,
-            },
-            manifest: ManifestOptions { manifest_path },
+            jobs,
+            release,
+            profile,
+            target,
+            coverage_target_only,
+            verbose: verbose.try_into().unwrap_or(u8::MAX),
+            color,
+            remap_path_prefix,
+            include_ffi,
+            no_clean,
+            manifest: ManifestOptions { manifest_path, frozen, locked, offline },
             cargo_args,
             rest,
         })
-    }
-
-    pub(crate) fn cov(&mut self) -> LlvmCovOptions {
-        mem::take(&mut self.cov)
-    }
-
-    pub(crate) fn build(&mut self) -> BuildOptions {
-        mem::take(&mut self.build)
-    }
-
-    pub(crate) fn manifest(&mut self) -> ManifestOptions {
-        mem::take(&mut self.manifest)
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Subcommand {
+    /// Run tests and generate coverage report.
+    None,
+
+    /// Run tests and generate coverage report.
     Test,
 
     /// Run a binary or example and generate coverage report.
     Run,
+
+    /// Generate coverage report.
+    Report,
 
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     Clean,
@@ -652,20 +809,41 @@ pub(crate) enum Subcommand {
 }
 
 static CARGO_LLVM_COV_USAGE: &str = include_str!("../docs/cargo-llvm-cov.txt");
+static CARGO_LLVM_COV_TEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-test.txt");
 static CARGO_LLVM_COV_RUN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-run.txt");
+static CARGO_LLVM_COV_REPORT_USAGE: &str = include_str!("../docs/cargo-llvm-cov-report.txt");
 static CARGO_LLVM_COV_CLEAN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-clean.txt");
 static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-cov-show-env.txt");
 static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
 
 impl Subcommand {
-    fn help_text(subcommand: Option<Self>) -> &'static str {
+    fn can_passthrough(subcommand: Self) -> bool {
+        matches!(subcommand, Self::Test | Self::Run | Self::Nextest)
+    }
+
+    fn help_text(subcommand: Self) -> &'static str {
         match subcommand {
-            None | Some(Self::Test) => CARGO_LLVM_COV_USAGE,
-            Some(Self::Run) => CARGO_LLVM_COV_RUN_USAGE,
-            Some(Self::Clean) => CARGO_LLVM_COV_CLEAN_USAGE,
-            Some(Self::ShowEnv) => CARGO_LLVM_COV_SHOW_ENV_USAGE,
-            Some(Self::Nextest) => CARGO_LLVM_COV_NEXTEST_USAGE,
-            Some(Self::Demangle) => "", // internal API
+            Self::None => CARGO_LLVM_COV_USAGE,
+            Self::Test => CARGO_LLVM_COV_TEST_USAGE,
+            Self::Run => CARGO_LLVM_COV_RUN_USAGE,
+            Self::Report => CARGO_LLVM_COV_REPORT_USAGE,
+            Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
+            Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
+            Self::Nextest => CARGO_LLVM_COV_NEXTEST_USAGE,
+            Self::Demangle => "", // internal API
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "",
+            Self::Test => "test",
+            Self::Run => "run",
+            Self::Report => "report",
+            Self::Clean => "clean",
+            Self::ShowEnv => "show-env",
+            Self::Nextest => "nextest",
+            Self::Demangle => "demangle",
         }
     }
 }
@@ -675,10 +853,11 @@ impl FromStr for Subcommand {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            // "test" | "t" => Ok(Self::Test),
+            "test" | "t" => Ok(Self::Test),
             "run" | "r" => Ok(Self::Run),
-            "show-env" => Ok(Self::ShowEnv),
+            "report" => Ok(Self::Report),
             "clean" => Ok(Self::Clean),
+            "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
@@ -773,63 +952,7 @@ impl LlvmCovOptions {
     }
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct BuildOptions {
-    /// Number of parallel jobs, defaults to # of CPUs
-    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
-    pub(crate) jobs: Option<u32>,
-    /// Build artifacts in release mode, with optimizations
-    pub(crate) release: bool,
-    /// Build artifacts with the specified profile
-    pub(crate) profile: Option<String>,
-    // /// Space or comma separated list of features to activate
-    // pub(crate) features: Vec<String>,
-    // /// Activate all available features
-    // pub(crate) all_features: bool,
-    // /// Do not activate the `default` feature
-    // pub(crate) no_default_features: bool,
-    /// Build for the target triple
-    ///
-    /// When this option is used, coverage for proc-macro and build script will
-    /// not be displayed because cargo does not pass RUSTFLAGS to them.
-    pub(crate) target: Option<String>,
-    /// Activate coverage reporting only for the target triple
-    ///
-    /// Activate coverage reporting only for the target triple specified via `--target`.
-    /// This is important, if the project uses multiple targets via the cargo
-    /// bindeps feature, and not all targets can use `instrument-coverage`,
-    /// e.g. a microkernel, or an embedded binary.
-    pub(crate) coverage_target_only: bool,
-    // TODO: Currently, we are using a subdirectory of the target directory as
-    //       the actual target directory. What effect should this option have
-    //       on its behavior?
-    // /// Directory for all generated artifacts
-    // target_dir: Option<Utf8PathBuf>,
-    /// Use verbose output
-    ///
-    /// Use -vv (-vvv) to propagate verbosity to cargo.
-    pub(crate) verbose: u8,
-    /// Coloring
-    // This flag will be propagated to both cargo and llvm-cov.
-    pub(crate) color: Option<Coloring>,
-
-    /// Use --remap-path-prefix for workspace root
-    ///
-    /// Note that this does not fully compatible with doctest.
-    pub(crate) remap_path_prefix: bool,
-    /// Include coverage of C/C++ code linked to Rust library/binary
-    ///
-    /// Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables
-    /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
-    // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
-    pub(crate) include_ffi: bool,
-    /// Build without cleaning any old build artifacts.
-    ///
-    /// Note that this can cause false positives/false negatives due to old build artifacts.
-    pub(crate) no_clean: bool,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct ShowEnvOptions {
     /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
     pub(crate) export_prefix: bool,
@@ -840,21 +963,75 @@ pub(crate) struct ShowEnvOptions {
 pub(crate) struct ManifestOptions {
     /// Path to Cargo.toml
     pub(crate) manifest_path: Option<Utf8PathBuf>,
+    /// Require Cargo.lock and cache are up to date
+    pub(crate) frozen: bool,
+    /// Require Cargo.lock is up to date
+    pub(crate) locked: bool,
+    /// Run without accessing the network
+    pub(crate) offline: bool,
 }
 
-fn format_flag(flag: &lexopt::Arg<'_>) -> String {
-    match flag {
+impl ManifestOptions {
+    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
+        // Skip --manifest-path because it is set based on Workspace::current_manifest.
+        if self.frozen {
+            cmd.arg("--frozen");
+        }
+        if self.locked {
+            cmd.arg("--locked");
+        }
+        if self.offline {
+            cmd.arg("--offline");
+        }
+    }
+}
+
+trait Store<T> {
+    fn is_full(&self) -> bool {
+        false
+    }
+    fn push(&mut self, val: &str) -> Result<()>;
+}
+impl Store<OsString> for () {
+    fn push(&mut self, _: &str) -> Result<()> {
+        Ok(())
+    }
+}
+impl<T: FromStr> Store<T> for Option<T>
+where
+    Error: From<T::Err>,
+{
+    fn is_full(&self) -> bool {
+        self.is_some()
+    }
+    fn push(&mut self, val: &str) -> Result<()> {
+        *self = Some(val.parse()?);
+        Ok(())
+    }
+}
+impl<T: FromStr> Store<T> for Vec<T>
+where
+    Error: From<T::Err>,
+{
+    fn push(&mut self, val: &str) -> Result<()> {
+        self.push(val.parse()?);
+        Ok(())
+    }
+}
+
+fn format_arg(arg: &lexopt::Arg<'_>) -> String {
+    match arg {
         Long(flag) => format!("--{flag}"),
         Short(flag) => format!("-{flag}"),
-        Value(_) => unreachable!(),
+        Value(val) => val.parse().unwrap(),
     }
 }
 
 #[cold]
 #[inline(never)]
 fn multi_arg(flag: &lexopt::Arg<'_>) -> Result<()> {
-    let flag = &format_flag(flag);
-    bail!("The argument '{flag}' was provided more than once, but cannot be used multiple times");
+    let flag = &format_arg(flag);
+    bail!("the argument '{flag}' was provided more than once, but cannot be used multiple times");
 }
 
 // `flag` requires one of `requires`.
@@ -887,8 +1064,14 @@ fn conflicts(a: &str, b: &str) -> Result<()> {
 
 #[cold]
 #[inline(never)]
-fn unexpected(arg: &str) -> Result<()> {
-    bail!("found argument '{arg}' which wasn't expected, or isn't valid in this context");
+fn unexpected(arg: &str, subcommand: Subcommand) -> Result<()> {
+    if arg.starts_with('-') && !arg.starts_with("---") && arg != "--" {
+        if subcommand == Subcommand::None {
+            bail!("invalid option '{arg}'");
+        }
+        bail!("invalid option '{arg}' for subcommand '{}'", subcommand.as_str());
+    }
+    Err(lexopt::Error::UnexpectedArgument(arg.into()).into())
 }
 
 #[cfg(test)]

@@ -57,6 +57,7 @@ use crate::{
 };
 
 fn main() {
+    term::init_coloring();
     if let Err(e) = try_main() {
         error!("{e:#}");
     }
@@ -70,116 +71,69 @@ fn main() {
 
 fn try_main() -> Result<()> {
     let mut args = Args::parse()?;
+    term::verbose::set(args.verbose != 0);
 
     match args.subcommand {
-        Subcommand::Demangle => {
-            demangle::run()?;
-        }
-
-        Subcommand::Clean => {
-            clean::run(&mut args)?;
-        }
-
-        Subcommand::Run => {
-            let cx =
-                &Context::new(args.build(), &args.manifest(), args.cov(), &[], &[], false, false)?;
-
-            clean::clean_partial(cx)?;
-            create_dirs(cx)?;
-
-            run_run(cx, &args)?;
-
-            if !cx.cov.no_report {
-                generate_report(cx)?;
-            }
-        }
-
+        Subcommand::Demangle => demangle::run()?,
+        Subcommand::Clean => clean::run(&mut args)?,
         Subcommand::ShowEnv => {
-            let cx = &context_from_args(&mut args, true)?;
+            let cx = &Context::new(args)?;
             let stdout = io::stdout();
-            let writer = &mut ShowEnvWriter { target: stdout.lock(), options: args.show_env };
+            let writer =
+                &mut ShowEnvWriter { target: stdout.lock(), options: cx.args.show_env.clone() };
             set_env(cx, writer)?;
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
-
-        Subcommand::Nextest => {
-            let cx = &context_from_args(&mut args, false)?;
-
+        Subcommand::Report => {
+            let cx = &Context::new(args)?;
+            create_dirs(cx)?;
+            generate_report(cx)?;
+        }
+        Subcommand::Run => {
+            let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
-            match (args.no_run, cx.cov.no_report) {
-                (false, false) => {
-                    run_nextest(cx, &args)?;
-                    generate_report(cx)?;
-                }
-                (false, true) => {
-                    run_nextest(cx, &args)?;
-                }
-                (true, false) => {
-                    generate_report(cx)?;
-                }
-                (true, true) => unreachable!(),
+            run_run(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
             }
         }
-
-        Subcommand::Test => {
-            let cx = &context_from_args(&mut args, false)?;
-            let tmp = term::warn(); // The following warnings should not be promoted to an error.
-            if args.doctests {
-                warn!("--doctests option is unstable");
-            }
-            if args.doc {
-                args.doctests = true;
-                warn!("--doc option is unstable");
-            }
-            term::warn::set(tmp);
-
+        Subcommand::Nextest => {
+            let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
-            match (args.no_run, cx.cov.no_report) {
-                (false, false) => {
-                    run_test(cx, &args)?;
-                    generate_report(cx)?;
-                }
-                (false, true) => {
-                    run_test(cx, &args)?;
-                }
-                (true, false) => {
-                    generate_report(cx)?;
-                }
-                (true, true) => unreachable!(),
+            run_nextest(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
+            }
+        }
+        Subcommand::None | Subcommand::Test => {
+            let cx = &Context::new(args)?;
+            clean::clean_partial(cx)?;
+            create_dirs(cx)?;
+            run_test(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
             }
         }
     }
     Ok(())
 }
 
-fn context_from_args(args: &mut Args, show_env: bool) -> Result<Context> {
-    Context::new(
-        args.build(),
-        &args.manifest(),
-        args.cov(),
-        &args.exclude,
-        &args.exclude_from_report,
-        args.doctests,
-        show_env,
-    )
-}
-
 fn create_dirs(cx: &Context) -> Result<()> {
     fs::create_dir_all(&cx.ws.target_dir)?;
 
-    if let Some(output_dir) = &cx.cov.output_dir {
+    if let Some(output_dir) = &cx.args.cov.output_dir {
         fs::create_dir_all(output_dir)?;
-        if cx.cov.html {
+        if cx.args.cov.html {
             fs::create_dir_all(output_dir.join("html"))?;
         }
-        if cx.cov.text {
+        if cx.args.cov.text {
             fs::create_dir_all(output_dir.join("text"))?;
         }
     }
 
-    if cx.doctests {
+    if cx.args.doctests {
         fs::create_dir_all(&cx.ws.doctests_dir)?;
     }
     Ok(())
@@ -223,10 +177,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
                 flags.push_str(" -C codegen-units=1");
             }
         }
-        if !cx.cov.no_cfg_coverage {
+        if !cx.args.cov.no_cfg_coverage {
             flags.push_str(" --cfg coverage");
         }
-        if cx.ws.nightly && !cx.cov.no_cfg_coverage_nightly {
+        if cx.ws.nightly && !cx.args.cov.no_cfg_coverage_nightly {
             flags.push_str(" --cfg coverage_nightly");
         }
     }
@@ -235,10 +189,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
 
     let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default().into_owned();
     push_common_flags(cx, rustflags);
-    if cx.build.remap_path_prefix {
+    if cx.args.remap_path_prefix {
         let _ = write!(rustflags, " --remap-path-prefix {}/=", cx.ws.metadata.workspace_root);
     }
-    if cx.build.target.is_none() {
+    if cx.args.target.is_none() {
         // https://github.com/dtolnay/trybuild/pull/121
         // https://github.com/dtolnay/trybuild/issues/122
         // https://github.com/dtolnay/trybuild/pull/123
@@ -247,14 +201,14 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
 
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
     let rustdocflags = &mut cx.ws.config.rustdocflags().map(Cow::into_owned);
-    if cx.doctests {
+    if cx.args.doctests {
         let rustdocflags = rustdocflags.get_or_insert_with(String::new);
         push_common_flags(cx, rustdocflags);
         let _ =
             write!(rustdocflags, " -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir);
     }
 
-    match (cx.build.coverage_target_only, &cx.build.target) {
+    match (cx.args.coverage_target_only, &cx.args.target) {
         (true, Some(coverage_target)) => env.set(
             &format!(
                 "CARGO_TARGET_{}_RUSTFLAGS",
@@ -268,11 +222,11 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
     if let Some(rustdocflags) = rustdocflags {
         env.set("RUSTDOCFLAGS", rustdocflags)?;
     }
-    if cx.build.include_ffi {
+    if cx.args.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
         let target_u =
-            cx.build.target.as_ref().unwrap_or(&cx.ws.host_triple).replace(['-', '.'], "_");
+            cx.args.target.as_ref().unwrap_or(&cx.ws.host_triple).replace(['-', '.'], "_");
         let cflags_key = &format!("CFLAGS_{target_u}");
         // Use std::env instead of crate::env to match cc-rs's behavior.
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740
@@ -323,87 +277,119 @@ fn has_z_flag(args: &[String], name: &str) -> bool {
     false
 }
 
-fn run_test(cx: &Context, args: &Args) -> Result<()> {
+fn run_test(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
     set_env(cx, &mut cargo)?;
 
     cargo.arg("test");
-    if cx.doctests && !has_z_flag(&args.cargo_args, "doctest-in-workspace") {
+    if cx.args.doctests && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
 
-    if args.ignore_run_fail {
-        let mut cargo_no_run = cargo.clone();
-        if !args.no_run {
-            cargo_no_run.arg("--no-run");
+    if cx.args.ignore_run_fail {
+        {
+            let mut cargo = cargo.clone();
+            cargo.arg("--no-run");
+            cargo::test_or_run_args(cx, &mut cargo);
+            if term::verbose() {
+                status!("Running", "{cargo}");
+                cargo.stdout_to_stderr().run()?;
+            } else {
+                // Capture output to prevent duplicate warnings from appearing in two runs.
+                cargo.run_with_output()?;
+            }
         }
-        cargo::test_or_run_args(cx, args, &mut cargo_no_run);
-        if term::verbose() {
-            status!("Running", "{cargo_no_run}");
-            cargo_no_run.stdout_to_stderr().run()?;
-        } else {
-            // Capture output to prevent duplicate warnings from appearing in two runs.
-            cargo_no_run.run_with_output()?;
-        }
-        drop(cargo_no_run);
 
         cargo.arg("--no-fail-fast");
-        cargo::test_or_run_args(cx, args, &mut cargo);
+        cargo::test_or_run_args(cx, &mut cargo);
         if term::verbose() {
             status!("Running", "{cargo}");
         }
-        if let Err(e) = cargo.stdout_to_stderr().run() {
+        stdout_to_stderr(cx, &mut cargo);
+        if let Err(e) = cargo.run() {
             warn!("{e:#}");
         }
     } else {
-        cargo::test_or_run_args(cx, args, &mut cargo);
+        cargo::test_or_run_args(cx, &mut cargo);
         if term::verbose() {
             status!("Running", "{cargo}");
         }
-        cargo.stdout_to_stderr().run()?;
+        stdout_to_stderr(cx, &mut cargo);
+        cargo.run()?;
     }
 
     Ok(())
 }
 
-fn run_nextest(cx: &Context, args: &Args) -> Result<()> {
+fn run_nextest(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
     set_env(cx, &mut cargo)?;
 
     cargo.arg("nextest").arg("run");
 
-    cargo::test_or_run_args(cx, args, &mut cargo);
-
-    if term::verbose() {
-        status!("Running", "{cargo}");
+    if cx.args.ignore_run_fail {
+        // TODO: support --ignore-run-fail
+        todo!();
+    } else {
+        cargo::test_or_run_args(cx, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{cargo}");
+        }
+        stdout_to_stderr(cx, &mut cargo);
+        cargo.run()?;
     }
-    stdout_to_stderr(cx, &mut cargo);
-    cargo.run()?;
     Ok(())
 }
 
-fn run_run(cx: &Context, args: &Args) -> Result<()> {
+fn run_run(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
     set_env(cx, &mut cargo)?;
 
-    cargo.arg("run");
-    cargo::test_or_run_args(cx, args, &mut cargo);
+    if cx.args.ignore_run_fail {
+        {
+            let mut cargo = cargo.clone();
+            cargo.arg("build");
+            cargo::test_or_run_args(cx, &mut cargo);
+            if term::verbose() {
+                status!("Running", "{cargo}");
+                cargo.stdout_to_stderr().run()?;
+            } else {
+                // Capture output to prevent duplicate warnings from appearing in two runs.
+                cargo.run_with_output()?;
+            }
+        }
 
-    if term::verbose() {
-        status!("Running", "{cargo}");
+        cargo.arg("run");
+        cargo::test_or_run_args(cx, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{cargo}");
+        }
+        stdout_to_stderr(cx, &mut cargo);
+        if let Err(e) = cargo.run() {
+            warn!("{e:#}");
+        }
+    } else {
+        cargo.arg("run");
+        cargo::test_or_run_args(cx, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{cargo}");
+        }
+        stdout_to_stderr(cx, &mut cargo);
+        cargo.run()?;
     }
-    stdout_to_stderr(cx, &mut cargo);
-    cargo.run()?;
     Ok(())
 }
 
 fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
-    if cx.cov.no_report || cx.cov.output_dir.is_some() || cx.cov.output_path.is_some() {
+    if cx.args.cov.no_report
+        || cx.args.cov.output_dir.is_some()
+        || cx.args.cov.output_path.is_some()
+    {
         // Do not redirect if unnecessary.
     } else {
         // Redirect stdout to stderr as the report is output to stdout by default.
@@ -416,22 +402,23 @@ fn generate_report(cx: &Context) -> Result<()> {
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx);
-    Format::from_args(cx)
+    let format = Format::from_args(cx);
+    format
         .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
         .context("failed to generate report")?;
 
-    if cx.cov.fail_under_lines.is_some()
-        || cx.cov.fail_uncovered_functions.is_some()
-        || cx.cov.fail_uncovered_lines.is_some()
-        || cx.cov.fail_uncovered_regions.is_some()
-        || cx.cov.show_missing_lines
+    if cx.args.cov.fail_under_lines.is_some()
+        || cx.args.cov.fail_uncovered_functions.is_some()
+        || cx.args.cov.fail_uncovered_lines.is_some()
+        || cx.args.cov.fail_uncovered_regions.is_some()
+        || cx.args.cov.show_missing_lines
     {
         let format = Format::Json;
         let json = format
             .get_json(cx, &object_files, ignore_filename_regex.as_ref())
             .context("failed to get json")?;
 
-        if let Some(fail_under_lines) = cx.cov.fail_under_lines {
+        if let Some(fail_under_lines) = cx.args.cov.fail_under_lines {
             // Handle --fail-under-lines.
             let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
@@ -439,7 +426,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if let Some(fail_uncovered_functions) = cx.cov.fail_uncovered_functions {
+        if let Some(fail_uncovered_functions) = cx.args.cov.fail_uncovered_functions {
             // Handle --fail-uncovered-functions.
             let uncovered =
                 json.count_uncovered_functions().context("failed to count uncovered functions")?;
@@ -447,7 +434,7 @@ fn generate_report(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
-        if let Some(fail_uncovered_lines) = cx.cov.fail_uncovered_lines {
+        if let Some(fail_uncovered_lines) = cx.args.cov.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
             let uncovered =
                 json.count_uncovered_lines().context("failed to count uncovered lines")?;
@@ -455,7 +442,7 @@ fn generate_report(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
-        if let Some(fail_uncovered_regions) = cx.cov.fail_uncovered_regions {
+        if let Some(fail_uncovered_regions) = cx.args.cov.fail_uncovered_regions {
             // Handle --fail-uncovered-regions.
             let uncovered =
                 json.count_uncovered_regions().context("failed to count uncovered regions")?;
@@ -464,21 +451,24 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if cx.cov.show_missing_lines {
+        if cx.args.cov.show_missing_lines {
             // Handle --show-missing-lines.
             let uncovered_files = json.get_uncovered_lines(&ignore_filename_regex);
             if !uncovered_files.is_empty() {
-                println!("Uncovered Lines:");
-            }
-            for (file, lines) in &uncovered_files {
-                let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
-                println!("{file}: {}", lines.join(", "));
+                let stdout = io::stdout();
+                let mut stdout = stdout.lock();
+                writeln!(stdout, "Uncovered Lines:")?;
+                for (file, lines) in &uncovered_files {
+                    let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
+                    writeln!(stdout, "{file}: {}", lines.join(", "))?;
+                }
+                stdout.flush()?;
             }
         }
     }
 
-    if cx.cov.open {
-        let path = &cx.cov.output_dir.as_ref().unwrap().join("html/index.html");
+    if cx.args.cov.open {
+        let path = &cx.args.cov.output_dir.as_ref().unwrap().join("html/index.html");
         status!("Opening", "{path}");
         open_report(cx, path)?;
     }
@@ -516,10 +506,10 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         .arg(input_files.path())
         .arg("-o")
         .arg(&cx.ws.profdata_file);
-    if let Some(mode) = &cx.cov.failure_mode {
+    if let Some(mode) = &cx.args.cov.failure_mode {
         cmd.arg(format!("-failure-mode={mode}"));
     }
-    if let Some(jobs) = cx.build.jobs {
+    if let Some(jobs) = cx.args.jobs {
         cmd.arg(format!("-num-threads={jobs}"));
     }
     if let Some(flags) = &cx.cargo_llvm_profdata_flags {
@@ -552,7 +542,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     if stem == "build-script-build" || stem.starts_with("build_script_build-") {
                         let p = p.parent().unwrap();
                         if p.parent().unwrap().file_name().unwrap() == "build" {
-                            if cx.cov.include_build_script {
+                            if cx.args.cov.include_build_script {
                                 let dir = p.file_name().unwrap().to_string_lossy();
                                 if !cx.build_script_re.is_match(&dir) {
                                     return false;
@@ -576,12 +566,19 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
     // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
-    if let Some(target) = &cx.build.target {
+    if let Some(target) = &cx.args.target {
         target_dir.push(target);
     }
     // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-    let profile = match cx.build.profile.as_deref() {
-        None if cx.build.release => "release",
+    let profile = if cx.args.subcommand == Subcommand::Nextest {
+        // nextest's --profile option is different from cargo.
+        // https://nexte.st/book/configuration.html#profiles
+        None
+    } else {
+        cx.args.profile.as_deref()
+    };
+    let profile = match profile {
+        None if cx.args.release => "release",
         None => "debug",
         Some(p) if matches!(p, "release" | "bench") => "release",
         Some(p) if matches!(p, "dev" | "test") => "debug",
@@ -598,7 +595,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
     }
-    if cx.doctests {
+    if cx.args.doctests {
         for f in glob::glob(cx.ws.doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok)
         {
             if is_executable::is_executable(&f) {
@@ -610,7 +607,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // trybuild
     let trybuild_dir = &cx.ws.metadata.target_directory.join("tests");
     let mut trybuild_target = trybuild_dir.join("target");
-    if let Some(target) = &cx.build.target {
+    if let Some(target) = &cx.args.target {
         trybuild_target.push(target);
     }
     // Currently, trybuild always use debug build.
@@ -714,13 +711,13 @@ enum Format {
 
 impl Format {
     fn from_args(cx: &Context) -> Self {
-        if cx.cov.json {
+        if cx.args.cov.json {
             Self::Json
-        } else if cx.cov.lcov {
+        } else if cx.args.cov.lcov {
             Self::LCov
-        } else if cx.cov.text {
+        } else if cx.args.cov.text {
             Self::Text
-        } else if cx.cov.html {
+        } else if cx.args.cov.html {
             Self::Html
         } else {
             Self::None
@@ -743,10 +740,10 @@ impl Format {
             // https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export
             return None;
         }
-        if self == Self::Text && cx.cov.output_dir.is_some() {
+        if self == Self::Text && cx.args.cov.output_dir.is_some() {
             return Some("-use-color=0");
         }
-        match cx.build.color {
+        match cx.args.color {
             Some(Coloring::Auto) | None => None,
             Some(Coloring::Always) => Some("-use-color=1"),
             Some(Coloring::Never) => Some("-use-color=0"),
@@ -765,7 +762,7 @@ impl Format {
         cmd.args(self.use_color(cx));
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
-        if let Some(jobs) = cx.build.jobs {
+        if let Some(jobs) = cx.args.jobs {
             cmd.arg(format!("-num-threads={jobs}"));
         }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
@@ -776,14 +773,14 @@ impl Format {
         match self {
             Self::Text | Self::Html => {
                 cmd.args([
-                    &format!("-show-instantiations={}", !cx.cov.hide_instantiations),
+                    &format!("-show-instantiations={}", !cx.args.cov.hide_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     &format!("-Xdemangler={}", cx.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
                 ]);
-                if let Some(output_dir) = &cx.cov.output_dir {
+                if let Some(output_dir) = &cx.args.cov.output_dir {
                     if self == Self::Html {
                         cmd.arg(&format!("-output-dir={}", output_dir.join("html")));
                     } else {
@@ -792,7 +789,7 @@ impl Format {
                 }
             }
             Self::Json | Self::LCov => {
-                if cx.cov.summary_only {
+                if cx.args.cov.summary_only {
                     cmd.arg("-summary-only");
                 }
             }
@@ -803,7 +800,7 @@ impl Format {
             cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
         }
 
-        if let Some(output_path) = &cx.cov.output_path {
+        if let Some(output_path) = &cx.args.cov.output_path {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -819,7 +816,7 @@ impl Format {
         }
         cmd.run()?;
         if matches!(self, Self::Html | Self::Text) {
-            if let Some(output_dir) = &cx.cov.output_dir {
+            if let Some(output_dir) = &cx.args.cov.output_dir {
                 eprintln!();
                 if self == Self::Html {
                     status!("Finished", "report saved to {}", output_dir.join("html"));
@@ -847,7 +844,7 @@ impl Format {
         cmd.args(self.llvm_cov_args());
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
-        if let Some(jobs) = cx.build.jobs {
+        if let Some(jobs) = cx.args.jobs {
             cmd.arg(format!("-num-threads={jobs}"));
         }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
@@ -890,13 +887,13 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
 
     let mut out = Out::default();
 
-    if let Some(ignore_filename) = &cx.cov.ignore_filename_regex {
+    if let Some(ignore_filename) = &cx.args.cov.ignore_filename_regex {
         out.push(ignore_filename);
     }
-    if !cx.cov.disable_default_ignore_filename_regex {
+    if !cx.args.cov.disable_default_ignore_filename_regex {
         // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
         //       We may have a directory like tests/support, so maybe we need both?
-        if cx.build.remap_path_prefix {
+        if cx.args.remap_path_prefix {
             out.push(format!(r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches){0}", SEPARATOR));
         } else {
             out.push(format!(
@@ -906,7 +903,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             ));
         }
         out.push_abs_path(&cx.ws.target_dir);
-        if cx.build.remap_path_prefix {
+        if cx.args.remap_path_prefix {
             if let Some(path) = home::home_dir() {
                 out.push_abs_path(path);
             }

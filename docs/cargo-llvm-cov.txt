@@ -1,13 +1,11 @@
 cargo-llvm-cov
 Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
 
-Use -h for short descriptions and --help for more details.
-
 USAGE:
-    cargo llvm-cov [OPTIONS] [-- <ARGS>...] [SUBCOMMAND]
+    cargo llvm-cov [SUBCOMMAND] [OPTIONS] [-- <args>...]
 
 ARGS:
-    <ARGS>...
+    <args>...
             Arguments for the test binary
 
 OPTIONS:
@@ -169,7 +167,8 @@ OPTIONS:
         --workspace
             Test all packages in the workspace
 
-            [aliases: all]
+        --all
+            Alias for --workspace (deprecated)
 
         --exclude <SPEC>
             Exclude packages from both the test and report
@@ -217,9 +216,7 @@ OPTIONS:
             Use -vv (-vvv) to propagate verbosity to cargo.
 
         --color <WHEN>
-            Coloring
-
-            [possible values: auto, always, never]
+            Coloring: auto, always, never
 
         --remap-path-prefix
             Use --remap-path-prefix for workspace root
@@ -231,6 +228,12 @@ OPTIONS:
 
             Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables must be set to
             Clang/LLVM compatible with the LLVM version used in rustc.
+
+        --keep-going
+            Do not abort the build as soon as there is an error (unstable)
+
+        --ignore-rust-version
+            Ignore `rust-version` specification in packages
 
         --manifest-path <PATH>
             Path to Cargo.toml
@@ -245,7 +248,8 @@ OPTIONS:
             Run without accessing the network
 
     -Z <FLAG>
-            Unstable (nightly-only) flags to Cargo
+            Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+            details
 
     -h, --help
             Print help information
@@ -254,8 +258,14 @@ OPTIONS:
             Print version information
 
 SUBCOMMANDS:
+    test
+            Run tests and generate coverage report
+            This is equivalent to `cargo llvm-cov` without subcommand,
+            except that test name filtering is supported.
     run
             Run a binary or example and generate coverage report
+    report
+            Generate coverage report
     show-env
             Output the environment set by cargo-llvm-cov to build Rust projects
     clean

@@ -18,9 +18,12 @@ use walkdir::WalkDir;
 pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
     Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
 
-pub fn cargo_llvm_cov() -> Command {
+pub fn cargo_llvm_cov(subcommand: &str) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
     cmd.arg("llvm-cov");
+    if !subcommand.is_empty() {
+        cmd.arg(subcommand);
+    }
     cmd.env("CARGO_LLVM_COV_DENY_WARNINGS", "true");
     cmd.env_remove("RUSTFLAGS")
         .env_remove("RUSTDOCFLAGS")
@@ -48,7 +51,7 @@ pub fn test_report(
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
     let expected = &fs::read_to_string(output_path).unwrap_or_default();
-    let mut cmd = cargo_llvm_cov();
+    let mut cmd = cargo_llvm_cov("");
     if let Some(subcommand) = subcommand {
         cmd.arg(subcommand);
     }
@@ -208,8 +211,8 @@ fn line_separated(lines: &str) -> impl Iterator<Item = &'_ str> {
 impl AssertOutput {
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
     #[track_caller]
-    pub fn stderr_contains(&self, pats: &str) -> &Self {
-        for pat in line_separated(pats) {
+    pub fn stderr_contains(&self, pats: impl AsRef<str>) -> &Self {
+        for pat in line_separated(pats.as_ref()) {
             assert!(
                 self.stderr.contains(pat),
                 "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
@@ -222,8 +225,8 @@ impl AssertOutput {
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]
-    pub fn stdout_contains(&self, pats: &str) -> &Self {
-        for pat in line_separated(pats) {
+    pub fn stdout_contains(&self, pats: impl AsRef<str>) -> &Self {
+        for pat in line_separated(pats.as_ref()) {
             assert!(
                 self.stdout.contains(pat),
                 "assertion failed: `self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
@@ -236,8 +239,8 @@ impl AssertOutput {
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]
-    pub fn stdout_not_contains(&self, pats: &str) -> &Self {
-        for pat in line_separated(pats) {
+    pub fn stdout_not_contains(&self, pats: impl AsRef<str>) -> &Self {
+        for pat in line_separated(pats.as_ref()) {
             assert!(
                 !self.stdout.contains(pat),
                 "assertion failed: `!self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
