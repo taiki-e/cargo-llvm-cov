@@ -76,8 +76,13 @@ impl Workspace {
             );
         }
 
-        let target_dir = if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")? {
-            path.into()
+        let target_dir = if let Some(path) =
+            env::var("CARGO_LLVM_COV_TARGET_DIR")?.map(Utf8PathBuf::from)
+        {
+            if path.is_relative() {
+                warn!("CARGO_LLVM_COV_TARGET_DIR with relative path may not work properly; consider using absolute path");
+            }
+            path
         } else if show_env {
             metadata.target_directory.clone()
         } else {
