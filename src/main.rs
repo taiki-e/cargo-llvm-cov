@@ -28,6 +28,7 @@ mod context;
 mod demangler;
 mod env;
 mod fs;
+mod regex_vec;
 
 use std::{
     borrow::Cow,
@@ -51,6 +52,7 @@ use crate::{
     context::Context,
     json::LlvmCovJsonExport,
     process::ProcessBuilder,
+    regex_vec::{RegexVec, RegexVecBuilder},
     term::Coloring,
 };
 
@@ -664,23 +666,15 @@ impl Targets {
         Self { packages, targets }
     }
 
-    fn pkg_hash_re(&self) -> Result<Regex> {
-        let mut re = String::from("^(lib)?(");
-        let mut first = true;
+    fn pkg_hash_re(&self) -> Result<RegexVec> {
+        let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]+)?$");
         for pkg in &self.packages {
-            if first {
-                first = false;
-            } else {
-                re.push('|');
-            }
-            re.push_str(&pkg.replace('-', "(-|_)"));
+            re.or(&pkg.replace('-', "(-|_)"));
         }
         for t in &self.targets {
-            re.push('|');
-            re.push_str(t);
+            re.or(t);
         }
-        re.push_str(")(-[0-9a-f]+)?$");
-        Ok(Regex::new(&re)?)
+        re.build()
     }
 }
 
