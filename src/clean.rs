@@ -6,14 +6,15 @@ use std::path::Path;
 
 use anyhow::Result;
 use cargo_metadata::PackageId;
-use regex::Regex;
 use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Workspace},
     cli::Args,
     context::Context,
-    fs, term,
+    fs,
+    regex_vec::{RegexVec, RegexVecBuilder},
+    term,
 };
 
 pub(crate) fn run(options: &mut Args) -> Result<()> {
@@ -110,21 +111,12 @@ fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Resul
     Ok(())
 }
 
-fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
-    let mut re = String::from("^(lib)?(");
-    let mut first = true;
+fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
+    let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]{7,})?$");
     for id in pkg_ids {
-        if first {
-            first = false;
-        } else {
-            re.push('|');
-        }
-        re.push_str(&ws.metadata[id].name.replace('-', "(-|_)"));
+        re.or(&ws.metadata[id].name.replace('-', "(-|_)"));
     }
-    re.push_str(")(-[0-9a-f]+)?$");
-    // unwrap -- it is not realistic to have a case where there are more than
-    // 5000 members in a workspace. see also pkg_hash_re_size_limit test.
-    Regex::new(&re).unwrap()
+    re.build().unwrap()
 }
 
 fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
@@ -158,48 +150,4 @@ fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
         fs::remove_file(path)?;
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use regex::Regex;
-
-    fn pkg_hash_re(pkg_names: &[String]) -> Result<Regex, regex::Error> {
-        let mut re = String::from("^(lib)?(");
-        let mut first = true;
-        for name in pkg_names {
-            if first {
-                first = false;
-            } else {
-                re.push('|');
-            }
-            re.push_str(&name.replace('-', "(-|_)"));
-        }
-        re.push_str(")(-[0-9a-f]+)?$");
-        Regex::new(&re)
-    }
-
-    #[test]
-    fn pkg_hash_re_size_limit() {
-        fn gen_pkg_names(num_pkg: usize, pkg_name_size: usize) -> Vec<String> {
-            (0..num_pkg)
-                .map(|_| ('a'..='z').cycle().take(pkg_name_size).collect())
-                .collect::<Vec<_>>()
-        }
-
-        let names = gen_pkg_names(5040, 64);
-        pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(5041, 64);
-        pkg_hash_re(&names).unwrap_err();
-
-        let names = gen_pkg_names(2540, 128);
-        pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(2541, 128);
-        pkg_hash_re(&names).unwrap_err();
-
-        let names = gen_pkg_names(1274, 256);
-        pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(1275, 256);
-        pkg_hash_re(&names).unwrap_err();
-    }
 }
