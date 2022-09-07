@@ -121,7 +121,7 @@ fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> Regex {
         }
         re.push_str(&ws.metadata[id].name.replace('-', "(-|_)"));
     }
-    re.push_str(")(-[0-9a-f]+)?$");
+    re.push_str(")(-[0-9a-f]{7,})?$");
     // unwrap -- it is not realistic to have a case where there are more than
     // 5000 members in a workspace. see also pkg_hash_re_size_limit test.
     Regex::new(&re).unwrap()
@@ -175,7 +175,7 @@ mod tests {
             }
             re.push_str(&name.replace('-', "(-|_)"));
         }
-        re.push_str(")(-[0-9a-f]+)?$");
+        re.push_str(")(-[0-9a-f]{7,})?$");
         Regex::new(&re)
     }
 
@@ -192,9 +192,9 @@ mod tests {
         let names = gen_pkg_names(5041, 64);
         pkg_hash_re(&names).unwrap_err();
 
-        let names = gen_pkg_names(2540, 128);
+        let names = gen_pkg_names(2539, 128);
         pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(2541, 128);
+        let names = gen_pkg_names(2540, 128);
         pkg_hash_re(&names).unwrap_err();
 
         let names = gen_pkg_names(1274, 256);

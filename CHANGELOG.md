@@ -17,6 +17,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - cargo-llvm-cov no longer redirects output from stdout to stderr if unnecessary. ([#206](https://github.com/taiki-e/cargo-llvm-cov/pull/206))
 
+- Support shared `target` directory.
+
 - Improve compile time. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
 ## [0.4.14] - 2022-08-06
