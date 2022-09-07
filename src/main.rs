@@ -25,7 +25,7 @@ mod clean;
 mod cli;
 mod config;
 mod context;
-mod demangler;
+mod demangle;
 mod env;
 mod fs;
 mod regex_vec;
@@ -73,7 +73,7 @@ fn try_main() -> Result<()> {
 
     match args.subcommand {
         Subcommand::Demangle => {
-            demangler::run()?;
+            demangle::run()?;
         }
 
         Subcommand::Clean => {
