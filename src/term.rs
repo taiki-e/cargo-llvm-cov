@@ -45,13 +45,20 @@ impl FromStr for Coloring {
 }
 
 static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
-pub(crate) fn set_coloring(coloring: &mut Option<Coloring>) {
-    let mut color = coloring.unwrap_or(Coloring::Auto);
-    if color == Coloring::Auto && !atty::is(atty::Stream::Stderr) {
-        *coloring = Some(Coloring::Never);
-        color = Coloring::Never;
+// Errors during argument parsing are returned before set_coloring, so check atty first.
+pub(crate) fn init_coloring() {
+    if !atty::is(atty::Stream::Stderr) {
+        COLORING.store(Coloring::NEVER, Ordering::Relaxed);
     }
-    COLORING.store(color as _, Ordering::Relaxed);
+}
+pub(crate) fn set_coloring(color: &mut Option<Coloring>) {
+    let new = color.unwrap_or(Coloring::Auto);
+    if new == Coloring::Auto && coloring() == ColorChoice::Never {
+        // If coloring is already set to never by init_coloring, respect it.
+        *color = Some(Coloring::Never);
+    } else {
+        COLORING.store(new as _, Ordering::Relaxed);
+    }
 }
 fn coloring() -> ColorChoice {
     match COLORING.load(Ordering::Relaxed) {
@@ -69,6 +76,19 @@ macro_rules! global_flag {
             pub(super) static VALUE: $ty = $ty::new($($default)?);
             pub(crate) fn set(value: $value) {
                 VALUE.store(value, Ordering::Relaxed);
+            }
+            pub(crate) struct Guard {
+                prev: $value,
+            }
+            impl Drop for Guard {
+                fn drop(&mut self) {
+                    set(self.prev);
+                }
+            }
+            #[allow(dead_code)]
+            #[must_use]
+            pub(crate) fn ignore() -> Guard {
+                Guard { prev: VALUE.swap(false, Ordering::Relaxed) }
             }
         }
         pub(crate) fn $name() -> $value {

@@ -1,12 +1,8 @@
-cargo-llvm-cov-run
-Run a binary or example and generate coverage report
+cargo-llvm-cov-report
+Generate coverage report
 
 USAGE:
-    cargo llvm-cov run [OPTIONS] [-- <args>...]
-
-ARGS:
-    <args>...
-            Arguments for the binary
+    cargo llvm-cov report [OPTIONS]
 
 OPTIONS:
         --json
@@ -74,19 +70,6 @@ OPTIONS:
         --hide-instantiations
             Hide instantiations from report
 
-        --no-cfg-coverage
-            Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
-
-        --no-cfg-coverage-nightly
-            Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov
-            and nightly compiler
-
-        --no-report
-            Run tests, but don't generate coverage report
-
-        --no-clean
-            Build without cleaning any old build artifacts
-
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 
@@ -105,25 +88,29 @@ OPTIONS:
         --include-build-script
             Include build script in coverage report
 
-        --ignore-run-fail
-            Run all tests regardless of failure and generate report
+        --doctests
+            Including doc tests (unstable)
 
-            If tests failed but report generation succeeded, exit with a status of 0.
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
+            more.
 
     -q, --quiet
-            No output printed to stdout
-
-        --bin <NAME>
-            Name of the bin target to run
-
-        --example <NAME>
-            Name of the example target to run
-
-        --exclude-from-report <SPEC>
-            Exclude packages from the report
+            Display one character per test instead of one line
 
     -p, --package <SPEC>
-            Package with the target to run
+            Package to run tests for
+
+        --workspace
+            Test all packages in the workspace
+
+        --all
+            Alias for --workspace (deprecated)
+
+        --exclude <SPEC>
+            Exclude packages from both the test and report
+
+        --exclude-from-report <SPEC>
+            Exclude packages from the report (but not from the test)
 
     -j, --jobs <N>
             Number of parallel jobs, defaults to # of CPUs
@@ -175,12 +162,6 @@ OPTIONS:
             Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables must be set to
             Clang/LLVM compatible with the LLVM version used in rustc.
 
-        --keep-going
-            Do not abort the build as soon as there is an error (unstable)
-
-        --ignore-rust-version
-            Ignore `rust-version` specification in packages
-
         --manifest-path <PATH>
             Path to Cargo.toml
 
@@ -199,3 +180,16 @@ OPTIONS:
 
     -h, --help
             Print help information
+
+    -V, --version
+            Print version information
+
+SUBCOMMANDS:
+    run
+            Run a binary or example and generate coverage report
+    show-env
+            Output the environment set by cargo-llvm-cov to build Rust projects
+    clean
+            Remove artifacts that cargo-llvm-cov has generated in the past
+    nextest
+            Run tests with cargo nextest

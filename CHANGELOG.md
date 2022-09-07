@@ -11,13 +11,29 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 ## [Unreleased]
 
 - Fix various CLI-related bugs. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
-  In particular, `nextest`-specific options are now fully supported.
+
+  This fixes various bugs related to subcommands (especially `nextest`). The following is a partial list:
+  - Fix errors for `nextest`-specific options. ([#151](https://github.com/taiki-e/cargo-llvm-cov/issues/151), [#144](https://github.com/taiki-e/cargo-llvm-cov/pull/144#issuecomment-1072772281), [#213](https://github.com/taiki-e/cargo-llvm-cov/issues/213), etc.)
+  - Fix problems where some options were ignored in `cargo llvm-cov run` and `cargo llvm-cov nextest` subcommands. ([#151](https://github.com/taiki-e/cargo-llvm-cov/issues/151), [#144](https://github.com/taiki-e/cargo-llvm-cov/pull/144#issuecomment-1072750780), [#198](https://github.com/taiki-e/cargo-llvm-cov/issues/198#issuecomment-1193305155), etc.)
+  - Fix help messages for subcommands.
+
+- Add `cargo llvm-cov report` subcommand. This is almost same as `cargo llvm-cov --no-run`, but it has a more obvious name and better diagnostics.
+
+- Add `cargo llvm-cov test` subcommand. This is equivalent to `cargo llvm-cov` without subcommand, except that test name filtering is supported.
+
+- Deprecate `--no-run` in favor of `cargo llvm-cov report` subcommand.
 
 - Add `--no-clean` flag to build without cleaning any old build artifacts. See [#214](https://github.com/taiki-e/cargo-llvm-cov/pull/214) for more.
 
 - cargo-llvm-cov no longer redirects output from stdout to stderr if unnecessary. ([#206](https://github.com/taiki-e/cargo-llvm-cov/pull/206))
 
 - Support shared `target` directory.
+
+- Support `--keep-going` (unstable), `--ignore-rust-version`.
+
+- Support `--exclude-from-report` and `--ignore-run-fail` for `cargo llvm-cov run`.
+
+- Remove `cargo llvm-cov help` subcommand it was added automatically by clap. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
 - Improve compile time. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 

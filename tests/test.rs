@@ -11,6 +11,8 @@ use camino::Utf8Path;
 use fs_err as fs;
 use tempfile::tempdir;
 
+const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
+
 fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     vec![
         ("txt", &["--text"]),
@@ -165,18 +167,18 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
         let workspace_root = test_project(model).unwrap();
         let output_path = &output_dir.join(model).with_extension(extension);
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
-        cargo_llvm_cov()
+        cargo_llvm_cov("")
             .args(["--color", "never", "--no-report", "--features", "a"])
             .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
-        cargo_llvm_cov()
+        cargo_llvm_cov("")
             .args(["--color", "never", "--no-report", "--features", "b"])
             .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
-        let mut cmd = cargo_llvm_cov();
-        cmd.args(["--color", "never", "--no-run", "--output-path"])
+        let mut cmd = cargo_llvm_cov("report");
+        cmd.args(["--color", "never", "--output-path"])
             .arg(output_path)
             .arg("--remap-path-prefix")
             .args(args)
@@ -206,13 +208,13 @@ fn clean_ws() {
         let workspace_root = test_project(model).unwrap();
         let output_path = &output_dir.join(name).with_extension(extension);
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
-        cargo_llvm_cov()
+        cargo_llvm_cov("")
             .args(["--color", "never", "--no-report", "--features", "a"])
             .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
-        cargo_llvm_cov()
-            .args(["--color", "never", "--no-run", "--output-path"])
+        cargo_llvm_cov("report")
+            .args(["--color", "never", "--output-path"])
             .arg(output_path)
             .arg("--remap-path-prefix")
             .args(args)
@@ -222,17 +224,17 @@ fn clean_ws() {
         normalize_output(output_path, args).unwrap();
         assert_output(output_path, expected).unwrap();
 
-        cargo_llvm_cov()
+        cargo_llvm_cov("")
             .args(["clean", "--color", "never", "--workspace"])
             .current_dir(workspace_root.path())
             .assert_success();
-        cargo_llvm_cov()
+        cargo_llvm_cov("")
             .args(["--color", "never", "--no-report", "--features", "a"])
             .arg("--remap-path-prefix")
             .current_dir(workspace_root.path())
             .assert_success();
-        cargo_llvm_cov()
-            .args(["--color", "never", "--no-run", "--output-path"])
+        cargo_llvm_cov("report")
+            .args(["--color", "never", "--output-path"])
             .arg(output_path)
             .arg("--remap-path-prefix")
             .args(args)
@@ -249,7 +251,7 @@ fn clean_ws() {
 fn open_report() {
     let model = "real1";
     let workspace_root = test_project(model).unwrap();
-    cargo_llvm_cov()
+    cargo_llvm_cov("")
         .args(["--color", "never", "--open"])
         .current_dir(workspace_root.path())
         .env("BROWSER", "echo")
@@ -261,32 +263,133 @@ fn open_report() {
 
 #[test]
 fn show_env() {
-    cargo_llvm_cov().args(["show-env"]).assert_success().stdout_not_contains("export");
-    cargo_llvm_cov()
-        .args(["show-env", "--export-prefix"])
-        .assert_success()
-        .stdout_contains("export");
+    cargo_llvm_cov("show-env").assert_success().stdout_not_contains("export");
+    cargo_llvm_cov("show-env").arg("--export-prefix").assert_success().stdout_contains("export");
 }
 
+#[allow(clippy::single_element_loop)]
 #[test]
-fn help() {
+fn invalid_arg() {
     for subcommand in ["", "run", "clean", "show-env", "nextest"] {
-        if subcommand.is_empty() {
-            cargo_llvm_cov().arg("--help").assert_success().stdout_contains("cargo llvm-cov");
-        } else {
-            cargo_llvm_cov()
-                .arg(subcommand)
-                .arg("--help")
-                .assert_success()
-                .stdout_contains(&format!("cargo llvm-cov {subcommand}"));
+        if subcommand != "show-env" {
+            cargo_llvm_cov(subcommand)
+                .arg("--export-prefix")
+                .assert_failure()
+                .stderr_contains("invalid option '--export-prefix'");
+        }
+        if !subcommand.is_empty() {
+            if subcommand == "nextest" {
+                cargo_llvm_cov(subcommand)
+                    .arg("--doc")
+                    .assert_failure()
+                    .stderr_contains("doctest is not supported for nextest");
+                cargo_llvm_cov(subcommand)
+                    .arg("--doctests")
+                    .assert_failure()
+                    .stderr_contains("doctest is not supported for nextest");
+            } else {
+                cargo_llvm_cov(subcommand)
+                    .arg("--doc")
+                    .assert_failure()
+                    .stderr_contains("invalid option '--doc'");
+                cargo_llvm_cov(subcommand)
+                    .arg("--doctests")
+                    .assert_failure()
+                    .stderr_contains("invalid option '--doctests'");
+            }
+        }
+        if !matches!(subcommand, "" | "nextest") {
+            for arg in [
+                "--lib",
+                "--bins",
+                "--examples",
+                "--test=v",
+                "--tests",
+                "--bench=v",
+                "--benches",
+                "--all-targets",
+                "--no-run",
+                "--no-fail-fast",
+                "--exclude=v",
+                "--exclude-from-test=v",
+            ] {
+                cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
+                    "invalid option '{}' for subcommand '{subcommand}'",
+                    arg.strip_suffix("=v").unwrap_or(arg)
+                ));
+            }
+        }
+        if !matches!(subcommand, "" | "nextest" | "run") {
+            for arg in [
+                "--bin=v",
+                "--example=v",
+                "--exclude-from-report=v",
+                "--no-cfg-coverage",
+                "--no-cfg-coverage-nightly",
+                "--no-report",
+                "--no-clean",
+                "--ignore-run-fail",
+            ] {
+                cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
+                    "invalid option '{}' for subcommand '{subcommand}'",
+                    arg.strip_suffix("=v").unwrap_or(arg)
+                ));
+            }
+        }
+        if !matches!(subcommand, "" | "nextest" | "clean") {
+            for arg in ["--workspace"] {
+                cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
+                    "invalid option '{}' for subcommand '{subcommand}'",
+                    arg.strip_suffix("=v").unwrap_or(arg)
+                ));
+            }
         }
     }
 }
 
 #[test]
+fn invalid_arg_no_passthrough() {
+    // These subcommands don't allow passthrough args.
+    // In other subcommands, if passthrough args are invalid,
+    // it will be detected by cargo or cargo-nextest.
+    for subcommand in ["report", "clean", "show-env"] {
+        cargo_llvm_cov(subcommand)
+            .arg("-a")
+            .assert_failure()
+            .stderr_contains(format!("invalid option '-a' for subcommand '{subcommand}'"));
+        cargo_llvm_cov(subcommand)
+            .arg("--b")
+            .assert_failure()
+            .stderr_contains(format!("invalid option '--b' for subcommand '{subcommand}'"));
+        cargo_llvm_cov(subcommand)
+            .arg("c")
+            .assert_failure()
+            .stderr_contains("unexpected argument \"c\"");
+    }
+}
+
+#[test]
+fn help() {
+    for &subcommand in SUBCOMMANDS {
+        cargo_llvm_cov(subcommand)
+            .arg("--help")
+            .assert_success()
+            .stdout_contains(format!("cargo llvm-cov {subcommand}"));
+    }
+}
+
+#[test]
 fn version() {
-    cargo_llvm_cov().arg("--version").assert_success().stdout_contains(env!("CARGO_PKG_VERSION"));
-    cargo_llvm_cov().args(["clean", "--version"]).assert_failure().stderr_contains(
-        "found argument '--version' which wasn't expected, or isn't valid in this context",
-    );
+    for &subcommand in SUBCOMMANDS {
+        if subcommand.is_empty() {
+            cargo_llvm_cov(subcommand)
+                .arg("--version")
+                .assert_success()
+                .stdout_contains(env!("CARGO_PKG_VERSION"));
+        } else {
+            cargo_llvm_cov(subcommand).arg("--version").assert_failure().stderr_contains(format!(
+                "invalid option '--version' for subcommand '{subcommand}'"
+            ));
+        }
+    }
 }

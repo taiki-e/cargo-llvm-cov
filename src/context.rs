@@ -6,7 +6,7 @@ use cargo_metadata::PackageId;
 
 use crate::{
     cargo::Workspace,
-    cli::{BuildOptions, LlvmCovOptions, ManifestOptions},
+    cli::{Args, Subcommand},
     env,
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
@@ -16,10 +16,7 @@ use crate::{
 pub(crate) struct Context {
     pub(crate) ws: Workspace,
 
-    pub(crate) build: BuildOptions,
-    pub(crate) cov: LlvmCovOptions,
-
-    pub(crate) doctests: bool,
+    pub(crate) args: Args,
 
     pub(crate) workspace_members: WorkspaceMembers,
     pub(crate) build_script_re: RegexVec,
@@ -41,39 +38,38 @@ pub(crate) struct Context {
 }
 
 impl Context {
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        mut build: BuildOptions,
-        manifest: &ManifestOptions,
-        mut cov: LlvmCovOptions,
-        exclude: &[String],
-        exclude_from_report: &[String],
-        doctests: bool,
-        show_env: bool,
-    ) -> Result<Self> {
-        let ws = Workspace::new(manifest, build.target.as_deref(), doctests, show_env)?;
-        ws.config.merge_to_args(&mut build.target, &mut build.verbose, &mut build.color);
-        term::set_coloring(&mut build.color);
-        term::verbose::set(build.verbose != 0);
+    pub(crate) fn new(mut args: Args) -> Result<Self> {
+        let show_env = args.subcommand == Subcommand::ShowEnv;
+        let ws = Workspace::new(&args.manifest, args.target.as_deref(), args.doctests, show_env)?;
+        ws.config.merge_to_args(&mut args.target, &mut args.verbose, &mut args.color);
+        term::set_coloring(&mut args.color);
+        term::verbose::set(args.verbose != 0);
 
-        cov.html |= cov.open;
-        if cov.output_dir.is_some() && !cov.show() {
+        args.cov.html |= args.cov.open;
+        if args.cov.output_dir.is_some() && !args.cov.show() {
             // If the format flag is not specified, this flag is no-op.
-            cov.output_dir = None;
+            args.cov.output_dir = None;
         }
-        let tmp = term::warn(); // The following warnings should not be promoted to an error.
-        if cov.disable_default_ignore_filename_regex {
-            warn!("--disable-default-ignore-filename-regex option is unstable");
+        {
+            // The following warnings should not be promoted to an error.
+            let _guard = term::warn::ignore();
+            if args.cov.disable_default_ignore_filename_regex {
+                warn!("--disable-default-ignore-filename-regex option is unstable");
+            }
+            if args.doc {
+                warn!("--doc option is unstable");
+            } else if args.doctests {
+                warn!("--doctests option is unstable");
+            }
         }
-        term::warn::set(tmp);
-        if build.target.is_some() {
+        if args.target.is_some() {
             info!(
                 "when --target option is used, coverage for proc-macro and build script will \
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
-        if cov.output_dir.is_none() && cov.html {
-            cov.output_dir = Some(ws.output_dir.clone());
+        if args.cov.output_dir.is_none() && args.cov.html {
+            args.cov.output_dir = Some(ws.output_dir.clone());
         }
 
         // target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
@@ -121,7 +117,8 @@ impl Context {
             }
         };
 
-        let workspace_members = WorkspaceMembers::new(exclude, exclude_from_report, &ws.metadata);
+        let workspace_members =
+            WorkspaceMembers::new(&args.exclude, &args.exclude_from_report, &ws.metadata);
         if workspace_members.included.is_empty() {
             bail!("no crates to be measured for coverage");
         }
@@ -130,9 +127,7 @@ impl Context {
 
         Ok(Self {
             ws,
-            build,
-            cov,
-            doctests,
+            args,
             workspace_members,
             build_script_re,
             current_dir: env::current_dir().unwrap(),
@@ -154,14 +149,14 @@ impl Context {
     pub(crate) fn process(&self, program: impl Into<OsString>) -> ProcessBuilder {
         let mut cmd = cmd!(program);
         // cargo displays env vars only with -vv.
-        if self.build.verbose > 1 {
+        if self.args.verbose > 1 {
             cmd.display_env_vars();
         }
         cmd
     }
 
     pub(crate) fn cargo(&self) -> ProcessBuilder {
-        self.ws.cargo(self.build.verbose)
+        self.ws.cargo(self.args.verbose)
     }
 }
 

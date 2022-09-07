@@ -45,13 +45,11 @@ $ cargo llvm-cov --help
 cargo-llvm-cov
 Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
 
-Use -h for short descriptions and --help for more details.
-
 USAGE:
-    cargo llvm-cov [OPTIONS] [-- <ARGS>...] [SUBCOMMAND]
+    cargo llvm-cov [SUBCOMMAND] [OPTIONS] [-- <args>...]
 
 ARGS:
-    <ARGS>...
+    <args>...
             Arguments for the test binary
 
 OPTIONS:
@@ -213,7 +211,8 @@ OPTIONS:
         --workspace
             Test all packages in the workspace
 
-            [aliases: all]
+        --all
+            Alias for --workspace (deprecated)
 
         --exclude <SPEC>
             Exclude packages from both the test and report
@@ -261,9 +260,7 @@ OPTIONS:
             Use -vv (-vvv) to propagate verbosity to cargo.
 
         --color <WHEN>
-            Coloring
-
-            [possible values: auto, always, never]
+            Coloring: auto, always, never
 
         --remap-path-prefix
             Use --remap-path-prefix for workspace root
@@ -275,6 +272,12 @@ OPTIONS:
 
             Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables must be set to
             Clang/LLVM compatible with the LLVM version used in rustc.
+
+        --keep-going
+            Do not abort the build as soon as there is an error (unstable)
+
+        --ignore-rust-version
+            Ignore `rust-version` specification in packages
 
         --manifest-path <PATH>
             Path to Cargo.toml
@@ -289,7 +292,8 @@ OPTIONS:
             Run without accessing the network
 
     -Z <FLAG>
-            Unstable (nightly-only) flags to Cargo
+            Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
+            details
 
     -h, --help
             Print help information
@@ -298,8 +302,14 @@ OPTIONS:
             Print version information
 
 SUBCOMMANDS:
+    test
+            Run tests and generate coverage report
+            This is equivalent to `cargo llvm-cov` without subcommand,
+            except that test name filtering is supported.
     run
             Run a binary or example and generate coverage report
+    report
+            Generate coverage report
     show-env
             Output the environment set by cargo-llvm-cov to build Rust projects
     clean
@@ -354,14 +364,14 @@ With lcov report (if `--output-path` is not specified, the report will be printe
 cargo llvm-cov --lcov --output-path lcov.info
 ```
 
-You can get a coverage report in a different format based on the results of a previous run by using `--no-run`.
+You can get a coverage report in a different format based on the results of a previous run by using `cargo llvm-cov report`.
 
 ```sh
 cargo llvm-cov --html          # run tests and generate html report
-cargo llvm-cov --no-run --lcov # generate lcov report
+cargo llvm-cov report --lcov # generate lcov report
 ```
 
-cargo-llvm-cov cleans some build artifacts by default to avoid false positives/false negatives due to old build artifacts.
+`cargo llvm-cov`/`cargo llvm-cov run`/`cargo llvm-cov nextest` cleans some build artifacts by default to avoid false positives/false negatives due to old build artifacts.
 This behavior is disabled when `--no-clean`, `--no-report`, or `--no-run` is passed, and old build artifacts are retained.
 When using these flags, it is recommended to first run `cargo llvm-cov clean --workspace` to remove artifacts that may affect the coverage results.
 
@@ -372,13 +382,13 @@ cargo llvm-cov --no-clean
 
 ### Merge coverages generated under different test conditions
 
-You can merge the coverages generated under different test conditions by using `--no-report` and `--no-run`.
+You can merge the coverages generated under different test conditions by using `--no-report` and `cargo llvm-cov report`.
 
 ```sh
 cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
 cargo llvm-cov --no-report --features a
 cargo llvm-cov --no-report --features b
-cargo llvm-cov --no-run --lcov # generate report without tests
+cargo llvm-cov report --lcov # generate report without tests
 ```
 
 ### Get coverage of C/C++ code linked to Rust library/binary
@@ -399,11 +409,14 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 ```sh
 source <(cargo llvm-cov show-env --export-prefix) # Set the environment variables needed to get coverage.
-cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
-cargo build # build rust binaries
-# commands using binaries in target/debug/*, including `cargo test` and other cargo subcommands
+cargo llvm-cov clean --workspace # Remove artifacts that may affect the coverage results.
+# Above two commands should be called before build binaries.
+
+cargo build # Build rust binaries.
+# Commands using binaries in target/debug/*, including `cargo test` and other cargo subcommands.
 # ...
-cargo llvm-cov --no-run --lcov # generate report without tests
+
+cargo llvm-cov report --lcov # Generate report without tests.
 ```
 
 ### Exclude file from coverage
