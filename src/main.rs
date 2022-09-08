@@ -210,10 +210,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
 
     match (cx.args.coverage_target_only, &cx.args.target) {
         (true, Some(coverage_target)) => env.set(
-            &format!(
-                "CARGO_TARGET_{}_RUSTFLAGS",
-                coverage_target.to_uppercase().replace(['-', '.'], "_")
-            ),
+            &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
             rustflags,
         )?,
         _ => env.set("RUSTFLAGS", rustflags)?,
@@ -225,8 +222,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
     if cx.args.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
-        let target_u =
-            cx.args.target.as_ref().unwrap_or(&cx.ws.host_triple).replace(['-', '.'], "_");
+        let target_u = target_u_lower(cx.args.target.as_ref().unwrap_or(&cx.ws.host_triple));
         let cflags_key = &format!("CFLAGS_{target_u}");
         // Use std::env instead of crate::env to match cc-rs's behavior.
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740
@@ -1000,6 +996,15 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         }) {}
     }
     excluded_path
+}
+
+fn target_u_lower(target: &str) -> String {
+    target.replace(['-', '.'], "_")
+}
+fn target_u_upper(target: &str) -> String {
+    let mut target = target_u_lower(target);
+    target.make_ascii_uppercase();
+    target
 }
 
 /// Make the path relative if it's a descendent of the current working dir, otherwise just return

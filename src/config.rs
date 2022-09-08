@@ -6,7 +6,7 @@ use std::{borrow::Cow, collections::BTreeMap, ffi::OsStr};
 use anyhow::{Context as _, Result};
 use serde::Deserialize;
 
-use crate::{env, term::Coloring};
+use crate::{env, target_u_upper, term::Coloring};
 
 // Note: We don't need to get configuration values like net.offline here,
 // because those are configuration that need to be applied only to cargo,
@@ -111,10 +111,9 @@ impl Config {
                     }
                 }
             }
-            if let Some(rustflags) = env::var(&format!(
-                "CARGO_TARGET_{}_RUSTFLAGS",
-                target.to_uppercase().replace(['-', '.'], "_")
-            ))? {
+            if let Some(rustflags) =
+                env::var(&format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(target)))?
+            {
                 let target_rustflags = target_rustflags.get_or_insert_with(String::new);
                 if !target_rustflags.is_empty() {
                     target_rustflags.push(' ');
