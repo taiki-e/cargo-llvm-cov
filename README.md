@@ -466,7 +466,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust
-        run: rustup toolchain install stable --component llvm-tools-preview
+        run: rustup update stable
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
@@ -485,12 +485,6 @@ jobs:
 
 <!-- omit in toc -->
 ### Prerequisites
-
-cargo-llvm-cov requires llvm-tools-preview:
-
-```sh
-rustup component add llvm-tools-preview
-```
 
 Running cargo-llvm-cov requires rustc 1.60+.
 
