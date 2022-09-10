@@ -50,6 +50,8 @@ impl ProcessBuilder {
             display_env_vars: Cell::new(false),
         };
         this.env("CARGO_INCREMENTAL", "0");
+        this.env_remove("LLVM_COV_FLAGS");
+        this.env_remove("LLVM_PROFDATA_FLAGS");
         this
     }
 
@@ -74,11 +76,11 @@ impl ProcessBuilder {
         self
     }
 
-    // /// Remove a variable from the process's environment.
-    // pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
-    //     self.env.insert(key.into(), None);
-    //     self
-    // }
+    /// Remove a variable from the process's environment.
+    pub(crate) fn env_remove(&mut self, key: impl Into<String>) -> &mut Self {
+        self.env.insert(key.into(), None);
+        self
+    }
 
     /// Set the working directory where the process will execute.
     pub(crate) fn dir(&mut self, path: impl Into<PathBuf>) -> &mut Self {

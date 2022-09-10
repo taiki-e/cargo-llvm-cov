@@ -20,28 +20,36 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   See [#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219) for more.
 
-- Fix various CLI-related bugs. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
+- Fix various CLI-related bugs. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197), [#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217))
 
   This fixes various bugs related to subcommands (especially `nextest`). The following is a partial list:
   - Fix errors for `nextest`-specific options. ([#151](https://github.com/taiki-e/cargo-llvm-cov/issues/151), [#144](https://github.com/taiki-e/cargo-llvm-cov/pull/144#issuecomment-1072772281), [#213](https://github.com/taiki-e/cargo-llvm-cov/issues/213), etc.)
   - Fix problems where some options were ignored in `cargo llvm-cov run` and `cargo llvm-cov nextest` subcommands. ([#151](https://github.com/taiki-e/cargo-llvm-cov/issues/151), [#144](https://github.com/taiki-e/cargo-llvm-cov/pull/144#issuecomment-1072750780), [#198](https://github.com/taiki-e/cargo-llvm-cov/issues/198#issuecomment-1193305155), etc.)
   - Fix help messages for subcommands.
 
-- Add `cargo llvm-cov report` subcommand. This is almost same as `cargo llvm-cov --no-run`, but it has a more obvious name and better diagnostics.
+- Add `cargo llvm-cov report` subcommand. ([#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217)) This is equivalent to `cargo llvm-cov --no-run`, but it has a more obvious name and better diagnostics.
 
-- Add `cargo llvm-cov test` subcommand. This is equivalent to `cargo llvm-cov` without subcommand, except that test name filtering is supported.
+- Add `cargo llvm-cov test` subcommand. ([#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217)) This is equivalent to `cargo llvm-cov` without subcommand, except that test name filtering is supported.
 
-- Deprecate `--no-run` in favor of `cargo llvm-cov report` subcommand.
+- Deprecate `--no-run` in favor of `cargo llvm-cov report` subcommand. ([#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217))
 
 - Add `--no-clean` flag to build without cleaning any old build artifacts. See [#214](https://github.com/taiki-e/cargo-llvm-cov/pull/214) for more.
 
 - cargo-llvm-cov no longer redirects output from stdout to stderr if unnecessary. ([#206](https://github.com/taiki-e/cargo-llvm-cov/pull/206))
 
-- Support shared `target` directory.
+- Support shared `target` directory. ([#215](https://github.com/taiki-e/cargo-llvm-cov/pull/215))
 
-- Support `--keep-going` (unstable), `--ignore-rust-version`.
+- Support `--keep-going` (unstable), `--ignore-rust-version`. ([#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217))
 
-- Support `--exclude-from-report` and `--ignore-run-fail` for `cargo llvm-cov run`.
+- Support `--exclude-from-report` and `--ignore-run-fail` for `cargo llvm-cov run`. ([#217](https://github.com/taiki-e/cargo-llvm-cov/pull/217))
+
+- Support relative path in `CARGO_LLVM_COV_TARGET_DIR`. ([#220](https://github.com/taiki-e/cargo-llvm-cov/pull/220))
+
+- Add `LLVM_COV_FLAGS`/`LLVM_PROFDATA_FLAGS` environment variables to pass additional flags to llvm-cov/llvm-profdata in a space-separated list. ([#220](https://github.com/taiki-e/cargo-llvm-cov/pull/220))
+
+- Deprecate `CARGO_LLVM_COV_FLAGS`/`CARGO_LLVM_PROFDATA_FLAGS` environment variables instead of `LLVM_COV_FLAGS`/`LLVM_PROFDATA_FLAGS` environment variables. ([#220](https://github.com/taiki-e/cargo-llvm-cov/pull/220))
+
+- Document environment variables that cargo-llvm-cov reads. ([#220](https://github.com/taiki-e/cargo-llvm-cov/pull/220))
 
 - Remove `cargo llvm-cov help` subcommand it was added automatically by clap. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
