@@ -1,4 +1,5 @@
 use std::{
+    convert::TryInto,
     ffi::OsStr,
     path::{Path, PathBuf},
 };
@@ -76,20 +77,18 @@ impl Workspace {
             );
         }
 
-        let target_dir = if let Some(path) =
-            env::var("CARGO_LLVM_COV_TARGET_DIR")?.map(Utf8PathBuf::from)
-        {
-            if path.is_relative() {
-                warn!("CARGO_LLVM_COV_TARGET_DIR with relative path may not work properly; consider using absolute path");
-            }
-            path
-        } else if show_env {
-            metadata.target_directory.clone()
-        } else {
-            // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
-            // use a subdirectory of the target directory as the actual target directory.
-            metadata.target_directory.join("llvm-cov-target")
-        };
+        let target_dir =
+            if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")?.map(Utf8PathBuf::from) {
+                let mut base: Utf8PathBuf = env::current_dir()?.try_into()?;
+                base.push(path);
+                base
+            } else if show_env {
+                metadata.target_directory.clone()
+            } else {
+                // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
+                // use a subdirectory of the target directory as the actual target directory.
+                metadata.target_directory.join("llvm-cov-target")
+            };
         let output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 

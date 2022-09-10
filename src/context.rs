@@ -33,12 +33,12 @@ pub(crate) struct Context {
     // Path to llvm-profdata, can be overridden with `LLVM_PROFDATA` environment variable.
     pub(crate) llvm_profdata: PathBuf,
 
-    /// `CARGO_LLVM_COV_FLAGS` environment variable to pass additional flags
-    /// to llvm-cov. (value: space-separated list)
-    pub(crate) cargo_llvm_cov_flags: Option<String>,
-    /// `CARGO_LLVM_PROFDATA_FLAGS` environment variable to pass additional flags
-    /// to llvm-profdata. (value: space-separated list)
-    pub(crate) cargo_llvm_profdata_flags: Option<String>,
+    /// `LLVM_COV_FLAGS` environment variable to pass additional flags to llvm-cov.
+    /// (value: space-separated list)
+    pub(crate) llvm_cov_flags: Option<String>,
+    /// `LLVM_PROFDATA_FLAGS` environment variable to pass additional flags to llvm-profdata.
+    /// (value: space-separated list)
+    pub(crate) llvm_profdata_flags: Option<String>,
 }
 
 impl Context {
@@ -156,6 +156,21 @@ impl Context {
 
         let build_script_re = pkg_hash_re(&ws, &workspace_members.included);
 
+        let mut llvm_cov_flags = env::var("LLVM_COV_FLAGS")?;
+        if llvm_cov_flags.is_none() {
+            llvm_cov_flags = env::var("CARGO_LLVM_COV_FLAGS")?;
+            if llvm_cov_flags.is_some() {
+                warn!("CARGO_LLVM_COV_FLAGS is deprecated; consider using LLVM_COV_FLAGS instead");
+            }
+        }
+        let mut llvm_profdata_flags = env::var("LLVM_PROFDATA_FLAGS")?;
+        if llvm_profdata_flags.is_none() {
+            llvm_profdata_flags = env::var("CARGO_LLVM_PROFDATA_FLAGS")?;
+            if llvm_profdata_flags.is_some() {
+                warn!("CARGO_LLVM_PROFDATA_FLAGS is deprecated; consider using LLVM_PROFDATA_FLAGS instead");
+            }
+        }
+
         Ok(Self {
             ws,
             args,
@@ -172,8 +187,8 @@ impl Context {
             },
             llvm_cov,
             llvm_profdata,
-            cargo_llvm_cov_flags: env::var("CARGO_LLVM_COV_FLAGS")?,
-            cargo_llvm_profdata_flags: env::var("CARGO_LLVM_PROFDATA_FLAGS")?,
+            llvm_cov_flags,
+            llvm_profdata_flags,
         })
     }
 

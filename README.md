@@ -25,6 +25,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
+  - [Environment variables](#environment-variables)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [Related Projects](#related-projects)
@@ -481,6 +482,19 @@ jobs:
 
 **Note:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
 
+### Environment variables
+
+You can override these environment variables to change cargo-llvm-cov's behavior on your system:
+
+- `CARGO_LLVM_COV_TARGET_DIR` -- Location of where to place all generated artifacts, relative to the current working directory. Default to `<cargo_target_dir>/llvm-cov-target`.
+- `CARGO_LLVM_COV_SETUP` -- Control behavior if `llvm-tools-preview` component is not installed. See [#219] for more.
+- `LLVM_COV` -- Override the path to `llvm-cov`. You may need to specify both this and `LLVM_PROFDATA` environment variables if you are using [`--include-ffi` flag](#get-coverage-of-cc-code-linked-to-rust-librarybinary) or if you are using a toolchain installed without via rustup.
+- `LLVM_PROFDATA` -- Override the path to `llvm-profdata`. See `LLVM_COV` environment variable for more.
+- `LLVM_COV_FLAGS` -- A space-separated list of additional flags to pass to all `llvm-cov` invocations that cargo-llvm-cov performs. See [LLVM documentation](https://llvm.org/docs/CommandGuide/llvm-cov.html) for available options.
+- `LLVM_PROFDATA_FLAGS` -- A space-separated list of additional flags to pass to all `llvm-profdata` invocations that cargo-llvm-cov performs. See [LLVM documentation](https://llvm.org/docs/CommandGuide/llvm-profdata.html) for available options.
+
+See also [environment variables that Cargo reads](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads). cargo-llvm-cov respects many of them.
+
 ## Installation
 
 <!-- omit in toc -->
@@ -590,6 +604,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
 [#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
+[#219]: https://github.com/taiki-e/cargo-llvm-cov/issues/219
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io

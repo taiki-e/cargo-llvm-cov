@@ -505,7 +505,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     if let Some(mode) = &cx.args.cov.failure_mode {
         cmd.arg(format!("-failure-mode={mode}"));
     }
-    if let Some(flags) = &cx.cargo_llvm_profdata_flags {
+    if let Some(flags) = &cx.llvm_profdata_flags {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
     if term::verbose() {
@@ -786,7 +786,7 @@ impl Format {
             Self::None => {}
         }
 
-        if let Some(flags) = &cx.cargo_llvm_cov_flags {
+        if let Some(flags) = &cx.llvm_cov_flags {
             cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
         }
 
