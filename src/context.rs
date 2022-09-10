@@ -118,21 +118,9 @@ impl Context {
                             "--toolchain",
                             toolchain
                         );
-                        match env::var_os("CARGO_LLVM_COV_SETUP") {
-                            None => {
-                                ask_to_run(
-                                    &mut cmd,
-                                    true,
-                                    "install the `llvm-tools-preview` component for the selected toolchain",
-                                )?;
-                            }
-                            Some(ref v) if v == "yes" => {
-                                ask_to_run(
-                                    &mut cmd,
-                                    false,
-                                    "install the `llvm-tools-preview` component for the selected toolchain",
-                                )?;
-                            }
+                        let ask = match env::var_os("CARGO_LLVM_COV_SETUP") {
+                            None => true,
+                            Some(ref v) if v == "yes" => false,
                             Some(v) => {
                                 if v != "no" {
                                     warn!(
@@ -144,7 +132,12 @@ impl Context {
                                      with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
                                 );
                             }
-                        }
+                        };
+                        ask_to_run(
+                            &mut cmd,
+                            ask,
+                            "install the `llvm-tools-preview` component for the selected toolchain",
+                        )?;
                     } else {
                         bail!(
                             "failed to find llvm-tools-preview, please install llvm-tools-preview, or set LLVM_COV and LLVM_PROFDATA environment variables",
