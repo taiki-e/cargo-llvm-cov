@@ -78,9 +78,9 @@ pub(crate) struct Args {
     /// Exclude packages from the report (but not from the test)
     pub(crate) exclude_from_report: Vec<String>,
 
-    /// Number of parallel jobs, defaults to # of CPUs
-    // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
-    pub(crate) jobs: Option<u32>,
+    // /// Number of parallel jobs, defaults to # of CPUs
+    // // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
+    // pub(crate) jobs: Option<u32>,
     /// Build artifacts in release mode, with optimizations
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
@@ -227,7 +227,6 @@ impl Args {
         let mut include_build_script = false;
 
         // build options
-        let mut jobs = None;
         let mut release = false;
         let mut profile = None;
         let mut target = None;
@@ -352,7 +351,6 @@ impl Args {
                 Long("exclude-from-report") => parse_opt!(exclude_from_report),
 
                 // build options
-                Short('j') | Long("jobs") => parse_opt_passthrough!(jobs),
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
                 Long("profile") => parse_opt_passthrough!(profile),
                 Long("target") => parse_opt_passthrough!(target),
@@ -412,7 +410,7 @@ impl Args {
                 Short('Z') => {
                     parse_opt_passthrough!(());
                 }
-                Short('F') | Long("features")
+                Short('F' | 'j') | Long("features" | "jobs")
                     if matches!(
                         subcommand,
                         Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest
@@ -764,7 +762,6 @@ impl Args {
             exclude,
             exclude_from_test,
             exclude_from_report,
-            jobs,
             release,
             profile,
             target,

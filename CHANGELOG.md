@@ -45,6 +45,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - Remove `cargo llvm-cov help` subcommand it was added automatically by clap. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
+- cargo-llvm-cov no longer maps the `--jobs` (`-j`) option to llvm-cov/llvm-profdata's `-num-threads` option.
+
+  This is to avoid confusion when using the `-j` option with `nextest`, which uses the `-j` option in a different sense than cargo.
+
 - Improve compile time. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
 - Diagnostics improvements.

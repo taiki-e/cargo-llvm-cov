@@ -505,9 +505,6 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     if let Some(mode) = &cx.args.cov.failure_mode {
         cmd.arg(format!("-failure-mode={mode}"));
     }
-    if let Some(jobs) = cx.args.jobs {
-        cmd.arg(format!("-num-threads={jobs}"));
-    }
     if let Some(flags) = &cx.cargo_llvm_profdata_flags {
         cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
     }
@@ -758,9 +755,6 @@ impl Format {
         cmd.args(self.use_color(cx));
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
-        if let Some(jobs) = cx.args.jobs {
-            cmd.arg(format!("-num-threads={jobs}"));
-        }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
@@ -840,9 +834,6 @@ impl Format {
         cmd.args(self.llvm_cov_args());
         cmd.arg(format!("-instr-profile={}", cx.ws.profdata_file));
         cmd.args(object_files.iter().flat_map(|f| [OsStr::new("-object"), f]));
-        if let Some(jobs) = cx.args.jobs {
-            cmd.arg(format!("-num-threads={jobs}"));
-        }
         if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
