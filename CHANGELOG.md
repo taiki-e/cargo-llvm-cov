@@ -16,8 +16,6 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   **TL;DR:** You no longer need to install `llvm-tools-preview` before running cargo-llvm-cov in most cases.
 
-  Previously, cargo-llvm-cov exit with error suggesting the installation of `llvm-tools-preview`.
-
   The new logic is based on the logic used by Miri when `rust-src` component or `xargo` is not installed.
 
   See [#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219) for more.
@@ -53,7 +51,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - Document environment variables that cargo-llvm-cov reads. ([#220](https://github.com/taiki-e/cargo-llvm-cov/pull/220))
 
-- Remove `cargo llvm-cov help` subcommand it was added automatically by clap. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
+- Remove `cargo llvm-cov help` subcommand that was added automatically by clap. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
 - cargo-llvm-cov no longer maps the `--jobs` (`-j`) option to llvm-cov/llvm-profdata's `-num-threads` option.
 
