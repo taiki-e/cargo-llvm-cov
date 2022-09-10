@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.0] - 2022-09-10
+
 - Improve handling of cases where `llvm-tools-preview` component is not installed. ([#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219))
 
   **TL;DR:** You no longer need to install `llvm-tools-preview` before running cargo-llvm-cov in most cases.
@@ -390,7 +392,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...v0.5.0
 [0.4.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...v0.4.14
 [0.4.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.12...v0.4.13
 [0.4.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.11...v0.4.12
