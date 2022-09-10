@@ -10,6 +10,16 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve handling of cases where `llvm-tools-preview` component is not installed. ([#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219))
+
+  **TL;DR:** You no longer need to install `llvm-tools-preview` before running cargo-llvm-cov in most cases.
+
+  Previously, cargo-llvm-cov exit with error suggesting the installation of `llvm-tools-preview`.
+
+  The new logic is based on the logic used by Miri when `rust-src` component or `xargo` is not installed.
+
+  See [#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219) for more.
+
 - Fix various CLI-related bugs. ([#197](https://github.com/taiki-e/cargo-llvm-cov/pull/197))
 
   This fixes various bugs related to subcommands (especially `nextest`). The following is a partial list:

@@ -1,4 +1,8 @@
-use std::{ffi::OsString, path::PathBuf};
+use std::{
+    ffi::OsString,
+    io::{self, Write},
+    path::PathBuf,
+};
 
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
@@ -79,41 +83,75 @@ impl Context {
         let mut rustlib: Utf8PathBuf = ws.rustc_print("target-libdir")?.into();
         rustlib.pop(); // lib
         rustlib.push("bin");
-        let llvm_cov: PathBuf = match env::var_os("LLVM_COV") {
-            Some(llvm_cov) => llvm_cov.into(),
-            None => {
-                let llvm_cov = rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX));
+        let (llvm_cov, llvm_profdata): (PathBuf, PathBuf) = match (
+            env::var_os("LLVM_COV").map(PathBuf::from),
+            env::var_os("LLVM_PROFDATA").map(PathBuf::from),
+        ) {
+            (Some(llvm_cov), Some(llvm_profdata)) => (llvm_cov, llvm_profdata),
+            (llvm_cov_env, llvm_profdata_env) => {
+                if llvm_cov_env.is_some() {
+                    warn!("setting only LLVM_COV environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
+                } else if llvm_profdata_env.is_some() {
+                    warn!("setting only LLVM_PROFDATA environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
+                }
+                let llvm_cov: PathBuf =
+                    rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX)).into();
+                let llvm_profdata: PathBuf =
+                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX)).into();
                 // Check if required tools are installed.
-                if !llvm_cov.exists() {
+                if !llvm_cov.exists() || !llvm_profdata.exists() {
                     let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
                     let toolchain = sysroot.file_name().unwrap();
-                    // Include --toolchain flag in the suggestion because the user may be
-                    // using toolchain override shorthand (+toolchain).
-                    bail!(
-                        "failed to find llvm-tools-preview, please install llvm-tools-preview \
-                         with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
-                    );
+                    if cmd!("rustup", "toolchain", "list")
+                        .read()
+                        .map_or(false, |t| t.contains(toolchain))
+                    {
+                        // If toolchain is installed from rustup and llvm-tools-preview is not installed,
+                        // suggest installing llvm-tools-preview via rustup.
+                        // Include --toolchain flag because the user may be using toolchain
+                        // override shorthand (+toolchain).
+                        let mut cmd = cmd!(
+                            "rustup",
+                            "component",
+                            "add",
+                            "llvm-tools-preview",
+                            "--toolchain",
+                            toolchain
+                        );
+                        match env::var_os("CARGO_LLVM_COV_SETUP") {
+                            None => {
+                                ask_to_run(
+                                    &mut cmd,
+                                    true,
+                                    "install the `llvm-tools-preview` component for the selected toolchain",
+                                )?;
+                            }
+                            Some(ref v) if v == "yes" => {
+                                ask_to_run(
+                                    &mut cmd,
+                                    false,
+                                    "install the `llvm-tools-preview` component for the selected toolchain",
+                                )?;
+                            }
+                            Some(v) => {
+                                if v != "no" {
+                                    warn!(
+                                        "CARGO_LLVM_COV_SETUP must be yes or no, but found `{v:?}`"
+                                    );
+                                }
+                                bail!(
+                                    "failed to find llvm-tools-preview, please install llvm-tools-preview \
+                                     with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
+                                );
+                            }
+                        }
+                    } else {
+                        bail!(
+                            "failed to find llvm-tools-preview, please install llvm-tools-preview, or set LLVM_COV and LLVM_PROFDATA environment variables",
+                        );
+                    }
                 }
-                llvm_cov.into()
-            }
-        };
-        let llvm_profdata: PathBuf = match env::var_os("LLVM_PROFDATA") {
-            Some(llvm_profdata) => llvm_profdata.into(),
-            None => {
-                let llvm_profdata =
-                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX));
-                // Check if required tools are installed.
-                if !llvm_profdata.exists() {
-                    let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
-                    let toolchain = sysroot.file_name().unwrap();
-                    // Include --toolchain flag in the suggestion because the user may be
-                    // using toolchain override shorthand (+toolchain).
-                    bail!(
-                        "failed to find llvm-tools-preview, please install llvm-tools-preview \
-                         with `rustup component add llvm-tools-preview --toolchain {toolchain}`",
-                    );
-                }
-                llvm_profdata.into()
+                (llvm_cov_env.unwrap_or(llvm_cov), llvm_profdata_env.unwrap_or(llvm_profdata))
             }
         };
 
@@ -200,4 +238,29 @@ impl WorkspaceMembers {
 
         Self { excluded, included }
     }
+}
+
+// Adapted from https://github.com/rust-lang/miri/blob/dba35d2be72f4b78343d1a0f0b4737306f310672/cargo-miri/src/util.rs#L181-L204
+fn ask_to_run(cmd: &mut ProcessBuilder, ask: bool, text: &str) -> Result<()> {
+    // Disable interactive prompts in CI (GitHub Actions, Travis, AppVeyor, etc).
+    // Azure doesn't set `CI` though (nothing to see here, just Microsoft being Microsoft),
+    // so we also check their `TF_BUILD`.
+    let is_ci = env::var_os("CI").is_some() || env::var_os("TF_BUILD").is_some();
+    if ask && !is_ci {
+        let mut buf = String::new();
+        print!("I will run {} to {}.\nProceed? [Y/n] ", cmd, text);
+        io::stdout().flush()?;
+        io::stdin().read_line(&mut buf)?;
+        match buf.trim().to_lowercase().as_str() {
+            // Proceed.
+            "" | "y" | "yes" => {}
+            "n" | "no" => bail!("aborting as per your request"),
+            a => bail!("invalid answer `{}`", a),
+        };
+    } else {
+        info!("running {} to {}", cmd, text);
+    }
+
+    cmd.run()?;
+    Ok(())
 }
