@@ -15,7 +15,7 @@ use tempfile::TempDir;
 use walkdir::WalkDir;
 
 pub fn fixtures_path() -> &'static Utf8Path {
-    Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "tests/fixtures"))
+    Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
 }
 
 pub fn cargo_llvm_cov(subcommand: &str) -> Command {
