@@ -8,15 +8,15 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use easy_ext::ext;
 use fs_err as fs;
-use once_cell::sync::Lazy;
 use tempfile::TempDir;
 use walkdir::WalkDir;
 
-pub static FIXTURES_PATH: Lazy<Utf8PathBuf> =
-    Lazy::new(|| Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"));
+pub fn fixtures_path() -> &'static Utf8Path {
+    Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "tests/fixtures"))
+}
 
 pub fn cargo_llvm_cov(subcommand: &str) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
@@ -47,7 +47,7 @@ pub fn test_report(
     envs: &[(&str, &str)],
 ) -> Result<()> {
     let workspace_root = test_project(model)?;
-    let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
+    let output_dir = fixtures_path().join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir)?;
     let output_path = &output_dir.join(name).with_extension(extension);
     let expected = &fs::read_to_string(output_path).unwrap_or_default();
@@ -104,7 +104,7 @@ pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
 pub fn test_project(model: &str) -> Result<TempDir> {
     let tmpdir = tempfile::tempdir()?;
     let workspace_root = tmpdir.path();
-    let model_path = FIXTURES_PATH.join("crates").join(model);
+    let model_path = fixtures_path().join("crates").join(model);
 
     for entry in WalkDir::new(&model_path).into_iter().filter_map(Result::ok) {
         let from = entry.path();

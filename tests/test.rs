@@ -4,8 +4,8 @@ mod auxiliary;
 
 use anyhow::Context as _;
 use auxiliary::{
-    assert_output, cargo_llvm_cov, normalize_output, perturb_one_header, test_project, test_report,
-    CommandExt, FIXTURES_PATH,
+    assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
+    test_project, test_report, CommandExt,
 };
 use camino::Utf8Path;
 use fs_err as fs;
@@ -149,7 +149,7 @@ fn coverage_helper() {
 
 #[test]
 fn merge() {
-    let output_dir = FIXTURES_PATH.join("coverage-reports").join("merge");
+    let output_dir = fixtures_path().join("coverage-reports").join("merge");
     merge_with_failure_mode(&output_dir, false);
 }
 
@@ -202,7 +202,7 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
 fn clean_ws() {
     let model = "merge";
     let name = "clean_ws";
-    let output_dir = FIXTURES_PATH.join("coverage-reports").join(model);
+    let output_dir = fixtures_path().join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
         let workspace_root = test_project(model).unwrap();
