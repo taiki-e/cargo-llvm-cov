@@ -147,6 +147,8 @@ fn coverage_helper() {
     }
 }
 
+// The order of the instantiations in the generated coverage report will be different depending on the version.
+#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn merge() {
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
