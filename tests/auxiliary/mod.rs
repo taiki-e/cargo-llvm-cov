@@ -2,7 +2,7 @@ use std::{
     env,
     ffi::OsStr,
     io::{Read, Seek, Write},
-    mem::size_of,
+    mem,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
 };
@@ -148,7 +148,7 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
 fn perturb_header<P: AsRef<Path>>(path: P) -> Result<()> {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(path.as_ref())?;
     let mut magic = {
-        let mut buf = vec![0_u8; size_of::<u64>()];
+        let mut buf = vec![0_u8; mem::size_of::<u64>()];
         file.read_exact(&mut buf)?;
         u64::from_ne_bytes(buf.try_into().unwrap())
     };
