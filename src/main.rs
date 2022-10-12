@@ -881,11 +881,12 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
         //       We may have a directory like tests/support, so maybe we need both?
         if cx.args.remap_path_prefix {
-            out.push(format!(r"(^|{0})(rustc{0}[0-9a-f]+|tests|examples|benches){0}", SEPARATOR));
+            out.push(format!(
+                r"(^|{SEPARATOR})(rustc{SEPARATOR}[0-9a-f]+|tests|examples|benches){SEPARATOR}"
+            ));
         } else {
             out.push(format!(
-                r"{0}rustc{0}[0-9a-f]+{0}|^{1}({0}.*)?{0}(tests|examples|benches){0}",
-                SEPARATOR,
+                r"{SEPARATOR}rustc{SEPARATOR}[0-9a-f]+{SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
                 regex::escape(cx.ws.metadata.workspace_root.as_str())
             ));
         }
@@ -897,7 +898,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         }
         if let Ok(path) = home::cargo_home() {
             let path = regex::escape(path.as_os_str().to_string_lossy().as_ref());
-            let path = format!("^{path}{0}(registry|git){0}", SEPARATOR);
+            let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
             out.push(path);
         }
         if let Ok(path) = home::rustup_home() {

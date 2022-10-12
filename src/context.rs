@@ -256,7 +256,7 @@ fn ask_to_run(cmd: &mut ProcessBuilder, ask: bool, text: &str) -> Result<()> {
     let is_ci = env::var_os("CI").is_some() || env::var_os("TF_BUILD").is_some();
     if ask && !is_ci {
         let mut buf = String::new();
-        print!("I will run {} to {}.\nProceed? [Y/n] ", cmd, text);
+        print!("I will run {cmd} to {text}.\nProceed? [Y/n] ");
         io::stdout().flush()?;
         io::stdin().read_line(&mut buf)?;
         match buf.trim().to_lowercase().as_str() {
