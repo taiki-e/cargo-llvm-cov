@@ -2,7 +2,7 @@
 name = "cargo-llvm-cov"
 version = "0.5.0"
 edition = "2021"
-rust-version = "1.58"
+rust-version = "1.59"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
@@ -49,3 +49,6 @@ walkdir = "2.2.3"
 easy-ext = "1"
 itertools = "0.10"
 rustversion = "1"
+
+[profile.release]
+strip = "symbols"
