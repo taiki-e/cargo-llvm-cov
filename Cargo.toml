@@ -44,6 +44,7 @@ target-spec = "1.1"
 tempfile = "3"
 termcolor = "1.1.2"
 walkdir = "2.2.3"
+lcov2cobertura = "1.0.0"
 
 [dev-dependencies]
 easy-ext = "1"
