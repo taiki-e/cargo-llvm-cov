@@ -808,6 +808,13 @@ impl Format {
 
         if cx.args.cov.cobertura {
             use std::io::BufRead;
+            let now = || -> anyhow::Result<u64> {
+                match std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)
+                {
+                    Ok(n) => Ok(n.as_secs()),
+                    Err(_) => anyhow::bail!("SystemTime before UNIX EPOCH!"),
+                }
+            };
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -815,7 +822,7 @@ impl Format {
             // Convert to XML
             let cdata = lcov2cobertura::parse_lines(lcov.as_bytes().lines(), "", &[])?;
             let demangler = lcov2cobertura::RustDemangler::new();
-            let out = lcov2cobertura::coverage_to_string(&cdata, 1_346_815_648_000, demangler)?;
+            let out = lcov2cobertura::coverage_to_string(&cdata, now()?, demangler)?;
 
             if let Some(output_path) = &cx.args.cov.output_path {
                 fs::write(output_path, out)?;
@@ -823,7 +830,7 @@ impl Format {
                 status!("Finished", "report saved to {output_path}");
             } else {
                 // write XML to stdout
-                println!("{}", out);
+                println!("{out}");
             }
             return Ok(());
         }
