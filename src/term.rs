@@ -45,9 +45,10 @@ impl FromStr for Coloring {
 }
 
 static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
-// Errors during argument parsing are returned before set_coloring, so check atty first.
+// Errors during argument parsing are returned before set_coloring, so check is_terminal first.
 pub(crate) fn init_coloring() {
-    if !atty::is(atty::Stream::Stderr) {
+    use is_terminal::IsTerminal;
+    if !std::io::stderr().is_terminal() {
         COLORING.store(Coloring::NEVER, Ordering::Relaxed);
     }
 }
