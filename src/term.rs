@@ -101,7 +101,6 @@ global_flag!(verbose: bool = AtomicBool::new(false));
 global_flag!(error: bool = AtomicBool::new(false));
 global_flag!(warn: bool = AtomicBool::new(false));
 
-#[allow(clippy::let_underscore_drop)]
 pub(crate) fn print_status(status: &str, color: Option<Color>, justified: bool) -> StandardStream {
     let mut stream = StandardStream::stderr(coloring());
     let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
@@ -122,7 +121,6 @@ macro_rules! error {
         use std::io::Write;
         crate::term::error::set(true);
         let mut stream = crate::term::print_status("error", Some(termcolor::Color::Red), false);
-        #[allow(clippy::let_underscore_drop)]
         let _ = writeln!(stream, $($msg),*);
     }};
 }
@@ -132,7 +130,6 @@ macro_rules! warn {
         use std::io::Write;
         crate::term::warn::set(true);
         let mut stream = crate::term::print_status("warning", Some(termcolor::Color::Yellow), false);
-        #[allow(clippy::let_underscore_drop)]
         let _ = writeln!(stream, $($msg),*);
     }};
 }
@@ -141,7 +138,6 @@ macro_rules! info {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
         let mut stream = crate::term::print_status("info", None, false);
-        #[allow(clippy::let_underscore_drop)]
         let _ = writeln!(stream, $($msg),*);
     }};
 }
@@ -150,7 +146,6 @@ macro_rules! status {
     ($status:expr, $($msg:expr),* $(,)?) => {{
         use std::io::Write;
         let mut stream = crate::term::print_status($status, Some(termcolor::Color::Cyan), true);
-        #[allow(clippy::let_underscore_drop)]
         let _ = writeln!(stream, $($msg),*);
     }};
 }
