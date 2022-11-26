@@ -145,7 +145,7 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
     | ('r' as u64) << 8
     | (129_u64);
 
-fn perturb_header<P: AsRef<Path>>(path: P) -> Result<()> {
+fn perturb_header(path: impl AsRef<Path>) -> Result<()> {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(path.as_ref())?;
     let mut magic = {
         let mut buf = vec![0_u8; mem::size_of::<u64>()];
