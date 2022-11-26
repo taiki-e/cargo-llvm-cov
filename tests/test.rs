@@ -22,6 +22,7 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
         // TODO: full JSON output is unstable between platform.
         // ("full.json", &["--json"]),
         ("lcov.info", &["--lcov", "--summary-only"]),
+        // TODO: test Cobertura output
     ]
 }
 

@@ -35,8 +35,9 @@ use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
     fmt::Write as _,
-    io::{self, Write},
+    io::{self, BufRead, Write},
     path::Path,
+    time::SystemTime,
 };
 
 use anyhow::{bail, Context as _, Result};
@@ -725,8 +726,7 @@ impl Format {
         match self {
             Self::None => &["report"],
             Self::Json => &["export", "-format=text"],
-            Self::LCov => &["export", "-format=lcov"],
-            Self::Cobertura => &["export", "-format=lcov"],
+            Self::LCov | Self::Cobertura => &["export", "-format=lcov"],
             Self::Text => &["show", "-format=text"],
             Self::Html => &["show", "-format=html"],
         }
@@ -807,14 +807,6 @@ impl Format {
         }
 
         if cx.args.cov.cobertura {
-            use std::io::BufRead;
-            let now = || -> anyhow::Result<u64> {
-                match std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)
-                {
-                    Ok(n) => Ok(n.as_secs()),
-                    Err(_) => anyhow::bail!("SystemTime before UNIX EPOCH!"),
-                }
-            };
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -822,7 +814,11 @@ impl Format {
             // Convert to XML
             let cdata = lcov2cobertura::parse_lines(lcov.as_bytes().lines(), "", &[])?;
             let demangler = lcov2cobertura::RustDemangler::new();
-            let out = lcov2cobertura::coverage_to_string(&cdata, now()?, demangler)?;
+            let now = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .context("SystemTime before UNIX EPOCH!")?
+                .as_secs();
+            let out = lcov2cobertura::coverage_to_string(&cdata, now, demangler)?;
 
             if let Some(output_path) = &cx.args.cov.output_path {
                 fs::write(output_path, out)?;

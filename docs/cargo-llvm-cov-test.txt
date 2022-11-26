@@ -30,6 +30,14 @@ OPTIONS:
             This internally calls `llvm-cov export -format=lcov`. See
             <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
+        --cobertura
+            Export coverage data in "cobertura" XML format
+
+            If --output-path is not specified, the report will be printed to stdout.
+
+            This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml.
+            See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+
         --text
             Generate coverage report in “text” format
 
@@ -56,13 +64,13 @@ OPTIONS:
         --summary-only
             Export only summary information for each file in the coverage data
 
-            This flag can only be used together with either --json or --lcov.
+            This flag can only be used together with --json, --lcov, or --cobertura.
 
         --output-path <PATH>
             Specify a file to write coverage data into.
 
-            This flag can only be used together with --json, --lcov, or --text. See --output-dir for
-            --html and --open.
+            This flag can only be used together with --json, --lcov, --cobertura, or --text.
+            See --output-dir for --html and --open.
 
         --output-dir <DIRECTORY>
             Specify a directory to write coverage report into (default to `target/llvm-cov`).

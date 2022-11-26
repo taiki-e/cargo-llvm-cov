@@ -647,6 +647,9 @@ impl Args {
             if json {
                 conflicts(flag, "--json")?;
             }
+            if lcov {
+                conflicts(flag, "--lcov")?;
+            }
         }
         if text {
             let flag = "--text";
@@ -656,6 +659,9 @@ impl Args {
             if lcov {
                 conflicts(flag, "--lcov")?;
             }
+            if cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
         }
         if html || open {
             let flag = if html { "--html" } else { "--open" };
@@ -664,6 +670,9 @@ impl Args {
             }
             if lcov {
                 conflicts(flag, "--lcov")?;
+            }
+            if cobertura {
+                conflicts(flag, "--cobertura")?;
             }
             if text {
                 conflicts(flag, "--text")?;
@@ -685,6 +694,9 @@ impl Args {
             }
             if lcov {
                 conflicts(flag, "--lcov")?;
+            }
+            if cobertura {
+                conflicts(flag, "--cobertura")?;
             }
             if output_path.is_some() {
                 conflicts(flag, "--output-path")?;
@@ -892,7 +904,7 @@ pub(crate) struct LlvmCovOptions {
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
     ///
-    /// This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml
+    /// This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     pub(crate) cobertura: bool,
 
@@ -917,12 +929,12 @@ pub(crate) struct LlvmCovOptions {
 
     /// Export only summary information for each file in the coverage data
     ///
-    /// This flag can only be used together with either --json or --lcov.
+    /// This flag can only be used together with --json, --lcov, or --cobertura.
     // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
     pub(crate) summary_only: bool,
     /// Specify a file to write coverage data into.
     ///
-    /// This flag can only be used together with --json, --lcov, or --text.
+    /// This flag can only be used together with --json, --lcov, --cobertura, or --text.
     /// See --output-dir for --html and --open.
     pub(crate) output_path: Option<Utf8PathBuf>,
     /// Specify a directory to write coverage report into (default to `target/llvm-cov`).
