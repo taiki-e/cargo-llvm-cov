@@ -902,7 +902,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         }
 
         fn push_abs_path(&mut self, path: impl AsRef<Path>) {
-            let path = regex::escape(path.as_ref().to_string_lossy().as_ref());
+            let path = regex::escape(&path.as_ref().to_string_lossy());
             let path = format!("^{path}($|{SEPARATOR})");
             self.push(path);
         }
@@ -933,7 +933,7 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
             }
         }
         if let Ok(path) = home::cargo_home() {
-            let path = regex::escape(path.as_os_str().to_string_lossy().as_ref());
+            let path = regex::escape(&path.as_os_str().to_string_lossy());
             let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
             out.push(path);
         }
