@@ -82,7 +82,7 @@ fn try_main() -> Result<()> {
             let stdout = io::stdout();
             let writer =
                 &mut ShowEnvWriter { target: stdout.lock(), options: cx.args.show_env.clone() };
-            set_env(cx, writer)?;
+            set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
         Subcommand::Report => {
@@ -163,7 +163,9 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     }
 }
 
-fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
+struct IsNextest(bool);
+
+fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNextest) -> Result<()> {
     fn push_common_flags(cx: &Context, flags: &mut String) {
         if cx.ws.stable_coverage {
             flags.push_str(" -C instrument-coverage");
@@ -252,6 +254,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget) -> Result<()> {
     env.set("CARGO_INCREMENTAL", "0")?;
     // Workaround for https://github.com/rust-lang/rust/issues/91092
     env.set("RUST_TEST_THREADS", "1")?;
+    if is_nextest {
+        // Same as above
+        env.set("NEXTEST_TEST_THREADS", "1")?;
+    }
     Ok(())
 }
 
@@ -277,7 +283,7 @@ fn has_z_flag(args: &[String], name: &str) -> bool {
 fn run_test(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo)?;
+    set_env(cx, &mut cargo, IsNextest(false))?;
 
     cargo.arg("test");
     if cx.args.doctests && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
@@ -324,7 +330,7 @@ fn run_test(cx: &Context) -> Result<()> {
 fn run_nextest(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo)?;
+    set_env(cx, &mut cargo, IsNextest(true))?;
 
     cargo.arg("nextest").arg("run");
 
@@ -345,7 +351,7 @@ fn run_nextest(cx: &Context) -> Result<()> {
 fn run_run(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
-    set_env(cx, &mut cargo)?;
+    set_env(cx, &mut cargo, IsNextest(false))?;
 
     if cx.args.ignore_run_fail {
         {
