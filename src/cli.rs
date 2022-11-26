@@ -206,6 +206,7 @@ impl Args {
         // llvm-cov options
         let mut json = false;
         let mut lcov = false;
+        let mut cobertura = false;
         let mut text = false;
         let mut html = false;
         let mut open = false;
@@ -362,6 +363,7 @@ impl Args {
                 // report options
                 Long("json") => parse_flag!(json),
                 Long("lcov") => parse_flag!(lcov),
+                Long("cobertura") => parse_flag!(cobertura),
                 Long("text") => parse_flag!(text),
                 Long("html") => parse_flag!(html),
                 Long("open") => parse_flag!(open),
@@ -640,6 +642,12 @@ impl Args {
                 conflicts(flag, "--json")?;
             }
         }
+        if cobertura {
+            let flag = "--cobertura";
+            if json {
+                conflicts(flag, "--json")?;
+            }
+        }
         if text {
             let flag = "--text";
             if json {
@@ -724,6 +732,7 @@ impl Args {
             cov: LlvmCovOptions {
                 json,
                 lcov,
+                cobertura,
                 text,
                 html,
                 open,
@@ -878,6 +887,14 @@ pub(crate) struct LlvmCovOptions {
     /// This internally calls `llvm-cov export -format=lcov`.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     pub(crate) lcov: bool,
+
+    /// Export coverage data in "cobertura" XML format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) cobertura: bool,
 
     /// Generate coverage report in “text” format
     ///

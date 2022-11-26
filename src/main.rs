@@ -696,6 +696,8 @@ enum Format {
     Json,
     /// `llvm-cov export -format=lcov`
     LCov,
+    /// `llvm-cov export -format=lcov` later converted to XML
+    Cobertura,
     /// `llvm-cov show -format=text`
     Text,
     /// `llvm-cov show -format=html`
@@ -708,6 +710,8 @@ impl Format {
             Self::Json
         } else if cx.args.cov.lcov {
             Self::LCov
+        } else if cx.args.cov.cobertura {
+            Self::Cobertura
         } else if cx.args.cov.text {
             Self::Text
         } else if cx.args.cov.html {
@@ -722,6 +726,7 @@ impl Format {
             Self::None => &["report"],
             Self::Json => &["export", "-format=text"],
             Self::LCov => &["export", "-format=lcov"],
+            Self::Cobertura => &["export", "-format=lcov"],
             Self::Text => &["show", "-format=text"],
             Self::Html => &["show", "-format=html"],
         }
@@ -778,7 +783,7 @@ impl Format {
                     }
                 }
             }
-            Self::Json | Self::LCov => {
+            Self::Json | Self::LCov | Self::Cobertura => {
                 if cx.args.cov.summary_only {
                     cmd.arg("-summary-only");
                 }
@@ -798,6 +803,35 @@ impl Format {
             fs::write(output_path, out)?;
             eprintln!();
             status!("Finished", "report saved to {output_path}");
+            return Ok(());
+        }
+
+        if cx.args.cov.cobertura {
+            use std::io::BufRead;
+            let now = || -> anyhow::Result<u64> {
+                match std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)
+                {
+                    Ok(n) => Ok(n.as_secs()),
+                    Err(_) => anyhow::bail!("SystemTime before UNIX EPOCH!"),
+                }
+            };
+            if term::verbose() {
+                status!("Running", "{cmd}");
+            }
+            let lcov = cmd.read()?;
+            // Convert to XML
+            let cdata = lcov2cobertura::parse_lines(lcov.as_bytes().lines(), "", &[])?;
+            let demangler = lcov2cobertura::RustDemangler::new();
+            let out = lcov2cobertura::coverage_to_string(&cdata, now()?, demangler)?;
+
+            if let Some(output_path) = &cx.args.cov.output_path {
+                fs::write(output_path, out)?;
+                eprintln!();
+                status!("Finished", "report saved to {output_path}");
+            } else {
+                // write XML to stdout
+                println!("{out}");
+            }
             return Ok(());
         }
 
