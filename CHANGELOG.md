@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where if `--cobertura` and `--output-path` are used simultaneously, then the saved file doesn't contain the cobertura-style output. ([#228](https://github.com/taiki-e/cargo-llvm-cov/pull/228), thanks @yuval-nextsilicon)
+
 ## [0.5.1] - 2022-11-27
 
 - Add `--cobertura` flag to support [Cobertura](https://cobertura.github.io/cobertura)'s XML report format. ([#224](https://github.com/taiki-e/cargo-llvm-cov/pull/224), thanks @mike-kfed)
