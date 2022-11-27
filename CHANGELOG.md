@@ -10,6 +10,14 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--cobertura` flag to support [Cobertura](https://cobertura.github.io/cobertura)'s XML report format. ([#224](https://github.com/taiki-e/cargo-llvm-cov/pull/224), thanks @mike-kfed)
+
+- Limit the number of test threads for `nextest` to work around [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#223](https://github.com/taiki-e/cargo-llvm-cov/pull/223))
+
+  For subcommands other than `cargo llvm-cov nextest`, the same workaround has already been applied since 0.4.6.
+
+- Replace `atty` with `is-terminal`. ([#226](https://github.com/taiki-e/cargo-llvm-cov/pull/226))
+
 ## [0.5.0] - 2022-09-10
 
 - Improve handling of cases where `llvm-tools-preview` component is not installed. ([#219](https://github.com/taiki-e/cargo-llvm-cov/pull/219))
