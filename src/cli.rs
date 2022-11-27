@@ -636,6 +636,7 @@ impl Args {
             // we reject it because the situation where both flags are specified is odd.
             conflicts("--package", "--workspace")?;
         }
+        // TODO: handle these mutual exclusions elegantly.
         if lcov {
             let flag = "--lcov";
             if json {
