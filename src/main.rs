@@ -209,6 +209,9 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         push_common_flags(cx, rustdocflags);
         let _ =
             write!(rustdocflags, " -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir);
+        // TODO: this should be opt-in
+        // unused_imports is needed for feature(prelude_import)
+        rustdocflags.push_str(" -Z crate-attr=allow(unused_imports) -Z crate-attr=::coverage_helper::__doc_crate_attr -Z crate-attr=feature(custom_inner_attributes) -Z crate-attr=feature(prelude_import) -Z crate-attr=feature(no_coverage)");
     }
 
     match (cx.args.coverage_target_only, &cx.args.target) {
