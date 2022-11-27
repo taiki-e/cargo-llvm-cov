@@ -801,17 +801,6 @@ impl Format {
             cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
         }
 
-        if let Some(output_path) = &cx.args.cov.output_path {
-            if term::verbose() {
-                status!("Running", "{cmd}");
-            }
-            let out = cmd.read()?;
-            fs::write(output_path, out)?;
-            eprintln!();
-            status!("Finished", "report saved to {output_path}");
-            return Ok(());
-        }
-
         if cx.args.cov.cobertura {
             if term::verbose() {
                 status!("Running", "{cmd}");
@@ -834,6 +823,17 @@ impl Format {
                 // write XML to stdout
                 println!("{out}");
             }
+            return Ok(());
+        }
+
+        if let Some(output_path) = &cx.args.cov.output_path {
+            if term::verbose() {
+                status!("Running", "{cmd}");
+            }
+            let out = cmd.read()?;
+            fs::write(output_path, out)?;
+            eprintln!();
+            status!("Finished", "report saved to {output_path}");
             return Ok(());
         }
 
