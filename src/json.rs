@@ -29,6 +29,22 @@ impl LlvmCovJsonExport {
         }
     }
 
+    #[must_use]
+    pub fn function_names(&self, filter: impl Fn(&str) -> bool) -> Vec<&str> {
+        let mut v = vec![];
+        for data in &self.data {
+            if let Some(functions) = data.functions.as_ref().filter(|f| !f.is_empty()) {
+                v.reserve(functions.len() / 2);
+                for func in functions {
+                    if filter(&func.name) {
+                        v.push(&*func.name);
+                    }
+                }
+            }
+        }
+        v
+    }
+
     /// Gets the minimal lines coverage of all files.
     pub fn get_lines_percent(&self) -> Result<f64> {
         let mut count = 0_f64;

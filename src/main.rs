@@ -405,9 +405,15 @@ fn generate_report(cx: &Context) -> Result<()> {
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx);
+
+    let json = Format::Json
+        .get_json(cx, &object_files, ignore_filename_regex.as_ref())
+        .context("failed to get json")?;
+    let function_names = json.function_names(|f| !f.contains("__doctest_main_"));
+
     let format = Format::from_args(cx);
     format
-        .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
+        .generate_report(cx, &object_files, ignore_filename_regex.as_ref(), Some(&function_names))
         .context("failed to generate report")?;
 
     if cx.args.cov.fail_under_lines.is_some()
@@ -416,11 +422,6 @@ fn generate_report(cx: &Context) -> Result<()> {
         || cx.args.cov.fail_uncovered_regions.is_some()
         || cx.args.cov.show_missing_lines
     {
-        let format = Format::Json;
-        let json = format
-            .get_json(cx, &object_files, ignore_filename_regex.as_ref())
-            .context("failed to get json")?;
-
         if let Some(fail_under_lines) = cx.args.cov.fail_under_lines {
             // Handle --fail-under-lines.
             let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
@@ -759,6 +760,7 @@ impl Format {
         cx: &Context,
         object_files: &[OsString],
         ignore_filename_regex: Option<&String>,
+        function_names: Option<&[&str]>,
     ) -> Result<()> {
         let mut cmd = cx.process(&cx.llvm_cov);
 
@@ -771,6 +773,7 @@ impl Format {
             cmd.arg(ignore_filename_regex);
         }
 
+        let mut allowlist_file = None;
         match self {
             Self::Text | Self::Html => {
                 cmd.args([
@@ -781,6 +784,13 @@ impl Format {
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
                 ]);
+                if let Some(function_names) = function_names {
+                    let allowlist_file = allowlist_file.insert(tempfile::NamedTempFile::new()?);
+                    for &function_name in function_names {
+                        writeln!(allowlist_file, "allowlist_fun:{function_name}")?;
+                    }
+                    cmd.arg(format!("-name-allowlist={}", allowlist_file.path().display()));
+                }
                 if let Some(output_dir) = &cx.args.cov.output_dir {
                     if self == Self::Html {
                         cmd.arg(&format!("-output-dir={}", output_dir.join("html")));
