@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.1] - 2022-11-27
+
 - Add `--cobertura` flag to support [Cobertura](https://cobertura.github.io/cobertura)'s XML report format. ([#224](https://github.com/taiki-e/cargo-llvm-cov/pull/224), thanks @mike-kfed)
 
 - Limit the number of test threads for `nextest` to work around [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#223](https://github.com/taiki-e/cargo-llvm-cov/pull/223))
@@ -398,7 +400,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...v0.5.0
 [0.4.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...v0.4.14
 [0.4.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.12...v0.4.13
