@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.2] - 2022-11-27
+
 - Fix an issue where if `--cobertura` and `--output-path` are used simultaneously, then the saved file doesn't contain the cobertura-style output. ([#228](https://github.com/taiki-e/cargo-llvm-cov/pull/228), thanks @yuval-nextsilicon)
 
 ## [0.5.1] - 2022-11-27
@@ -402,7 +404,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...v0.5.0
 [0.4.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.13...v0.4.14
