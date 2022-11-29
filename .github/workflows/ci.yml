@@ -113,6 +113,19 @@ jobs:
       - run: cargo hack build --workspace --ignore-private --no-dev-deps --version-range .. --version-step 2
         if: github.event_name == 'pull_request'
 
+  deny:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-deny
+      # Workaround for https://github.com/EmbarkStudios/cargo-deny/issues/413
+      - run: cargo hack --remove-dev-deps --workspace
+      - run: cargo deny check licenses advisories --config .deny.toml
+
   tidy:
     runs-on: ubuntu-18.04
     steps:
@@ -138,7 +151,7 @@ jobs:
   ci-success:
     name: ci
     if: github.event_name == 'push' && success()
-    needs: [test, build, msrv, tidy] # tidy:needs
+    needs: [test, build, msrv, deny, tidy] # tidy:needs
     runs-on: ubuntu-18.04
     steps:
       - name: Mark the job as a success

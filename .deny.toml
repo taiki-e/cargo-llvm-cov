@@ -1,0 +1,22 @@
+# https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
+ignore = []
+
+# https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
+[licenses]
+default = "deny"
+unused-allowed-license = "deny"
+private.ignore = true
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "Unicode-DFS-2016", # unicode-ident
+    "Apache-2.0 WITH LLVM-exception", # target-lexicon
+]
+exceptions = [
+    { name = "instant", allow = ["BSD-3-Clause"] }, # tempfile via fastrand
+]
