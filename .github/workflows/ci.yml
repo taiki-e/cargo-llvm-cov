@@ -136,14 +136,13 @@ jobs:
         with:
           components: clippy,rustfmt
       - uses: taiki-e/install-action@shellcheck
+      - uses: taiki-e/install-action@shfmt
       - run: pip3 install yq
       - run: cargo fmt --all --check
         if: always()
       - run: cargo clippy --workspace --all-features --all-targets
         if: always()
-      - run: shellcheck $(git ls-files '*.sh')
-        if: always()
-      - run: tools/check-workflow.sh
+      - run: tools/tidy.sh
         if: always()
 
   # ALL THE PREVIOUS JOBS NEEDS TO BE ADDED TO THE `needs` SECTION OF THIS JOB!
@@ -151,6 +150,7 @@ jobs:
   ci-success:
     name: ci
     if: github.event_name == 'push' && success()
+    # prettier-ignore
     needs: [test, build, msrv, deny, tidy] # tidy:needs
     runs-on: ubuntu-18.04
     steps:

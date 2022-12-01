@@ -14,7 +14,7 @@ trim_trailing_whitespace = true
 [*.{json,md,yml}]
 indent_size = 2
 
-[*.yml]
+[*.{js,yml}]
 quote_type = single
 
 [*.sh]
