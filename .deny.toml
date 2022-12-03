@@ -9,7 +9,7 @@ ignore = []
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "deny"
-wildcards = "deny"
+wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/448
 skip = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
