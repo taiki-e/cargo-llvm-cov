@@ -6,9 +6,17 @@ yanked = "deny"
 notice = "deny"
 ignore = []
 
+# https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
+[bans]
+multiple-versions = "deny"
+wildcards = "deny"
+skip = []
+
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
 default = "deny"
+unlicensed = "deny"
+copyleft = "deny"
 unused-allowed-license = "deny"
 private.ignore = true
 allow = [
@@ -20,3 +28,9 @@ allow = [
 exceptions = [
     { name = "instant", allow = ["BSD-3-Clause"] }, # tempfile via fastrand
 ]
+
+# https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = []
