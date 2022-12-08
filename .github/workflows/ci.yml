@@ -95,14 +95,23 @@ jobs:
       - name: Install Rust
         run: rustup update stable --no-self-update
       - run: rustup target add ${{ matrix.target }}
+      - uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.target }}
+        if: (matrix.os == '' || startsWith(matrix.os, 'ubuntu')) && !contains(matrix.target, '-musl')
       - uses: taiki-e/install-action@cross
-        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
+        if: contains(matrix.target, '-musl')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >> "${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
       - run: echo "cargo=cross" >>"${GITHUB_ENV}"
-        if: matrix.target != 'x86_64-unknown-linux-gnu' && (matrix.os == '' || startsWith(matrix.os, 'ubuntu'))
+        if: contains(matrix.target, '-musl')
       - run: $cargo build --target ${{ matrix.target }}
       - run: $cargo build --target ${{ matrix.target }} --release
+      # For debugging
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/cargo-llvm-cov*
 
   # ALL THE PREVIOUS JOBS NEEDS TO BE ADDED TO THE `needs` SECTION OF THIS JOB!
 
