@@ -2,9 +2,6 @@ target
 # There is binary in the workspace, but intentionally not committing lockfile.
 # See https://github.com/taiki-e/cargo-llvm-cov/pull/152#issuecomment-1107055622 for more.
 Cargo.lock
-node_modules
-package-lock.json
-package.json
 
 # For platform and editor specific settings, it is recommended to add to
 # a global .gitignore file.
