@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.3] - 2022-12-15
+
 - Fix an issue where coverage of binary targets containing hyphens was not collected correctly. ([#232](https://github.com/taiki-e/cargo-llvm-cov/pull/232))
 
 - Fix help messages for `cargo llvm-cov report` subcommand.
@@ -408,7 +410,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.4.14...v0.5.0
