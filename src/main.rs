@@ -669,7 +669,7 @@ impl Targets {
             re.or(&pkg.replace('-', "(-|_)"));
         }
         for t in &self.targets {
-            re.or(t);
+            re.or(&t.replace('-', "(-|_)"));
         }
         re.build()
     }

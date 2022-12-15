@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where coverage of binary targets containing hyphens was not collected correctly. ([#232](https://github.com/taiki-e/cargo-llvm-cov/pull/232))
+
 ## [0.5.2] - 2022-11-27
 
 - Fix an issue where if `--cobertura` and `--output-path` are used simultaneously, then the saved file doesn't contain the cobertura-style output. ([#228](https://github.com/taiki-e/cargo-llvm-cov/pull/228), thanks @yuval-nextsilicon)
