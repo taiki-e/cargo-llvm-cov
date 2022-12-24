@@ -47,8 +47,7 @@ impl FromStr for Coloring {
 static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
 // Errors during argument parsing are returned before set_coloring, so check is_terminal first.
 pub(crate) fn init_coloring() {
-    use is_terminal::IsTerminal;
-    if !std::io::stderr().is_terminal() {
+    if !is_terminal::IsTerminal::is_terminal(&std::io::stderr()) {
         COLORING.store(Coloring::NEVER, Ordering::Relaxed);
     }
 }
