@@ -15,20 +15,13 @@ trap 's=$?; echo >&2 "$0: Error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}
 # - shellcheck
 # - npm
 # - jq and yq (if this repository uses bors)
-# - clang-format (if any of C/C++ exists)
+# - rustup (if Rust code exists)
+# - clang-format (if C/C++ code exists)
 #
 # This script is shared with other repositories, so there may also be
 # checks for files not included in this repository, but they will be
 # skipped if the corresponding files do not exist.
 
-x() {
-    local cmd="$1"
-    shift
-    (
-        set -x
-        "${cmd}" "$@"
-    )
-}
 check_diff() {
     if [[ -n "${CI:-}" ]]; then
         if ! git --no-pager diff --exit-code "$@"; then
@@ -57,13 +50,36 @@ EOF
     exit 1
 fi
 
+# Rust (if exists)
+if [[ -n "$(git ls-files '*.rs')" ]]; then
+    if type -P rustup &>/dev/null; then
+        # `cargo fmt` cannot recognize files not included in the current workspace and modules
+        # defined inside macros, so run rustfmt directly.
+        # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
+        rustc_version=$(rustc -Vv | grep 'release: ' | sed 's/release: //')
+        if [[ "${rustc_version}" == *"nightly"* ]] || [[ "${rustc_version}" == *"dev"* ]]; then
+            rustup component add rustfmt &>/dev/null
+            echo "+ rustfmt \$(git ls-files '*.rs')"
+            rustfmt $(git ls-files '*.rs')
+        else
+            rustup component add rustfmt --toolchain nightly &>/dev/null
+            echo "+ rustfmt +nightly \$(git ls-files '*.rs')"
+            rustfmt +nightly $(git ls-files '*.rs')
+        fi
+        check_diff $(git ls-files '*.rs')
+    else
+        warn "'rustup' is not installed"
+    fi
+fi
+
 # C/C++ (if exists)
 if [[ -n "$(git ls-files '*.c')$(git ls-files '*.cpp')" ]]; then
     if [[ ! -e .clang-format ]]; then
         warn "could not fount .clang-format in the repository root"
     fi
     if type -P clang-format &>/dev/null; then
-        x clang-format -i $(git ls-files '*.c') $(git ls-files '*.cpp')
+        echo "+ clang-format -i \$(git ls-files '*.c') \$(git ls-files '*.cpp')"
+        clang-format -i $(git ls-files '*.c') $(git ls-files '*.cpp')
         check_diff $(git ls-files '*.c') $(git ls-files '*.cpp')
     else
         warn "'clang-format' is not installed"
@@ -73,7 +89,8 @@ fi
 # YAML/JavaScript/JSON (if exists)
 if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')" ]]; then
     if type -P npm &>/dev/null; then
-        x npx prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
+        echo "+ npx prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
+        npx prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
         check_diff $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
     else
         warn "'npm' is not installed"
@@ -103,18 +120,21 @@ fi
 
 # Shell scripts
 if type -P shfmt &>/dev/null; then
-    x shfmt -l -w $(git ls-files '*.sh')
+    echo "+ shfmt -l -w \$(git ls-files '*.sh')"
+    shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
 else
     warn "'shfmt' is not installed"
 fi
 if type -P shellcheck &>/dev/null; then
-    if ! x shellcheck $(git ls-files '*.sh'); then
+    echo "+ shellcheck \$(git ls-files '*.sh')"
+    if ! shellcheck $(git ls-files '*.sh'); then
         should_fail=1
     fi
     if [[ -n "$(git ls-files '*Dockerfile')" ]]; then
         # SC2154 doesn't seem to work on dockerfile.
-        if ! x shellcheck -e SC2148,SC2154,SC2250 $(git ls-files '*Dockerfile'); then
+        echo "+ shellcheck -e SC2148,SC2154,SC2250 \$(git ls-files '*Dockerfile')"
+        if ! shellcheck -e SC2148,SC2154,SC2250 $(git ls-files '*Dockerfile'); then
             should_fail=1
         fi
     fi
@@ -144,7 +164,8 @@ EOF
             touch .github/.cspell/rust-dependencies.txt
         fi
 
-        x npx cspell --no-progress $(git ls-files)
+        echo "+ npx cspell --no-progress \$(git ls-files)"
+        npx cspell --no-progress $(git ls-files)
 
         for dictionary in .github/.cspell/*.txt; do
             if [[ "${dictionary}" == .github/.cspell/project-dictionary.txt ]]; then
