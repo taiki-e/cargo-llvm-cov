@@ -63,9 +63,9 @@ if [[ -n "${tags}" ]]; then
     fi
 
     # Update changelog.
-    remote_url=$(grep -E '^\[Unreleased\]: https://' CHANGELOG.md | sed 's/^\[Unreleased\]: //' | sed 's/\.\.\.HEAD$//')
-    before_tag=$(sed <<<"${remote_url}" 's/^.*\/compare\///')
-    remote_url=$(sed <<<"${remote_url}" 's/\/compare\/v.*$//')
+    remote_url=$(grep -E '^\[Unreleased\]: https://' CHANGELOG.md | sed 's/^\[Unreleased\]: //; s/\.\.\.HEAD$//')
+    before_tag="${remote_url#*/compare/}"
+    remote_url="${remote_url%/compare/*}"
     sed -i "s/^## \\[Unreleased\\]/## [Unreleased]\\n\\n## [${version}] - ${release_date}/" CHANGELOG.md
     sed -i "s#^\[Unreleased\]: https://.*#[Unreleased]: ${remote_url}/compare/v${version}...HEAD\\n[${version}]: ${remote_url}/compare/${before_tag}...v${version}#" CHANGELOG.md
     if ! grep -Eq "^## \\[${version//./\\.}\\] - ${release_date}$" CHANGELOG.md; then
