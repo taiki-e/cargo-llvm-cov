@@ -56,7 +56,7 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         .flat_map(|id| ["--package", &cx.ws.metadata[id].name])
         .collect();
     let mut cmd = cx.cargo();
-    cmd.arg("clean").args(&package_args);
+    cmd.arg("clean").args(package_args);
     cargo::clean_args(cx, &mut cmd);
     if let Err(e) = if cx.args.verbose > 1 { cmd.run() } else { cmd.run_with_output() } {
         warn!("{e:#}");

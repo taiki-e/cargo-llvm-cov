@@ -783,9 +783,9 @@ impl Format {
                 ]);
                 if let Some(output_dir) = &cx.args.cov.output_dir {
                     if self == Self::Html {
-                        cmd.arg(&format!("-output-dir={}", output_dir.join("html")));
+                        cmd.arg(format!("-output-dir={}", output_dir.join("html")));
                     } else {
-                        cmd.arg(&format!("-output-dir={}", output_dir.join("text")));
+                        cmd.arg(format!("-output-dir={}", output_dir.join("text")));
                     }
                 }
             }

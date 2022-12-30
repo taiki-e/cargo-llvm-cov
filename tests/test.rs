@@ -260,7 +260,7 @@ fn open_report() {
         .env("BROWSER", "echo")
         .assert_success()
         .stdout_contains(
-            &workspace_root.path().join("target/llvm-cov/html/index.html").to_string_lossy(),
+            workspace_root.path().join("target/llvm-cov/html/index.html").to_string_lossy(),
         );
 }
 
