@@ -58,6 +58,7 @@ msvc
 muslabi
 musleabi
 musleabihf
+newlibeabihf
 nvptx
 openwrt
 riscv
@@ -92,8 +93,13 @@ punct
 repr
 rfind
 rfold
+rsplit
 splitn
+supertrait
+supertraits
+toolchains
 uninit
+upcastable
 
 // Other
 connrefused

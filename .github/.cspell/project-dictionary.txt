@@ -29,7 +29,6 @@ sysroot
 tempdir
 TESTNAME
 tmpdir
-toolchains
 trybuild
 xargo
 Xdemangler
