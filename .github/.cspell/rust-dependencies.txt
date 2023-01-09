@@ -5,6 +5,7 @@ anyhow
 camino
 cargo
 cobertura
+config
 demangle
 duct
 easy
@@ -23,8 +24,6 @@ rustc
 rustversion
 serde
 shell
-spec
-target
 tempfile
 termcolor
 terminal

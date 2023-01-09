@@ -10,7 +10,7 @@ use cargo_metadata::PackageId;
 
 use crate::{
     cargo::Workspace,
-    cli::{Args, Subcommand},
+    cli::{self, Args, Subcommand},
     env,
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
@@ -45,7 +45,7 @@ impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
         let show_env = args.subcommand == Subcommand::ShowEnv;
         let ws = Workspace::new(&args.manifest, args.target.as_deref(), args.doctests, show_env)?;
-        ws.config.merge_to_args(&mut args.target, &mut args.verbose, &mut args.color);
+        cli::merge_config_to_args(&ws, &mut args.target, &mut args.verbose, &mut args.color);
         term::set_coloring(&mut args.color);
         term::verbose::set(args.verbose != 0);
 

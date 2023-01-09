@@ -10,6 +10,14 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Use [`cargo-config2`](https://github.com/taiki-e/cargo-config2) to load Cargo configuration.
+
+  This brings the following improvements:
+
+  - More accurate cargo configuration loading and resolution.
+  - Fix installation failure on Rust 1.60 and 1.61 by removing dependency on `target-spec`.
+  - Remove run-time dependency on unstable `cargo config get`. (Previously, this command was used in a form allowing failure, like `rust-analyzer` does.)
+
 ## [0.5.3] - 2022-12-15
 
 - Fix an issue where coverage of binary targets containing hyphens was not collected correctly. ([#232](https://github.com/taiki-e/cargo-llvm-cov/pull/232))

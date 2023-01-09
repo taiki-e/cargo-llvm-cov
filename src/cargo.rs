@@ -1,15 +1,11 @@
-use std::{
-    convert::TryInto,
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::{ffi::OsStr, path::PathBuf};
 
 use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use cargo_config2::Config;
 
 use crate::{
     cli::{ManifestOptions, Subcommand},
-    config::Config,
     context::Context,
     env,
     process::ProcessBuilder,
@@ -28,7 +24,8 @@ pub(crate) struct Workspace {
 
     cargo: PathBuf,
     rustc: ProcessBuilder,
-    pub(crate) host_triple: String,
+    pub(crate) target_for_config: cargo_config2::TargetTriple,
+    pub(crate) target_for_cli: Option<String>,
     pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
@@ -42,27 +39,18 @@ impl Workspace {
         show_env: bool,
     ) -> Result<Self> {
         let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-        let host_triple = host_triple(&cargo)?;
 
         // Metadata and config
         let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
         let metadata = metadata(&cargo, &current_manifest)?;
-        let config = Config::new(&cargo, target, Some(&host_triple))?;
-
-        // TODO: Update comment based on https://github.com/rust-lang/cargo/pull/10896?
-        // The following priorities are not documented, but at as of cargo
-        // 1.63.0-nightly (2022-05-31), `RUSTC_WRAPPER` is preferred over `RUSTC_WORKSPACE_WRAPPER`.
-        let rustc = config.build.rustc.clone().map_or_else(|| rustc_path(&cargo), PathBuf::from);
-        let rustc = match config
-            .build
-            .rustc_wrapper
-            .as_ref()
-            .or(config.build.rustc_workspace_wrapper.as_ref())
-        {
-            // The wrapper's first argument is supposed to be the path to rustc.
-            Some(wrapper) => cmd!(wrapper, rustc),
-            None => cmd!(rustc),
-        };
+        let config = Config::load()?;
+        let mut target_for_config = config.build_target_for_config(target)?;
+        if target_for_config.len() != 1 {
+            bail!("cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}");
+        }
+        let target_for_config = target_for_config.pop().unwrap();
+        let target_for_cli = config.build_target_for_cli(target)?.pop();
+        let rustc = ProcessBuilder::from(config.rustc().clone());
         let nightly = rustc_version(&rustc)?;
 
         if doctests && !nightly {
@@ -106,7 +94,8 @@ impl Workspace {
             profdata_file,
             cargo: cargo.into(),
             rustc,
-            host_triple,
+            target_for_config,
+            target_for_cli,
             nightly,
             stable_coverage,
         })
@@ -137,21 +126,6 @@ impl Workspace {
     }
 }
 
-fn rustc_path(cargo: impl AsRef<Path>) -> PathBuf {
-    // When toolchain override shorthand (`+toolchain`) is used, `rustc` in
-    // PATH and `CARGO` environment variable may be different toolchains.
-    // When Rust was installed using rustup, the same toolchain's rustc
-    // binary is in the same directory as the cargo binary, so we use it.
-    let mut rustc = cargo.as_ref().to_owned();
-    rustc.pop(); // cargo
-    rustc.push(format!("rustc{}", env::consts::EXE_SUFFIX));
-    if rustc.exists() {
-        rustc
-    } else {
-        "rustc".into()
-    }
-}
-
 fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
     let mut cmd = rustc.clone();
     cmd.args(["--version", "--verbose"]);
@@ -163,17 +137,6 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
     let (_version, channel) = version.split_once('-').unwrap_or_default();
     let nightly = channel == "nightly" || version == "dev";
     Ok(nightly)
-}
-
-fn host_triple(cargo: &OsStr) -> Result<String> {
-    let mut cmd = cmd!(cargo, "--version", "--verbose");
-    let verbose_version = cmd.read()?;
-    let host = verbose_version
-        .lines()
-        .find_map(|line| line.strip_prefix("host: "))
-        .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?
-        .to_owned();
-    Ok(host)
 }
 
 fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {

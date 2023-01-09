@@ -23,7 +23,6 @@ mod process;
 mod cargo;
 mod clean;
 mod cli;
-mod config;
 mod context;
 mod demangle;
 mod env;
@@ -31,10 +30,8 @@ mod fs;
 mod regex_vec;
 
 use std::{
-    borrow::Cow,
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
-    fmt::Write as _,
     io::{self, BufRead, Write},
     path::Path,
     time::SystemTime,
@@ -42,6 +39,7 @@ use std::{
 
 use anyhow::{bail, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use cargo_config2::Flags;
 use cargo_llvm_cov::json;
 use regex::Regex;
 use walkdir::WalkDir;
@@ -49,7 +47,6 @@ use walkdir::WalkDir;
 use crate::{
     cargo::Workspace,
     cli::{Args, ShowEnvOptions, Subcommand},
-    config::StringOrArray,
     context::Context,
     json::LlvmCovJsonExport,
     process::ProcessBuilder,
@@ -166,66 +163,72 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
 struct IsNextest(bool);
 
 fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNextest) -> Result<()> {
-    fn push_common_flags(cx: &Context, flags: &mut String) {
+    fn push_common_flags(cx: &Context, flags: &mut Flags) {
         if cx.ws.stable_coverage {
-            flags.push_str(" -C instrument-coverage");
+            flags.push("-C");
+            flags.push("instrument-coverage");
         } else {
-            flags.push_str(" -Z instrument-coverage");
+            flags.push("-Z");
+            flags.push("instrument-coverage");
             if cfg!(windows) {
                 // `-C codegen-units=1` is needed to work around link error on windows
                 // https://github.com/rust-lang/rust/issues/85461
                 // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
                 // This has been fixed in https://github.com/rust-lang/rust/pull/91470,
                 // but old nightly compilers still need this.
-                flags.push_str(" -C codegen-units=1");
+                flags.push("-C");
+                flags.push("codegen-units=1");
             }
         }
         if !cx.args.cov.no_cfg_coverage {
-            flags.push_str(" --cfg coverage");
+            flags.push("--cfg=coverage");
         }
         if cx.ws.nightly && !cx.args.cov.no_cfg_coverage_nightly {
-            flags.push_str(" --cfg coverage_nightly");
+            flags.push("--cfg=coverage_nightly");
         }
     }
 
     let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name));
 
-    let rustflags = &mut cx.ws.config.rustflags().unwrap_or_default().into_owned();
+    let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
     push_common_flags(cx, rustflags);
     if cx.args.remap_path_prefix {
-        let _ = write!(rustflags, " --remap-path-prefix {}/=", cx.ws.metadata.workspace_root);
+        rustflags.push("--remap-path-prefix");
+        rustflags.push(format!("{}/=", cx.ws.metadata.workspace_root));
     }
     if cx.args.target.is_none() {
         // https://github.com/dtolnay/trybuild/pull/121
         // https://github.com/dtolnay/trybuild/issues/122
         // https://github.com/dtolnay/trybuild/pull/123
-        rustflags.push_str(" --cfg trybuild_no_target");
+        rustflags.push("--cfg=trybuild_no_target");
     }
 
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
-    let rustdocflags = &mut cx.ws.config.rustdocflags().map(Cow::into_owned);
+    let rustdocflags = &mut cx.ws.config.build.rustdocflags.clone();
     if cx.args.doctests {
-        let rustdocflags = rustdocflags.get_or_insert_with(String::new);
+        let rustdocflags = rustdocflags.get_or_insert_with(Flags::default);
         push_common_flags(cx, rustdocflags);
-        let _ =
-            write!(rustdocflags, " -Z unstable-options --persist-doctests {}", cx.ws.doctests_dir);
+        rustflags.push("-Z");
+        rustflags.push("unstable-options");
+        rustflags.push("--persist-doctests");
+        rustflags.push(cx.ws.doctests_dir.as_str());
     }
 
     match (cx.args.coverage_target_only, &cx.args.target) {
         (true, Some(coverage_target)) => env.set(
             &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
-            rustflags,
+            &rustflags.encode_space_separated()?,
         )?,
-        _ => env.set("RUSTFLAGS", rustflags)?,
+        _ => env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?,
     }
 
     if let Some(rustdocflags) = rustdocflags {
-        env.set("RUSTDOCFLAGS", rustdocflags)?;
+        env.set("CARGO_ENCODED_RUSTDOCFLAGS", &rustdocflags.encode()?)?;
     }
     if cx.args.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
-        let target_u = target_u_lower(cx.args.target.as_ref().unwrap_or(&cx.ws.host_triple));
+        let target_u = target_u_lower(cx.ws.target_for_config.triple());
         let cflags_key = &format!("CFLAGS_{target_u}");
         // Use std::env instead of crate::env to match cc-rs's behavior.
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2740
@@ -479,13 +482,13 @@ fn generate_report(cx: &Context) -> Result<()> {
 }
 
 fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
-    let browser = cx.ws.config.doc.browser.as_ref().and_then(StringOrArray::path_and_args);
-
-    match browser {
-        Some((browser, initial_args)) => {
-            cmd!(browser).args(initial_args).arg(path).run().with_context(|| {
-                format!("couldn't open report with {}", browser.to_string_lossy())
-            })?;
+    match &cx.ws.config.doc.browser {
+        Some(browser) => {
+            cmd!(&browser.path)
+                .args(&browser.args)
+                .arg(path)
+                .run()
+                .with_context(|| format!("couldn't open report with {}", browser.path.display()))?;
         }
         None => opener::open(path).context("couldn't open report")?,
     }

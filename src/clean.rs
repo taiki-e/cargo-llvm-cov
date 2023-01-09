@@ -10,7 +10,7 @@ use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Workspace},
-    cli::{Args, ManifestOptions},
+    cli::{self, Args, ManifestOptions},
     context::Context,
     fs,
     regex_vec::{RegexVec, RegexVecBuilder},
@@ -19,7 +19,7 @@ use crate::{
 
 pub(crate) fn run(args: &mut Args) -> Result<()> {
     let ws = Workspace::new(&args.manifest, None, false, false)?;
-    ws.config.merge_to_args(&mut None, &mut args.verbose, &mut args.color);
+    cli::merge_config_to_args(&ws, &mut None, &mut args.verbose, &mut args.color);
     term::set_coloring(&mut args.color);
 
     if !args.workspace {
