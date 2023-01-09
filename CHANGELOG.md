@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.4] - 2023-01-09
+
 - Use [`cargo-config2`](https://github.com/taiki-e/cargo-config2) to load Cargo configuration.
 
   This brings the following improvements:
@@ -418,7 +420,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.0...v0.5.1
