@@ -38,6 +38,14 @@ pub(crate) struct ProcessBuilder {
     display_env_vars: Cell<bool>,
 }
 
+impl From<cargo_config2::PathAndArgs> for ProcessBuilder {
+    fn from(value: cargo_config2::PathAndArgs) -> Self {
+        let mut cmd = ProcessBuilder::new(value.path);
+        cmd.args(value.args);
+        cmd
+    }
+}
+
 impl ProcessBuilder {
     /// Creates a new `ProcessBuilder`.
     pub(crate) fn new(program: impl Into<OsString>) -> Self {

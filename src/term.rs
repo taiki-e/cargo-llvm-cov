@@ -4,7 +4,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
 
-use anyhow::{bail, Error};
+use anyhow::Error;
 use serde::Deserialize;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
@@ -35,11 +35,16 @@ impl FromStr for Coloring {
     type Err = Error;
 
     fn from_str(color: &str) -> Result<Self, Self::Err> {
-        match color {
-            "auto" => Ok(Self::Auto),
-            "always" => Ok(Self::Always),
-            "never" => Ok(Self::Never),
-            other => bail!("must be auto, always, or never, but found `{other}`"),
+        Ok(cargo_config2::Color::from_str(color)?.into())
+    }
+}
+
+impl From<cargo_config2::Color> for Coloring {
+    fn from(value: cargo_config2::Color) -> Self {
+        match value {
+            cargo_config2::Color::Auto => Self::Auto,
+            cargo_config2::Color::Always => Self::Always,
+            cargo_config2::Color::Never => Self::Never,
         }
     }
 }

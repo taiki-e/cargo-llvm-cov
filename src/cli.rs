@@ -1013,6 +1013,24 @@ impl ManifestOptions {
     }
 }
 
+pub(crate) fn merge_config_to_args(
+    ws: &crate::cargo::Workspace,
+    target: &mut Option<String>,
+    verbose: &mut u8,
+    color: &mut Option<Coloring>,
+) {
+    // CLI flags are prefer over config values.
+    if target.is_none() {
+        *target = ws.target_for_cli.clone();
+    }
+    if *verbose == 0 {
+        *verbose = u8::from(ws.config.term.verbose.unwrap_or(false));
+    }
+    if color.is_none() {
+        *color = ws.config.term.color.map(Into::into);
+    }
+}
+
 trait Store<T> {
     fn is_full(&self) -> bool {
         false
