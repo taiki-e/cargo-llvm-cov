@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, path::PathBuf};
+use std::ffi::OsStr;
 
 use anyhow::{bail, format_err, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -22,7 +22,6 @@ pub(crate) struct Workspace {
     pub(crate) doctests_dir: Utf8PathBuf,
     pub(crate) profdata_file: Utf8PathBuf,
 
-    cargo: PathBuf,
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_for_cli: Option<String>,
@@ -38,12 +37,10 @@ impl Workspace {
         doctests: bool,
         show_env: bool,
     ) -> Result<Self> {
-        let cargo = env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
-
         // Metadata and config
-        let current_manifest = package_root(&cargo, options.manifest_path.as_deref())?;
-        let metadata = metadata(&cargo, &current_manifest)?;
         let config = Config::load()?;
+        let current_manifest = package_root(config.cargo(), options.manifest_path.as_deref())?;
+        let metadata = metadata(config.cargo(), &current_manifest)?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
             bail!("cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}");
@@ -92,7 +89,6 @@ impl Workspace {
             output_dir,
             doctests_dir,
             profdata_file,
-            cargo: cargo.into(),
             rustc,
             target_for_config,
             target_for_cli,
@@ -102,7 +98,7 @@ impl Workspace {
     }
 
     pub(crate) fn cargo(&self, verbose: u8) -> ProcessBuilder {
-        let mut cmd = cmd!(&self.cargo);
+        let mut cmd = cmd!(&self.config.cargo());
         // cargo displays env vars only with -vv.
         if verbose > 1 {
             cmd.display_env_vars();
