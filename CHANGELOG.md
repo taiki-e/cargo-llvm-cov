@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.5] - 2023-01-10
+
 - Fix regression on doctests introduced in 0.5.4.
 
 ## [0.5.4] - 2023-01-09
@@ -422,7 +424,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.1...v0.5.2
