@@ -208,10 +208,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     if cx.args.doctests {
         let rustdocflags = rustdocflags.get_or_insert_with(Flags::default);
         push_common_flags(cx, rustdocflags);
-        rustflags.push("-Z");
-        rustflags.push("unstable-options");
-        rustflags.push("--persist-doctests");
-        rustflags.push(cx.ws.doctests_dir.as_str());
+        rustdocflags.push("-Z");
+        rustdocflags.push("unstable-options");
+        rustdocflags.push("--persist-doctests");
+        rustdocflags.push(cx.ws.doctests_dir.as_str());
     }
 
     match (cx.args.coverage_target_only, &cx.args.target) {

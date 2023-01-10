@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix regression on doctests introduced in 0.5.4.
+
 ## [0.5.4] - 2023-01-09
 
 - Use [`cargo-config2`](https://github.com/taiki-e/cargo-config2) to load Cargo configuration.
