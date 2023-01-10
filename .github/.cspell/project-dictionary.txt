@@ -9,6 +9,7 @@ demangler
 disambiguators
 doctestbins
 doctests
+easytime
 fastrand
 fcoverage
 fprofile

@@ -48,6 +48,7 @@ jobs:
           - rust: stable
           - rust: beta
           - rust: nightly
+          - rust: nightly
             os: macos-11
           - rust: nightly
             os: windows-2019
@@ -69,6 +70,12 @@ jobs:
       - run: cargo install --path . --debug
       - run: cargo llvm-cov nextest --text
         working-directory: tests/fixtures/crates/bin_crate
+      - run: |
+          set -euxo pipefail
+          git clone https://github.com/taiki-e/easytime.git
+          cd easytime
+          cargo llvm-cov test --doctests --text
+        if: startsWith(matrix.rust, 'nightly')
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
 
   build:
