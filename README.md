@@ -514,7 +514,7 @@ Running cargo-llvm-cov requires rustc 1.60+.
 ### From source
 
 ```sh
-cargo +stable install cargo-llvm-cov
+cargo +stable install cargo-llvm-cov --locked
 ```
 
 Currently, installing cargo-llvm-cov requires rustc 1.60+.
@@ -604,6 +604,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 ## Related Projects
 
 - [coverage-helper]: Helper for [#123].
+- [cargo-config2]: Library to load and resolve Cargo configuration. cargo-llvm-cov uses this library.
 - [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
 - [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
 
@@ -613,6 +614,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
 [#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
 [#219]: https://github.com/taiki-e/cargo-llvm-cov/issues/219
+[cargo-config2]: https://github.com/taiki-e/cargo-config2
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
