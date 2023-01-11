@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix "cannot satisfy dependencies so `std` only shows up once" error on `cargo llvm-cov nextest` introduced in 0.5.4.
+
 ## [0.5.6] - 2023-01-11
 
 - Distribute prebuilt macOS universal binary.

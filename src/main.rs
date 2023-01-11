@@ -139,11 +139,16 @@ fn create_dirs(cx: &Context) -> Result<()> {
 
 trait EnvTarget {
     fn set(&mut self, key: &str, value: &str) -> Result<()>;
+    fn unset(&mut self, key: &str) -> Result<()>;
 }
 
 impl EnvTarget for ProcessBuilder {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         self.env(key, value);
+        Ok(())
+    }
+    fn unset(&mut self, key: &str) -> Result<()> {
+        self.env_remove(key);
         Ok(())
     }
 }
@@ -157,6 +162,9 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         let prefix = if self.options.export_prefix { "export " } else { "" };
         writeln!(self.target, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
+    }
+    fn unset(&mut self, _key: &str) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -215,15 +223,31 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
 
     match (cx.args.coverage_target_only, &cx.args.target) {
-        (true, Some(coverage_target)) => env.set(
-            &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
-            &rustflags.encode_space_separated()?,
-        )?,
-        _ => env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?,
+        (true, Some(coverage_target)) => {
+            env.set(
+                &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
+                &rustflags.encode_space_separated()?,
+            )?;
+            env.unset("RUSTFLAGS")?;
+            env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+        }
+        _ => {
+            if let Ok(v) = rustflags.encode_space_separated() {
+                env.set("RUSTFLAGS", &v)?;
+                env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+            } else {
+                env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
+            }
+        }
     }
 
     if let Some(rustdocflags) = rustdocflags {
-        env.set("CARGO_ENCODED_RUSTDOCFLAGS", &rustdocflags.encode()?)?;
+        if let Ok(v) = rustdocflags.encode_space_separated() {
+            env.set("RUSTDOCFLAGS", &v)?;
+            env.unset("CARGO_ENCODED_RUSTDOCFLAGS")?;
+        } else {
+            env.set("CARGO_ENCODED_RUSTDOCFLAGS", &rustdocflags.encode()?)?;
+        }
     }
     if cx.args.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
