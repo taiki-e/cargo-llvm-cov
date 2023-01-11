@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.6] - 2023-01-11
+
 - Distribute prebuilt macOS universal binary.
 
 ## [0.5.5] - 2023-01-10
@@ -426,7 +428,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.2...v0.5.3
