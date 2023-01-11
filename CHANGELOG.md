@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Distribute prebuilt macOS universal binary.
+
 ## [0.5.5] - 2023-01-10
 
 - Fix regression on doctests introduced in 0.5.4.
