@@ -24,7 +24,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.5.4] - 2023-01-09
 
-- Use [`cargo-config2`](https://github.com/taiki-e/cargo-config2) to load Cargo configuration.
+- Use [`cargo-config2`](https://github.com/taiki-e/cargo-config2) to load Cargo configuration. ([#237](https://github.com/taiki-e/cargo-llvm-cov/pull/237))
 
   This brings the following improvements:
 
