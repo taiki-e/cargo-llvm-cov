@@ -163,7 +163,10 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
         let prefix = if self.options.export_prefix { "export " } else { "" };
         writeln!(self.target, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
     }
-    fn unset(&mut self, _key: &str) -> Result<()> {
+    fn unset(&mut self, key: &str) -> Result<()> {
+        if env::var_os(key).is_some() {
+            warn!("cannot unset environment variable `{key}`");
+        }
         Ok(())
     }
 }
@@ -232,6 +235,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             env.unset("CARGO_ENCODED_RUSTFLAGS")?;
         }
         _ => {
+            // First, try with RUSTFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
             if let Ok(v) = rustflags.encode_space_separated() {
                 env.set("RUSTFLAGS", &v)?;
                 env.unset("CARGO_ENCODED_RUSTFLAGS")?;
@@ -242,6 +246,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
 
     if let Some(rustdocflags) = rustdocflags {
+        // First, try with RUSTDOCFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
         if let Ok(v) = rustdocflags.encode_space_separated() {
             env.set("RUSTDOCFLAGS", &v)?;
             env.unset("CARGO_ENCODED_RUSTDOCFLAGS")?;
