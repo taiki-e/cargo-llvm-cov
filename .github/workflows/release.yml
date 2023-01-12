@@ -25,6 +25,7 @@ jobs:
   create-release:
     if: github.repository_owner == 'taiki-e'
     runs-on: ubuntu-18.04
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
         with:
@@ -64,6 +65,7 @@ jobs:
           - target: universal-apple-darwin
             os: macos-11
     runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v3
         with:
