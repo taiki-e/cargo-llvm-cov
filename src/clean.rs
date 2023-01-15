@@ -131,8 +131,7 @@ fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
 }
 
 fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
-    let trybuild_dir = &ws.metadata.target_directory.join("tests");
-    let trybuild_target = &trybuild_dir.join("target");
+    let trybuild_target = ws.trybuild_target();
     let re = pkg_hash_re(ws, pkg_ids);
 
     for e in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {

@@ -120,6 +120,21 @@ impl Workspace {
             .trim()
             .into())
     }
+
+    pub(crate) fn trybuild_target(&self) -> Utf8PathBuf {
+        let mut trybuild_dir = self.metadata.target_directory.join("tests/trybuild");
+        if !trybuild_dir.is_dir() {
+            trybuild_dir = self.metadata.target_directory.join("tests");
+        }
+        let mut trybuild_target = trybuild_dir.join("target");
+        // https://github.com/dtolnay/trybuild/pull/219 specifies tests/trybuild as the target
+        // directory, which is a bit odd since build artifacts are generated in the same directory
+        // as the test project.
+        if !trybuild_target.is_dir() {
+            trybuild_target.pop();
+        }
+        trybuild_target
+    }
 }
 
 fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {

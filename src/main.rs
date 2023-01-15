@@ -645,8 +645,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     // trybuild
-    let trybuild_dir = &cx.ws.metadata.target_directory.join("tests");
-    let mut trybuild_target = trybuild_dir.join("target");
+    let mut trybuild_target = cx.ws.trybuild_target();
     if let Some(target) = &cx.args.target {
         trybuild_target.push(target);
     }

@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `trybuild` 1.0.76+. ([#238](https://github.com/taiki-e/cargo-llvm-cov/pull/238))
+
 ## [0.5.8] - 2023-01-15
 
 - Fix handling of cases where the target directory contains glob characters.
