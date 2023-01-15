@@ -35,10 +35,6 @@ jobs:
       event_name: ${{ github.event_name }}
   tidy:
     uses: taiki-e/workflows/.github/workflows/tidy-rust.yml@main
-    with:
-      # Since nightly-2022-12-30, clippy is very slow and uses extreme amounts of memory.
-      # https://github.com/rust-lang/rust-clippy/issues/10134
-      rust: nightly-2022-12-29
 
   test:
     strategy:
