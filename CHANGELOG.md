@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix handling of cases where the target directory contains glob characters.
+
 ## [0.5.7] - 2023-01-11
 
 - Fix "cannot satisfy dependencies so `std` only shows up once" error on `cargo llvm-cov nextest` introduced in 0.5.4.

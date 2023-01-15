@@ -526,9 +526,12 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
 
 fn merge_profraw(cx: &Context) -> Result<()> {
     // Convert raw profile data.
-    let profraw_files =
-        glob::glob(cx.ws.target_dir.join(format!("{}-*.profraw", cx.ws.name)).as_str())?
-            .filter_map(Result::ok);
+    let profraw_files = glob::glob(
+        Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str()))
+            .join(format!("{}-*.profraw", cx.ws.name))
+            .as_str(),
+    )?
+    .filter_map(Result::ok);
     let mut input_files = tempfile::NamedTempFile::new()?;
     for path in profraw_files {
         let path_str =
@@ -628,7 +631,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
     }
     if cx.args.doctests {
-        for f in glob::glob(cx.ws.doctests_dir.join("*/rust_out").as_str())?.filter_map(Result::ok)
+        for f in glob::glob(
+            Utf8Path::new(&glob::Pattern::escape(cx.ws.doctests_dir.as_str()))
+                .join("*/rust_out")
+                .as_str(),
+        )?
+        .filter_map(Result::ok)
         {
             if is_executable::is_executable(&f) {
                 files.push(make_relative(cx, &f).to_owned().into_os_string());

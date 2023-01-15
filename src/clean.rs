@@ -5,6 +5,7 @@
 use std::path::Path;
 
 use anyhow::Result;
+use camino::Utf8Path;
 use cargo_metadata::PackageId;
 use walkdir::WalkDir;
 
@@ -106,7 +107,11 @@ fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Resul
         rm_rf(ws.output_dir.join(format), verbose)?;
     }
 
-    for path in glob::glob(ws.target_dir.join("*.profraw").as_str())?.filter_map(Result::ok) {
+    for path in glob::glob(
+        Utf8Path::new(&glob::Pattern::escape(ws.target_dir.as_str())).join("*.profraw").as_str(),
+    )?
+    .filter_map(Result::ok)
+    {
         rm_rf(path, verbose)?;
     }
 
