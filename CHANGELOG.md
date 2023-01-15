@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.9] - 2023-01-15
+
 - Support `trybuild` 1.0.76+. ([#238](https://github.com/taiki-e/cargo-llvm-cov/pull/238))
 
 ## [0.5.8] - 2023-01-15
@@ -438,7 +440,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.8...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...HEAD
+[0.5.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.5...v0.5.6
