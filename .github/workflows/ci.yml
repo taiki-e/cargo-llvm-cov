@@ -34,7 +34,7 @@ jobs:
     with:
       event_name: ${{ github.event_name }}
   tidy:
-    uses: taiki-e/workflows/.github/workflows/tidy-rust.yml@main
+    uses: taiki-e/workflows/.github/workflows/tidy.yml@main
 
   test:
     strategy:
