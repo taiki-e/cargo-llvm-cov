@@ -35,7 +35,7 @@ home = "0.5"
 is_executable = "1"
 is-terminal = "0.4"
 lcov2cobertura = "1.0.1"
-lexopt = "0.2"
+lexopt = "0.3"
 opener = "0.5"
 regex = { version = "1.3", default-features = false, features = ["perf", "std"] }
 rustc-demangle = "0.1.21"

@@ -304,14 +304,14 @@ impl Args {
                         Long(flag) => {
                             let flag = format!("--{}", flag);
                             if let Some(val) = parser.optional_value() {
-                                cargo_args.push(format!("{}={}", flag, val.parse::<String>()?));
+                                cargo_args.push(format!("{}={}", flag, val.string()?));
                             } else {
                                 cargo_args.push(flag);
                             }
                         }
                         Short(flag) => {
                             if let Some(val) = parser.optional_value() {
-                                cargo_args.push(format!("-{}{}", flag, val.parse::<String>()?));
+                                cargo_args.push(format!("-{}{}", flag, val.string()?));
                             } else {
                                 cargo_args.push(format!("-{}", flag));
                             }
