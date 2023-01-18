@@ -79,15 +79,20 @@ xous
 
 // Rust other
 alloc
+bools
+builtins
 canonicalize
 consts
 deque
 doctest
 hasher
+impls
 inlateout
 intrinsics
 lateout
 msrv
+nomem
+nostack
 peekable
 punct
 repr
@@ -99,16 +104,19 @@ supertrait
 supertraits
 toolchains
 uninit
+unsized
 upcastable
 
 // Other
 connrefused
 cygwin
+dpkg
 euxo
 msys
 noninteractive
 noprofile
 norc
+nproc
 pipefail
 powerset
 proto

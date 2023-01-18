@@ -1,7 +1,6 @@
 bindeps
 binstall
 binutils
-bools
 cfgs
 codecov
 demangled
@@ -18,8 +17,7 @@ libhello
 microkernel
 nextest
 notcovered
-nproc
-paru
+pacman
 profdata
 profraw
 rngs
@@ -34,4 +32,3 @@ trybuild
 xargo
 Xdemangler
 xtask
-pacman
