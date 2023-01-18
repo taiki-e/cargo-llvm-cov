@@ -34,3 +34,4 @@ trybuild
 xargo
 Xdemangler
 xtask
+pacman

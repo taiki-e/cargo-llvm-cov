@@ -583,15 +583,13 @@ cargo binstall cargo-llvm-cov
 ```
 
 <!-- omit in toc -->
-### Via AUR (ArchLinux)
+### Via pacman (Arch Linux)
 
-You can install [cargo-llvm-cov from AUR](https://aur.archlinux.org/packages/cargo-llvm-cov):
+You can install cargo-llvm-cov from the [community repository](https://archlinux.org/packages/community/x86_64/cargo-llvm-cov):
 
 ```sh
-paru -S cargo-llvm-cov
+pacman -S cargo-llvm-cov
 ```
-
-Note: AUR package is maintained by community, not maintainer of cargo-llvm-cov.
 
 ## Known limitations
 
