@@ -51,6 +51,7 @@ gnuspe
 gnux
 illumos
 imac
+loongarch
 macabi
 mipsel
 mipsisa
