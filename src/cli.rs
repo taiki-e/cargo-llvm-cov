@@ -800,7 +800,7 @@ impl Args {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum Subcommand {
     /// Run tests and generate coverage report.
     None,

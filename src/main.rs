@@ -734,7 +734,7 @@ fn trybuild_metadata(target_dir: &Utf8Path) -> Result<Vec<cargo_metadata::Metada
     Ok(metadata)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum Format {
     /// `llvm-cov report`
     None,

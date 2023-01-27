@@ -7,7 +7,7 @@ use std::{
 use anyhow::Error;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 pub(crate) enum Coloring {
     Auto = 0,
