@@ -22,9 +22,7 @@ profdata
 profraw
 rngs
 rustfilt
-rustlib
 subcmd
-sysroot
 tempdir
 TESTNAME
 tmpdir

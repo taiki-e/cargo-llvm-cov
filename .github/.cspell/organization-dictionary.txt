@@ -79,6 +79,7 @@ watchos
 xous
 
 // Rust other
+acqrel
 alloc
 bools
 builtins
@@ -92,6 +93,7 @@ inlateout
 intrinsics
 lateout
 msrv
+nand
 nomem
 nostack
 peekable
@@ -100,9 +102,12 @@ repr
 rfind
 rfold
 rsplit
+rustlib
+seqcst
 splitn
 supertrait
 supertraits
+sysroot
 toolchains
 uninit
 unsized
@@ -118,7 +123,9 @@ noninteractive
 noprofile
 norc
 nproc
+objdump
 pipefail
 powerset
 proto
+readelf
 tlsv
