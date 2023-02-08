@@ -175,6 +175,9 @@ EOF
             echo "${words}" >>.github/.cspell/rust-dependencies.txt
         fi
         check_diff .github/.cspell/rust-dependencies.txt
+        if ! grep -Eq "^\.github/\.cspell/rust-dependencies.txt linguist-generated" .gitattributes; then
+            echo "warning: you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
+        fi
 
         echo "+ npx cspell --no-progress \$(git ls-files)"
         npx cspell --no-progress $(git ls-files)
