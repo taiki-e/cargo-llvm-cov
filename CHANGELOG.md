@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.10] - 2023-02-23
+
 - Update `lexopt` to 0.3.
 - Update `cargo-config2` to 0.1.5.
 
@@ -443,7 +445,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.10...HEAD
+[0.5.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.6...v0.5.7
