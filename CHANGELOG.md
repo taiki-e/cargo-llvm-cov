@@ -10,6 +10,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update `lexopt` to 0.3.
+- Update `cargo-config2` to 0.1.5.
+
 ## [0.5.9] - 2023-01-15
 
 - Support `trybuild` 1.0.76+. ([#238](https://github.com/taiki-e/cargo-llvm-cov/pull/238))
