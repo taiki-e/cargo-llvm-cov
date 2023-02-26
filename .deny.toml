@@ -26,9 +26,6 @@ allow = [
     "MIT",
     "Unicode-DFS-2016", # unicode-ident
 ]
-exceptions = [
-    { name = "instant", allow = ["BSD-3-Clause"] }, # tempfile via fastrand
-]
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
 [sources]

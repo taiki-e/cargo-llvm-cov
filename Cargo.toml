@@ -42,7 +42,6 @@ rustc-demangle = "0.1.21"
 serde = { version = "1.0.103", features = ["derive"] }
 serde_json = "1"
 shell-escape = "0.1.5"
-tempfile = "3"
 termcolor = "1.1.2"
 walkdir = "2.2.3"
 
@@ -50,6 +49,7 @@ walkdir = "2.2.3"
 easy-ext = "1"
 itertools = "0.10"
 rustversion = "1"
+tempfile = "3"
 
 [profile.release]
 strip = "symbols"

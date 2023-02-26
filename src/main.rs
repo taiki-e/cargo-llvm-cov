@@ -532,16 +532,19 @@ fn merge_profraw(cx: &Context) -> Result<()> {
             .as_str(),
     )?
     .filter_map(Result::ok);
-    let mut input_files = tempfile::NamedTempFile::new()?;
+    let mut input_files = String::new();
     for path in profraw_files {
-        let path_str =
-            path.to_str().with_context(|| format!("{path:?} contains invalid utf-8 data"))?;
-        writeln!(input_files, "{path_str}")?;
+        input_files.push_str(
+            path.to_str().with_context(|| format!("{path:?} contains invalid utf-8 data"))?,
+        );
+        input_files.push('\n');
     }
+    let input_files_path = &cx.ws.target_dir.join(format!("{}-profraw-list", cx.ws.name));
+    fs::write(input_files_path, input_files)?;
     let mut cmd = cx.process(&cx.llvm_profdata);
     cmd.args(["merge", "-sparse"])
         .arg("-f")
-        .arg(input_files.path())
+        .arg(input_files_path)
         .arg("-o")
         .arg(&cx.ws.profdata_file);
     if let Some(mode) = &cx.args.cov.failure_mode {
