@@ -778,9 +778,10 @@ impl Format {
     }
 
     fn use_color(self, cx: &Context) -> Option<&'static str> {
-        if matches!(self, Self::Json | Self::LCov) {
+        if matches!(self, Self::Json | Self::LCov | Self::Html) {
             // `llvm-cov export` doesn't have `-use-color` flag.
             // https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export
+            // Color output cannot be disabled when generating html.
             return None;
         }
         if self == Self::Text && cx.args.cov.output_dir.is_some() {
