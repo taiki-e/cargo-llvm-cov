@@ -105,16 +105,16 @@ global_flag!(warn: bool = AtomicBool::new(false));
 
 pub(crate) fn print_status(status: &str, color: Option<Color>, justified: bool) -> StandardStream {
     let mut stream = StandardStream::stderr(coloring());
-    let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
+    _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
     if justified {
-        let _ = write!(stream, "{status:>12}");
+        _ = write!(stream, "{status:>12}");
     } else {
-        let _ = write!(stream, "{status}");
-        let _ = stream.set_color(ColorSpec::new().set_bold(true));
-        let _ = write!(stream, ":");
+        _ = write!(stream, "{status}");
+        _ = stream.set_color(ColorSpec::new().set_bold(true));
+        _ = write!(stream, ":");
     }
-    let _ = stream.reset();
-    let _ = write!(stream, " ");
+    _ = stream.reset();
+    _ = write!(stream, " ");
     stream
 }
 
@@ -123,7 +123,7 @@ macro_rules! error {
         use std::io::Write;
         crate::term::error::set(true);
         let mut stream = crate::term::print_status("error", Some(termcolor::Color::Red), false);
-        let _ = writeln!(stream, $($msg),*);
+        _ = writeln!(stream, $($msg),*);
     }};
 }
 
@@ -132,7 +132,7 @@ macro_rules! warn {
         use std::io::Write;
         crate::term::warn::set(true);
         let mut stream = crate::term::print_status("warning", Some(termcolor::Color::Yellow), false);
-        let _ = writeln!(stream, $($msg),*);
+        _ = writeln!(stream, $($msg),*);
     }};
 }
 
@@ -140,7 +140,7 @@ macro_rules! info {
     ($($msg:expr),* $(,)?) => {{
         use std::io::Write;
         let mut stream = crate::term::print_status("info", None, false);
-        let _ = writeln!(stream, $($msg),*);
+        _ = writeln!(stream, $($msg),*);
     }};
 }
 
@@ -148,6 +148,6 @@ macro_rules! status {
     ($status:expr, $($msg:expr),* $(,)?) => {{
         use std::io::Write;
         let mut stream = crate::term::print_status($status, Some(termcolor::Color::Cyan), true);
-        let _ = writeln!(stream, $($msg),*);
+        _ = writeln!(stream, $($msg),*);
     }};
 }
