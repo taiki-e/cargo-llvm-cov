@@ -1,6 +1,6 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.5.10"
+version = "0.5.11"
 edition = "2021"
 rust-version = "1.60"
 license = "Apache-2.0 OR MIT"

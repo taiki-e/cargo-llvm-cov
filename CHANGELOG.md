@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.11] - 2023-02-28
+
 - Remove dependency on `tempfile`.
 
 ## [0.5.10] - 2023-02-23
@@ -448,7 +450,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.10...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.11...HEAD
+[0.5.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.7...v0.5.8
