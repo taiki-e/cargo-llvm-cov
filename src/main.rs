@@ -2,6 +2,7 @@
 #![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
 #![warn(clippy::pedantic)]
 #![allow(
+    clippy::let_underscore_untyped,
     clippy::match_same_arms,
     clippy::similar_names,
     clippy::single_match_else,
