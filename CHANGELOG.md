@@ -10,9 +10,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Remove dependency on `tempfile`.
+
 ## [0.5.10] - 2023-02-23
 
 - Update `lexopt` to 0.3.
+
 - Update `cargo-config2` to 0.1.5.
 
 ## [0.5.9] - 2023-01-15
