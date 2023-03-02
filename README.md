@@ -336,6 +336,8 @@ By default, run tests (via `cargo test`), and print the coverage summary to stdo
 cargo llvm-cov
 ```
 
+Currently, doc tests are disabled by default because nightly-only features are required to make coverage work for doc tests. see [#2] for more.
+
 To run `cargo run` instead of `cargo test`, use `run` subcommand.
 
 ```sh
