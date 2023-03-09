@@ -2,7 +2,6 @@ name: PR
 
 permissions:
   contents: read
-  pull-requests: write
 
 on:
   pull_request:
@@ -14,6 +13,8 @@ jobs:
     if: startsWith(github.head_ref, 'dependabot/') && github.repository_owner == 'taiki-e'
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      pull-requests: write
     steps:
       - uses: taiki-e/github-actions/update-dependabot-pr@main
         with:

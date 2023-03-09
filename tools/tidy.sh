@@ -14,7 +14,7 @@ trap 's=$?; echo >&2 "$0: Error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}
 # - shfmt
 # - shellcheck
 # - npm
-# - jq and yq (if this repository uses bors)
+# - jq and yq
 # - rustup (if Rust code exists)
 # - clang-format (if C/C++ code exists)
 #
@@ -95,19 +95,32 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
     else
         warn "'npm' is not installed"
     fi
-    if [[ -e .github/workflows/ci.yml ]] && grep -q '# tidy:needs' .github/workflows/ci.yml && ! grep -Eq '# *needs: \[' .github/workflows/ci.yml; then
+    # Check GitHub workflows.
+    if [[ -d .github/workflows ]]; then
         if type -P jq &>/dev/null && type -P yq &>/dev/null; then
-            # shellcheck disable=SC2207
-            jobs_actual=($(yq '.jobs' .github/workflows/ci.yml | jq -r 'keys_unsorted[]'))
-            unset 'jobs_actual[${#jobs_actual[@]}-1]'
-            # shellcheck disable=SC2207
-            jobs_expected=($(yq -r '.jobs."ci-success".needs[]' .github/workflows/ci.yml))
-            if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
-                printf -v jobs '%s, ' "${jobs_actual[@]}"
-                sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" .github/workflows/ci.yml
-                check_diff .github/workflows/ci.yml
-                warn "please update 'needs' section in 'ci-success' job"
-            fi
+            for workflow in .github/workflows/*.yml; do
+                # The top-level permissions must be weak as they are referenced by all jobs.
+                permissions=$(yq '.permissions' "${workflow}" | jq -c)
+                case "${permissions}" in
+                    '{"contents":"read"}' | '{"contents":"none"}' | '{}') ;;
+                    null) warn "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
+                    *) warn "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
+                esac
+                # Make sure the 'needs' section is not out of date.
+                if grep -q '# tidy:needs' "${workflow}" && ! grep -Eq '# *needs: \[' "${workflow}"; then
+                    # shellcheck disable=SC2207
+                    jobs_actual=($(yq '.jobs' "${workflow}" | jq -r 'keys_unsorted[]'))
+                    unset 'jobs_actual[${#jobs_actual[@]}-1]'
+                    # shellcheck disable=SC2207
+                    jobs_expected=($(yq -r '.jobs."ci-success".needs[]' "${workflow}"))
+                    if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
+                        printf -v jobs '%s, ' "${jobs_actual[@]}"
+                        sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" "${workflow}"
+                        check_diff "${workflow}"
+                        warn "${workflow}: please update 'needs' section in 'ci-success' job"
+                    fi
+                fi
+            done
         else
             warn "'jq' or 'yq' is not installed"
         fi

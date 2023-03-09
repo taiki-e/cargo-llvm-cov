@@ -1,8 +1,7 @@
 name: Release
 
 permissions:
-  # TODO: once `releases: write` is supported, use it instead.
-  contents: write
+  contents: read
 
 on:
   push:
@@ -27,6 +26,8 @@ jobs:
     if: github.repository_owner == 'taiki-e'
     runs-on: ubuntu-18.04
     timeout-minutes: 60
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -67,6 +68,8 @@ jobs:
             os: macos-11
     runs-on: ${{ matrix.os || 'ubuntu-18.04' }}
     timeout-minutes: 60
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
         with:
