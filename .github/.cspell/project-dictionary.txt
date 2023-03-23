@@ -1,6 +1,5 @@
 bindeps
 binstall
-binutils
 cfgs
 codecov
 demangled
