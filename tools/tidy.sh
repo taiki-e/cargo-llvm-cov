@@ -41,6 +41,14 @@ warn() {
     fi
     should_fail=1
 }
+error() {
+    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+        echo "::error::$*"
+    else
+        echo >&2 "error: $*"
+    fi
+    should_fail=1
+}
 
 if [[ $# -gt 0 ]]; then
     cat <<EOF
@@ -69,6 +77,11 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         check_diff $(git ls-files '*.rs')
     else
         warn "'rustup' is not installed"
+    fi
+    cast_without_turbofish=$(grep -n -E '\.cast\(\)' $(git ls-files '*.rs') || true)
+    if [[ -n "${cast_without_turbofish}" ]]; then
+        error "please replace \`.cast()\` with \`.cast::<type_name>()\`:"
+        echo "${cast_without_turbofish}"
     fi
 fi
 

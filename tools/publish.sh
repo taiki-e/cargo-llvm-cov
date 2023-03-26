@@ -49,6 +49,7 @@ if gh release view "${tag}" &>/dev/null; then
     bail "tag '${tag}' has already been created and pushed"
 fi
 
+# Make sure that the release was created from an allowed branch.
 if ! git branch | grep -q '\* main$'; then
     bail "current branch is not 'main'"
 fi
