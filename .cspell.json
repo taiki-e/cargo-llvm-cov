@@ -26,7 +26,7 @@
   ],
   "ignoreRegExpList": [
     // Copyright notice
-    "Copyright ((\\(c\\)|\\(C\\)|©) )?.*",
+    "Copyright .*",
     // GHA actions/workflows
     "uses: .+@",
     // GHA context (repo name, owner name, etc.)
@@ -35,6 +35,8 @@
     "( |\\[)@[\\w_-]+",
     // Git config username
     "git config user.name .*",
+    // Username in todo comment
+    "(TODO|FIXME)\\([\\w_., -]+\\)",
     // Cargo.toml authors
     "authors *= *\\[.*\\]",
     "\".* <[\\w_.+-]+@[\\w.-]+>\""

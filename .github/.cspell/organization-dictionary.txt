@@ -85,6 +85,7 @@ acqrel
 alloc
 bools
 builtins
+bytecount
 canonicalize
 consts
 ctypes
@@ -98,6 +99,7 @@ inlateout
 intrinsics
 lateout
 mclass
+memcpy
 msrv
 nand
 nomem
@@ -110,6 +112,7 @@ rclass
 repr
 rfind
 rfold
+rposition
 rsplit
 rustlib
 seqcst
@@ -124,6 +127,8 @@ unsized
 upcastable
 
 // Other
+armel
+armhf
 binutils
 connrefused
 cygwin
