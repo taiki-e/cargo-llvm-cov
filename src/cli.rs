@@ -207,6 +207,7 @@ impl Args {
         let mut json = false;
         let mut lcov = false;
         let mut cobertura = false;
+        let mut codecov = false;
         let mut text = false;
         let mut html = false;
         let mut open = false;
@@ -364,6 +365,7 @@ impl Args {
                 Long("json") => parse_flag!(json),
                 Long("lcov") => parse_flag!(lcov),
                 Long("cobertura") => parse_flag!(cobertura),
+                Long("codecov") => parse_flag!(codecov),
                 Long("text") => parse_flag!(text),
                 Long("html") => parse_flag!(html),
                 Long("open") => parse_flag!(open),
@@ -651,6 +653,21 @@ impl Args {
             if lcov {
                 conflicts(flag, "--lcov")?;
             }
+            if codecov {
+                conflicts(flag, "--codecov")?;
+            }
+        }
+        if codecov {
+            let flag = "--codecov";
+            if json {
+                conflicts(flag, "--json")?;
+            }
+            if lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
         }
         if text {
             let flag = "--text";
@@ -663,6 +680,9 @@ impl Args {
             if cobertura {
                 conflicts(flag, "--cobertura")?;
             }
+            if codecov {
+                conflicts(flag, "--codecov")?;
+            }
         }
         if html || open {
             let flag = if html { "--html" } else { "--open" };
@@ -674,6 +694,9 @@ impl Args {
             }
             if cobertura {
                 conflicts(flag, "--cobertura")?;
+            }
+            if codecov {
+                conflicts(flag, "--codecov")?;
             }
             if text {
                 conflicts(flag, "--text")?;
@@ -698,6 +721,9 @@ impl Args {
             }
             if cobertura {
                 conflicts(flag, "--cobertura")?;
+            }
+            if codecov {
+                conflicts(flag, "--codecov")?;
             }
             if output_path.is_some() {
                 conflicts(flag, "--output-path")?;
@@ -746,6 +772,7 @@ impl Args {
                 json,
                 lcov,
                 cobertura,
+                codecov,
                 text,
                 html,
                 open,
@@ -909,6 +936,14 @@ pub(crate) struct LlvmCovOptions {
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     pub(crate) cobertura: bool,
 
+    /// Export coverage data in "Codecov Custom Coverage" format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=lcov` and then converts to codecov.json.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) codecov: bool,
+
     /// Generate coverage report in “text” format
     ///
     /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
@@ -930,12 +965,13 @@ pub(crate) struct LlvmCovOptions {
 
     /// Export only summary information for each file in the coverage data
     ///
-    /// This flag can only be used together with --json, --lcov, or --cobertura.
+    /// This flag can only be used together with --json, --lcov, --cobertura, or --codecov.
     // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
     pub(crate) summary_only: bool,
+
     /// Specify a file to write coverage data into.
     ///
-    /// This flag can only be used together with --json, --lcov, --cobertura, or --text.
+    /// This flag can only be used together with --json, --lcov, --cobertura, --codecov, or --text.
     /// See --output-dir for --html and --open.
     pub(crate) output_path: Option<Utf8PathBuf>,
     /// Specify a directory to write coverage report into (default to `target/llvm-cov`).

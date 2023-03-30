@@ -15,6 +15,30 @@
 // - https://llvm.org/docs/CommandGuide/llvm-profdata.html
 // - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
+use std::{
+    collections::{BTreeSet, HashMap},
+    ffi::{OsStr, OsString},
+    io::{self, BufRead, Write},
+    path::Path,
+    time::SystemTime,
+};
+
+use anyhow::{bail, Context as _, Result};
+use camino::{Utf8Path, Utf8PathBuf};
+use cargo_config2::Flags;
+use cargo_llvm_cov::json::{CodeCovJsonExport, LlvmCovJsonExport};
+use regex::Regex;
+use walkdir::WalkDir;
+
+use crate::{
+    cargo::Workspace,
+    cli::{Args, ShowEnvOptions, Subcommand},
+    context::Context,
+    process::ProcessBuilder,
+    regex_vec::{RegexVec, RegexVecBuilder},
+    term::Coloring,
+};
+
 #[macro_use]
 mod term;
 
@@ -29,31 +53,6 @@ mod demangle;
 mod env;
 mod fs;
 mod regex_vec;
-
-use std::{
-    collections::{BTreeSet, HashMap},
-    ffi::{OsStr, OsString},
-    io::{self, BufRead, Write},
-    path::Path,
-    time::SystemTime,
-};
-
-use anyhow::{bail, Context as _, Result};
-use camino::{Utf8Path, Utf8PathBuf};
-use cargo_config2::Flags;
-use cargo_llvm_cov::json;
-use regex::Regex;
-use walkdir::WalkDir;
-
-use crate::{
-    cargo::Workspace,
-    cli::{Args, ShowEnvOptions, Subcommand},
-    context::Context,
-    json::LlvmCovJsonExport,
-    process::ProcessBuilder,
-    regex_vec::{RegexVec, RegexVecBuilder},
-    term::Coloring,
-};
 
 fn main() {
     term::init_coloring();
@@ -748,6 +747,8 @@ enum Format {
     LCov,
     /// `llvm-cov export -format=lcov` later converted to XML
     Cobertura,
+    /// `llvm-cov show -format=lcov` later converted to Codecov JSON
+    Codecov,
     /// `llvm-cov show -format=text`
     Text,
     /// `llvm-cov show -format=html`
@@ -762,6 +763,8 @@ impl Format {
             Self::LCov
         } else if cx.args.cov.cobertura {
             Self::Cobertura
+        } else if cx.args.cov.codecov {
+            Self::Codecov
         } else if cx.args.cov.text {
             Self::Text
         } else if cx.args.cov.html {
@@ -774,7 +777,7 @@ impl Format {
     const fn llvm_cov_args(self) -> &'static [&'static str] {
         match self {
             Self::None => &["report"],
-            Self::Json => &["export", "-format=text"],
+            Self::Json | Self::Codecov => &["export", "-format=text"],
             Self::LCov | Self::Cobertura => &["export", "-format=lcov"],
             Self::Text => &["show", "-format=text"],
             Self::Html => &["show", "-format=html"],
@@ -833,7 +836,7 @@ impl Format {
                     }
                 }
             }
-            Self::Json | Self::LCov | Self::Cobertura => {
+            Self::Json | Self::LCov | Self::Cobertura | Self::Codecov => {
                 if cx.args.cov.summary_only {
                     cmd.arg("-summary-only");
                 }
@@ -868,7 +871,27 @@ impl Format {
                 println!("{out}");
             }
             return Ok(());
-        }
+        };
+
+        if cx.args.cov.codecov {
+            if term::verbose() {
+                status!("Running", "{cmd}");
+            }
+            let cov = cmd.read()?;
+            let cov: LlvmCovJsonExport = serde_json::from_str(&cov)?;
+            let cov = CodeCovJsonExport::from(cov);
+            let out = serde_json::to_string(&cov)?;
+
+            if let Some(output_path) = &cx.args.cov.output_path {
+                fs::write(output_path, out)?;
+                eprintln!();
+                status!("Finished", "report saved to {output_path}");
+            } else {
+                // write XML to stdout
+                println!("{out}");
+            }
+            return Ok(());
+        };
 
         if let Some(output_path) = &cx.args.cov.output_path {
             if term::verbose() {
