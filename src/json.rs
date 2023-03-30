@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-15.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
+// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct LlvmCovJsonExport {
@@ -185,7 +185,7 @@ pub(crate) struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
-    // https://github.com/llvm/llvm-project/blob/llvmorg-15.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L93
+    // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
@@ -204,7 +204,7 @@ pub(crate) struct File {
 }
 
 /// Describes a segment of the file with a counter
-// https://github.com/llvm/llvm-project/blob/llvmorg-15.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L80
+// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub(crate) struct Segment(
@@ -216,7 +216,7 @@ pub(crate) struct Segment(
     /* IsGapRegion */ pub(crate) bool,
 );
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-15.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L259
+// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
 /// Coverage info for a single function
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
