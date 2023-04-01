@@ -20,7 +20,7 @@ pub struct LlvmCovJsonExport {
 
 /// <https://docs.codecov.com/docs/codecov-custom-coverage-format>
 ///
-/// The fraction
+/// This represents the fraction: `{covered}/{count}`.
 #[derive(Default, Debug)]
 pub(crate) struct CodeCovCoverage {
     pub(crate) count: u64,
