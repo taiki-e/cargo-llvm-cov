@@ -887,7 +887,7 @@ impl Format {
                 eprintln!();
                 status!("Finished", "report saved to {output_path}");
             } else {
-                // write XML to stdout
+                // write JSON to stdout
                 println!("{out}");
             }
             return Ok(());
