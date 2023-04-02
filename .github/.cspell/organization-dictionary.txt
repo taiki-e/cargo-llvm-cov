@@ -61,6 +61,7 @@ musleabi
 musleabihf
 newlibeabihf
 nvptx
+ohos
 openwrt
 riscv
 softfloat
