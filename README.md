@@ -498,7 +498,20 @@ jobs:
           fail_ci_if_error: true
 ```
 
-**Note:** Currently, only line coverage is available on Codecov. This is because `-C instrument-coverage` does not support branch coverage and Codecov does not support region coverage. See also [#8], [#12], and [#20].
+Currently, when using `--lcov` flag, [only line coverage is available on Codecov][#20].
+
+By using `--codecov` flag instead of `--lcov` flag, you can use region coverage on Codecov:
+
+```yaml
+- name: Generate code coverage
+  run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
+- name: Upload coverage to Codecov
+  uses: codecov/codecov-action@v3
+  with:
+    token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+    files: codecov.json
+    fail_ci_if_error: true
+```
 
 ### Environment variables
 
