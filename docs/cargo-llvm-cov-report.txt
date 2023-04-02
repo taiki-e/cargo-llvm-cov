@@ -29,6 +29,14 @@ OPTIONS:
             This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml.
             See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
+        --codecov
+            Export coverage data in "Codecov Custom Coverage" format
+
+            If --output-path is not specified, the report will be printed to stdout.
+
+            This internally calls `llvm-cov export -format=json` and then converts to codecov.json.
+            See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+
         --text
             Generate coverage report in “text” format
 

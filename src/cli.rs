@@ -940,7 +940,7 @@ pub(crate) struct LlvmCovOptions {
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
     ///
-    /// This internally calls `llvm-cov export -format=lcov` and then converts to codecov.json.
+    /// This internally calls `llvm-cov export -format=json` and then converts to codecov.json.
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     pub(crate) codecov: bool,
 
