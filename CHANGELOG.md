@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--codecov` flag to support "Codecov Custom Coverage" format. This allows using region coverage on Codecov. ([#249](https://github.com/taiki-e/cargo-llvm-cov/pull/249), thanks @andrewgazelka)
+
 ## [0.5.11] - 2023-02-28
 
 - Remove dependency on `tempfile`.
