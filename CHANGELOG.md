@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.12] - 2023-04-02
+
 - Add `--codecov` flag to support "Codecov Custom Coverage" format. This allows using region coverage on Codecov. ([#249](https://github.com/taiki-e/cargo-llvm-cov/pull/249), thanks @andrewgazelka)
 
 ## [0.5.11] - 2023-02-28
@@ -452,7 +454,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.11...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.12...HEAD
+[0.5.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.11...v0.5.12
 [0.5.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.8...v0.5.9
