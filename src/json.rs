@@ -1,7 +1,10 @@
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    fmt::{Debug, Formatter},
+};
 
 use anyhow::{Context as _, Result};
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 
 // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
@@ -13,6 +16,101 @@ pub struct LlvmCovJsonExport {
     #[serde(rename = "type")]
     pub(crate) type_: String,
     pub(crate) version: String,
+}
+
+/// <https://docs.codecov.com/docs/codecov-custom-coverage-format>
+///
+/// This represents the fraction: `{covered}/{count}`.
+#[derive(Default, Debug)]
+pub(crate) struct CodeCovCoverage {
+    pub(crate) count: u64,
+    pub(crate) covered: u64,
+}
+
+impl Serialize for CodeCovCoverage {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{}/{}", self.covered, self.count))
+    }
+}
+
+/// line -> coverage in fraction
+#[derive(Default)]
+pub struct CodeCovExport(BTreeMap<u64, CodeCovCoverage>);
+
+/// Custom serialize [`CodeCovExport`] as "string" -> JSON (as function)
+/// Serialize as "string" -> JSON
+impl Serialize for CodeCovExport {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (key, value) in &self.0 {
+            map.serialize_entry(&key.to_string(), value)?;
+        }
+        map.end()
+    }
+}
+
+#[derive(Default, Serialize)]
+pub struct CodeCovJsonExport {
+    /// filename -> list of uncovered lines.
+    pub(crate) coverage: BTreeMap<String, CodeCovExport>,
+}
+
+impl From<Export> for CodeCovJsonExport {
+    fn from(value: Export) -> Self {
+        let functions = value.functions.unwrap_or_default();
+
+        let mut coverage = BTreeMap::new();
+
+        for func in functions {
+            for filename in func.filenames {
+                for region in &func.regions {
+                    let line_start = region.line_start();
+                    let line_end = region.line_end();
+
+                    let coverage: &mut CodeCovExport =
+                        coverage.entry(filename.clone()).or_default();
+
+                    for line in line_start..=line_end {
+                        let coverage = coverage.0.entry(line).or_default();
+                        coverage.count += 1;
+                        coverage.covered += u64::from(region.execution_count() > 0);
+                    }
+                }
+            }
+        }
+
+        Self { coverage }
+    }
+}
+
+impl From<LlvmCovJsonExport> for CodeCovJsonExport {
+    fn from(value: LlvmCovJsonExport) -> Self {
+        let exports: Vec<_> = value.data.into_iter().map(CodeCovJsonExport::from).collect();
+
+        let mut combined = CodeCovJsonExport::default();
+
+        for export in exports {
+            for (filename, coverage) in export.coverage {
+                let combined = combined.coverage.entry(filename).or_default();
+                for (line, coverage) in coverage.0 {
+                    let combined = combined
+                        .0
+                        .entry(line)
+                        .or_insert_with(|| CodeCovCoverage { count: 0, covered: 0 });
+                    combined.count += coverage.count;
+                    combined.covered += coverage.covered;
+                }
+            }
+        }
+
+        combined
+    }
 }
 
 /// Files -> list of uncovered lines.
@@ -52,10 +150,7 @@ impl LlvmCovJsonExport {
     pub fn get_uncovered_lines(&self, ignore_filename_regex: &Option<String>) -> UncoveredLines {
         let mut uncovered_files: UncoveredLines = BTreeMap::new();
         let mut covered_files: UncoveredLines = BTreeMap::new();
-        let mut re: Option<regex::Regex> = None;
-        if let Some(ref ignore_filename_regex) = *ignore_filename_regex {
-            re = Some(regex::Regex::new(ignore_filename_regex).unwrap());
-        }
+        let re = ignore_filename_regex.as_ref().map(|s| regex::Regex::new(s).unwrap());
         for data in &self.data {
             if let Some(ref functions) = data.functions {
                 // Iterate over all functions inside the coverage data.
@@ -205,7 +300,7 @@ pub(crate) struct File {
 
 /// Describes a segment of the file with a counter
 // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub(crate) struct Segment(
     /* Line */ pub(crate) u64,
@@ -215,6 +310,45 @@ pub(crate) struct Segment(
     /* IsRegionEntry */ pub(crate) bool,
     /* IsGapRegion */ pub(crate) bool,
 );
+
+impl Segment {
+    pub(crate) fn line(&self) -> u64 {
+        self.0
+    }
+
+    pub(crate) fn col(&self) -> u64 {
+        self.1
+    }
+
+    pub(crate) fn count(&self) -> u64 {
+        self.2
+    }
+
+    pub(crate) fn has_count(&self) -> bool {
+        self.3
+    }
+
+    pub(crate) fn is_region_entry(&self) -> bool {
+        self.4
+    }
+
+    pub(crate) fn is_gap_region(&self) -> bool {
+        self.5
+    }
+}
+
+impl Debug for Segment {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Segment")
+            .field("line", &self.line())
+            .field("col", &self.col())
+            .field("count", &self.count())
+            .field("has_count", &self.has_count())
+            .field("is_region_entry", &self.is_region_entry())
+            .field("is_gap_region", &self.is_gap_region())
+            .finish()
+    }
+}
 
 // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
 /// Coverage info for a single function
@@ -229,7 +363,7 @@ pub(crate) struct Function {
     pub(crate) regions: Vec<Region>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub(crate) struct Region(
     /* LineStart */ pub(crate) u64,
@@ -241,6 +375,55 @@ pub(crate) struct Region(
     /* ExpandedFileID */ pub(crate) u64,
     /* Kind */ pub(crate) u64,
 );
+
+impl Region {
+    pub(crate) fn line_start(&self) -> u64 {
+        self.0
+    }
+
+    pub(crate) fn column_start(&self) -> u64 {
+        self.1
+    }
+
+    pub(crate) fn line_end(&self) -> u64 {
+        self.2
+    }
+
+    pub(crate) fn column_end(&self) -> u64 {
+        self.3
+    }
+
+    pub(crate) fn execution_count(&self) -> u64 {
+        self.4
+    }
+
+    pub(crate) fn file_id(&self) -> u64 {
+        self.5
+    }
+
+    pub(crate) fn expanded_file_id(&self) -> u64 {
+        self.6
+    }
+
+    pub(crate) fn kind(&self) -> u64 {
+        self.7
+    }
+}
+
+impl Debug for Region {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Region")
+            .field("line_start", &self.line_start())
+            .field("column_start", &self.column_start())
+            .field("line_end", &self.line_end())
+            .field("column_end", &self.column_end())
+            .field("execution_count", &self.execution_count())
+            .field("file_id", &self.file_id())
+            .field("expanded_file_id", &self.expanded_file_id())
+            .field("kind", &self.kind())
+            .finish()
+    }
+}
 
 /// Object summarizing the coverage for this file
 #[derive(Debug, Serialize, Deserialize)]
@@ -277,13 +460,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_llvm_cov_json() {
+    fn test_parse_llvm_cov_json() {
         let files: Vec<_> = glob::glob(&format!(
             "{}/tests/fixtures/coverage-reports/**/*.json",
             env!("CARGO_MANIFEST_DIR")
         ))
         .unwrap()
         .filter_map(Result::ok)
+        .filter(|path| !path.to_str().unwrap().contains("codecov.json"))
         .collect();
         assert!(!files.is_empty());
 
