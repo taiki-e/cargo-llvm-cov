@@ -439,7 +439,7 @@ fn generate_report(cx: &Context) -> Result<()> {
     let ignore_filename_regex = ignore_filename_regex(cx);
     let format = Format::from_args(cx);
     format
-        .generate_report(cx, &object_files, ignore_filename_regex.as_ref())
+        .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
         .context("failed to generate report")?;
 
     if cx.args.cov.fail_under_lines.is_some()
@@ -488,7 +488,7 @@ fn generate_report(cx: &Context) -> Result<()> {
 
         if cx.args.cov.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines(&ignore_filename_regex);
+            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             if !uncovered_files.is_empty() {
                 let stdout = io::stdout();
                 let mut stdout = stdout.lock();
@@ -805,7 +805,7 @@ impl Format {
         self,
         cx: &Context,
         object_files: &[OsString],
-        ignore_filename_regex: Option<&String>,
+        ignore_filename_regex: Option<&str>,
     ) -> Result<()> {
         let mut cmd = cx.process(&cx.llvm_cov);
 
@@ -879,7 +879,7 @@ impl Format {
             }
             let cov = cmd.read()?;
             let cov: LlvmCovJsonExport = serde_json::from_str(&cov)?;
-            let cov = CodeCovJsonExport::from(cov);
+            let cov = CodeCovJsonExport::from_llvm_cov_json_export(cov, ignore_filename_regex);
             let out = serde_json::to_string(&cov)?;
 
             if let Some(output_path) = &cx.args.cov.output_path {

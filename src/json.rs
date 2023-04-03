@@ -4,6 +4,7 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
+use regex::Regex;
 use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 
 // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
@@ -61,14 +62,19 @@ pub struct CodeCovJsonExport {
     pub(crate) coverage: BTreeMap<String, CodeCovExport>,
 }
 
-impl From<Export> for CodeCovJsonExport {
-    fn from(value: Export) -> Self {
+impl CodeCovJsonExport {
+    fn from_export(value: Export, ignore_filename_regex: Option<&Regex>) -> Self {
         let functions = value.functions.unwrap_or_default();
 
         let mut coverage = BTreeMap::new();
 
         for func in functions {
             for filename in func.filenames {
+                if let Some(re) = ignore_filename_regex {
+                    if re.is_match(&filename) {
+                        continue;
+                    }
+                }
                 for region in &func.regions {
                     let line_start = region.line_start();
                     let line_end = region.line_end();
@@ -87,11 +93,15 @@ impl From<Export> for CodeCovJsonExport {
 
         Self { coverage }
     }
-}
 
-impl From<LlvmCovJsonExport> for CodeCovJsonExport {
-    fn from(value: LlvmCovJsonExport) -> Self {
-        let exports: Vec<_> = value.data.into_iter().map(CodeCovJsonExport::from).collect();
+    #[must_use]
+    pub fn from_llvm_cov_json_export(
+        value: LlvmCovJsonExport,
+        ignore_filename_regex: Option<&str>,
+    ) -> Self {
+        let re = ignore_filename_regex.map(|s| Regex::new(s).unwrap());
+        let exports: Vec<_> =
+            value.data.into_iter().map(|v| Self::from_export(v, re.as_ref())).collect();
 
         let mut combined = CodeCovJsonExport::default();
 
@@ -147,10 +157,10 @@ impl LlvmCovJsonExport {
 
     /// Gets the list of uncovered lines of all files.
     #[must_use]
-    pub fn get_uncovered_lines(&self, ignore_filename_regex: &Option<String>) -> UncoveredLines {
+    pub fn get_uncovered_lines(&self, ignore_filename_regex: Option<&str>) -> UncoveredLines {
         let mut uncovered_files: UncoveredLines = BTreeMap::new();
         let mut covered_files: UncoveredLines = BTreeMap::new();
-        let re = ignore_filename_regex.as_ref().map(|s| regex::Regex::new(s).unwrap());
+        let re = ignore_filename_regex.map(|s| Regex::new(s).unwrap());
         for data in &self.data {
             if let Some(ref functions) = data.functions {
                 // Iterate over all functions inside the coverage data.
@@ -526,7 +536,7 @@ mod tests {
 
         // When finding uncovered lines in that report:
         let ignore_filename_regex = None;
-        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
+        let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
         let expected: UncoveredLines =
@@ -547,7 +557,7 @@ mod tests {
         let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
 
         let ignore_filename_regex = None;
-        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
+        let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         let expected: UncoveredLines = UncoveredLines::new();
         assert_eq!(uncovered_lines, expected);
@@ -566,7 +576,7 @@ mod tests {
 
         // When finding uncovered lines in that report:
         let ignore_filename_regex = None;
-        let uncovered_lines = json.get_uncovered_lines(&ignore_filename_regex);
+        let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
         let expected: UncoveredLines =
