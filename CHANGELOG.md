@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where `--codecov` flag doesn't exclude files that should be excluded from the report. ([#251](https://github.com/taiki-e/cargo-llvm-cov/pull/251))
+
 ## [0.5.12] - 2023-04-02
 
 - Add `--codecov` flag to support "Codecov Custom Coverage" format. This allows using region coverage on Codecov. ([#249](https://github.com/taiki-e/cargo-llvm-cov/pull/249), thanks @andrewgazelka)
