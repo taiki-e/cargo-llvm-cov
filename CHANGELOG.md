@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.13] - 2023-04-03
+
 - Fix an issue where `--codecov` flag doesn't exclude files that should be excluded from the report. ([#251](https://github.com/taiki-e/cargo-llvm-cov/pull/251))
 
 ## [0.5.12] - 2023-04-02
@@ -456,7 +458,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.12...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.13...HEAD
+[0.5.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.12...v0.5.13
 [0.5.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.11...v0.5.12
 [0.5.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.9...v0.5.10
