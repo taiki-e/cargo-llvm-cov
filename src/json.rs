@@ -71,11 +71,6 @@ impl CodeCovJsonExport {
         for func in functions {
             let func_count = func.count; // instances of function
 
-            // We do not want to include 0/0 in code coverage. This might cause weird issues
-            if func_count == 0 {
-                continue;
-            }
-
             for filename in func.filenames {
                 if let Some(re) = ignore_filename_regex {
                     if re.is_match(&filename) {
@@ -121,6 +116,7 @@ impl CodeCovJsonExport {
 
         let mut combined = CodeCovJsonExport::default();
 
+        // first pass: combine
         for export in exports {
             for (filename, coverage) in export.coverage {
                 let combined = combined.coverage.entry(filename).or_default();
@@ -131,6 +127,19 @@ impl CodeCovJsonExport {
                         .or_insert_with(|| CodeCovCoverage { count: 0, covered: 0 });
                     combined.count += coverage.count;
                     combined.covered += coverage.covered;
+                }
+            }
+        }
+
+        // second pass: replace all 0/0 with 0/1. We will get 0/0 if the function was not included
+        // in any of the test binaries
+        // (for instance, if the function was never called and was optimized out).
+        // We want to make sure that we do not get a 100% coverage if codecov chooses to ignore the
+        // 0/0.
+        for (_, coverage) in &mut combined.coverage {
+            for (_, coverage) in &mut coverage.0 {
+                if coverage.count == 0 {
+                    coverage.count = 1;
                 }
             }
         }
