@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where `--codecov` flag reports a fully covered line as only partially covered or not covered. ([#253](https://github.com/taiki-e/cargo-llvm-cov/pull/253), thanks @andrewgazelka)
+
 ## [0.5.13] - 2023-04-03
 
 - Fix an issue where `--codecov` flag doesn't exclude files that should be excluded from the report. ([#251](https://github.com/taiki-e/cargo-llvm-cov/pull/251))
