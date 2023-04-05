@@ -2,13 +2,9 @@ bindeps
 binstall
 cfgs
 codecov
-demangled
 demangler
-disambiguators
 doctestbins
-doctests
 easytime
-fastrand
 fcoverage
 fprofile
 libdir
@@ -19,7 +15,6 @@ notcovered
 pacman
 profdata
 profraw
-rngs
 rustfilt
 subcmd
 tempdir

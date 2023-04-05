@@ -67,6 +67,7 @@ openwrt
 riscv
 softfloat
 sparcv
+spirv
 thumbeb
 thumbebv
 thumbv
@@ -89,12 +90,14 @@ bools
 builtins
 bytecount
 canonicalize
+concat
 consts
 ctypes
 dealloc
 deque
 docsrs
 doctest
+doctests
 hasher
 impls
 inlateout
@@ -148,6 +151,7 @@ powerset
 proto
 ranlib
 readelf
+shellcheckrc
 SIGABRT
 SIGILL
 SIGINT
