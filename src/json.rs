@@ -70,6 +70,12 @@ impl CodeCovJsonExport {
 
         for func in functions {
             let func_count = func.count; // instances of function
+
+            // We do not want to include 0/0 in code coverage. This might cause weird issues
+            if func_count == 0 {
+                continue;
+            }
+
             for filename in func.filenames {
                 if let Some(re) = ignore_filename_regex {
                     if re.is_match(&filename) {
