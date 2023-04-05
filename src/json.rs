@@ -86,7 +86,16 @@ impl CodeCovJsonExport {
                     for line in line_start..=line_end {
                         let coverage = coverage.0.entry(line).or_default();
                         coverage.count += func_count;
-                        coverage.covered += region.execution_count();
+
+                        // TODO: not sure this is 100% accurate, but it will be most of the time.
+                        // for instance, if there are 5 versions of a functions and a line is
+                        // hit 5 times does not mean all 5 versions of that function have been
+                        // called. For instance, one of the functions might have been called
+                        // multiple times while others might have been called none.
+                        // Regardless, we for sure do not want to increase _over_ the
+                        // `func_count` as not more than the number of functions could have been
+                        // covered
+                        coverage.covered += region.execution_count().min(func_count);
                     }
                 }
             }
