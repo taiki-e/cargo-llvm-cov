@@ -633,7 +633,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
-[#12]: https://github.com/taiki-e/cargo-llvm-cov/issues/12
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
 [#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
 [#219]: https://github.com/taiki-e/cargo-llvm-cov/issues/219
