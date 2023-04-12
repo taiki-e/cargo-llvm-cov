@@ -138,8 +138,11 @@ binutils
 connrefused
 cygwin
 dpkg
+elif
 endianness
+esac
 euxo
+gsub
 msys
 noninteractive
 noprofile

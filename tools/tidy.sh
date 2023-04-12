@@ -64,6 +64,7 @@ fi
 
 # Rust (if exists)
 if [[ -n "$(git ls-files '*.rs')" ]]; then
+    info "checking Rust code style"
     if type -P rustup &>/dev/null; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
@@ -87,10 +88,35 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         error "please replace \`.cast()\` with \`.cast::<type_name>()\`:"
         echo "${cast_without_turbofish}"
     fi
+    first='1'
+    for readme in $(git ls-files '*README.md'); do
+        if ! grep -q '^<!-- tidy:crate-doc:start -->' "${readme}"; then
+            continue
+        fi
+        lib="$(dirname "${readme}")/src/lib.rs"
+        if [[ -n "${first}" ]]; then
+            first=''
+            info "checking readme and crate-level doc are synchronized"
+        fi
+        if ! grep -q '^<!-- tidy:crate-doc:end -->' "${readme}"; then
+            bail "missing '<!-- tidy:crate-doc:end -->' comment in ${readme}"
+        fi
+        if ! grep -q '^<!-- tidy:crate-doc:start -->' "${lib}"; then
+            bail "missing '<!-- tidy:crate-doc:start -->' comment in ${lib}"
+        fi
+        if ! grep -q '^<!-- tidy:crate-doc:end -->' "${lib}"; then
+            bail "missing '<!-- tidy:crate-doc:end -->' comment in ${lib}"
+        fi
+        new=$(tr <"${readme}" '\n' '\a' | grep -o '<!-- tidy:crate-doc:start -->.*<!-- tidy:crate-doc:end -->' | sed 's/\&/\\\&/g; s/\\/\\\\/g')
+        new=$(tr <"${lib}" '\n' '\a' | awk -v new="${new}" 'gsub("<!-- tidy:crate-doc:start -->.*<!-- tidy:crate-doc:end -->",new)' | tr '\a' '\n')
+        echo "${new}" >"${lib}"
+        check_diff "${lib}"
+    done
 fi
 
 # C/C++ (if exists)
 if [[ -n "$(git ls-files '*.c')$(git ls-files '*.cpp')" ]]; then
+    info "checking C/C++ code style"
     if [[ ! -e .clang-format ]]; then
         warn "could not fount .clang-format in the repository root"
     fi
@@ -105,6 +131,7 @@ fi
 
 # YAML/JavaScript/JSON (if exists)
 if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')" ]]; then
+    info "checking YAML/JavaScript/JSON code style"
     if type -P npm &>/dev/null; then
         echo "+ npx prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
         npx prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
@@ -114,6 +141,7 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
     fi
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
+        info "checking GitHub workflows"
         if type -P jq &>/dev/null && type -P yq &>/dev/null; then
             for workflow in .github/workflows/*.yml; do
                 # The top-level permissions must be weak as they are referenced by all jobs.
@@ -149,6 +177,7 @@ if [[ -n "$(git ls-files '*.yaml')" ]]; then
 fi
 
 # Shell scripts
+info "checking Shell scripts"
 if type -P shfmt &>/dev/null; then
     echo "+ shfmt -l -w \$(git ls-files '*.sh')"
     shfmt -l -w $(git ls-files '*.sh')
@@ -174,6 +203,7 @@ fi
 
 # Spell check (if config exists)
 if [[ -f .cspell.json ]]; then
+    info "spell checking"
     if type -P npm &>/dev/null; then
         has_rust=''
         if [[ -n "$(git ls-files '*Cargo.toml')" ]]; then
