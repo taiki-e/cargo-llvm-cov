@@ -513,7 +513,7 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
     fail_ci_if_error: true
 ```
 
-Note: `--codecov` flag has [a known bug](https://github.com/taiki-e/cargo-llvm-cov/issues/252) and is still considered somewhat experimental.
+Note: `--codecov` flag has [a known bug](https://github.com/taiki-e/cargo-llvm-cov/issues/255) and is still considered somewhat experimental.
 
 ### Environment variables
 
