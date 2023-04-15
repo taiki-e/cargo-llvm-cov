@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix version detection with dev build. ([#257](https://github.com/taiki-e/cargo-llvm-cov/pull/257), thanks @tofay)
+
 ## [0.5.14] - 2023-04-05
 
 - Fix an issue where `--codecov` flag reports a fully covered line as only partially covered or not covered. ([#253](https://github.com/taiki-e/cargo-llvm-cov/pull/253), thanks @andrewgazelka)
