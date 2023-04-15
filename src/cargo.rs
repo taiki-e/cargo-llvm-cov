@@ -146,7 +146,7 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
         .find_map(|line| line.strip_prefix("release: "))
         .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?;
     let (_version, channel) = version.split_once('-').unwrap_or_default();
-    let nightly = channel == "nightly" || version == "dev";
+    let nightly = channel == "nightly" || channel == "dev";
     Ok(nightly)
 }
 
