@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.16] - 2023-04-18
+
 - Improve the `--codecov` flag to match how region coverage is calculated to the HTML report.
 
 ## [0.5.15] - 2023-04-15
@@ -468,7 +470,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...HEAD
+[0.5.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...v0.5.16
 [0.5.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.14...v0.5.15
 [0.5.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.13...v0.5.14
 [0.5.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.12...v0.5.13
