@@ -69,8 +69,6 @@ impl CodeCovJsonExport {
         let mut regions = BTreeMap::new();
 
         for func in functions {
-            // let func_count = func.count; // instances of function
-
             for filename in func.filenames {
                 if let Some(re) = ignore_filename_regex {
                     if re.is_match(&filename) {
@@ -86,7 +84,7 @@ impl CodeCovJsonExport {
 
                     let covered = coverage.entry(loc).or_default();
 
-                    *covered = *covered || region.execution_count() > 0; // TODO: maybe this should be compared to func_count?
+                    *covered = *covered || region.execution_count() > 0;
                 }
             }
         }
