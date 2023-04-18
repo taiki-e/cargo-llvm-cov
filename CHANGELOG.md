@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve the `--codecov` flag to match how region coverage is calculated to the HTML report.
+
 ## [0.5.15] - 2023-04-15
 
 - Fix version detection with dev build. ([#257](https://github.com/taiki-e/cargo-llvm-cov/pull/257), thanks @tofay)
