@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     fmt::{Debug, Formatter},
 };
 
@@ -66,11 +66,9 @@ impl CodeCovJsonExport {
     fn from_export(value: Export, ignore_filename_regex: Option<&Regex>) -> Self {
         let functions = value.functions.unwrap_or_default();
 
-        let mut coverage = BTreeMap::new();
+        let mut regions = BTreeMap::new();
 
         for func in functions {
-            let func_count = func.count; // instances of function
-
             for filename in func.filenames {
                 if let Some(re) = ignore_filename_regex {
                     if re.is_match(&filename) {
@@ -78,26 +76,29 @@ impl CodeCovJsonExport {
                     }
                 }
                 for region in &func.regions {
-                    let line_start = region.line_start();
-                    let line_end = region.line_end();
+                    let loc = RegionLocation::from(region);
 
-                    let coverage: &mut CodeCovExport =
-                        coverage.entry(filename.clone()).or_default();
+                    // region location to covered
+                    let coverage: &mut HashMap<RegionLocation, bool> =
+                        regions.entry(filename.clone()).or_default();
 
-                    for line in line_start..=line_end {
-                        let coverage = coverage.0.entry(line).or_default();
-                        coverage.count += func_count;
+                    let covered = coverage.entry(loc).or_default();
 
-                        // TODO: not sure this is 100% accurate, but it will be most of the time.
-                        // for instance, if there are 5 versions of a functions and a line is
-                        // hit 5 times does not mean all 5 versions of that function have been
-                        // called. For instance, one of the functions might have been called
-                        // multiple times while others might have been called none.
-                        // Regardless, we for sure do not want to increase _over_ the
-                        // `func_count` as not more than the number of functions could have been
-                        // covered
-                        coverage.covered += region.execution_count().min(func_count);
-                    }
+                    *covered = *covered || region.execution_count() > 0;
+                }
+            }
+        }
+
+        let mut coverage = BTreeMap::new();
+
+        for (filename, regions) in regions {
+            let coverage: &mut CodeCovExport = coverage.entry(filename).or_default();
+
+            for (loc, covered) in regions {
+                for line in loc.lines() {
+                    let coverage = coverage.0.entry(line).or_default();
+                    coverage.count += 1;
+                    coverage.covered += u64::from(covered);
                 }
             }
         }
@@ -116,7 +117,7 @@ impl CodeCovJsonExport {
 
         let mut combined = CodeCovJsonExport::default();
 
-        // first pass: combine
+        // combine
         for export in exports {
             for (filename, coverage) in export.coverage {
                 let combined = combined.coverage.entry(filename).or_default();
@@ -127,19 +128,6 @@ impl CodeCovJsonExport {
                         .or_insert_with(|| CodeCovCoverage { count: 0, covered: 0 });
                     combined.count += coverage.count;
                     combined.covered += coverage.covered;
-                }
-            }
-        }
-
-        // second pass: replace all 0/0 with 0/1. We will get 0/0 if the function was not included
-        // in any of the test binaries
-        // (for instance, if the function was never called and was optimized out).
-        // We want to make sure that we do not get a 100% coverage if codecov chooses to ignore the
-        // 0/0.
-        for (_, coverage) in &mut combined.coverage {
-            for (_, coverage) in &mut coverage.0 {
-                if coverage.count == 0 {
-                    coverage.count = 1;
                 }
             }
         }
@@ -442,6 +430,32 @@ impl Region {
 
     pub(crate) fn kind(&self) -> u64 {
         self.7
+    }
+}
+
+/// The location of a region
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+pub(crate) struct RegionLocation {
+    start_line: u64,
+    end_line: u64,
+    start_column: u64,
+    end_column: u64,
+}
+
+impl From<&Region> for RegionLocation {
+    fn from(region: &Region) -> Self {
+        Self {
+            start_line: region.line_start(),
+            end_line: region.line_end(),
+            start_column: region.column_start(),
+            end_column: region.column_end(),
+        }
+    }
+}
+
+impl RegionLocation {
+    fn lines(&self) -> impl Iterator<Item = u64> {
+        self.start_line..=self.end_line
     }
 }
 
