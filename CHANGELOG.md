@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Set `CARGO_LLVM_COV` environment variable ([#259](https://github.com/taiki-e/cargo-llvm-cov/pull/259), thanks @def-)
+
 ## [0.5.16] - 2023-04-18
 
 - Improve the `--codecov` flag to match how region coverage is calculated to the HTML report. ([#255](https://github.com/taiki-e/cargo-llvm-cov/pull/255), thanks @andrewgazelka)
