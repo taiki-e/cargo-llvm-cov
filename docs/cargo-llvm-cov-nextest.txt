@@ -1,5 +1,6 @@
 cargo-llvm-cov-nextest
 Run tests with cargo nextest
+This internally calls `cargo nextest run`.
 
 USAGE:
     cargo llvm-cov nextest [OPTIONS] [NEXTEST_OPTIONS]

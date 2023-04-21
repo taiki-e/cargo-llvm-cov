@@ -333,6 +333,7 @@ SUBCOMMANDS:
             Remove artifacts that cargo-llvm-cov has generated in the past
     nextest
             Run tests with cargo nextest
+            This internally calls `cargo nextest run`.
 ```
 <!-- readme-long-help:end -->
 
@@ -646,6 +647,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
+[rust-lang/rust#91092]: https://github.com/rust-lang/rust/issues/91092
 [xtask]: https://github.com/matklad/cargo-xtask
 
 ## License
