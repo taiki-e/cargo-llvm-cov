@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.17] - 2023-04-21
+
 - Set `CARGO_LLVM_COV` environment variable ([#259](https://github.com/taiki-e/cargo-llvm-cov/pull/259), thanks @def-)
 
 ## [0.5.16] - 2023-04-18
@@ -472,7 +474,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...HEAD
+[0.5.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...v0.5.17
 [0.5.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...v0.5.16
 [0.5.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.14...v0.5.15
 [0.5.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.13...v0.5.14
