@@ -290,6 +290,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         // Same as above
         env.set("NEXTEST_TEST_THREADS", "1")?;
     }
+    env.set("CARGO_LLVM_COV", "1")?;
     Ok(())
 }
 
