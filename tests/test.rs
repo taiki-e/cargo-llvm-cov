@@ -153,6 +153,10 @@ fn coverage_helper() {
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn merge() {
+    // The order of the instantiations in the generated coverage report will be different depending on the platform.
+    if !cfg!(target_os = "linux") {
+        return;
+    }
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
     merge_with_failure_mode(&output_dir, false);
 }
