@@ -527,12 +527,7 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Test | Subcommand::Run => {}
-            Subcommand::Nextest => {
-                if ignore_run_fail {
-                    bail!("--ignore-run-fail is not supported for nextest");
-                }
-            }
+            Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest => {}
             _ => {
                 if !bin.is_empty() {
                     unexpected("--bin", subcommand)?;
