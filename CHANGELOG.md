@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.18] - 2023-04-25
+
 - Support `--ignore-run-fail` for `cargo llvm-cov nextest`. ([#263](https://github.com/taiki-e/cargo-llvm-cov/pull/263))
 
 ## [0.5.17] - 2023-04-21
@@ -476,7 +478,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...HEAD
+[0.5.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...v0.5.18
 [0.5.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...v0.5.17
 [0.5.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...v0.5.16
 [0.5.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.14...v0.5.15
