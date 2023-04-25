@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `--ignore-run-fail` for `cargo llvm-cov nextest`. ([#263](https://github.com/taiki-e/cargo-llvm-cov/pull/263))
+
 ## [0.5.17] - 2023-04-21
 
 - Set `CARGO_LLVM_COV` environment variable ([#259](https://github.com/taiki-e/cargo-llvm-cov/pull/259), thanks @def-)

@@ -368,8 +368,29 @@ fn run_nextest(cx: &Context) -> Result<()> {
     cargo.arg("nextest").arg("run");
 
     if cx.args.ignore_run_fail {
-        // TODO: support --ignore-run-fail
-        todo!();
+        {
+            let mut cargo = cargo.clone();
+            cargo.arg("--no-run");
+            cargo.env_remove("NEXTEST_TEST_THREADS"); // error: the argument '--no-run' cannot be used with '--test-threads <THREADS>'
+            cargo::test_or_run_args(cx, &mut cargo);
+            if term::verbose() {
+                status!("Running", "{cargo}");
+                cargo.stdout_to_stderr().run()?;
+            } else {
+                // Capture output to prevent duplicate warnings from appearing in two runs.
+                cargo.run_with_output()?;
+            }
+        }
+
+        cargo.arg("--no-fail-fast");
+        cargo::test_or_run_args(cx, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{cargo}");
+        }
+        stdout_to_stderr(cx, &mut cargo);
+        if let Err(e) = cargo.run() {
+            warn!("{e:#}");
+        }
     } else {
         cargo::test_or_run_args(cx, &mut cargo);
         if term::verbose() {
