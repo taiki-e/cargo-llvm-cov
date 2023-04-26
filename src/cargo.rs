@@ -10,6 +10,7 @@ use crate::{
     env,
     process::ProcessBuilder,
 };
+use crate::cli::Args;
 
 pub(crate) struct Workspace {
     pub(crate) name: String,
@@ -198,8 +199,7 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
-    cmd.arg("--target-dir");
-    cmd.arg(&cx.ws.target_dir);
+    add_target_dir(&cx.args, cmd, &cx.ws.target_dir);
 
     for cargo_arg in &cx.args.cargo_args {
         cmd.arg(cargo_arg);
@@ -235,8 +235,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
-    cmd.arg("--target-dir");
-    cmd.arg(&cx.ws.target_dir);
+    add_target_dir(&cx.args, cmd, &cx.ws.target_dir);
 
     cx.args.manifest.cargo_args(cmd);
 
@@ -244,4 +243,14 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.args.verbose > 1 {
         cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
     }
+}
+
+// https://github.com/taiki-e/cargo-llvm-cov/issues/265
+fn add_target_dir(args: &Args, cmd: &mut ProcessBuilder, target_dir: &Utf8Path) {
+    if args.subcommand == Subcommand::Nextest && args.rest.contains(&"--archive-file".to_string()) {
+        cmd.arg("--extract-to");
+    } else {
+        cmd.arg("--target-dir");
+    }
+    cmd.arg(target_dir.as_str());
 }
