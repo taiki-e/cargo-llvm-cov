@@ -5,12 +5,11 @@ use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Config;
 
 use crate::{
-    cli::{ManifestOptions, Subcommand},
+    cli::{ManifestOptions, Subcommand, Args},
     context::Context,
     env,
     process::ProcessBuilder,
 };
-use crate::cli::Args;
 
 pub(crate) struct Workspace {
     pub(crate) name: String,
