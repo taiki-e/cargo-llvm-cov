@@ -234,7 +234,8 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
-    add_target_dir(&cx.args, cmd, &cx.ws.target_dir);
+    cmd.arg("--target-dir");
+    cmd.arg(cx.ws.target_dir.as_str());
 
     cx.args.manifest.cargo_args(cmd);
 
