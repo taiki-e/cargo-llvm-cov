@@ -630,14 +630,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         target_dir.push(target);
     }
     // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-    let profile = if cx.args.subcommand == Subcommand::Nextest {
-        // nextest's --profile option is different from cargo.
-        // https://nexte.st/book/configuration.html#profiles
-        None
-    } else {
-        cx.args.profile.as_deref()
-    };
-    let profile = match profile {
+    let profile = match cx.args.profile.as_deref() {
         None if cx.args.release => "release",
         None => "debug",
         Some(p) if matches!(p, "release" | "bench") => "release",

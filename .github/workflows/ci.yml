@@ -72,7 +72,10 @@ jobs:
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
-      - run: cargo llvm-cov nextest --text
+      - run: |
+          set -euxo pipefail
+          cargo llvm-cov nextest --text
+          cargo llvm-cov nextest --text --profile default --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail

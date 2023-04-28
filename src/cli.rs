@@ -354,7 +354,12 @@ impl Args {
 
                 // build options
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
-                Long("profile") => parse_opt_passthrough!(profile),
+                Long("profile") if subcommand != Subcommand::Nextest => {
+                    parse_opt_passthrough!(profile)
+                }
+                Long("cargo-profile") if subcommand == Subcommand::Nextest => {
+                    parse_opt_passthrough!(profile)
+                }
                 Long("target") => parse_opt_passthrough!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
