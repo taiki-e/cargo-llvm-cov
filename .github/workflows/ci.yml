@@ -45,9 +45,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - rust: '1.60'
-          - rust: stable
-          - rust: beta
+          # TODO: nightly-2023-04-27 fixed a bug in report generation,
+          # so the latest report is not the same as the old report.
+          # - rust: '1.60'
+          # - rust: stable
+          # - rust: beta
           - rust: nightly
           - rust: nightly
             os: macos-11

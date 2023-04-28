@@ -1,4 +1,4 @@
-    1|      1|fn func(x: i32) -> bool {fn func(x: i32) -> bool {
+    1|      1|fn func(x: i32) -> bool {
     2|      1|    if x < 0 {
     3|      0|        true
     4|       |    } else {

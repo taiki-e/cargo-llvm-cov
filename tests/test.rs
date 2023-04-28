@@ -154,7 +154,7 @@ fn coverage_helper() {
 #[test]
 fn merge() {
     // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if !cfg!(target_os = "linux") {
+    if cfg!(windows) {
         return;
     }
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
