@@ -542,7 +542,7 @@ mod tests {
         let percent = json.get_lines_percent().unwrap();
 
         let error_margin = f64::EPSILON;
-        assert!((percent - 69.565_217_391_304_34).abs() < error_margin);
+        assert!((percent - 68.181_818_181_818_19).abs() < error_margin, "{percent}");
     }
 
     #[test]
