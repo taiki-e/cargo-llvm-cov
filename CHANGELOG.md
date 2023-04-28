@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.19] - 2023-04-28
+
 - Fix handling of `--cargo-profile` option for `cargo llvm-cov nextest`. ([#269](https://github.com/taiki-e/cargo-llvm-cov/pull/269))
 
 ## [0.5.18] - 2023-04-25
@@ -480,7 +482,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.19...HEAD
+[0.5.19]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...v0.5.19
 [0.5.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...v0.5.18
 [0.5.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...v0.5.17
 [0.5.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...v0.5.16
