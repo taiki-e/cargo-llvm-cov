@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix handling of `--cargo-profile` option for `cargo llvm-cov nextest`. ([#269](https://github.com/taiki-e/cargo-llvm-cov/pull/269))
+
 ## [0.5.18] - 2023-04-25
 
 - Support `--ignore-run-fail` for `cargo llvm-cov nextest`. ([#263](https://github.com/taiki-e/cargo-llvm-cov/pull/263))
