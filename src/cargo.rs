@@ -216,12 +216,9 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.args.release {
         cmd.arg("--release");
     }
-    // nextest's --profile option is different from cargo.
-    if cx.args.subcommand != Subcommand::Nextest {
-        if let Some(profile) = &cx.args.profile {
-            cmd.arg("--profile");
-            cmd.arg(profile);
-        }
+    if let Some(profile) = &cx.args.profile {
+        cmd.arg("--profile");
+        cmd.arg(profile);
     }
     if let Some(target) = &cx.args.target {
         cmd.arg("--target");
