@@ -83,7 +83,7 @@ pub(crate) struct Args {
     // pub(crate) jobs: Option<u32>,
     /// Build artifacts in release mode, with optimizations
     pub(crate) release: bool,
-    /// Nextest profile to use
+    /// Build artifacts with the specified profile
     pub(crate) profile: Option<String>,
     // /// Space or comma separated list of features to activate
     // pub(crate) features: Vec<String>,
