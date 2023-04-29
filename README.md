@@ -247,7 +247,13 @@ OPTIONS:
             Build artifacts in release mode, with optimizations
 
         --profile <PROFILE-NAME>
-            Build artifacts with the specified profile
+            Nextest profile to use
+
+        --config-file <PATH>
+            Path to the Nextest config file [default: workspace-root/.config/nextest.toml]
+
+        --cargo-profile <PROFILE-NAME>
+            Build artifacts with the specified cargo profile
 
     -F, --features <FEATURES>
             Space or comma separated list of features to activate
@@ -345,7 +351,7 @@ By default, run tests (via `cargo test`), and print the coverage summary to stdo
 cargo llvm-cov
 ```
 
-Currently, doc tests are disabled by default because nightly-only features are required to make coverage work for doc tests. see [#2] for more.
+Currently, doc tests are disabled by default because nightly-only features are required to make coverage work for doc tests. See [#2] for more.
 
 To run `cargo run` instead of `cargo test`, use `run` subcommand.
 

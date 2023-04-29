@@ -148,7 +148,13 @@ OPTIONS:
             Build artifacts in release mode, with optimizations
 
         --profile <PROFILE-NAME>
-            Build artifacts with the specified profile
+            Nextest profile to use
+
+        --config-file <PATH>
+            Path to the Nextest config file [default: workspace-root/.config/nextest.toml]
+
+        --cargo-profile <PROFILE-NAME>
+            Build artifacts with the specified cargo profile
 
     -F, --features <FEATURES>
             Space or comma separated list of features to activate
