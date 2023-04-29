@@ -247,13 +247,14 @@ OPTIONS:
             Build artifacts in release mode, with optimizations
 
         --profile <PROFILE-NAME>
-            Nextest profile to use
+            If used with Nextest, specifies Nextest profile to use, can be cusomized in the Nextest config file
+            If used with cargo, specifies cargo compilation profile to use
 
         --config-file <PATH>
             Path to the Nextest config file [default: workspace-root/.config/nextest.toml]
 
         --cargo-profile <PROFILE-NAME>
-            Build artifacts with the specified cargo profile
+            If used with Nextest, build artifacts with the specified cargo profile
 
     -F, --features <FEATURES>
             Space or comma separated list of features to activate
