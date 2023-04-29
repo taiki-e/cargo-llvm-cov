@@ -206,10 +206,10 @@ OPTIONS:
         --profile <PROFILE-NAME>
             Nextest profile to use
 
-    --config-file <PATH>
+        --config-file <PATH>
             Path to the Nextest config file [default: workspace-root/.config/nextest.toml]
 
-    --cargo-profile <PROFILE-NAME>
+        --cargo-profile <PROFILE-NAME>
             Build artifacts with the specified cargo profile
 
     -F, --features <FEATURES>
