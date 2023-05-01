@@ -2,7 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
-[![rustc](https://img.shields.io/badge/rustc-1.60+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![rustc](https://img.shields.io/badge/rustc-1.64+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/actions/workflow/status/taiki-e/cargo-llvm-cov/ci.yml?branch=main&style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
 Cargo subcommand to easily use LLVM source-based code coverage.
@@ -534,8 +534,6 @@ See also [environment variables that Cargo reads](https://doc.rust-lang.org/nigh
 <!-- omit in toc -->
 ### Prerequisites
 
-Running cargo-llvm-cov requires rustc 1.60+.
-
 <!-- omit in toc -->
 ### From source
 
@@ -543,7 +541,11 @@ Running cargo-llvm-cov requires rustc 1.60+.
 cargo +stable install cargo-llvm-cov --locked
 ```
 
-Currently, installing cargo-llvm-cov requires rustc 1.60+.
+Currently, installing cargo-llvm-cov requires rustc 1.64+.
+
+cargo-llvm-cov is usually runnable with Cargo versions older than the Rust version
+required for installation (e.g., `cargo +1.60 llvm-cov`). Currently, to run
+cargo-llvm-cov requires Cargo 1.60+.
 
 <!-- omit in toc -->
 ### From prebuilt binaries
