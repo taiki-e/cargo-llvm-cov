@@ -1,5 +1,5 @@
-    1|      1|// https://github.com/taiki-e/cargo-llvm-cov/issues/43
-    2|      1|
+    1|       |// https://github.com/taiki-e/cargo-llvm-cov/issues/43
+    2|       |
     3|      2|fn func<T: Default + PartialOrd>(t: T) -> bool {
     4|      2|    if t < T::default() {
     5|      1|        true

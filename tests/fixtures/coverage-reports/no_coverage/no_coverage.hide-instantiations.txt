@@ -1,5 +1,5 @@
-    1|      1|#![cfg_attr(coverage, feature(no_coverage))]
-    2|      1|
+    1|       |#![cfg_attr(coverage, feature(no_coverage))]
+    2|       |
     3|      1|fn func(x: i32) {
     4|      1|    match x {
     5|      1|        0 => {}

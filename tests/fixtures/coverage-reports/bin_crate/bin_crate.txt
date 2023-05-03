@@ -1,8 +1,4 @@
     1|      2|fn main() {
-  ------------------
-  | bin_crate::main:
-  |    1|       |fn main() {
-  ------------------
     2|      2|    match std::env::args().skip(1).next().unwrap().parse::<u8>().unwrap() {
     3|      1|        0 => {}
     4|      1|        1 => {}

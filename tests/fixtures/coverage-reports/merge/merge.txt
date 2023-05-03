@@ -1,11 +1,4 @@
     1|      2|fn func(x: i32) -> bool {
-  ------------------
-  | merge::main:
-  |    1|       |fn func(x: i32) -> bool {
-  ------------------
-  | merge::main:
-  |    1|       |fn func(x: i32) -> bool {
-  ------------------
     2|      2|    if x < 0 {
     3|      1|        true
     4|       |    } else {

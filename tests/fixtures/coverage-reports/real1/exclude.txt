@@ -1,9 +1,5 @@
 member1/member2/src/lib.rs:
     1|      0|pub fn func(x: u32) {
-  ------------------
-  | member2::main:
-  |    1|       |pub fn func(x: u32) {
-  ------------------
     2|      0|    match x {
     3|      0|        0 => {}
     4|      0|        1 => {}
@@ -11,16 +7,9 @@ member1/member2/src/lib.rs:
     6|      0|        _ => {}
     7|       |    }
     8|      0|}
-  ------------------
-  | Unexecuted instantiation: member2::func
-  ------------------
 
 member1/src/lib.rs:
     1|      0|pub fn func(x: u32) {
-  ------------------
-  | member1::main:
-  |    1|       |pub fn func(x: u32) {
-  ------------------
     2|      0|    match x {
     3|      0|        0 => {}
     4|      0|        1 => {}
@@ -28,6 +17,3 @@ member1/src/lib.rs:
     6|      0|        _ => {}
     7|       |    }
     8|      0|}
-  ------------------
-  | Unexecuted instantiation: member1::func
-  ------------------

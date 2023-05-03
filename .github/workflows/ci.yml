@@ -45,8 +45,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # TODO: nightly-2023-04-27 fixed a bug in report generation,
-          # so the latest report is not the same as the old report.
+          # TODO: nightly-2023-04-27 (https://github.com/rust-lang/rust/pull/97368)
+          # and nightly-2023-05-03 (https://github.com/rust-lang/rust/pull/111042)
+          # fixed bugs in report generation, so the latest report is not the
+          # same as the old report.
           # - rust: '1.60'
           # - rust: stable
           # - rust: beta

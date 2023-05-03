@@ -13,13 +13,13 @@
             },
             "functions": {
               "count": 1,
-              "covered": 1,
-              "percent": 100.0
+              "covered": 0,
+              "percent": 0.0
             },
             "instantiations": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "lines": {
               "count": 7,
@@ -28,9 +28,9 @@
             },
             "regions": {
               "count": 6,
-              "covered": 1,
-              "notcovered": 5,
-              "percent": 16.666666666666664
+              "covered": 0,
+              "notcovered": 6,
+              "percent": 0.0
             }
           }
         },
@@ -45,13 +45,13 @@
             },
             "functions": {
               "count": 1,
-              "covered": 1,
-              "percent": 100.0
+              "covered": 0,
+              "percent": 0.0
             },
             "instantiations": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "lines": {
               "count": 7,
@@ -60,9 +60,9 @@
             },
             "regions": {
               "count": 6,
-              "covered": 1,
-              "notcovered": 5,
-              "percent": 16.666666666666664
+              "covered": 0,
+              "notcovered": 6,
+              "percent": 0.0
             }
           }
         }
@@ -76,13 +76,13 @@
         },
         "functions": {
           "count": 2,
-          "covered": 2,
-          "percent": 100
+          "covered": 0,
+          "percent": 0
         },
         "instantiations": {
-          "count": 4,
-          "covered": 2,
-          "percent": 50
+          "count": 2,
+          "covered": 0,
+          "percent": 0
         },
         "lines": {
           "count": 14,
@@ -91,9 +91,9 @@
         },
         "regions": {
           "count": 12,
-          "covered": 2,
-          "notcovered": 10,
-          "percent": 16.666666666666664
+          "covered": 0,
+          "notcovered": 12,
+          "percent": 0
         }
       }
     }

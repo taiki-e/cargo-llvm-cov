@@ -17,8 +17,8 @@
               "percent": 100.0
             },
             "instantiations": {
-              "count": 4,
-              "covered": 4,
+              "count": 3,
+              "covered": 3,
               "percent": 100.0
             },
             "lines": {
@@ -81,9 +81,9 @@
               "percent": 100.0
             },
             "instantiations": {
-              "count": 7,
-              "covered": 5,
-              "percent": 71.42857142857143
+              "count": 6,
+              "covered": 4,
+              "percent": 66.66666666666666
             },
             "lines": {
               "count": 19,
@@ -144,9 +144,9 @@
           "percent": 100
         },
         "instantiations": {
-          "count": 13,
-          "covered": 11,
-          "percent": 84.61538461538461
+          "count": 11,
+          "covered": 9,
+          "percent": 81.81818181818183
         },
         "lines": {
           "count": 48,

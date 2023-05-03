@@ -1,9 +1,5 @@
 member1/src/lib.rs:
     1|      2|pub fn func(x: u32) {
-  ------------------
-  | member1::main:
-  |    1|       |pub fn func(x: u32) {
-  ------------------
     2|      2|    match x {
     3|      0|        0 => {}
     4|      1|        1 => {}
@@ -11,17 +7,6 @@ member1/src/lib.rs:
     6|      1|        _ => {}
     7|       |    }
     8|      2|}
-  ------------------
-  | member1::func:
-  |    1|      2|pub fn func(x: u32) {
-  |    2|      2|    match x {
-  |    3|      0|        0 => {}
-  |    4|      1|        1 => {}
-  |    5|      0|        2 => {}
-  |    6|      1|        _ => {}
-  |    7|       |    }
-  |    8|      2|}
-  ------------------
     9|       |
    10|      1|#[test]
    11|      1|fn test() {
@@ -34,10 +19,6 @@ member1/src/lib.rs:
 
 member2/member3/src/lib.rs:
     1|      1|pub fn func(x: u32) {
-  ------------------
-  | member3::main:
-  |    1|       |pub fn func(x: u32) {
-  ------------------
     2|      1|    match x {
     3|      1|        0 => {}
     4|      0|        1 => {}
@@ -86,10 +67,6 @@ member2/src/lib.rs:
 
 member2/src/member4/src/lib.rs:
     1|      1|pub fn func(x: u32) {
-  ------------------
-  | member4::main:
-  |    1|       |pub fn func(x: u32) {
-  ------------------
     2|      1|    match x {
     3|      1|        0 => {}
     4|      0|        1 => {}

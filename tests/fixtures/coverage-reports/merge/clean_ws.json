@@ -17,8 +17,8 @@
               "percent": 100.0
             },
             "instantiations": {
-              "count": 4,
-              "covered": 4,
+              "count": 3,
+              "covered": 3,
               "percent": 100.0
             },
             "lines": {
@@ -48,8 +48,8 @@
           "percent": 100
         },
         "instantiations": {
-          "count": 4,
-          "covered": 4,
+          "count": 3,
+          "covered": 3,
           "percent": 100
         },
         "lines": {

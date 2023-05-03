@@ -1,7 +1,7 @@
 src/lib.rs:
-    1|      1|mod module;
-    2|      1|pub use module::*;
-    3|      1|
+    1|       |mod module;
+    2|       |pub use module::*;
+    3|       |
     4|      1|#[test]
     5|      1|fn f() {}
 
