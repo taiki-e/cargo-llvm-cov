@@ -100,12 +100,12 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Build and archive tests
+        working-directory: tests/fixtures/crates/bin_crate
         run: |
           set -euxo pipefail
           cargo nextest archive --archive-file nextest-artifacts.tar.zst
           ls -la target
           tar -tvf nextest-artifacts.tar.zst
-        working-directory: tests/fixtures/crates/bin_crate
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -135,7 +135,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: nextest-artifacts
+          path: tests/fixtures/crates/bin_crate
       - name: Run tests
+        working-directory: tests/fixtures/crates/bin_crate
         run: |
           set -euxo pipefail
           export CARGO_TARGET_DIR=target
@@ -145,7 +147,6 @@ jobs:
           cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --text
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
-        working-directory: tests/fixtures/crates/bin_crate
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -171,13 +172,14 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: llvm-cov-artifacts
+          path: tests/fixtures/crates/bin_crate
       - name: Run tests
+        working-directory: tests/fixtures/crates/bin_crate
         run: |
           set -euxo pipefail
           mkdir -p target
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
           cargo llvm-cov report --text
-        working-directory: tests/fixtures/crates/bin_crate
 
   build:
     name: build (${{ matrix.target }})
