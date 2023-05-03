@@ -138,8 +138,9 @@ jobs:
       - name: Run tests
         run: |
           set -euxo pipefail
+          export CARGO_TARGET_DIR=target
           mkdir -p target
-          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --extract-to ./target --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --text
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
         working-directory: tests/fixtures/crates/bin_crate
