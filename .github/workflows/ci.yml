@@ -99,8 +99,6 @@ jobs:
           override: true
       - name: Install nextest
         uses: taiki-e/install-action@nextest
-      - name: Install llvm-cov
-        run: cargo install --path . --debug
       - name: Build and archive tests
         run: cargo nextest archive --archive-file nextest-artifacts.tar.zst
       - name: Upload archive to workflow
@@ -125,6 +123,8 @@ jobs:
           components: llvm-tools-preview
       - name: Install nextest
         uses: taiki-e/install-action@nextest
+      - name: Install llvm-cov
+        run: cargo install --path . --debug
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
@@ -132,7 +132,7 @@ jobs:
       - name: Run tests
         run: |
           set -euxo pipefail
-          cargo llvm-cov nextest --workspace --locked --verbose --archive-file nextest-artifacts.tar.zst --text --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -153,6 +153,8 @@ jobs:
           toolchain: stable
           override: true
           components: llvm-tools-preview
+      - name: Install llvm-cov
+        run: cargo install --path . --debug
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
