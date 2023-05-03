@@ -170,24 +170,6 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
         Ok(())
     }
 }
-
-struct IsNextest(bool);
-
-fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNextest) -> Result<()> {
-    fn push_common_flags(cx: &Context, flags: &mut Flags) {
-        if cx.ws.stable_coverage {
-            flags.push("-C");
-            flags.push("instrument-coverage");
-        } else {
-            flags.push("-Z");
-            flags.push("instrument-coverage");
-            if cfg!(windows) {
-                // `-C codegen-units=1` is needed to work around link error on windows
-                // https://github.com/rust-lang/rust/issues/85461
-                // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
-                // This has been fixed in https://github.com/rust-lang/rust/pull/91470,
-                // but old nightly compilers still need this.
-                flags.push("-C");
                 flags.push("codegen-units=1");
             }
         }
@@ -625,6 +607,11 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
+    if cx.args.subcommand == Subcommand::Nextest
+        && cx.args.cargo_args.iter().any(|a| a == "--archive-file")
+    {
+        target_dir.push("target");
+    }
     // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
     if let Some(target) = &cx.args.target {
         target_dir.push(target);
