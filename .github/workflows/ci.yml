@@ -110,7 +110,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: nextest-artifacts
-          path: nextest-artifacts.tar.zst
+          path: tests/fixtures/crates/bin_crate/nextest-artifacts.tar.zst
 
   llvm-cov-nextest-partitioned:
     name: Run tests and coverage instrumentation with partitioning
@@ -148,8 +148,8 @@ jobs:
         with:
           name: llvm-cov-artifacts
           path: |
-            llvm-cov-artifacts-1.tar.gz
-            llvm-cov-artifacts-2.tar.gz
+            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-1.tar.gz
+            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-2.tar.gz
 
   report-from-partitions:
     name: Collect artifacts from partitions and generate the report
