@@ -125,10 +125,10 @@ jobs:
           components: llvm-tools-preview
       - name: Install nextest
         uses: taiki-e/install-action@nextest
-      - name: Download atifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          name: nextest-atifacts
+          name: nextest-artifacts
       - name: Run tests
         run: |
           set -euxo pipefail
@@ -153,7 +153,7 @@ jobs:
           toolchain: stable
           override: true
           components: llvm-tools-preview
-      - name: Download atifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
           name: llvm-cov-artifacts
