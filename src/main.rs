@@ -625,6 +625,11 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
+    if cx.args.subcommand == Subcommand::Nextest
+        && cx.args.cargo_args.iter().any(|a| a == "--archive-file")
+    {
+        target_dir.push("target");
+    }
     // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
     if let Some(target) = &cx.args.target {
         target_dir.push(target);
