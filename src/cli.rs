@@ -84,6 +84,9 @@ pub(crate) struct Args {
     /// Build artifacts in release mode, with optimizations
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
+    ///
+    /// On `cargo llvm-cov nextest` this is the value of `--cargo-profile` option,
+    /// otherwise this is the value of  `--profile` option.
     pub(crate) profile: Option<String>,
     // /// Space or comma separated list of features to activate
     // pub(crate) features: Vec<String>,
