@@ -124,7 +124,8 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
-        run: cargo install --path . --debug
+        # run: cargo install --path . --debug
+        run: cargo install -f --git https://github.com/TriplEight/cargo-llvm-cov cargo-llvm-cov --rev a9ada936f2c3da5d759145ebe6a5b9a38593f104
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
