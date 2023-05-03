@@ -101,9 +101,11 @@ jobs:
         uses: taiki-e/install-action@nextest
       - name: Build and archive tests
         run: |
+          set -euxo pipefail
           cargo nextest archive --archive-file nextest-artifacts.tar.zst
           ls -la target
           tar -tvf nextest-artifacts.tar.zst
+        working-directory: tests/fixtures/crates/bin_crate
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -140,6 +142,7 @@ jobs:
           cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --extract-to ./target --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --text
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
+        working-directory: tests/fixtures/crates/bin_crate
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -171,6 +174,7 @@ jobs:
           mkdir -p target
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
           cargo llvm-cov report --text
+        working-directory: tests/fixtures/crates/bin_crate
 
   build:
     name: build (${{ matrix.target }})
