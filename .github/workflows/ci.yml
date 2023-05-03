@@ -139,7 +139,9 @@ jobs:
         run: |
           set -euxo pipefail
           export CARGO_TARGET_DIR=target
+          cargo llvm-cov show-env --export-prefix
           mkdir -p target
+          tar -tvf nextest-artifacts.tar.zst
           cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --text
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
