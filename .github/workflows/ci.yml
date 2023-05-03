@@ -100,7 +100,10 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Build and archive tests
-        run: cargo nextest archive --archive-file nextest-artifacts.tar.zst
+        run: |
+          cargo nextest archive --archive-file nextest-artifacts.tar.zst
+          ls -la target
+          tar -tvf nextest-artifacts.tar.zst
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -133,7 +136,8 @@ jobs:
       - name: Run tests
         run: |
           set -euxo pipefail
-          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          mkdir -p target
+          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --extract-to ./target --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --text
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
