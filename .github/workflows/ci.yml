@@ -126,7 +126,7 @@ jobs:
   report-from-partitions:
     name: 2/2 Collect artifacts from partitions and generate the report
     runs-on: ubuntu-latest
-    needs: llvm-cov-nextest-archive-partitioned
+    needs: llvm-cov-nextest-partitioned
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
