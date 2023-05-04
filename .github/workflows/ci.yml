@@ -94,6 +94,9 @@ jobs:
     strategy:
       matrix:
         partition: [1, 2]
+    env:
+      CARGO_TARGET_DIR: target
+      CARGO_LLVM_COV_TARGET_DIR: coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -107,13 +110,18 @@ jobs:
         run: cargo install --path . --debug
       - name: Run tests
         # reports from each partition will show only the partial coverage
+        #
+        # In https://github.com/TriplEight/cargo-llvm-cov/actions/runs/4882694449/jobs/8713078366?pr=2 it's seen that coverage artifacts
+        # sit in target/llvm-cov-target/ whereas the compilation artifacts are generated into target/llvm-cov-target/debug/ and not a level lower, it's not expected
+        # maybe affected by https://github.com/TriplEight/cargo-llvm-cov/blob/6e4ce6a0784841a1fd06d9c1492a28af0e72c286/src/cargo.rs#L75
+        # setting it explicitly to avoid including test artifacts into the llvm-cov archive
         run: |
           set -euxo pipefail
-          cargo llvm-cov show-env --export-prefix
-          cargo llvm-cov --text nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov --summary-only
-          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
-          tar tvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz
+          cargo llvm-cov show-env
+          cargo llvm-cov --color always --summary-only nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
+          find ./target -type d
+          find ./coverage -type d
+          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz coverage
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -126,6 +134,9 @@ jobs:
     name: 2/2 Collect artifacts from partitions and generate the report
     runs-on: ubuntu-latest
     needs: llvm-cov-nextest-partitioned
+    env:
+      CARGO_TARGET_DIR: target
+      CARGO_LLVM_COV_TARGET_DIR: coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -143,14 +154,19 @@ jobs:
         # This is expected to show the full coverage
         run: |
           set -euxo pipefail
-          for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
-          ls -R ./target
-          cargo llvm-cov report --text
-          cargo llvm-cov report --summary-only
+          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
+          find ./target -type d
+          find ./coverage -type d
+          cargo llvm-cov report --color always --summary-only
+        # 1
+        # 2
+        # 2/2 TOTAL 2493 963 61.37% 262 69 73.66% 2920 754 74.18% 0 0 -
 
   nextest-archive:
     name: 1/3 Build nextest artifacts
     runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: target
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -160,17 +176,16 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Build and archive tests
-        working-directory: tests/fixtures/crates/bin_crate
         run: |
           set -euxo pipefail
-          cargo nextest archive --archive-file nextest-artifacts.tar.zst
-          ls -R target
+          cargo nextest archive --color always --archive-file nextest-artifacts.tar.zst
+          find ./target -type d
           tar tvf nextest-artifacts.tar.zst
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
           name: nextest-artifacts
-          path: tests/fixtures/crates/bin_crate/nextest-artifacts.tar.zst
+          path: nextest-artifacts.tar.zst
 
   llvm-cov-nextest-archive-partitioned:
     name: 2/3 Run tests and coverage with partitioning on archived nextest artifacts
@@ -179,6 +194,9 @@ jobs:
     strategy:
       matrix:
         partition: [1, 2]
+    env:
+      CARGO_TARGET_DIR: target
+      CARGO_LLVM_COV_TARGET_DIR: coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -221,11 +239,11 @@ jobs:
         #       --manifest-path /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/Cargo.toml
         #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
         #       --archive-file nextest-artifacts.tar.zst --partition 'count:1/2'` (exit status: 100)
-        # which is weird: target/llvm-cov-target is not the expected place for the nextest artifacts, they should go to target/nextest and target/debug
-        # and I couldn't change it by assigning CARGO_TARGET_DIR=./target/
-        # also I tried to set --extract-to ./target to override who knows where it comes from
+        # Which is weird: target/llvm-cov-target is not the expected place for the nextest artifacts, they should go to target/nextest and target/debug
+        # And I couldn't change it by assigning CARGO_TARGET_DIR=./target/ which worked only to add /./ to the path before target in error
+        # Also I tried to set --extract-to ./target to override who knows where it comes from
         #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
-        # but got error: the argument '--extract-to <DIR>' cannot be used multiple times
+        #   but got error: the argument '--extract-to <DIR>' cannot be used multiple times
         #
         # => substituting this command for now:
         # cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
@@ -233,28 +251,28 @@ jobs:
         # tar --use-compress-program=unzstd -xvf nextest-artifacts.tar.zst -C .
         # cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
         # set -euxo pipefail
-        env:
-          CARGO_TARGET_DIR: ./target
         run: |
-          cargo llvm-cov show-env --export-prefix
-          tar tvf nextest-artifacts.tar.zst
+          cargo llvm-cov show-env
           cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
-          ls -R target
-          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
+          find ./target -type d
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz coverage
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
           name: llvm-cov-archive-artifacts
           path: |
-            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-1.tar.gz
-            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-2.tar.gz
+            llvm-cov-artifacts-1.tar.gz
+            llvm-cov-artifacts-2.tar.gz
 
   report-from-archive-partitions:
     name: 3/3 Collect artifacts from partitions and generate the report
     runs-on: ubuntu-latest
     needs: llvm-cov-nextest-archive-partitioned
+    env:
+      CARGO_TARGET_DIR: target
+      CARGO_LLVM_COV_TARGET_DIR: coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -274,8 +292,9 @@ jobs:
         # This is expected to show the full coverage
         run: |
           set -euxo pipefail
-          for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
-          ls -R ./target
+          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
+          find ./target -type d
+          find ./coverage -type d
           cargo llvm-cov report --text
           cargo llvm-cov report --summary-only
 
