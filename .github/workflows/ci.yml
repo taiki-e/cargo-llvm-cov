@@ -158,9 +158,10 @@ jobs:
           find $CARGO_TARGET_DIR -type d
           find $CARGO_LLVM_COV_TARGET_DIR -type d
           cargo llvm-cov report --color always --summary-only
-        # 1
-        # 2
-        # 2/2 TOTAL 2493 963 61.37% 262 69 73.66% 2920 754 74.18% 0 0 -
+        #     Filename Regions Missed Regions Cover Functions Missed Functions Executed Lines Missed Lines Cover Branches Missed Branches Cover
+        # 1   TOTAL     2493    1127          54.79%   262          91          65.27%  2920    976        66.58%   0           0           -
+        # 2   TOTAL     2493    1264          49.30%   262          101         61.45%  2920    1134       61.16%   0           0           -
+        # 2/2 TOTAL     2493    963           61.37%   262          69          73.66%  2920    754        74.18%   0           0           -
 
   nextest-archive:
     name: 1/3 Build nextest artifacts
@@ -248,12 +249,13 @@ jobs:
         # with this:
         # tar --use-compress-program=unzstd -xvf nextest-artifacts.tar.zst -C .
         # cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
-        # set -euxo pipefail
+        #
+        # cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
         run: |
+          set -euxo pipefail
           cargo llvm-cov show-env
-          cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov --summary-only
+          cargo llvm-cov --color always --summary-only nextest --no-fail-fast --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov 
           find ./target -type d
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
       - name: Upload archive to workflow
@@ -291,8 +293,7 @@ jobs:
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
           find $CARGO_TARGET_DIR -type d
           find $CARGO_LLVM_COV_TARGET_DIR -type d
-          cargo llvm-cov report --text
-          cargo llvm-cov report --summary-only
+          cargo llvm-cov report --color always --summary-only
 
   build:
     name: build (${{ matrix.target }})
