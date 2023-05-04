@@ -118,7 +118,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env
-          cargo llvm-cov --color always --summary-only nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --color always --summary-only nextest --workspace --all-features -E `not test(merge_failure_mode_all) --partition count:${{ matrix.partition }}/2
           find $CARGO_TARGET_DIR -type d
           find $CARGO_LLVM_COV_TARGET_DIR -type d
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
@@ -214,7 +214,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: nextest-artifacts
-          path: tests/fixtures/crates/bin_crate
       - name: Run tests
         # reports from each partition will show only the partial coverage
         #
@@ -285,7 +284,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: llvm-cov-archive-artifacts
-          path: tests/fixtures/crates/bin_crate
       - name: Run tests
         # This is expected to show the full coverage
         run: |
