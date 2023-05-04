@@ -118,7 +118,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env
-          cargo llvm-cov --color always --summary-only nextest --workspace --all-features -E `not test(merge_failure_mode_all) --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features -E 'not test(merge_failure_mode_all)' --partition count:${{ matrix.partition }}/2
           find $CARGO_TARGET_DIR -type d
           find $CARGO_LLVM_COV_TARGET_DIR -type d
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
