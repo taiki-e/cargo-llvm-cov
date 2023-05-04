@@ -110,7 +110,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env --export-prefix
-          cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --text nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
           tar tvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz
@@ -200,12 +200,27 @@ jobs:
       - name: Run tests
         working-directory: tests/fixtures/crates/bin_crate
         # reports from each partition will show only the partial coverage
+        #
+        # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with 
+        # 1. with --text flag:
+        # error: no input files specified. See llvm-profdata merge -help
+        # error: failed to merge profile data: process didn't exit successfully: 
+        #   `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata
+        #       merge -sparse -f /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate-profraw-list
+        #       -o /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate.profdata` (exit status: 1)
+        # which is weird: target/llvm-cov-target is not the expected place for the nextest artifacts, they should go to target/nextest and target/debug
+        # 2. without --text flag:
+        # 
+        # => substituting this command
+        # cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+        # with this one
+        # 
         run: |
           set -euxo pipefail
           export CARGO_TARGET_DIR=target
           cargo llvm-cov show-env --export-prefix
           tar tvf nextest-artifacts.tar.zst
-          cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
