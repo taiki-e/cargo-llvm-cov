@@ -216,7 +216,6 @@ jobs:
           name: nextest-artifacts
           path: tests/fixtures/crates/bin_crate
       - name: Run tests
-        working-directory: tests/fixtures/crates/bin_crate
         # reports from each partition will show only the partial coverage
         #
         # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with
@@ -288,7 +287,6 @@ jobs:
           name: llvm-cov-archive-artifacts
           path: tests/fixtures/crates/bin_crate
       - name: Run tests
-        working-directory: tests/fixtures/crates/bin_crate
         # This is expected to show the full coverage
         run: |
           set -euxo pipefail
