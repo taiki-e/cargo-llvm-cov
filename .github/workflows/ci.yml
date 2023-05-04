@@ -98,7 +98,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: llvm-tools-preview
       - name: Install nextest
@@ -110,7 +110,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env --export-prefix
-          cargo llvm-cov --text nextest --workspace --all-features -E 'not test(bin_crate)' --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --text nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
           tar tvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz
@@ -130,7 +130,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: llvm-tools-preview
       - name: Install llvm-cov
@@ -155,7 +155,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
       - name: Install nextest
         uses: taiki-e/install-action@nextest
@@ -183,7 +183,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: llvm-tools-preview
       - name: Install nextest
@@ -233,8 +233,9 @@ jobs:
         # tar --use-compress-program=unzstd -xvf nextest-artifacts.tar.zst -C .
         # cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
         # set -euxo pipefail
+        env:
+          CARGO_TARGET_DIR: ./target
         run: |
-          export CARGO_TARGET_DIR=./target
           cargo llvm-cov show-env --export-prefix
           tar tvf nextest-artifacts.tar.zst
           cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
@@ -258,7 +259,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: llvm-tools-preview
       - name: Install llvm-cov
