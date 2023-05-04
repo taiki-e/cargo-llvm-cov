@@ -113,7 +113,7 @@ jobs:
           pwd
           cargo llvm-cov show-env --export-prefix
           cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov --text
+          cargo llvm-cov --summary-only
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -149,7 +149,9 @@ jobs:
           pwd
           mkdir -p target
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
+          ls -R ./target
           cargo llvm-cov report --text
+          cargo llvm-cov report --summary-only
 
   nextest-archive:
     name: 1/3 Build nextest artifacts
@@ -192,6 +194,7 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
+        # workaround --archive-file fails with https://github.com/TriplEight/cargo-llvm-cov/pull/1
         # run: cargo install --path . --debug
         run: cargo install -f --git https://github.com/TriplEight/cargo-llvm-cov cargo-llvm-cov --rev a9ada936f2c3da5d759145ebe6a5b9a38593f104
       - name: Download artifacts
@@ -208,8 +211,8 @@ jobs:
           cargo llvm-cov show-env --export-prefix
           mkdir -p target
           tar -tvf nextest-artifacts.tar.zst
-          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov --text
+          cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --summary-only
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -244,7 +247,9 @@ jobs:
           set -euxo pipefail
           mkdir -p target
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
+          ls -R ./target
           cargo llvm-cov report --text
+          cargo llvm-cov report --summary-only
 
   build:
     name: build (${{ matrix.target }})
