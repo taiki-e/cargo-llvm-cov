@@ -110,7 +110,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env --export-prefix
-          cargo llvm-cov --text nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --text nextest --workspace --all-features -E 'not test(bin_crate)' --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
           tar tvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz
@@ -189,7 +189,7 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
-        # workaround --archive-file fails with https://github.com/TriplEight/cargo-llvm-cov/pull/1
+        # workaround https://github.com/taiki-e/cargo-llvm-cov/issues/265: --archive-file fails with https://github.com/TriplEight/cargo-llvm-cov/pull/1
         # run: cargo install --path . --debug
         run: cargo install -f --git https://github.com/TriplEight/cargo-llvm-cov cargo-llvm-cov --rev a9ada936f2c3da5d759145ebe6a5b9a38593f104
       - name: Download artifacts
@@ -201,27 +201,46 @@ jobs:
         working-directory: tests/fixtures/crates/bin_crate
         # reports from each partition will show only the partial coverage
         #
-        # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with 
-        # 1. with --text flag:
+        # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with
+        #
+        # 1. with --text flag (cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2) :
         # error: no input files specified. See llvm-profdata merge -help
-        # error: failed to merge profile data: process didn't exit successfully: 
+        # error: failed to merge profile data: process didn't exit successfully:
         #   `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata
         #       merge -sparse -f /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate-profraw-list
         #       -o /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate.profdata` (exit status: 1)
+        # which is weird because the (first) command should be nextest reading the archive
+        #
+        # 2. without --text flag (cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2) :
+        # Caused by:
+        # No such file or directory (os error 2)', tests/test.rs:223:14 (maybe https://github.com/nextest-rs/nextest/issues/260?)
+        # ...
+        # error: test run failed
+        # error: process didn't exit successfully:
+        #   `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo nextest run
+        #       --manifest-path /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/Cargo.toml
+        #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
+        #       --archive-file nextest-artifacts.tar.zst --partition 'count:1/2'` (exit status: 100)
         # which is weird: target/llvm-cov-target is not the expected place for the nextest artifacts, they should go to target/nextest and target/debug
-        # 2. without --text flag:
-        # 
-        # => substituting this command
+        # and I couldn't change it by assigning CARGO_TARGET_DIR=./target/
+        # also I tried to set --extract-to ./target to override who knows where it comes from
+        #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
+        # but got error: the argument '--extract-to <DIR>' cannot be used multiple times
+        #
+        # => substituting this command for now:
         # cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
-        # with this one
-        # 
+        # with this:
+        # tar --use-compress-program=unzstd -xvf nextest-artifacts.tar.zst -C .
+        # cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
+        # set -euxo pipefail
         run: |
-          set -euxo pipefail
-          export CARGO_TARGET_DIR=target
+          export CARGO_TARGET_DIR=./target
           cargo llvm-cov show-env --export-prefix
           tar tvf nextest-artifacts.tar.zst
-          cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
+          ls -R target
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
