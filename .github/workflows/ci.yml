@@ -106,11 +106,9 @@ jobs:
       - name: Install llvm-cov
         run: cargo install --path . --debug
       - name: Run tests
-        working-directory: tests/fixtures/crates/bin_crate
         # reports from each partition will show only the partial coverage
         run: |
           set -euxo pipefail
-          pwd
           cargo llvm-cov show-env --export-prefix
           cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
@@ -121,8 +119,8 @@ jobs:
         with:
           name: llvm-cov-artifacts
           path: |
-            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-1.tar.gz
-            tests/fixtures/crates/bin_crate/llvm-cov-artifacts-2.tar.gz
+            llvm-cov-artifacts-1.tar.gz
+            llvm-cov-artifacts-2.tar.gz
 
   report-from-partitions:
     name: 2/2 Collect artifacts from partitions and generate the report
@@ -141,14 +139,10 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: llvm-cov-artifacts
-          path: tests/fixtures/crates/bin_crate
       - name: Run tests
-        working-directory: tests/fixtures/crates/bin_crate
         # This is expected to show the full coverage
         run: |
           set -euxo pipefail
-          pwd
-          mkdir -p target
           for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
           ls -R ./target
           cargo llvm-cov report --text
@@ -210,7 +204,6 @@ jobs:
           set -euxo pipefail
           export CARGO_TARGET_DIR=target
           cargo llvm-cov show-env --export-prefix
-          mkdir -p target
           tar tvf nextest-artifacts.tar.zst
           cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
@@ -223,7 +216,7 @@ jobs:
             tests/fixtures/crates/bin_crate/llvm-cov-artifacts-1.tar.gz
             tests/fixtures/crates/bin_crate/llvm-cov-artifacts-2.tar.gz
 
-  report-from-achive-partitions:
+  report-from-archive-partitions:
     name: 3/3 Collect artifacts from partitions and generate the report
     runs-on: ubuntu-latest
     needs: llvm-cov-nextest-archive-partitioned
@@ -246,7 +239,6 @@ jobs:
         # This is expected to show the full coverage
         run: |
           set -euxo pipefail
-          mkdir -p target
           for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
           ls -R ./target
           cargo llvm-cov report --text
