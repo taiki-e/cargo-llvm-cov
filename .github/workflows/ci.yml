@@ -114,7 +114,8 @@ jobs:
           cargo llvm-cov show-env --export-prefix
           cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
-          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
+          tar tvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -148,7 +149,7 @@ jobs:
           set -euxo pipefail
           pwd
           mkdir -p target
-          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
+          for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
           ls -R ./target
           cargo llvm-cov report --text
           cargo llvm-cov report --summary-only
@@ -169,8 +170,8 @@ jobs:
         run: |
           set -euxo pipefail
           cargo nextest archive --archive-file nextest-artifacts.tar.zst
-          ls -la target
-          tar -tvf nextest-artifacts.tar.zst
+          ls -R target
+          tar tvf nextest-artifacts.tar.zst
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -210,10 +211,10 @@ jobs:
           export CARGO_TARGET_DIR=target
           cargo llvm-cov show-env --export-prefix
           mkdir -p target
-          tar -tvf nextest-artifacts.tar.zst
+          tar tvf nextest-artifacts.tar.zst
           cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
-          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz target/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -246,7 +247,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p target
-          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C ./target; done
+          for i in {1..2}; do tar xzvf llvm-cov-artifacts-$i.tar.gz -C . ; done
           ls -R ./target
           cargo llvm-cov report --text
           cargo llvm-cov report --summary-only
