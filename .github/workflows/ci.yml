@@ -96,7 +96,7 @@ jobs:
         partition: [1, 2]
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: coverage
+      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -119,9 +119,9 @@ jobs:
           set -euxo pipefail
           cargo llvm-cov show-env
           cargo llvm-cov --color always --summary-only nextest --workspace --all-features --partition count:${{ matrix.partition }}/2
-          find ./target -type d
-          find ./coverage -type d
-          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz coverage
+          find $CARGO_TARGET_DIR -type d
+          find $CARGO_LLVM_COV_TARGET_DIR -type d
+          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -136,7 +136,7 @@ jobs:
     needs: llvm-cov-nextest-partitioned
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: coverage
+      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -155,8 +155,8 @@ jobs:
         run: |
           set -euxo pipefail
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
-          find ./target -type d
-          find ./coverage -type d
+          find $CARGO_TARGET_DIR -type d
+          find $CARGO_LLVM_COV_TARGET_DIR -type d
           cargo llvm-cov report --color always --summary-only
         # 1
         # 2
@@ -196,7 +196,7 @@ jobs:
         partition: [1, 2]
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: coverage
+      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -257,7 +257,7 @@ jobs:
           cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov --summary-only
           find ./target -type d
-          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz coverage
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -272,7 +272,7 @@ jobs:
     needs: llvm-cov-nextest-archive-partitioned
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: coverage
+      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -293,8 +293,8 @@ jobs:
         run: |
           set -euxo pipefail
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
-          find ./target -type d
-          find ./coverage -type d
+          find $CARGO_TARGET_DIR -type d
+          find $CARGO_LLVM_COV_TARGET_DIR -type d
           cargo llvm-cov report --text
           cargo llvm-cov report --summary-only
 
