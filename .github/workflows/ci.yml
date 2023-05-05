@@ -96,7 +96,6 @@ jobs:
         partition: [1, 2]
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -108,7 +107,7 @@ jobs:
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
         run: cargo install --path . --debug
-      - name: Run tests
+      - name: Run tests and coverage
         # reports from each partition will show only the partial coverage
         #
         # In https://github.com/TriplEight/cargo-llvm-cov/actions/runs/4882694449/jobs/8713078366?pr=2 it's seen that coverage artifacts
@@ -117,10 +116,9 @@ jobs:
         # setting it explicitly to avoid including test artifacts into the llvm-cov archive
         run: |
           set -euxo pipefail
-          cargo llvm-cov show-env
           cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features -E 'not test(merge_failure_mode_all)' --partition count:${{ matrix.partition }}/2
           find $CARGO_TARGET_DIR -type d
-          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
+          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_TARGET_DIR/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -135,7 +133,6 @@ jobs:
     needs: llvm-cov-nextest-partitioned
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -195,7 +192,6 @@ jobs:
         partition: [1, 2]
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -213,7 +209,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: nextest-artifacts
-      - name: Run tests
+      - name: Run tests and coverage
         # reports from each partition will show only the partial coverage
         #
         # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with
@@ -247,7 +243,7 @@ jobs:
           cargo llvm-cov --color always --summary-only nextest --no-fail-fast --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov 
           find $CARGO_TARGET_DIR -type d
-          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_TARGET_DIR/llvm-cov-target
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
         with:
@@ -262,7 +258,6 @@ jobs:
     needs: llvm-cov-nextest-archive-partitioned
     env:
       CARGO_TARGET_DIR: target
-      CARGO_LLVM_COV_TARGET_DIR: target/coverage
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
