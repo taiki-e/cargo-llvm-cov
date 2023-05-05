@@ -240,7 +240,6 @@ jobs:
           set -euxo pipefail
           cargo llvm-cov show-env
           cargo llvm-cov --color always --summary-only nextest --no-fail-fast --archive-file nextest-artifacts.tar.zst --extract-to nextest-artifacts --partition count:${{ matrix.partition }}/2
-          cargo llvm-cov 
           find $CARGO_TARGET_DIR -type d
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_TARGET_DIR/llvm-cov-target
       - name: Upload archive to workflow
