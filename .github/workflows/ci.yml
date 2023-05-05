@@ -243,18 +243,11 @@ jobs:
         # Also I tried to set --extract-to ./target to override who knows where it comes from
         #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
         #   but got error: the argument '--extract-to <DIR>' cannot be used multiple times
-        #
-        # => substituting this command for now:
-        # cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
-        # with this:
-        # tar --use-compress-program=unzstd -xvf nextest-artifacts.tar.zst -C .
-        # cargo llvm-cov --text nextest --partition count:${{ matrix.partition }}/2
-        #
-        # cargo llvm-cov nextest --text --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+        # --all-features
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env
-          cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov 
           find ./target -type d
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
