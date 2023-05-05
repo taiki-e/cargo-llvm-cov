@@ -109,11 +109,6 @@ jobs:
         run: cargo install --path . --debug
       - name: Run tests and coverage
         # reports from each partition will show only the partial coverage
-        #
-        # In https://github.com/TriplEight/cargo-llvm-cov/actions/runs/4882694449/jobs/8713078366?pr=2 it's seen that coverage artifacts
-        # sit in target/llvm-cov-target/ whereas the compilation artifacts are generated into target/llvm-cov-target/debug/ and not a level lower, it's not expected
-        # maybe affected by https://github.com/TriplEight/cargo-llvm-cov/blob/6e4ce6a0784841a1fd06d9c1492a28af0e72c286/src/cargo.rs#L75
-        # setting it explicitly to avoid including test artifacts into the llvm-cov archive
         run: |
           set -euxo pipefail
           cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features -E 'not test(merge_failure_mode_all)' --partition count:${{ matrix.partition }}/2
@@ -202,7 +197,7 @@ jobs:
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
-        # workaround https://github.com/taiki-e/cargo-llvm-cov/issues/265: --archive-file fails with https://github.com/TriplEight/cargo-llvm-cov/pull/1
+        # workaround https://github.com/taiki-e/cargo-llvm-cov/issues/265 with https://github.com/TriplEight/cargo-llvm-cov/pull/1
         # run: cargo install --path . --debug
         run: cargo install -f --git https://github.com/TriplEight/cargo-llvm-cov cargo-llvm-cov --rev a9ada936f2c3da5d759145ebe6a5b9a38593f104
       - name: Download artifacts
@@ -237,6 +232,8 @@ jobs:
         # Also I tried to set --extract-to ./target to override who knows where it comes from
         #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
         #   but got error: the argument '--extract-to <DIR>' cannot be used multiple times
+        #
+        # I assume https://github.com/taiki-e/cargo-llvm-cov/pull/266 should be improved to fix this
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env
