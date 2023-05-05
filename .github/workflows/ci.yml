@@ -120,7 +120,6 @@ jobs:
           cargo llvm-cov show-env
           cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features -E 'not test(merge_failure_mode_all)' --partition count:${{ matrix.partition }}/2
           find $CARGO_TARGET_DIR -type d
-          find $CARGO_LLVM_COV_TARGET_DIR -type d
           tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -156,7 +155,6 @@ jobs:
           set -euxo pipefail
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
           find $CARGO_TARGET_DIR -type d
-          find $CARGO_LLVM_COV_TARGET_DIR -type d
           cargo llvm-cov report --color always --summary-only
         #     Filename Regions Missed Regions Cover Functions Missed Functions Executed Lines Missed Lines Cover Branches Missed Branches Cover
         # 1   TOTAL     2493    1127          54.79%   262          91          65.27%  2920    976        66.58%   0           0           -
@@ -180,7 +178,7 @@ jobs:
         run: |
           set -euxo pipefail
           cargo nextest archive --color always --archive-file nextest-artifacts.tar.zst
-          find ./target -type d
+          find $CARGO_TARGET_DIR -type d
           tar tvf nextest-artifacts.tar.zst
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -243,13 +241,13 @@ jobs:
         # Also I tried to set --extract-to ./target to override who knows where it comes from
         #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
         #   but got error: the argument '--extract-to <DIR>' cannot be used multiple times
-        # --all-features
+        # --workspace
         run: |
           set -euxo pipefail
           cargo llvm-cov show-env
-          cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
+          cargo llvm-cov --color always --summary-only nextest --all-features --no-fail-fast --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2
           cargo llvm-cov 
-          find ./target -type d
+          find $CARGO_TARGET_DIR -type d
           tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_LLVM_COV_TARGET_DIR
       - name: Upload archive to workflow
         uses: actions/upload-artifact@v3
@@ -285,7 +283,6 @@ jobs:
           set -euxo pipefail
           for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
           find $CARGO_TARGET_DIR -type d
-          find $CARGO_LLVM_COV_TARGET_DIR -type d
           cargo llvm-cov report --color always --summary-only
 
   build:
