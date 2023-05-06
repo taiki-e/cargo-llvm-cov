@@ -98,11 +98,8 @@ jobs:
       CARGO_TARGET_DIR: target
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-          components: llvm-tools-preview
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - name: Install llvm-cov
