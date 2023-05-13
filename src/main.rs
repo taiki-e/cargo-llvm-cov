@@ -190,6 +190,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
+        // Workaround for https://github.com/rust-lang/rust/issues/91092
+        // TODO: skip passing this on newer nightly that includes https://github.com/rust-lang/rust/pull/111469.
+        flags.push("-C");
+        flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         if !cx.args.cov.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
@@ -275,7 +279,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 Err(_) => std::env::var("CXXFLAGS").unwrap_or_default(),
             },
         };
-        let clang_flags = " -fprofile-instr-generate -fcoverage-mapping";
+        let clang_flags = " -fprofile-instr-generate -fcoverage-mapping -fprofile-update=atomic";
         cflags.push_str(clang_flags);
         cxxflags.push_str(clang_flags);
         env.set(cflags_key, &cflags)?;
@@ -283,8 +287,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
     env.set("CARGO_INCREMENTAL", "0")?;
-    // Workaround for https://github.com/rust-lang/rust/issues/91092
-    env.set("RUST_TEST_THREADS", "1")?;
     if is_nextest {
         // Same as above
         env.set("NEXTEST_TEST_THREADS", "1")?;

@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- cargo-llvm-cov no longer sets the `RUST_TEST_THREADS` environment variable and uses llvm-args instead for workaround [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092).
+
 ## [0.5.19] - 2023-04-28
 
 - Fix handling of `--cargo-profile` option for `cargo llvm-cov nextest`. ([#269](https://github.com/taiki-e/cargo-llvm-cov/pull/269))
