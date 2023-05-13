@@ -1,6 +1,5 @@
 bindeps
 binstall
-cfgs
 codecov
 demangler
 doctestbins
@@ -16,7 +15,6 @@ pacman
 profdata
 profraw
 rustfilt
-subcmd
 tempdir
 TESTNAME
 tmpdir
