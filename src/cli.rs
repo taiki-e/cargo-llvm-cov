@@ -358,10 +358,10 @@ impl Args {
                 // build options
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
                 Long("profile") if subcommand != Subcommand::Nextest => {
-                    parse_opt_passthrough!(profile)
+                    parse_opt_passthrough!(profile);
                 }
                 Long("cargo-profile") if subcommand == Subcommand::Nextest => {
-                    parse_opt_passthrough!(profile)
+                    parse_opt_passthrough!(profile);
                 }
                 Long("target") => parse_opt_passthrough!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),

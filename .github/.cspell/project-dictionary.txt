@@ -6,6 +6,7 @@ doctestbins
 easytime
 fcoverage
 fprofile
+instrprof
 libdir
 libhello
 microkernel
