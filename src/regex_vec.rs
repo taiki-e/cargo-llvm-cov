@@ -72,6 +72,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore)] // Miri is too slow
     fn smoke() {
         let mut re = RegexVecBuilder::new("^(", ")$");
         re.or(&"a".repeat(64 * 4100));
@@ -104,6 +105,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // Miri is too slow
     fn regex_pkg_hash_re_size_limit() {
         fn pkg_hash_re(pkg_names: &[String]) -> Result<Regex, regex::Error> {
             let mut re = String::from("^(lib)?(");
@@ -145,6 +147,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // Miri is too slow
     fn regex_vec_pkg_hash_re_size_limit() {
         let names = gen_pkg_names(12000, 64);
         pkg_hash_re_builder(&names).build().unwrap();

@@ -96,6 +96,7 @@ rand::rngs::adapter::reseeding::fork::FORK_HANDLER_REGISTERED.0.0
 ";
 
     #[test]
+    #[cfg_attr(miri, ignore)] // Miri is too slow
     fn test_demangle_lines_no_crate_disambiguators() {
         let demangled_lines = demangle_lines(MANGLED_INPUT.lines());
         for (expected, actual) in
