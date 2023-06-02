@@ -202,7 +202,27 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
     }
 
-    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name));
+    let llvm_profile_file = if is_nextest {
+        // https://github.com/taiki-e/cargo-llvm-cov/issues/258
+        // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+        // Select the number of threads that is the same as the one nextest uses by default here.
+        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
+        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
+        // TODO: should we respect custom test-threads?
+        // - If the number of threads specified by the user is negative or
+        //   less or equal to available cores, it should not really be a problem
+        //   because it does not exceed the number of available cores.
+        // - Even if the number of threads specified by the user is greater than
+        //   available cores, it is expected that the number of threads that can
+        //   write simultaneously will not exceed the number of available cores.
+        cx.ws.target_dir.join(format!(
+            "{}-%p-%{}m.profraw",
+            cx.ws.name,
+            std::thread::available_parallelism().map_or(1, usize::from)
+        ))
+    } else {
+        cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name))
+    };
 
     let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
     push_common_flags(cx, rustflags);
@@ -287,10 +307,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
     env.set("CARGO_INCREMENTAL", "0")?;
-    if is_nextest {
-        // Same as above
-        env.set("NEXTEST_TEST_THREADS", "1")?;
-    }
     env.set("CARGO_LLVM_COV", "1")?;
     Ok(())
 }
@@ -372,7 +388,6 @@ fn run_nextest(cx: &Context) -> Result<()> {
         {
             let mut cargo = cargo.clone();
             cargo.arg("--no-run");
-            cargo.env_remove("NEXTEST_TEST_THREADS"); // error: the argument '--no-run' cannot be used with '--test-threads <THREADS>'
             cargo::test_or_run_args(cx, &mut cargo);
             if term::verbose() {
                 status!("Running", "{cargo}");
