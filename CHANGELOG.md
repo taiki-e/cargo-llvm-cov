@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.20] - 2023-06-02
+
 - cargo-llvm-cov no longer sets the `RUST_TEST_THREADS` and `NEXTEST_TEST_THREADS` environment variables. cargo-llvm-cov now adopts another efficient way to workaround [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#279](https://github.com/taiki-e/cargo-llvm-cov/pull/279))
 
   This may greatly improve performance, [especially when using `cargo llvm-cov nextest`](https://github.com/taiki-e/cargo-llvm-cov/pull/279#issuecomment-1552058044).
@@ -486,7 +488,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.19...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.20...HEAD
+[0.5.20]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.19...v0.5.20
 [0.5.19]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...v0.5.19
 [0.5.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...v0.5.18
 [0.5.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...v0.5.17
