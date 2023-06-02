@@ -100,6 +100,7 @@ docsrs
 doctest
 doctests
 hasher
+idents
 impls
 inlateout
 intrinsics
@@ -108,6 +109,7 @@ mclass
 memcpy
 msrv
 nand
+nanos
 nomem
 nonoverlapping
 noreturn
@@ -124,6 +126,8 @@ rustlib
 seqcst
 simd
 splitn
+structs
+subsec
 supertrait
 supertraits
 sysroot
@@ -145,6 +149,7 @@ endianness
 esac
 euxo
 gsub
+moreutils
 msys
 noninteractive
 noprofile
