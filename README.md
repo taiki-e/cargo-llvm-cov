@@ -622,7 +622,6 @@ pacman -S cargo-llvm-cov
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
-- `cargo llvm-cov nextest` is run with `NEXTEST_TEST_THREADS=1` to work around [rust-lang/rust#91092]. You can pass `--test-threads` (e.g., `--test-threads=$(nproc)`) to override this behavior.
 
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
@@ -648,7 +647,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
-[rust-lang/rust#91092]: https://github.com/rust-lang/rust/issues/91092
 [xtask]: https://github.com/matklad/cargo-xtask
 
 ## License
