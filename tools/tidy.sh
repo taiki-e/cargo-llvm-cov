@@ -6,7 +6,7 @@ IFS=$'\n\t'
 cd "$(dirname "$0")"/..
 
 # shellcheck disable=SC2154
-trap 's=$?; echo >&2 "$0: Error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}' ERR
+trap 's=$?; echo >&2 "$0: error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}' ERR
 
 # USAGE:
 #    ./tools/tidy.sh
@@ -199,6 +199,44 @@ if type -P shellcheck &>/dev/null; then
     fi
 else
     warn "'shellcheck' is not installed"
+fi
+
+# License check
+# TODO: This check is still experimental and does not track all files that should be tracked.
+if [[ -f tools/.tidy-check-license-headers ]]; then
+    info "checking license headers (experimental)"
+    failed_files=''
+    for p in $(eval $(<tools/.tidy-check-license-headers)); do
+        # TODO: More file types?
+        case "$(basename "${p}")" in
+            *.sh) prefix=("# ") ;;
+            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S) prefix=("// " "/* ") ;;
+            *.ld | *.x) prefix=("/* ") ;;
+            *) error "unrecognized file type: ${p}" ;;
+        esac
+        # TODO: The exact line number is not actually important; it is important
+        # that it be part of the top-level comments of the file.
+        line="1"
+        case "${p}" in
+            *.sh) line="2" ;; # shebang
+        esac
+        header_found=''
+        for pre in "${prefix[@]}"; do
+            if [[ "$(grep -E -n "${pre}SPDX-License-Identifier: " "${p}")" == "${line}:${pre}SPDX-License-Identifier: "* ]]; then
+                header_found='1'
+                continue
+            fi
+        done
+        if [[ -z "${header_found}" ]]; then
+            failed_files+="${p}:${line}"$'\n'
+        fi
+    done
+    if [[ -n "${failed_files}" ]]; then
+        error "license-check failed: please add SPDX-License-Identifier to the following files"
+        echo "======================================="
+        echo -n "${failed_files}"
+        echo "======================================="
+    fi
 fi
 
 # Spell check (if config exists)
