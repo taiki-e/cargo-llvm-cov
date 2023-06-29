@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix "`-Z doctest-in-workspace` has been stabilized in the 1.72 release" warning on the latest nightly.
+
 ## [0.5.20] - 2023-06-02
 
 - cargo-llvm-cov no longer sets the `RUST_TEST_THREADS` and `NEXTEST_TEST_THREADS` environment variables. cargo-llvm-cov now adopts another efficient way to workaround [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#279](https://github.com/taiki-e/cargo-llvm-cov/pull/279))
