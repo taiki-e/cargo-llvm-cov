@@ -28,8 +28,8 @@ pub(crate) struct Workspace {
     pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
-    /// Whether `-Z doctest-in-workspace` is not needed.
-    pub(crate) stable_doctest_in_workspace: bool,
+    /// Whether `-Z doctest-in-workspace` is needed.
+    pub(crate) need_doctest_in_workspace: bool,
 }
 
 impl Workspace {
@@ -63,10 +63,11 @@ impl Workspace {
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
             );
         }
-        let mut stable_doctest_in_workspace = false;
+        let mut need_doctest_in_workspace = false;
         if doctests {
-            stable_doctest_in_workspace =
-                !cmd!(config.cargo(), "-Z", "help").read()?.contains("doctest-in-workspace")
+            need_doctest_in_workspace = cmd!(config.cargo(), "-Z", "help")
+                .read()
+                .map_or(false, |s| s.contains("doctest-in-workspace"))
         }
 
         let target_dir =
@@ -101,7 +102,7 @@ impl Workspace {
             target_for_cli,
             nightly,
             stable_coverage,
-            stable_doctest_in_workspace,
+            need_doctest_in_workspace,
         })
     }
 

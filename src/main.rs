@@ -336,9 +336,7 @@ fn run_test(cx: &Context) -> Result<()> {
     set_env(cx, &mut cargo, IsNextest(false))?;
 
     cargo.arg("test");
-    if !cx.ws.stable_doctest_in_workspace
-        && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace")
-    {
+    if cx.ws.need_doctest_in_workspace && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");

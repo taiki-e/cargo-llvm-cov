@@ -10,7 +10,11 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix regression introduced in 0.5.21.
+
 ## [0.5.21] - 2023-06-29
+
+**Note:** This release has been yanked due to regression fixed in 0.5.22.
 
 - Fix "`-Z doctest-in-workspace` has been stabilized in the 1.72 release" warning on the latest nightly.
 
