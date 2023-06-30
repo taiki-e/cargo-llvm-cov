@@ -928,8 +928,16 @@ impl Format {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
+
             let out = cmd.read()?;
-            fs::write(output_path, out)?;
+            if self == Self::Json {
+                let mut cov = serde_json::from_str::<LlvmCovJsonExport>(&out)?;
+                cov.inject(cx.ws.current_manifest.clone());
+                fs::write(output_path, serde_json::to_string(&cov)?)?;
+            } else {
+                fs::write(output_path, out)?;
+            }
+
             eprintln!();
             status!("Finished", "report saved to {output_path}");
             return Ok(());
@@ -938,7 +946,18 @@ impl Format {
         if term::verbose() {
             status!("Running", "{cmd}");
         }
-        cmd.run()?;
+
+        if self == Self::Json {
+            let out = cmd.read()?;
+            let mut cov = serde_json::from_str::<LlvmCovJsonExport>(&out)?;
+            cov.inject(cx.ws.current_manifest.clone());
+
+            let stdout = std::io::stdout().lock();
+            serde_json::to_writer(stdout, &cov)?;
+        } else {
+            cmd.run()?;
+        }
+
         if matches!(self, Self::Html | Self::Text) {
             if let Some(output_dir) = &cx.args.cov.output_dir {
                 eprintln!();
