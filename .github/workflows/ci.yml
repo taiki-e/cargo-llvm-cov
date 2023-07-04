@@ -51,7 +51,7 @@ jobs:
           # same as the old report.
           # - rust: '1.60'
           # - rust: stable
-          # - rust: beta
+          - rust: beta
           - rust: nightly
           - rust: nightly
             os: macos-11

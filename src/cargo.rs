@@ -28,6 +28,8 @@ pub(crate) struct Workspace {
     pub(crate) nightly: bool,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
+    /// Whether `-Z doctest-in-workspace` is needed.
+    pub(crate) need_doctest_in_workspace: bool,
 }
 
 impl Workspace {
@@ -60,6 +62,12 @@ impl Workspace {
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
             );
+        }
+        let mut need_doctest_in_workspace = false;
+        if doctests {
+            need_doctest_in_workspace = cmd!(config.cargo(), "-Z", "help")
+                .read()
+                .map_or(false, |s| s.contains("doctest-in-workspace"))
         }
 
         let target_dir =
@@ -94,11 +102,12 @@ impl Workspace {
             target_for_cli,
             nightly,
             stable_coverage,
+            need_doctest_in_workspace,
         })
     }
 
     pub(crate) fn cargo(&self, verbose: u8) -> ProcessBuilder {
-        let mut cmd = cmd!(&self.config.cargo());
+        let mut cmd = cmd!(self.config.cargo());
         // cargo displays env vars only with -vv.
         if verbose > 1 {
             cmd.display_env_vars();
