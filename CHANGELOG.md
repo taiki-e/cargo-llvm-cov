@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Inject additional contextual information about cargo-llvm-cov into the JSON output of llvm-cov. It allows other programs, that rely on this output, to make certain assertions about the behavior of cargo-llvm-cov and can help to share common information.
+
 ## [0.5.22] - 2023-06-29
 
 - Fix regression introduced in 0.5.21.

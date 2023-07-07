@@ -25,6 +25,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
   - [Environment variables](#environment-variables)
+  - [Additional JSON information](#additional-json-information)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [Related Projects](#related-projects)
@@ -527,6 +528,29 @@ You can override these environment variables to change cargo-llvm-cov's behavior
 - `LLVM_PROFDATA_FLAGS` -- A space-separated list of additional flags to pass to all `llvm-profdata` invocations that cargo-llvm-cov performs. See [LLVM documentation](https://llvm.org/docs/CommandGuide/llvm-profdata.html) for available options.
 
 See also [environment variables that Cargo reads](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads). cargo-llvm-cov respects many of them.
+
+### Additional JSON information
+
+If **JSON** is selected as output format (with the `--json` flag), then cargo-llvm-cov will add additional contextual information at the root of the llvm-cov data. This can be helpful for programs that rely on the output of cargo-llvm-cov.
+
+```json
+{
+  // Other regular llvm-cov fields ...
+  "cargo_llvm_cov": {
+    "version": "0.0.0",
+    "manifest_path": "/path/to/your/project/Cargo.toml"
+  }
+}
+```
+
+- `version` specifies the version of cargo-llvm-cov that was used. This allows other programs to verify a certain version of it was used and make assertions of its behavior.
+- `manifest_path` defines the absolute path to the Rust project's Cargo.toml that cargo-llvm-cov was executed on. It can help to avoid repeating the same option on both programs.
+
+For example, when forwarding the JSON output directly to another program:
+
+```sh
+cargo-llvm-cov --json | some-program
+```
 
 ## Installation
 
