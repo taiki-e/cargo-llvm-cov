@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.23] - 2023-07-07
+
 - Inject additional contextual information about cargo-llvm-cov into the JSON output of llvm-cov. ([#289](https://github.com/taiki-e/cargo-llvm-cov/pull/289), thanks @dnaka91)
 
   It allows other programs, that rely on this output, to make certain assertions about the behavior of cargo-llvm-cov and can help to share common information.
@@ -502,7 +504,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.22...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.23...HEAD
+[0.5.23]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.20...v0.5.21
 [0.5.20]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.19...v0.5.20
