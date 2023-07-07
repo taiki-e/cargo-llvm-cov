@@ -1,3 +1,5 @@
+// TODO: this may no longer needed since regex 1.9.
+
 use std::mem;
 
 use anyhow::Result;
@@ -122,20 +124,14 @@ mod tests {
             Regex::new(&re)
         }
 
-        let names = gen_pkg_names(5040, 64);
+        let names = gen_pkg_names(12000, 64);
         pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(5041, 64);
-        pkg_hash_re(&names).unwrap_err();
 
-        let names = gen_pkg_names(2539, 128);
+        let names = gen_pkg_names(6000, 128);
         pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(2540, 128);
-        pkg_hash_re(&names).unwrap_err();
 
-        let names = gen_pkg_names(1274, 256);
+        let names = gen_pkg_names(3000, 256);
         pkg_hash_re(&names).unwrap();
-        let names = gen_pkg_names(1275, 256);
-        pkg_hash_re(&names).unwrap_err();
     }
 
     fn pkg_hash_re_builder(pkg_names: &[String]) -> RegexVecBuilder {
