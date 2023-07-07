@@ -115,6 +115,7 @@ nonoverlapping
 noreturn
 nostack
 peekable
+powf
 punct
 rclass
 repr
@@ -164,7 +165,5 @@ readelf
 shellcheckrc
 SIGABRT
 SIGILL
-SIGINT
-SIGTERM
 subcmd
 tlsv
