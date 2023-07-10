@@ -89,8 +89,6 @@ jobs:
 
   build:
     name: build (${{ matrix.target }})
-    env:
-      cargo: cargo
     strategy:
       fail-fast: false
       matrix:
@@ -118,15 +116,11 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-        if: (matrix.os == '' || startsWith(matrix.os, 'ubuntu')) && !contains(matrix.target, '-musl')
-      - uses: taiki-e/install-action@cross
-        if: contains(matrix.target, '-musl')
+        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
-      - run: echo "cargo=cross" >>"${GITHUB_ENV}"
-        if: contains(matrix.target, '-musl')
-      - run: $cargo build --target ${{ matrix.target }}
-      - run: $cargo build --target ${{ matrix.target }} --release
+      - run: cargo build --target ${{ matrix.target }}
+      - run: cargo build --target ${{ matrix.target }} --release
       # For debugging
       - uses: actions/upload-artifact@v3
         with:
