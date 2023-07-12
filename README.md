@@ -2,7 +2,6 @@
 
 [![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
-[![rustc](https://img.shields.io/badge/rustc-1.60+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![build status](https://img.shields.io/github/actions/workflow/status/taiki-e/cargo-llvm-cov/ci.yml?branch=main&style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
 
 Cargo subcommand to easily use LLVM source-based code coverage.
@@ -26,6 +25,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
   - [Environment variables](#environment-variables)
+  - [Additional JSON information](#additional-json-information)
 - [Installation](#installation)
 - [Known limitations](#known-limitations)
 - [Related Projects](#related-projects)
@@ -529,12 +529,33 @@ You can override these environment variables to change cargo-llvm-cov's behavior
 
 See also [environment variables that Cargo reads](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads). cargo-llvm-cov respects many of them.
 
+### Additional JSON information
+
+If **JSON** is selected as output format (with the `--json` flag), then cargo-llvm-cov will add additional contextual information at the root of the llvm-cov data. This can be helpful for programs that rely on the output of cargo-llvm-cov.
+
+```json
+{
+  // Other regular llvm-cov fields ...
+  "cargo_llvm_cov": {
+    "version": "0.0.0",
+    "manifest_path": "/path/to/your/project/Cargo.toml"
+  }
+}
+```
+
+- `version` specifies the version of cargo-llvm-cov that was used. This allows other programs to verify a certain version of it was used and make assertions of its behavior.
+- `manifest_path` defines the absolute path to the Rust project's Cargo.toml that cargo-llvm-cov was executed on. It can help to avoid repeating the same option on both programs.
+
+For example, when forwarding the JSON output directly to another program:
+
+```sh
+cargo-llvm-cov --json | some-program
+```
+
 ## Installation
 
 <!-- omit in toc -->
 ### Prerequisites
-
-Running cargo-llvm-cov requires rustc 1.60+.
 
 <!-- omit in toc -->
 ### From source
@@ -543,7 +564,11 @@ Running cargo-llvm-cov requires rustc 1.60+.
 cargo +stable install cargo-llvm-cov --locked
 ```
 
-Currently, installing cargo-llvm-cov requires rustc 1.60+.
+Currently, installing cargo-llvm-cov requires rustc 1.64+.
+
+cargo-llvm-cov is usually runnable with Cargo versions older than the Rust version
+required for installation (e.g., `cargo +1.60 llvm-cov`). Currently, to run
+cargo-llvm-cov requires Cargo 1.60+.
 
 <!-- omit in toc -->
 ### From prebuilt binaries
@@ -621,7 +646,6 @@ pacman -S cargo-llvm-cov
 
 - Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
-- All the tests are run with `RUST_TEST_THREADS=1` to work around [rust-lang/rust#91092]. You can pass `--test-threads` (e.g., `--test-threads=$(nproc)`) to override this behavior. (As for `nextest`, we also set `NEXTEST_TEST_THREADS=1`.)
 
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
 
@@ -647,7 +671,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
-[rust-lang/rust#91092]: https://github.com/rust-lang/rust/issues/91092
 [xtask]: https://github.com/matklad/cargo-xtask
 
 ## License

@@ -4,6 +4,7 @@ use std::{
 };
 
 use anyhow::{Context as _, Result};
+use camino::Utf8PathBuf;
 use regex::Regex;
 use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 
@@ -17,6 +18,9 @@ pub struct LlvmCovJsonExport {
     #[serde(rename = "type")]
     pub(crate) type_: String,
     pub(crate) version: String,
+    /// Additional information injected into the export data.
+    #[serde(skip_deserializing, skip_serializing_if = "Option::is_none")]
+    cargo_llvm_cov: Option<CargoLlvmCov>,
 }
 
 /// <https://docs.codecov.com/docs/codecov-custom-coverage-format>
@@ -148,6 +152,11 @@ impl LlvmCovJsonExport {
                 }
             }
         }
+    }
+
+    pub fn inject(&mut self, manifest_path: Utf8PathBuf) {
+        self.cargo_llvm_cov =
+            Some(CargoLlvmCov { version: env!("CARGO_PKG_VERSION"), manifest_path });
     }
 
     /// Gets the minimal lines coverage of all files.
@@ -500,6 +509,17 @@ pub(crate) struct CoverageCounts {
     pub(crate) percent: f64,
 }
 
+/// Information that is not part of the llvm-cov JSON export, but instead injected afterwards by us.
+#[derive(Debug, Default, Serialize)]
+#[cfg_attr(test, derive(PartialEq))]
+struct CargoLlvmCov {
+    /// Version of this project, which allows projects that depend on it, to express and verify
+    /// requirements on specific versions.
+    version: &'static str,
+    /// Resolved path to the `Cargo.toml` manifest.
+    manifest_path: Utf8PathBuf,
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -525,6 +545,7 @@ mod tests {
             let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
             assert_eq!(json.type_, "llvm.coverage.json.export");
             assert!(json.version.starts_with("2.0."));
+            assert_eq!(json.cargo_llvm_cov, None);
             serde_json::to_string(&json).unwrap();
         }
     }
@@ -542,7 +563,7 @@ mod tests {
         let percent = json.get_lines_percent().unwrap();
 
         let error_margin = f64::EPSILON;
-        assert!((percent - 69.565_217_391_304_34).abs() < error_margin);
+        assert!((percent - 68.181_818_181_818_19).abs() < error_margin, "{percent}");
     }
 
     #[test]

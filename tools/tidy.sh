@@ -6,7 +6,7 @@ IFS=$'\n\t'
 cd "$(dirname "$0")"/..
 
 # shellcheck disable=SC2154
-trap 's=$?; echo >&2 "$0: Error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}' ERR
+trap 's=$?; echo >&2 "$0: error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}' ERR
 
 # USAGE:
 #    ./tools/tidy.sh
@@ -201,9 +201,48 @@ else
     warn "'shellcheck' is not installed"
 fi
 
+# License check
+# TODO: This check is still experimental and does not track all files that should be tracked.
+if [[ -f tools/.tidy-check-license-headers ]]; then
+    info "checking license headers (experimental)"
+    failed_files=''
+    for p in $(eval $(<tools/.tidy-check-license-headers)); do
+        # TODO: More file types?
+        case "$(basename "${p}")" in
+            *.sh) prefix=("# ") ;;
+            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S) prefix=("// " "/* ") ;;
+            *.ld | *.x) prefix=("/* ") ;;
+            *) error "unrecognized file type: ${p}" ;;
+        esac
+        # TODO: The exact line number is not actually important; it is important
+        # that it be part of the top-level comments of the file.
+        line="1"
+        case "${p}" in
+            *.sh) line="2" ;; # shebang
+        esac
+        header_found=''
+        for pre in "${prefix[@]}"; do
+            if [[ "$(grep -E -n "${pre}SPDX-License-Identifier: " "${p}")" == "${line}:${pre}SPDX-License-Identifier: "* ]]; then
+                header_found='1'
+                continue
+            fi
+        done
+        if [[ -z "${header_found}" ]]; then
+            failed_files+="${p}:${line}"$'\n'
+        fi
+    done
+    if [[ -n "${failed_files}" ]]; then
+        error "license-check failed: please add SPDX-License-Identifier to the following files"
+        echo "======================================="
+        echo -n "${failed_files}"
+        echo "======================================="
+    fi
+fi
+
 # Spell check (if config exists)
 if [[ -f .cspell.json ]]; then
     info "spell checking"
+    project_dictionary=.github/.cspell/project-dictionary.txt
     if type -P npm &>/dev/null; then
         has_rust=''
         if [[ -n "$(git ls-files '*Cargo.toml')" ]]; then
@@ -227,7 +266,7 @@ if [[ -f .cspell.json ]]; then
         if [[ -n "${has_rust}" ]]; then
             dependencies_words=$(npx <<<"${dependencies}" cspell stdin --no-progress --no-summary --words-only --unique || true)
         fi
-        all_words=$(npx cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v '\.github/\.cspell/project-dictionary\.txt' || true)) || true)
+        all_words=$(npx cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v "${project_dictionary//\./\\.}" || true)) || true)
         # TODO: handle SIGINT
         echo "${config_old}" >.cspell.json
         cat >.github/.cspell/rust-dependencies.txt <<EOF
@@ -244,17 +283,17 @@ EOF
 
         echo "+ npx cspell --no-progress --no-summary \$(git ls-files)"
         if ! npx cspell --no-progress --no-summary $(git ls-files); then
-            error "spellcheck failed: please fix uses of above words or add to .github/.cspell/project-dictionary.txt if correct"
+            error "spellcheck failed: please fix uses of above words or add to ${project_dictionary} if correct"
         fi
 
         # Make sure the project-specific dictionary does not contain duplicated words.
         for dictionary in .github/.cspell/*.txt; do
-            if [[ "${dictionary}" == .github/.cspell/project-dictionary.txt ]]; then
+            if [[ "${dictionary}" == "${project_dictionary}" ]]; then
                 continue
             fi
-            dup=$(sed '/^$/d' .github/.cspell/project-dictionary.txt "${dictionary}" | LC_ALL=C sort -f | uniq -d -i | (grep -v '//.*' || true))
+            dup=$(sed '/^$/d' "${project_dictionary}" "${dictionary}" | LC_ALL=C sort -f | uniq -d -i | (grep -v '//.*' || true))
             if [[ -n "${dup}" ]]; then
-                error "duplicated words in dictionaries; please remove the following words from .github/.cspell/project-dictionary.txt"
+                error "duplicated words in dictionaries; please remove the following words from ${project_dictionary}"
                 echo "======================================="
                 echo "${dup}"
                 echo "======================================="
@@ -263,13 +302,13 @@ EOF
 
         # Make sure the project-specific dictionary does not contain unused words.
         unused=''
-        for word in $(grep -v '//.*' .github/.cspell/project-dictionary.txt || true); do
+        for word in $(grep -v '//.*' "${project_dictionary}" || true); do
             if ! grep <<<"${all_words}" -Eq -i "^${word}$"; then
                 unused+="${word}"$'\n'
             fi
         done
         if [[ -n "${unused}" ]]; then
-            error "unused words in dictionaries; please remove the following words from .github/.cspell/project-dictionary.txt"
+            error "unused words in dictionaries; please remove the following words from ${project_dictionary}"
             echo "======================================="
             echo -n "${unused}"
             echo "======================================="

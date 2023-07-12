@@ -12,25 +12,25 @@
               "percent": 0.0
             },
             "functions": {
-              "count": 5,
-              "covered": 4,
-              "percent": 80.0
+              "count": 4,
+              "covered": 3,
+              "percent": 75.0
             },
             "instantiations": {
-              "count": 5,
-              "covered": 4,
-              "percent": 80.0
+              "count": 4,
+              "covered": 3,
+              "percent": 75.0
             },
             "lines": {
-              "count": 20,
-              "covered": 11,
-              "percent": 55.00000000000001
+              "count": 19,
+              "covered": 10,
+              "percent": 52.63157894736842
             },
             "regions": {
-              "count": 15,
-              "covered": 7,
+              "count": 14,
+              "covered": 6,
               "notcovered": 8,
-              "percent": 46.666666666666664
+              "percent": 42.857142857142854
             }
           }
         }
@@ -43,25 +43,25 @@
           "percent": 0
         },
         "functions": {
-          "count": 5,
-          "covered": 4,
-          "percent": 80
+          "count": 4,
+          "covered": 3,
+          "percent": 75
         },
         "instantiations": {
-          "count": 5,
-          "covered": 4,
-          "percent": 80
+          "count": 4,
+          "covered": 3,
+          "percent": 75
         },
         "lines": {
-          "count": 20,
-          "covered": 11,
-          "percent": 55.00000000000001
+          "count": 19,
+          "covered": 10,
+          "percent": 52.63157894736842
         },
         "regions": {
-          "count": 15,
-          "covered": 7,
+          "count": 14,
+          "covered": 6,
           "notcovered": 8,
-          "percent": 46.666666666666664
+          "percent": 42.857142857142854
         }
       }
     }

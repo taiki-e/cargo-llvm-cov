@@ -84,6 +84,9 @@ pub(crate) struct Args {
     /// Build artifacts in release mode, with optimizations
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
+    ///
+    /// On `cargo llvm-cov nextest` this is the value of `--cargo-profile` option,
+    /// otherwise this is the value of  `--profile` option.
     pub(crate) profile: Option<String>,
     // /// Space or comma separated list of features to activate
     // pub(crate) features: Vec<String>,
@@ -144,7 +147,7 @@ impl Args {
         const SUBCMD: &str = "llvm-cov";
 
         // rustc/cargo args must be valid Unicode
-        // https://github.com/rust-lang/rust/blob/1.67.0/compiler/rustc_driver/src/lib.rs#L1372-L1382
+        // https://github.com/rust-lang/rust/blob/1.70.0/compiler/rustc_driver_impl/src/lib.rs#L1366-L1376
         fn handle_args(
             args: impl IntoIterator<Item = impl Into<OsString>>,
         ) -> impl Iterator<Item = Result<String>> {
@@ -354,7 +357,12 @@ impl Args {
 
                 // build options
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
-                Long("profile") => parse_opt_passthrough!(profile),
+                Long("profile") if subcommand != Subcommand::Nextest => {
+                    parse_opt_passthrough!(profile);
+                }
+                Long("cargo-profile") if subcommand == Subcommand::Nextest => {
+                    parse_opt_passthrough!(profile);
+                }
                 Long("target") => parse_opt_passthrough!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),

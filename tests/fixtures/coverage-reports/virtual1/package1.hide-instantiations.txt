@@ -1,6 +1,5 @@
 member1/src/lib.rs:
-    1|      2|pub fn func(x: u32) {pub fn func(x: u32) {
-              ^1
+    1|      2|pub fn func(x: u32) {
     2|      2|    match x {
     3|      0|        0 => {}
     4|      1|        1 => {}

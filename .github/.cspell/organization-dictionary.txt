@@ -90,6 +90,7 @@ bools
 builtins
 bytecount
 canonicalize
+cfgs
 concat
 consts
 ctypes
@@ -99,6 +100,7 @@ docsrs
 doctest
 doctests
 hasher
+idents
 impls
 inlateout
 intrinsics
@@ -107,11 +109,13 @@ mclass
 memcpy
 msrv
 nand
+nanos
 nomem
 nonoverlapping
 noreturn
 nostack
 peekable
+powf
 punct
 rclass
 repr
@@ -121,7 +125,10 @@ rposition
 rsplit
 rustlib
 seqcst
+simd
 splitn
+structs
+subsec
 supertrait
 supertraits
 sysroot
@@ -143,6 +150,7 @@ endianness
 esac
 euxo
 gsub
+moreutils
 msys
 noninteractive
 noprofile
@@ -157,6 +165,5 @@ readelf
 shellcheckrc
 SIGABRT
 SIGILL
-SIGINT
-SIGTERM
+subcmd
 tlsv

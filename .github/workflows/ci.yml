@@ -45,8 +45,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - rust: '1.60'
-          - rust: stable
+          # TODO: nightly-2023-04-27 (https://github.com/rust-lang/rust/pull/97368)
+          # and nightly-2023-05-03 (https://github.com/rust-lang/rust/pull/111042)
+          # fixed bugs in report generation, so the latest report is not the
+          # same as the old report.
+          # - rust: '1.60'
+          # - rust: stable
           - rust: beta
           - rust: nightly
           - rust: nightly
@@ -70,7 +74,10 @@ jobs:
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
-      - run: cargo llvm-cov nextest --text
+      - run: |
+          set -euxo pipefail
+          cargo llvm-cov nextest --text
+          cargo llvm-cov nextest --text --profile default --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail
@@ -82,8 +89,6 @@ jobs:
 
   build:
     name: build (${{ matrix.target }})
-    env:
-      cargo: cargo
     strategy:
       fail-fast: false
       matrix:
@@ -111,17 +116,28 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-        if: (matrix.os == '' || startsWith(matrix.os, 'ubuntu')) && !contains(matrix.target, '-musl')
-      - uses: taiki-e/install-action@cross
-        if: contains(matrix.target, '-musl')
+        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
-      - run: echo "cargo=cross" >>"${GITHUB_ENV}"
-        if: contains(matrix.target, '-musl')
-      - run: $cargo build --target ${{ matrix.target }}
-      - run: $cargo build --target ${{ matrix.target }} --release
+      - run: cargo build --target ${{ matrix.target }}
+      - run: cargo build --target ${{ matrix.target }} --release
       # For debugging
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.target }}
           path: target/${{ matrix.target }}/release/cargo-llvm-cov*
+
+  miri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component miri && rustup default nightly
+      - run: cargo miri test --workspace --all-features
+        env:
+          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-symbolic-alignment-check -Zmiri-retag-fields -Zmiri-disable-isolation
+          RUSTDOCFLAGS: ${{ env.RUSTDOCFLAGS }} -Z randomize-layout
+          RUSTFLAGS: ${{ env.RUSTFLAGS }} -Z randomize-layout

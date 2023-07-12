@@ -12,25 +12,25 @@
               "percent": 0.0
             },
             "functions": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "instantiations": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "lines": {
-              "count": 8,
-              "covered": 1,
-              "percent": 12.5
+              "count": 7,
+              "covered": 0,
+              "percent": 0.0
             },
             "regions": {
-              "count": 7,
-              "covered": 1,
+              "count": 6,
+              "covered": 0,
               "notcovered": 6,
-              "percent": 14.285714285714285
+              "percent": 0.0
             }
           }
         },
@@ -44,25 +44,25 @@
               "percent": 0.0
             },
             "functions": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "instantiations": {
-              "count": 2,
-              "covered": 1,
-              "percent": 50.0
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
             },
             "lines": {
-              "count": 8,
-              "covered": 1,
-              "percent": 12.5
+              "count": 7,
+              "covered": 0,
+              "percent": 0.0
             },
             "regions": {
-              "count": 7,
-              "covered": 1,
+              "count": 6,
+              "covered": 0,
               "notcovered": 6,
-              "percent": 14.285714285714285
+              "percent": 0.0
             }
           }
         }
@@ -75,25 +75,25 @@
           "percent": 0
         },
         "functions": {
-          "count": 4,
-          "covered": 2,
-          "percent": 50
+          "count": 2,
+          "covered": 0,
+          "percent": 0
         },
         "instantiations": {
-          "count": 4,
-          "covered": 2,
-          "percent": 50
+          "count": 2,
+          "covered": 0,
+          "percent": 0
         },
         "lines": {
-          "count": 16,
-          "covered": 2,
-          "percent": 12.5
+          "count": 14,
+          "covered": 0,
+          "percent": 0
         },
         "regions": {
-          "count": 14,
-          "covered": 2,
+          "count": 12,
+          "covered": 0,
           "notcovered": 12,
-          "percent": 14.285714285714285
+          "percent": 0
         }
       }
     }

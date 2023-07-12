@@ -10,13 +10,39 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.23] - 2023-07-07
+
+- Inject additional contextual information about cargo-llvm-cov into the JSON output of llvm-cov. ([#289](https://github.com/taiki-e/cargo-llvm-cov/pull/289), thanks @dnaka91)
+
+  It allows other programs, that rely on this output, to make certain assertions about the behavior of cargo-llvm-cov and can help to share common information.
+
+## [0.5.22] - 2023-06-29
+
+- Fix regression introduced in 0.5.21.
+
+## [0.5.21] - 2023-06-29
+
+**Note:** This release has been yanked due to regression fixed in 0.5.22.
+
+- Fix "`-Z doctest-in-workspace` has been stabilized in the 1.72 release" warning on the latest nightly.
+
+## [0.5.20] - 2023-06-02
+
+- cargo-llvm-cov no longer sets the `RUST_TEST_THREADS` and `NEXTEST_TEST_THREADS` environment variables. cargo-llvm-cov now adopts another efficient way to workaround [rust-lang/rust#91092](https://github.com/rust-lang/rust/issues/91092). ([#279](https://github.com/taiki-e/cargo-llvm-cov/pull/279))
+
+  This may greatly improve performance, [especially when using `cargo llvm-cov nextest`](https://github.com/taiki-e/cargo-llvm-cov/pull/279#issuecomment-1552058044).
+
+## [0.5.19] - 2023-04-28
+
+- Fix handling of `--cargo-profile` option for `cargo llvm-cov nextest`. ([#269](https://github.com/taiki-e/cargo-llvm-cov/pull/269))
+
 ## [0.5.18] - 2023-04-25
 
 - Support `--ignore-run-fail` for `cargo llvm-cov nextest`. ([#263](https://github.com/taiki-e/cargo-llvm-cov/pull/263))
 
 ## [0.5.17] - 2023-04-21
 
-- Set `CARGO_LLVM_COV` environment variable ([#259](https://github.com/taiki-e/cargo-llvm-cov/pull/259), thanks @def-)
+- Set `CARGO_LLVM_COV` environment variable. ([#259](https://github.com/taiki-e/cargo-llvm-cov/pull/259), thanks @def-)
 
 ## [0.5.16] - 2023-04-18
 
@@ -478,7 +504,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.23...HEAD
+[0.5.23]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.22...v0.5.23
+[0.5.22]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.21...v0.5.22
+[0.5.21]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.20...v0.5.21
+[0.5.20]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.19...v0.5.20
+[0.5.19]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.18...v0.5.19
 [0.5.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.17...v0.5.18
 [0.5.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.16...v0.5.17
 [0.5.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.15...v0.5.16

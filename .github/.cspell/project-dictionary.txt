@@ -1,12 +1,12 @@
 bindeps
 binstall
-cfgs
 codecov
 demangler
 doctestbins
 easytime
 fcoverage
 fprofile
+instrprof
 libdir
 libhello
 microkernel
@@ -16,7 +16,6 @@ pacman
 profdata
 profraw
 rustfilt
-subcmd
 tempdir
 TESTNAME
 tmpdir

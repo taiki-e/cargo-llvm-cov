@@ -2,7 +2,6 @@
 #![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
 #![warn(clippy::pedantic)]
 #![allow(
-    clippy::let_underscore_untyped,
     clippy::match_same_arms,
     clippy::similar_names,
     clippy::single_match_else,
@@ -197,6 +196,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
+        // Workaround for https://github.com/rust-lang/rust/issues/91092
+        // TODO: skip passing this on newer nightly that includes https://github.com/rust-lang/rust/pull/111469.
+        flags.push("-C");
+        flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         if !cx.args.cov.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
@@ -205,7 +208,27 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
     }
 
-    let llvm_profile_file = cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name));
+    let llvm_profile_file = if is_nextest {
+        // https://github.com/taiki-e/cargo-llvm-cov/issues/258
+        // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+        // Select the number of threads that is the same as the one nextest uses by default here.
+        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
+        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
+        // TODO: should we respect custom test-threads?
+        // - If the number of threads specified by the user is negative or
+        //   less or equal to available cores, it should not really be a problem
+        //   because it does not exceed the number of available cores.
+        // - Even if the number of threads specified by the user is greater than
+        //   available cores, it is expected that the number of threads that can
+        //   write simultaneously will not exceed the number of available cores.
+        cx.ws.target_dir.join(format!(
+            "{}-%p-%{}m.profraw",
+            cx.ws.name,
+            std::thread::available_parallelism().map_or(1, usize::from)
+        ))
+    } else {
+        cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name))
+    };
 
     let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
     push_common_flags(cx, rustflags);
@@ -282,7 +305,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 Err(_) => std::env::var("CXXFLAGS").unwrap_or_default(),
             },
         };
-        let clang_flags = " -fprofile-instr-generate -fcoverage-mapping";
+        let clang_flags = " -fprofile-instr-generate -fcoverage-mapping -fprofile-update=atomic";
         cflags.push_str(clang_flags);
         cxxflags.push_str(clang_flags);
         env.set(cflags_key, &cflags)?;
@@ -290,12 +313,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
     env.set("CARGO_INCREMENTAL", "0")?;
-    // Workaround for https://github.com/rust-lang/rust/issues/91092
-    env.set("RUST_TEST_THREADS", "1")?;
-    if is_nextest {
-        // Same as above
-        env.set("NEXTEST_TEST_THREADS", "1")?;
-    }
     env.set("CARGO_LLVM_COV", "1")?;
     Ok(())
 }
@@ -325,7 +342,7 @@ fn run_test(cx: &Context) -> Result<()> {
     set_env(cx, &mut cargo, IsNextest(false))?;
 
     cargo.arg("test");
-    if cx.args.doctests && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
+    if cx.ws.need_doctest_in_workspace && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
@@ -394,7 +411,6 @@ fn run_nextest(cx: &Context) -> Result<()> {
         {
             let mut cargo = cargo.clone();
             cargo.arg("--no-run");
-            cargo.env_remove("NEXTEST_TEST_THREADS"); // error: the argument '--no-run' cannot be used with '--test-threads <THREADS>'
             cargo::test_or_run_args(cx, &mut cargo);
             if term::verbose() {
                 status!("Running", "{cargo}");
@@ -653,14 +669,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         target_dir.push(target);
     }
     // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-    let profile = if matches!(cx.args.subcommand, Subcommand::Nextest | Subcommand::NextestArchive) {
-        // nextest's --profile option is different from cargo.
-        // https://nexte.st/book/configuration.html#profiles
-        None
-    } else {
-        cx.args.profile.as_deref()
-    };
-    let profile = match profile {
+    let profile = match cx.args.profile.as_deref() {
         None if cx.args.release => "release",
         None => "debug",
         Some(p) if matches!(p, "release" | "bench") => "release",
@@ -942,8 +951,16 @@ impl Format {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
+
             let out = cmd.read()?;
-            fs::write(output_path, out)?;
+            if self == Self::Json {
+                let mut cov = serde_json::from_str::<LlvmCovJsonExport>(&out)?;
+                cov.inject(cx.ws.current_manifest.clone());
+                fs::write(output_path, serde_json::to_string(&cov)?)?;
+            } else {
+                fs::write(output_path, out)?;
+            }
+
             eprintln!();
             status!("Finished", "report saved to {output_path}");
             return Ok(());
@@ -952,7 +969,18 @@ impl Format {
         if term::verbose() {
             status!("Running", "{cmd}");
         }
-        cmd.run()?;
+
+        if self == Self::Json {
+            let out = cmd.read()?;
+            let mut cov = serde_json::from_str::<LlvmCovJsonExport>(&out)?;
+            cov.inject(cx.ws.current_manifest.clone());
+
+            let stdout = std::io::stdout().lock();
+            serde_json::to_writer(stdout, &cov)?;
+        } else {
+            cmd.run()?;
+        }
+
         if matches!(self, Self::Html | Self::Text) {
             if let Some(output_dir) = &cx.args.cov.output_dir {
                 eprintln!();

@@ -1,4 +1,5 @@
 #![warn(rust_2018_idioms)]
+#![cfg(not(miri))] // Miri doesn't support file with non-default mode: https://github.com/rust-lang/miri/pull/2720
 
 use anyhow::Context as _;
 use auxiliary::{
@@ -154,7 +155,7 @@ fn coverage_helper() {
 #[test]
 fn merge() {
     // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if !cfg!(target_os = "linux") {
+    if cfg!(windows) || cfg!(all(target_arch = "x86_64", target_os = "macos")) {
         return;
     }
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
