@@ -11,7 +11,7 @@ ignore = []
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "warn"
-wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/448
+wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/488
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
