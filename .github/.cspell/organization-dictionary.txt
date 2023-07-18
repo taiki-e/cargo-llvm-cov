@@ -38,6 +38,7 @@ asmjs
 atmega
 bpfeb
 bpfel
+csky
 cuda
 eabi
 eabihf
@@ -45,6 +46,7 @@ emscripten
 espidf
 fortanix
 gnuabi
+gnuabiv
 gnueabi
 gnueabihf
 gnullvm
