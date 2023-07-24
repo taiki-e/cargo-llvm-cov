@@ -26,7 +26,7 @@ resolver = "2"
 [dependencies]
 anyhow = "1.0.47"
 camino = "1.0.3"
-cargo_metadata = "0.15"
+cargo_metadata = "0.17"
 cargo-config2 = "0.1.5"
 duct = "0.13.1"
 fs-err = "2.5"
