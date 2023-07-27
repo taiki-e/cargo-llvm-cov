@@ -78,6 +78,7 @@ jobs:
           set -euxo pipefail
           cargo llvm-cov nextest --text
           cargo llvm-cov nextest --text --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --profile ci
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail
@@ -86,6 +87,181 @@ jobs:
           cargo llvm-cov test --doctests --text
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
+
+  llvm-cov-nextest-partitioned:
+    name: 1/2 Run tests and coverage with partitioning
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        partition: [1, 2]
+    env:
+      CARGO_TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - name: Install llvm-cov
+        run: cargo install --path . --debug
+      - name: Run tests and coverage
+        # Reports from each partition will show only the partial coverage
+        run: |
+          set -euxo pipefail
+          cargo llvm-cov --color always --summary-only nextest --workspace --no-fail-fast --all-features --partition count:${{ matrix.partition }}/2
+          find $CARGO_TARGET_DIR -type d
+          tar czf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_TARGET_DIR/llvm-cov-target
+      - name: Upload archive to workflow
+        uses: actions/upload-artifact@v3
+        with:
+          name: llvm-cov-artifacts
+          path: |
+            llvm-cov-artifacts-1.tar.gz
+            llvm-cov-artifacts-2.tar.gz
+
+  report-from-partitions:
+    name: 2/2 Collect coverage artifacts from partitions and generate the report
+    runs-on: ubuntu-latest
+    needs: llvm-cov-nextest-partitioned
+    env:
+      CARGO_TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
+      - name: Install llvm-cov
+        run: cargo install --path . --debug
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: llvm-cov-artifacts
+      - name: Run tests
+        # This is expected to show the full coverage
+        run: |
+          set -euxo pipefail
+          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
+          find $CARGO_TARGET_DIR -type d
+          cargo llvm-cov report --color always --summary-only
+        #     Filename Regions Missed Regions Cover Functions Missed Functions Executed Lines Missed Lines Cover Branches Missed Branches Cover
+        # 1   TOTAL     2493    1127          54.79%   262          91          65.27%  2920    976        66.58%   0           0           -
+        # 2   TOTAL     2493    1264          49.30%   262          101         61.45%  2920    1134       61.16%   0           0           -
+        # 2/2 TOTAL     2493    963           61.37%   262          69          73.66%  2920    754        74.18%   0           0           -
+
+  nextest-archive:
+    name: 1/3 Build nextest artifacts
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - name: Build and archive tests
+        run: |
+          set -euxo pipefail
+          cargo nextest archive --color always --workspace --all-features --archive-file nextest-artifacts.tar.zst
+          find $CARGO_TARGET_DIR -type d
+          tar tvf nextest-artifacts.tar.zst
+      - name: Upload archive to workflow
+        uses: actions/upload-artifact@v3
+        with:
+          name: nextest-artifacts
+          path: nextest-artifacts.tar.zst
+
+  llvm-cov-nextest-archive-partitioned:
+    name: 2/3 Run tests and coverage with partitioning on archived nextest artifacts
+    runs-on: ubuntu-latest
+    needs: nextest-archive
+    strategy:
+      matrix:
+        partition: [1, 2]
+    env:
+      CARGO_TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - name: Install llvm-cov
+        # workaround https://github.com/taiki-e/cargo-llvm-cov/issues/265 with https://github.com/TriplEight/cargo-llvm-cov/pull/1
+        # run: cargo install --path . --debug
+        run: cargo install -f --git https://github.com/TriplEight/cargo-llvm-cov cargo-llvm-cov --rev a9ada936f2c3da5d759145ebe6a5b9a38593f104
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: nextest-artifacts
+      - name: Run tests and coverage
+        # Reports from each partition will show only the partial coverage
+        #
+        # this is supposed to be the test of llvm-cov generating coverage from the nextest archive, but it fails with
+        #
+        # 1. with --text flag (cargo llvm-cov --text nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2) :
+        # error: no input files specified. See llvm-profdata merge -help
+        # error: failed to merge profile data: process didn't exit successfully:
+        #   `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata
+        #       merge -sparse -f /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate-profraw-list
+        #       -o /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/tests/fixtures/crates/bin_crate/target/llvm-cov-target/bin_crate.profdata` (exit status: 1)
+        # which is weird because the (first) command should be nextest reading the archive.
+        #
+        # 2. without --text flag (cargo llvm-cov nextest --archive-file nextest-artifacts.tar.zst --partition count:${{ matrix.partition }}/2) :
+        # Caused by:
+        # No such file or directory (os error 2)', tests/test.rs:223:14 (maybe https://github.com/nextest-rs/nextest/issues/260?)
+        # ...
+        # error: test run failed
+        # error: process didn't exit successfully:
+        #   `/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/cargo nextest run
+        #       --manifest-path /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/Cargo.toml
+        #       --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
+        #       --archive-file nextest-artifacts.tar.zst --partition 'count:1/2'` (exit status: 100)
+        # Which is weird: target/llvm-cov-target is not the expected place for the nextest artifacts, they should go to target/nextest and target/debug.
+        # And I couldn't change it by assigning a custom CARGO_TARGET_DIR and CARGO_LLVM_COV_TARGET_DIR.
+        # Also I tried to set a custom --extract-to to override the default-who-knows-where-it-comes-from
+        #   --extract-to value that appears when I use --archive-file, like this:
+        #     --extract-to /home/runner/work/cargo-llvm-cov/cargo-llvm-cov/target/llvm-cov-target
+        #   but got an 
+        #     error: the argument '--extract-to <DIR>' cannot be used multiple times
+        #
+        # I assume https://github.com/taiki-e/cargo-llvm-cov/issues/265 should be improved to fix this.
+        run: |
+          set -euxo pipefail
+          cargo llvm-cov show-env
+          cargo llvm-cov --color always --summary-only nextest --no-fail-fast --archive-file nextest-artifacts.tar.zst --extract-to nextest-artifacts --partition count:${{ matrix.partition }}/2
+          find $CARGO_TARGET_DIR -type d
+          tar czvf llvm-cov-artifacts-${{ matrix.partition }}.tar.gz $CARGO_TARGET_DIR/llvm-cov-target
+      - name: Upload archive to workflow
+        uses: actions/upload-artifact@v3
+        with:
+          name: llvm-cov-archive-artifacts
+          path: |
+            llvm-cov-artifacts-1.tar.gz
+            llvm-cov-artifacts-2.tar.gz
+
+  report-from-archive-partitions:
+    name: 3/3 Collect artifacts from partitions and generate the report
+    runs-on: ubuntu-latest
+    needs: llvm-cov-nextest-archive-partitioned
+    env:
+      CARGO_TARGET_DIR: target
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust
+        run: rustup toolchain add nightly --no-self-update --component llvm-tools-preview && rustup default nightly
+      - name: Install llvm-cov
+        run: cargo install --path . --debug
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: llvm-cov-archive-artifacts
+      - name: Run tests
+        # This is expected to show the full coverage
+        run: |
+          set -euxo pipefail
+          for i in {1..2}; do tar xzf llvm-cov-artifacts-$i.tar.gz -C . ; done
+          find $CARGO_TARGET_DIR -type d
+          cargo llvm-cov report --color always --summary-only
 
   build:
     name: build (${{ matrix.target }})
