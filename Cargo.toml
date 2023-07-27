@@ -6,7 +6,7 @@ rust-version = "1.64"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
-categories = ["command-line-utilities", "development-tools", "development-tools::cargo-plugins", "development-tools::testing"]
+categories = ["command-line-utilities", "development-tools::cargo-plugins", "development-tools::testing"]
 exclude = ["/.*", "/tools"]
 description = """
 Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
