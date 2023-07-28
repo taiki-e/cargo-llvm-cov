@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update `cargo_metadata` to 0.17.
+
 ## [0.5.23] - 2023-07-07
 
 - Inject additional contextual information about cargo-llvm-cov into the JSON output of llvm-cov. ([#289](https://github.com/taiki-e/cargo-llvm-cov/pull/289), thanks @dnaka91)
