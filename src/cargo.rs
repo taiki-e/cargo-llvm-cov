@@ -67,7 +67,7 @@ impl Workspace {
         if doctests {
             need_doctest_in_workspace = cmd!(config.cargo(), "-Z", "help")
                 .read()
-                .map_or(false, |s| s.contains("doctest-in-workspace"))
+                .map_or(false, |s| s.contains("doctest-in-workspace"));
         }
 
         let target_dir =
