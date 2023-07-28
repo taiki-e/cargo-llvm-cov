@@ -112,11 +112,9 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         run: rustup update stable --no-self-update
-      - run: rustup target add ${{ matrix.target }}
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
       - run: cargo build --target ${{ matrix.target }}
