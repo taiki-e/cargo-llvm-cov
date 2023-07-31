@@ -24,7 +24,6 @@ rustsec
 rustup
 valgrind
 xcompile
-Zdoctest
 Zmiri
 
 // Rust target triple
@@ -152,12 +151,14 @@ endianness
 esac
 euxo
 gsub
+libc
 moreutils
 msys
 noninteractive
 noprofile
 norc
 nproc
+objcopy
 objdump
 pipefail
 powerset
