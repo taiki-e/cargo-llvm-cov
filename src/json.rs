@@ -222,13 +222,13 @@ impl LlvmCovJsonExport {
                     if !uncovered_lines.is_empty() {
                         uncovered_files
                             .entry(file_name.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .append(&mut uncovered_lines);
                     }
                     if !covered_lines.is_empty() {
                         covered_files
                             .entry(file_name.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .append(&mut covered_lines);
                     }
                 }
