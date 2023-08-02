@@ -649,8 +649,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     let profile = match cx.args.profile.as_deref() {
         None if cx.args.release => "release",
         None => "debug",
-        Some(p) if matches!(p, "release" | "bench") => "release",
-        Some(p) if matches!(p, "dev" | "test") => "debug",
+        Some("release" | "bench") => "release",
+        Some("dev" | "test") => "debug",
         Some(p) => p,
     };
     target_dir.push(profile);
