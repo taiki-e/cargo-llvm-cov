@@ -513,8 +513,11 @@ fn generate_report(cx: &Context) -> Result<()> {
         }
         if let Some(fail_uncovered_lines) = cx.args.cov.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered =
-                json.count_uncovered_lines().context("failed to count uncovered lines")?;
+            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered = uncovered_files
+                .iter()
+                .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
+
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
             }
