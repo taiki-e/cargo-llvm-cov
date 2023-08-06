@@ -190,14 +190,18 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
-        // Workaround for https://github.com/rust-lang/rust/issues/91092
-        // TODO: skip passing this on newer nightly that includes https://github.com/rust-lang/rust/pull/111469.
-        flags.push("-C");
-        flags.push("llvm-args=--instrprof-atomic-counter-update-all");
+        // Workaround for https://github.com/rust-lang/rust/issues/91092.
+        // Unnecessary since https://github.com/rust-lang/rust/pull/111469.
+        if cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor <= 71
+            || !cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor < 71
+        {
+            flags.push("-C");
+            flags.push("llvm-args=--instrprof-atomic-counter-update-all");
+        }
         if !cx.args.cov.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
-        if cx.ws.nightly && !cx.args.cov.no_cfg_coverage_nightly {
+        if cx.ws.rustc_version.nightly && !cx.args.cov.no_cfg_coverage_nightly {
             flags.push("--cfg=coverage_nightly");
         }
     }
