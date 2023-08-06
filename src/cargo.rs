@@ -159,7 +159,7 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<RustcVersion> {
         .lines()
         .find_map(|line| line.strip_prefix("release: "))
         .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?;
-    let (version, channel) = release.split_once('-').unwrap_or_default();
+    let (version, channel) = release.split_once('-').unwrap_or((release, ""));
     let mut digits = version.splitn(3, '.');
     let minor = (|| {
         let major = digits.next()?.parse::<u32>().ok()?;

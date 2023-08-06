@@ -50,7 +50,7 @@ jobs:
           # fixed bugs in report generation, so the latest report is not the
           # same as the old report.
           # - rust: '1.60'
-          # - rust: stable
+          - rust: stable
           - rust: beta
           - rust: nightly
           - rust: nightly
