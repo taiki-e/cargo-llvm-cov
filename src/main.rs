@@ -306,7 +306,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         env.set(cxxflags_key, &cxxflags)?;
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
-    env.set("CARGO_INCREMENTAL", "0")?;
     env.set("CARGO_LLVM_COV", "1")?;
     Ok(())
 }
