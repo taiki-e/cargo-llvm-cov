@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Use `--show-missing-lines` logic in `--fail-uncovered-lines`. ([#277](https://github.com/taiki-e/cargo-llvm-cov/pull/277), thanks @michaelvlach)
+
+- cargo-llvm-cov no longer sets the `CARGO_INCREMENTAL=0` environment variable. ([#297](https://github.com/taiki-e/cargo-llvm-cov/pull/297))
+
 ## [0.5.24] - 2023-07-28
 
 - Update `cargo_metadata` to 0.17.
