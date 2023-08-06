@@ -86,6 +86,8 @@ jobs:
           git clone https://github.com/taiki-e/easytime.git
           cd easytime
           cargo llvm-cov test --doctests --text
+          rustup toolchain add 1.60 --no-self-update
+          cargo +1.60 llvm-cov test --text
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
 
