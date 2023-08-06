@@ -78,6 +78,8 @@ jobs:
           set -euxo pipefail
           cargo llvm-cov nextest --text
           cargo llvm-cov nextest --text --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --profile ci
+          cargo llvm-cov nextest --text --profile ci --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail
