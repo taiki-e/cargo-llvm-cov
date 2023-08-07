@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix: Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rust and cargo.
+
 ## [0.5.24] - 2023-07-28
 
 - Update `cargo_metadata` to 0.17.

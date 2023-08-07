@@ -50,7 +50,7 @@ impl Workspace {
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
         let rustc = ProcessBuilder::from(config.rustc().clone());
-        let nightly = rustc_version(&rustc)?;
+        let nightly = rustc_version(&rustc)? || rustc_bootstrap()?;
 
         if doctests && !nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
@@ -157,6 +157,14 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
     let (_version, channel) = version.split_once('-').unwrap_or_default();
     let nightly = channel == "nightly" || channel == "dev";
     Ok(nightly)
+}
+
+fn rustc_bootstrap() -> Result<bool> {
+    if let Some(bootstrap) = env::var("RUSTC_BOOTSTRAP")? {
+        Ok(bootstrap == "1")
+    } else {
+        Ok(false)
+    }
 }
 
 fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
