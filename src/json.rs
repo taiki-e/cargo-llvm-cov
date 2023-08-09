@@ -8,7 +8,7 @@ use camino::Utf8PathBuf;
 use regex::Regex;
 use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct LlvmCovJsonExport {
@@ -312,7 +312,7 @@ pub(crate) struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
-    // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
+    // https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
@@ -331,7 +331,7 @@ pub(crate) struct File {
 }
 
 /// Describes a segment of the file with a counter
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub(crate) struct Segment(
@@ -382,7 +382,7 @@ impl Debug for Segment {
     }
 }
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
 /// Coverage info for a single function
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
