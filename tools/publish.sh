@@ -97,11 +97,11 @@ echo "============== CHANGELOG =============="
 echo "${changes}"
 echo "======================================="
 
-metadata="$(cargo metadata --format-version=1 --all-features --no-deps)"
+metadata=$(cargo metadata --format-version=1 --all-features --no-deps)
 prev_version=''
 manifest_paths=()
 for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
-    pkg="$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")"
+    pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
     publish=$(jq <<<"${pkg}" -r '.publish')
     # Publishing is unrestricted if null, and forbidden if an empty array.
     if [[ "${publish}" == "[]" ]]; then
