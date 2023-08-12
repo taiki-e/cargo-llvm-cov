@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix support for `trybuild` 1.0.76+. ([#301](https://github.com/taiki-e/cargo-llvm-cov/pull/301))
+
 ## [0.5.25] - 2023-08-06
 
 - Use `--show-missing-lines` logic in `--fail-uncovered-lines`. ([#277](https://github.com/taiki-e/cargo-llvm-cov/pull/277), thanks @michaelvlach)
