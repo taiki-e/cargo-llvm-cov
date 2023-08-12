@@ -1,6 +1,7 @@
 bindeps
 binstall
 codecov
+compiletest
 demangler
 doctestbins
 easytime
@@ -12,6 +13,7 @@ libhello
 microkernel
 nextest
 notcovered
+OSTYPE
 pacman
 profdata
 profraw
