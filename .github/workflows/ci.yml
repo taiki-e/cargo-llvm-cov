@@ -50,7 +50,7 @@ jobs:
           # fixed bugs in report generation, so the latest report is not the
           # same as the old report.
           # - rust: '1.60'
-          # - rust: stable
+          - rust: stable
           - rust: beta
           - rust: nightly
           - rust: nightly
@@ -76,14 +76,28 @@ jobs:
       - run: cargo install --path . --debug
       - run: |
           set -euxo pipefail
-          cargo llvm-cov nextest --text
-          cargo llvm-cov nextest --text --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --fail-under-lines 50
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail
           git clone https://github.com/taiki-e/easytime.git
           cd easytime
-          cargo llvm-cov test --doctests --text
+          cargo llvm-cov test --doctests --text --fail-under-lines 30
+          # Test minimum runnable Cargo version.
+          rustup toolchain add 1.60 --no-self-update
+          cargo +1.60 llvm-cov test --text --fail-under-lines 30
+          cd ..
+          # Test trybuild compatibility.
+          git clone https://github.com/taiki-e/easy-ext.git
+          cd easy-ext
+          case "${OSTYPE}" in
+            # TODO(windows)
+            cygwin* | msys*) cargo llvm-cov --text --test compiletest ;;
+            *) cargo llvm-cov --text --test compiletest --fail-under-lines 70 ;;
+          esac
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
 

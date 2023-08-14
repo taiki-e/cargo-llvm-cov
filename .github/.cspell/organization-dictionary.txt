@@ -26,7 +26,7 @@ valgrind
 xcompile
 Zmiri
 
-// Rust target triple
+// Rust target triple/spec
 aarch
 amdgpu
 androideabi
@@ -53,6 +53,7 @@ gnuspe
 gnux
 illumos
 imac
+libnx
 loongarch
 macabi
 mipsel
@@ -61,14 +62,17 @@ msvc
 muslabi
 musleabi
 musleabihf
+newlib
 newlibeabihf
 nvptx
 ohos
 openwrt
+relibc
 riscv
 softfloat
 sparcv
 spirv
+teeos
 thumbeb
 thumbebv
 thumbv

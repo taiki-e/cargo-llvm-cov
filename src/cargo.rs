@@ -25,7 +25,7 @@ pub(crate) struct Workspace {
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_for_cli: Option<String>,
-    pub(crate) nightly: bool,
+    pub(crate) rustc_version: RustcVersion,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
     /// Whether `-Z doctest-in-workspace` is needed.
@@ -50,14 +50,14 @@ impl Workspace {
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
         let rustc = ProcessBuilder::from(config.rustc().clone());
-        let nightly = rustc_version(&rustc)? || rustc_bootstrap()?;
+        let rustc_version = rustc_version(&rustc)?;
 
-        if doctests && !nightly {
+        if doctests && !rustc_version.nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
-        if !stable_coverage && !nightly {
+        if !stable_coverage && !rustc_version.nightly {
             bail!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
@@ -100,7 +100,7 @@ impl Workspace {
             rustc,
             target_for_config,
             target_for_cli,
-            nightly,
+            rustc_version,
             stable_coverage,
             need_doctest_in_workspace,
         })
@@ -131,32 +131,43 @@ impl Workspace {
     }
 
     pub(crate) fn trybuild_target(&self) -> Utf8PathBuf {
-        let mut trybuild_dir = self.metadata.target_directory.join("tests/trybuild");
-        if !trybuild_dir.is_dir() {
-            trybuild_dir = self.metadata.target_directory.join("tests");
-        }
-        let mut trybuild_target = trybuild_dir.join("target");
-        // https://github.com/dtolnay/trybuild/pull/219 specifies tests/trybuild as the target
-        // directory, which is a bit odd since build artifacts are generated in the same directory
-        // as the test project.
+        // https://github.com/dtolnay/trybuild/pull/219
+        let mut trybuild_target = self.metadata.target_directory.join("tests").join("trybuild");
         if !trybuild_target.is_dir() {
             trybuild_target.pop();
+            trybuild_target.push("target");
         }
         trybuild_target
     }
 }
 
-fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
+pub(crate) struct RustcVersion {
+    pub(crate) minor: u32,
+    pub(crate) nightly: bool,
+}
+
+fn rustc_version(rustc: &ProcessBuilder) -> Result<RustcVersion> {
     let mut cmd = rustc.clone();
     cmd.args(["--version", "--verbose"]);
     let verbose_version = cmd.read()?;
-    let version = verbose_version
+    let release = verbose_version
         .lines()
         .find_map(|line| line.strip_prefix("release: "))
         .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?;
-    let (_version, channel) = version.split_once('-').unwrap_or_default();
-    let nightly = channel == "nightly" || channel == "dev";
-    Ok(nightly)
+    let (version, channel) = release.split_once('-').unwrap_or((release, ""));
+    let mut digits = version.splitn(3, '.');
+    let minor = (|| {
+        let major = digits.next()?.parse::<u32>().ok()?;
+        if major != 1 {
+            return None;
+        }
+        let minor = digits.next()?.parse::<u32>().ok()?;
+        let _patch = digits.next().unwrap_or("0").parse::<u32>().ok()?;
+        Some(minor)
+    })()
+    .ok_or_else(|| format_err!("unable to determine rustc version"))?;
+    let nightly = channel == "nightly" || channel == "dev" || rustc_bootstrap()?;
+    Ok(RustcVersion { minor, nightly })
 }
 
 fn rustc_bootstrap() -> Result<bool> {

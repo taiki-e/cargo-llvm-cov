@@ -57,7 +57,6 @@ impl ProcessBuilder {
             stdout_to_stderr: false,
             display_env_vars: Cell::new(false),
         };
-        this.env("CARGO_INCREMENTAL", "0");
         this.env_remove("LLVM_COV_FLAGS");
         this.env_remove("LLVM_PROFDATA_FLAGS");
         this
