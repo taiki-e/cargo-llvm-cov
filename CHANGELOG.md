@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.27] - 2023-08-14
+
 - Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rustc and cargo. ([#298](https://github.com/taiki-e/cargo-llvm-cov/pull/298), thanks @RocketJas)
 
 ## [0.5.26] - 2023-08-12
@@ -520,7 +522,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.26...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.27...HEAD
+[0.5.27]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.26...v0.5.27
 [0.5.26]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.25...v0.5.26
 [0.5.25]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.24...v0.5.25
 [0.5.24]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.23...v0.5.24
