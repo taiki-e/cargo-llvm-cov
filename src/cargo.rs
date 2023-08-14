@@ -166,16 +166,10 @@ fn rustc_version(rustc: &ProcessBuilder) -> Result<RustcVersion> {
         Some(minor)
     })()
     .ok_or_else(|| format_err!("unable to determine rustc version"))?;
-    let nightly = channel == "nightly" || channel == "dev" || rustc_bootstrap()?;
+    let nightly = channel == "nightly"
+        || channel == "dev"
+        || env::var("RUSTC_BOOTSTRAP")?.as_deref() == Some("1");
     Ok(RustcVersion { minor, nightly })
-}
-
-fn rustc_bootstrap() -> Result<bool> {
-    if let Some(bootstrap) = env::var("RUSTC_BOOTSTRAP")? {
-        Ok(bootstrap == "1")
-    } else {
-        Ok(false)
-    }
 }
 
 fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
