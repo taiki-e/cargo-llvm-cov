@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix: Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rust and cargo.
+
 ## [0.5.26] - 2023-08-12
 
 - Fix support for `trybuild` 1.0.76+. ([#301](https://github.com/taiki-e/cargo-llvm-cov/pull/301))
