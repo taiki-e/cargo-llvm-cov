@@ -10,7 +10,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- Fix: Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rust and cargo.
+- Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rustc and cargo. ([#298](https://github.com/taiki-e/cargo-llvm-cov/pull/298), thanks @RocketJas)
 
 ## [0.5.26] - 2023-08-12
 
