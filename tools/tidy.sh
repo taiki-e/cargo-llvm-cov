@@ -112,6 +112,49 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         echo "${new}" >"${lib}"
         check_diff "${lib}"
     done
+    # Make sure that public Rust crates don't contain executables.
+    failed_files=''
+    metadata=$(cargo metadata --format-version=1 --all-features --no-deps)
+    has_public_crate=''
+    for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
+        pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
+        publish=$(jq <<<"${pkg}" -r '.publish')
+        # Publishing is unrestricted if null, and forbidden if an empty array.
+        if [[ "${publish}" == "[]" ]]; then
+            continue
+        fi
+        has_public_crate='1'
+    done
+    if [[ -n "${has_public_crate}" ]]; then
+        info "checking file permissions"
+        if [[ -f Cargo.toml ]] && grep -Eq '^\[package\]' Cargo.toml && ! grep -Eq '^publish = false' Cargo.toml; then
+            if ! grep -Eq '^exclude = \[.*\.\*.*\]' Cargo.toml; then
+                error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+            elif ! grep -Eq '^exclude = \[.*/tools.*\]' Cargo.toml; then
+                error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+            fi
+        fi
+        for p in $(git ls-files); do
+            # Skip directories.
+            if [[ -d "${p}" ]]; then
+                continue
+            fi
+            # Top-level hidden files/directories and tools/* are excluded from crates.io (ensured by the above check).
+            # TODO: fully respect exclude field in Cargo.toml.
+            case "${p}" in
+                .* | tools/*) continue ;;
+            esac
+            if [[ -x "${p}" ]]; then
+                failed_files+="${p}"$'\n'
+            fi
+        done
+        if [[ -n "${failed_files}" ]]; then
+            error "file-permissions-check failed: executable should be in tools/ directory"
+            echo "======================================="
+            echo -n "${failed_files}"
+            echo "======================================="
+        fi
+    fi
 fi
 
 # C/C++ (if exists)
