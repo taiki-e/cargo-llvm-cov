@@ -121,17 +121,14 @@ pub fn test_project(model: &str) -> Result<TempDir> {
 
 pub fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {
     let target_dir = workspace_root.join("target").join("llvm-cov-target");
-    let read_dir = fs::read_dir(target_dir)?;
-    let path = itertools::process_results(read_dir, |mut iter| {
-        iter.find_map(|entry| {
-            let path = entry.path();
-            if path.extension() == Some(OsStr::new("profraw")) {
-                Some(path)
-            } else {
-                None
-            }
-        })
-    })?;
+    let path = fs::read_dir(target_dir)?.filter_map(Result::ok).find_map(|entry| {
+        let path = entry.path();
+        if path.extension() == Some(OsStr::new("profraw")) {
+            Some(path)
+        } else {
+            None
+        }
+    });
     path.as_ref().map(perturb_header).transpose()?;
     Ok(path)
 }
