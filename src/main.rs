@@ -583,7 +583,11 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     .filter_map(Result::ok)
     .collect::<Vec<_>>();
     if profraw_files.is_empty() {
-        warn!("not found *.profraw files in {}", cx.ws.target_dir);
+        warn!(
+            "not found *.profraw files in {}; this may occur if target directory is accidentally \
+             cleared, or running report subcommand without running any tests or binaries",
+            cx.ws.target_dir
+        );
     }
     let mut input_files = String::new();
     for path in profraw_files {
