@@ -77,7 +77,7 @@ fn try_main() -> Result<()> {
             let cx = &Context::new(args)?;
             let stdout = io::stdout();
             let writer =
-                &mut ShowEnvWriter { target: stdout.lock(), options: cx.args.show_env.clone() };
+                &mut ShowEnvWriter { writer: stdout.lock(), options: cx.args.show_env.clone() };
             set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
@@ -153,14 +153,14 @@ impl EnvTarget for ProcessBuilder {
 }
 
 struct ShowEnvWriter<W: io::Write> {
-    target: W,
+    writer: W,
     options: ShowEnvOptions,
 }
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         let prefix = if self.options.export_prefix { "export " } else { "" };
-        writeln!(self.target, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
+        writeln!(self.writer, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
     }
     fn unset(&mut self, key: &str) -> Result<()> {
         if env::var_os(key).is_some() {
@@ -206,7 +206,8 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
     }
 
-    let llvm_profile_file = if is_nextest {
+    let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
+    if is_nextest {
         // https://github.com/taiki-e/cargo-llvm-cov/issues/258
         // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
         // Select the number of threads that is the same as the one nextest uses by default here.
@@ -219,14 +220,15 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         // - Even if the number of threads specified by the user is greater than
         //   available cores, it is expected that the number of threads that can
         //   write simultaneously will not exceed the number of available cores.
-        cx.ws.target_dir.join(format!(
-            "{}-%p-%{}m.profraw",
-            cx.ws.name,
+        llvm_profile_file_name.push_str(&format!(
+            "-%{}m",
             std::thread::available_parallelism().map_or(1, usize::from)
-        ))
+        ));
     } else {
-        cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name))
-    };
+        llvm_profile_file_name.push_str("-%m");
+    }
+    llvm_profile_file_name.push_str(".profraw");
+    let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
 
     let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
     push_common_flags(cx, rustflags);
