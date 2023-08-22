@@ -1039,10 +1039,8 @@ impl Format {
 }
 
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
-    #[cfg(not(windows))]
-    const SEPARATOR: &str = "/";
-    #[cfg(windows)]
-    const SEPARATOR: &str = "\\\\"; // On windows, we should escape the separator.
+    // On windows, we should escape the separator.
+    const SEPARATOR: &str = if cfg!(windows) { "\\\\" } else { "/" };
 
     #[derive(Default)]
     struct Out(String);

@@ -92,8 +92,7 @@ pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
         }
         fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
     }
-    #[cfg(windows)]
-    {
+    if cfg!(windows) {
         let s = fs::read_to_string(output_path)?;
         // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
         fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
