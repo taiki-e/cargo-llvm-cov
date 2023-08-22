@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Diagnostics improvements.
+
 ## [0.5.27] - 2023-08-14
 
 - Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rustc and cargo. ([#298](https://github.com/taiki-e/cargo-llvm-cov/pull/298), thanks @RocketJas)

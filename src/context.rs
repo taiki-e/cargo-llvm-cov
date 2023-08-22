@@ -75,6 +75,16 @@ impl Context {
         if args.cov.output_dir.is_none() && args.cov.html {
             args.cov.output_dir = Some(ws.output_dir.clone());
         }
+        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+            && env::var_os("CARGO_LLVM_COV_SHOW_ENV").is_some()
+        {
+            warn!(
+                "cargo-llvm-cov subcommands other than report and clean may not work correctly \
+                 in context where environment variables are set by show-env; consider using \
+                 normal {} commands",
+                if args.subcommand == Subcommand::Nextest { "cargo-nextest" } else { "cargo" }
+            );
+        }
 
         // target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
         // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin

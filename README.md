@@ -428,8 +428,11 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 `cargo test`, `cargo run`, and [`cargo nextest`][nextest] are available as builtin, but cargo-llvm-cov can also be used for arbitrary binaries built using cargo (including other cargo subcommands or external tests that use make, [xtask], etc.)
 
 ```sh
-source <(cargo llvm-cov show-env --export-prefix) # Set the environment variables needed to get coverage.
-cargo llvm-cov clean --workspace # Remove artifacts that may affect the coverage results.
+# Set the environment variables needed to get coverage.
+source <(cargo llvm-cov show-env --export-prefix)
+# Remove artifacts that may affect the coverage results.
+# This command should be called after show-env.
+cargo llvm-cov clean --workspace
 # Above two commands should be called before build binaries.
 
 cargo build # Build rust binaries.
@@ -438,6 +441,8 @@ cargo build # Build rust binaries.
 
 cargo llvm-cov report --lcov # Generate report without tests.
 ```
+
+Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest` commands.
 
 ### Exclude file from coverage
 

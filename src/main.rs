@@ -311,6 +311,9 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
     env.set("CARGO_LLVM_COV", "1")?;
+    if cx.args.subcommand == Subcommand::ShowEnv {
+        env.set("CARGO_LLVM_COV_SHOW_ENV", "1")?;
+    }
     Ok(())
 }
 
