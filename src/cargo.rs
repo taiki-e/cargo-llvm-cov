@@ -130,14 +130,14 @@ impl Workspace {
             .into())
     }
 
-    pub(crate) fn trybuild_target(&self) -> Utf8PathBuf {
+    pub(crate) fn trybuild_target_dir(&self) -> Utf8PathBuf {
         // https://github.com/dtolnay/trybuild/pull/219
-        let mut trybuild_target = self.metadata.target_directory.join("tests").join("trybuild");
-        if !trybuild_target.is_dir() {
-            trybuild_target.pop();
-            trybuild_target.push("target");
+        let mut trybuild_target_dir = self.metadata.target_directory.join("tests").join("trybuild");
+        if !trybuild_target_dir.is_dir() {
+            trybuild_target_dir.pop();
+            trybuild_target_dir.push("target");
         }
-        trybuild_target
+        trybuild_target_dir
     }
 }
 

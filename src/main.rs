@@ -580,7 +580,11 @@ fn merge_profraw(cx: &Context) -> Result<()> {
             .join(format!("{}-*.profraw", cx.ws.name))
             .as_str(),
     )?
-    .filter_map(Result::ok);
+    .filter_map(Result::ok)
+    .collect::<Vec<_>>();
+    if profraw_files.is_empty() {
+        warn!("not found *.profraw files in {}", cx.ws.target_dir);
+    }
     let mut input_files = String::new();
     for path in profraw_files {
         input_files.push_str(
@@ -647,6 +651,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
 
     let re = Targets::new(&cx.ws).pkg_hash_re()?;
     let mut files = vec![];
+    let mut searched_dir = String::new();
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
     // This is not the ideal way, but the way unstable book says it is cannot support them.
@@ -675,6 +680,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
     }
+    searched_dir.push_str(target_dir.as_str());
     if cx.args.doctests {
         for f in glob::glob(
             Utf8Path::new(&glob::Pattern::escape(cx.ws.doctests_dir.as_str()))
@@ -687,16 +693,18 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                 files.push(make_relative(cx, &f).to_owned().into_os_string());
             }
         }
+        searched_dir.push(',');
+        searched_dir.push_str(cx.ws.doctests_dir.as_str());
     }
 
     // trybuild
-    let mut trybuild_target = cx.ws.trybuild_target();
+    let mut trybuild_target_dir = cx.ws.trybuild_target_dir();
     if let Some(target) = &cx.args.target {
-        trybuild_target.push(target);
+        trybuild_target_dir.push(target);
     }
     // Currently, trybuild always use debug build.
-    trybuild_target.push("debug");
-    if trybuild_target.is_dir() {
+    trybuild_target_dir.push("debug");
+    if trybuild_target_dir.is_dir() {
         let mut trybuild_targets = vec![];
         for metadata in trybuild_metadata(&cx.ws.metadata.target_directory)? {
             for package in metadata.packages {
@@ -708,7 +716,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !trybuild_targets.is_empty() {
             let re =
                 Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|"))).unwrap();
-            for entry in walk_target_dir(cx, &trybuild_target) {
+            for entry in walk_target_dir(cx, &trybuild_target_dir) {
                 let path = make_relative(cx, entry.path());
                 if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                     if re.is_match(file_stem) {
@@ -719,12 +727,22 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     files.push(path.to_owned().into_os_string());
                 }
             }
+            searched_dir.push(',');
+            searched_dir.push_str(trybuild_target_dir.as_str());
         }
     }
 
     // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
     files.sort_unstable();
 
+    if files.is_empty() {
+        warn!(
+            "not found object files (searched directories: {searched_dir}); this may occur if \
+             show-env subcommand is used incorrectly (see docs or other warnings), unsupported \
+             commands such as nextest archive are used, or encountered Windows-specific bug \
+             (see issue 300)",
+        );
+    }
     Ok(files)
 }
 

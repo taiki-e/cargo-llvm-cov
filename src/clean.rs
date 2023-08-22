@@ -131,10 +131,10 @@ fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
 }
 
 fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
-    let trybuild_target = ws.trybuild_target();
+    let trybuild_target_dir = ws.trybuild_target_dir();
     let re = pkg_hash_re(ws, pkg_ids);
 
-    for e in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {
+    for e in WalkDir::new(trybuild_target_dir).into_iter().filter_map(Result::ok) {
         let path = e.path();
         if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
             if re.is_match(file_stem) {
