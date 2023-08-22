@@ -163,7 +163,9 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
         writeln!(self.writer, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
     }
     fn unset(&mut self, key: &str) -> Result<()> {
-        if env::var_os(key).is_some() {
+        if self.options.export_prefix {
+            writeln!(self.writer, "unset {key}").context("failed to write env to stdout")?;
+        } else if env::var_os(key).is_some() {
             warn!("cannot unset environment variable `{key}`");
         }
         Ok(())
