@@ -10,9 +10,11 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Diagnostics improvements. ([#302](https://github.com/taiki-e/cargo-llvm-cov/pull/302))
+
 ## [0.5.28] - 2023-08-22
 
-- Diagnostics improvements.  ([#305](https://github.com/taiki-e/cargo-llvm-cov/pull/305), [#306](https://github.com/taiki-e/cargo-llvm-cov/pull/306))
+- Diagnostics improvements. ([#305](https://github.com/taiki-e/cargo-llvm-cov/pull/305), [#306](https://github.com/taiki-e/cargo-llvm-cov/pull/306))
 
 ## [0.5.27] - 2023-08-14
 

@@ -177,6 +177,7 @@ impl Args {
 
         let mut cargo_args = vec![];
         let mut subcommand = Subcommand::None;
+        let mut after_subcommand = false;
 
         let mut manifest_path = None;
         let mut frozen = false;
@@ -252,6 +253,7 @@ impl Args {
                         multi_arg(&arg)?;
                     }
                     Store::push(&mut $opt, &parser.value()?.into_string().unwrap())?;
+                    after_subcommand = false;
                 }};
             }
             macro_rules! parse_opt_passthrough {
@@ -287,14 +289,19 @@ impl Args {
                         }
                         Value(_) => unreachable!(),
                     }
+                    after_subcommand = false;
                 }};
             }
             macro_rules! parse_flag {
-                ($flag:ident $(,)?) => {
+                ($flag:ident $(,)?) => {{
                     if mem::replace(&mut $flag, true) {
                         multi_arg(&arg)?;
                     }
-                };
+                    #[allow(unused_assignments)]
+                    {
+                        after_subcommand = false;
+                    }
+                }};
             }
             macro_rules! parse_flag_passthrough {
                 ($flag:ident $(,)?) => {{
@@ -303,7 +310,7 @@ impl Args {
                 }};
             }
             macro_rules! passthrough {
-                () => {
+                () => {{
                     match arg {
                         Long(flag) => {
                             let flag = format!("--{}", flag);
@@ -322,7 +329,8 @@ impl Args {
                         }
                         Value(_) => unreachable!(),
                     }
-                };
+                    after_subcommand = false;
+                }};
             }
 
             match arg {
@@ -399,7 +407,10 @@ impl Args {
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
 
-                Short('v') | Long("verbose") => verbose += 1,
+                Short('v') | Long("verbose") => {
+                    verbose += 1;
+                    after_subcommand = false;
+                }
                 Short('h') | Long("help") => {
                     print!("{}", Subcommand::help_text(subcommand));
                     std::process::exit(0);
@@ -419,9 +430,7 @@ impl Args {
                 Long("target-dir") => unexpected(&format_arg(&arg), subcommand)?,
 
                 // Handle known options for can_passthrough=false subcommands
-                Short('Z') => {
-                    parse_opt_passthrough!(());
-                }
+                Short('Z') => parse_opt_passthrough!(()),
                 Short('F' | 'j') | Long("features" | "jobs")
                     if matches!(
                         subcommand,
@@ -461,8 +470,26 @@ impl Args {
                                 )?;
                             }
                         }
+                        after_subcommand = true;
                     } else {
+                        if after_subcommand
+                            && subcommand == Subcommand::Nextest
+                            && matches!(
+                                val.as_str(),
+                                // from `cargo nextest --help`
+                                "list" | "run" | "archive" | "show-config" | "self" | "help"
+                            )
+                        {
+                            // The following warning is a hint, so it should not be promoted to an error.
+                            let _guard = term::warn::ignore();
+                            warn!(
+                                "note that `{val}` is treated as test filter instead of subcommand \
+                                 because `cargo llvm-cov nextest` internally calls `cargo nextest \
+                                 run`"
+                            );
+                        }
                         cargo_args.push(val);
+                        after_subcommand = false;
                     }
                 }
                 _ => unexpected(&format_arg(&arg), subcommand)?,
