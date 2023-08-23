@@ -653,6 +653,11 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             })
             .filter_map(Result::ok)
     }
+    fn is_object(cx: &Context, f: &Path) -> bool {
+        is_executable::is_executable(f)
+            || cx.args.target.as_ref().map_or(cfg!(windows), |t| t.contains("-windows"))
+                && f.extension() == Some(OsStr::new("dll"))
+    }
 
     let re = Targets::new(&cx.ws).pkg_hash_re()?;
     let mut files = vec![];
@@ -677,7 +682,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     target_dir.push(profile);
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
-        if is_executable::is_executable(f) {
+        if is_object(cx, f) {
             if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
                 if re.is_match(file_stem) {
                     files.push(make_relative(cx, f).to_owned().into_os_string());
@@ -694,7 +699,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         )?
         .filter_map(Result::ok)
         {
-            if is_executable::is_executable(&f) {
+            if is_object(cx, &f) {
                 files.push(make_relative(cx, &f).to_owned().into_os_string());
             }
         }
@@ -728,7 +733,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                         continue;
                     }
                 }
-                if is_executable::is_executable(path) {
+                if is_object(cx, path) {
                     files.push(path.to_owned().into_os_string());
                 }
             }
@@ -743,9 +748,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     if files.is_empty() {
         warn!(
             "not found object files (searched directories: {searched_dir}); this may occur if \
-             show-env subcommand is used incorrectly (see docs or other warnings), unsupported \
-             commands such as nextest archive are used, or encountered Windows-specific bug \
-             (see issue 300)",
+             show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
+             commands such as nextest archive are used",
         );
     }
     Ok(files)

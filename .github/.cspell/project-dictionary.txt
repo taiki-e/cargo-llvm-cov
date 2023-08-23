@@ -13,7 +13,6 @@ libhello
 microkernel
 nextest
 notcovered
-OSTYPE
 pacman
 profdata
 profraw

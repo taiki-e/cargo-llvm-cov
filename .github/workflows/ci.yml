@@ -93,11 +93,7 @@ jobs:
           # Test trybuild compatibility.
           git clone https://github.com/taiki-e/easy-ext.git
           cd easy-ext
-          case "${OSTYPE}" in
-            # TODO(windows)
-            cygwin* | msys*) cargo llvm-cov --text --test compiletest ;;
-            *) cargo llvm-cov --text --test compiletest --fail-under-lines 70 ;;
-          esac
+          cargo llvm-cov --text --test compiletest --fail-under-lines 70
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo minimal-versions build --workspace --all-features --ignore-private
 
