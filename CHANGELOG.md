@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where coverage is not collected or fails to generate coverage on `cdylib` or proc-macro crate on Windows. ([#307](https://github.com/taiki-e/cargo-llvm-cov/pull/307))
+
+- Escape values that are shown by `show-env` subcommand. ([#307](https://github.com/taiki-e/cargo-llvm-cov/pull/307))
+
 ## [0.5.29] - 2023-08-23
 
 - Diagnostics improvements. ([#302](https://github.com/taiki-e/cargo-llvm-cov/pull/302))

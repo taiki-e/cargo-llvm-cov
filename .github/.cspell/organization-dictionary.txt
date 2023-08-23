@@ -6,15 +6,18 @@ taiki
 
 // tool name and its configs or options
 asan
+cdylib
 cflags
 clippy
 codegen
 cxxflags
+dylib
 exitcode
 miri
 miriflags
 msan
 retag
+rlib
 rustc
 rustdoc
 rustdocflags
@@ -22,6 +25,7 @@ rustflags
 rustfmt
 rustsec
 rustup
+staticlib
 valgrind
 xcompile
 Zmiri
