@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix empty source path generated in cobertura.xml. ([#309](https://github.com/taiki-e/cargo-llvm-cov/pull/309), thanks @mstyura)
+
+- Prepare for future branch coverage support. ([#308](https://github.com/taiki-e/cargo-llvm-cov/pull/308), thanks @Swatinem)
+
 ## [0.5.30] - 2023-08-23
 
 - Fix an issue where coverage is not collected or fails to generate coverage on `cdylib` or proc-macro crate on Windows. ([#307](https://github.com/taiki-e/cargo-llvm-cov/pull/307))
