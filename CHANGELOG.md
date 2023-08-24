@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.31] - 2023-08-24
+
 - Fix empty source path generated in cobertura.xml. ([#309](https://github.com/taiki-e/cargo-llvm-cov/pull/309), thanks @mstyura)
 
 - Prepare for future branch coverage support. ([#308](https://github.com/taiki-e/cargo-llvm-cov/pull/308), thanks @Swatinem)
@@ -540,7 +542,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.30...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.31...HEAD
+[0.5.31]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.30...v0.5.31
 [0.5.30]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.29...v0.5.30
 [0.5.29]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.28...v0.5.29
 [0.5.28]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.27...v0.5.28
