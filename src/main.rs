@@ -928,7 +928,11 @@ impl Format {
             }
             let lcov = cmd.read()?;
             // Convert to XML
-            let cdata = lcov2cobertura::parse_lines(lcov.as_bytes().lines(), "", &[])?;
+            let cdata = lcov2cobertura::parse_lines(
+                lcov.as_bytes().lines(),
+                &cx.ws.metadata.workspace_root,
+                &[],
+            )?;
             let demangler = lcov2cobertura::RustDemangler::new();
             let now = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
