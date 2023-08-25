@@ -16,7 +16,6 @@ exitcode
 miri
 miriflags
 msan
-retag
 rlib
 rustc
 rustdoc
@@ -26,6 +25,7 @@ rustfmt
 rustsec
 rustup
 staticlib
+tsan
 valgrind
 xcompile
 Zmiri
