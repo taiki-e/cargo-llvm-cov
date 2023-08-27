@@ -83,7 +83,7 @@ jobs:
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -euxo pipefail
-          git clone https://github.com/taiki-e/easytime.git
+          git clone --depth 1 https://github.com/taiki-e/easytime.git
           cd easytime
           cargo llvm-cov test --doctests --text --fail-under-lines 30
           # Test minimum runnable Cargo version.
@@ -91,7 +91,7 @@ jobs:
           cargo +1.60 llvm-cov test --text --fail-under-lines 30
           cd ..
           # Test trybuild compatibility.
-          git clone https://github.com/taiki-e/easy-ext.git
+          git clone --depth 1 https://github.com/taiki-e/easy-ext.git
           cd easy-ext
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
         if: startsWith(matrix.rust, 'nightly')
