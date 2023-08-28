@@ -95,7 +95,8 @@ jobs:
           cd easy-ext
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
         if: startsWith(matrix.rust, 'nightly')
-      - run: cargo minimal-versions build --workspace --all-features --ignore-private
+      - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
+      - run: cargo minimal-versions build --workspace --no-private --all-features
 
   build:
     name: build (${{ matrix.target }})
