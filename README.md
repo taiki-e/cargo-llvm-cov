@@ -632,7 +632,7 @@ scoop install cargo-llvm-cov
 <!-- omit in toc -->
 ### Via cargo-binstall
 
-You can install cargo-llvm-cov using [cargo-binstall](https://github.com/ryankurte/cargo-binstall):
+You can install cargo-llvm-cov using [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
 
 ```sh
 cargo binstall cargo-llvm-cov
