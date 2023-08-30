@@ -641,7 +641,7 @@ cargo binstall cargo-llvm-cov
 <!-- omit in toc -->
 ### Via pacman (Arch Linux)
 
-You can install cargo-llvm-cov from the [community repository](https://archlinux.org/packages/community/x86_64/cargo-llvm-cov):
+You can install cargo-llvm-cov from the [extra repository](https://archlinux.org/packages/extra/x86_64/cargo-llvm-cov):
 
 ```sh
 pacman -S cargo-llvm-cov
