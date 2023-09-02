@@ -133,6 +133,8 @@ pub(crate) struct Args {
     ///
     /// Note that this can cause false positives/false negatives due to old build artifacts.
     pub(crate) no_clean: bool,
+    /// <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>
+    pub(crate) continuous_mode: bool,
 
     pub(crate) manifest: ManifestOptions,
 
@@ -241,6 +243,7 @@ impl Args {
         let mut include_ffi = false;
         let mut verbose: usize = 0;
         let mut no_clean = false;
+        let mut continuous_mode = false;
 
         // show-env options
         let mut export_prefix = false;
@@ -376,6 +379,7 @@ impl Args {
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
                 Long("no-clean") => parse_flag!(no_clean),
+                Long("continuous-mode") => parse_flag!(continuous_mode),
 
                 // report options
                 Long("json") => parse_flag!(json),
@@ -850,6 +854,7 @@ impl Args {
             remap_path_prefix,
             include_ffi,
             no_clean,
+            continuous_mode,
             manifest: ManifestOptions { manifest_path, frozen, locked, offline },
             cargo_args,
             rest,

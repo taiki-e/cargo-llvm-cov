@@ -199,6 +199,11 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             flags.push("-C");
             flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         }
+        // if cx.args.continuous_mode {
+        //     // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+        //     flags.push("-C");
+        //     flags.push("llvm-args=--runtime-counter-relocation");
+        // }
         if !cx.args.cov.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
@@ -228,6 +233,22 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     } else {
         llvm_profile_file_name.push_str("-%m");
     }
+    // TODO:
+    // - "LLVM Profile Error: Counters section not page-aligned (start = 0x10214c470, pagesz = 16384)." on macOS
+    // - "LLVM Profile Error: __llvm_profile_counter_bias is undefined" on Linux
+    // if cx.args.continuous_mode {
+    //     // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+    //     llvm_profile_file_name.push_str("-%c");
+    // }
+    // if cx.args.target.as_ref().map_or(cfg!(target_os = "macos"), |t| t.contains("-darwin"))
+    //     || cx
+    //         .args
+    //         .target
+    //         .as_ref()
+    //         .map_or(cfg!(target_os = "linux"), |t| t.contains("-linux") && !t.contains("-android"))
+    // {
+    //     llvm_profile_file_name.push_str("-%c");
+    // }
     llvm_profile_file_name.push_str(".profraw");
     let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
 
