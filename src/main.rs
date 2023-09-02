@@ -228,6 +228,16 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     } else {
         llvm_profile_file_name.push_str("-%m");
     }
+    // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+    if cx.args.target.as_ref().map_or(cfg!(target_os = "macos"), |t| t.contains("-darwin"))
+        || cx
+            .args
+            .target
+            .as_ref()
+            .map_or(cfg!(target_os = "linux"), |t| t.contains("-linux") && !t.contains("-android"))
+    {
+        llvm_profile_file_name.push_str("-%c");
+    }
     llvm_profile_file_name.push_str(".profraw");
     let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
 
