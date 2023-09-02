@@ -30,5 +30,6 @@
    11|      1|#[test]
    12|      1|fn test() {
    13|      1|    assert!(!func(1_f32));
+                  ^0
    14|      1|    assert!(func(-1_i32));
    15|      1|}

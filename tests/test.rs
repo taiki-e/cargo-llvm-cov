@@ -98,18 +98,25 @@ fn bin_crate() {
     }
 }
 
+// nightly-2023-09-02 fixed bug in report generation, so the latest report is
+// not the same as the old report.
+#[rustversion::attr(before(1.74), ignore)]
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
     run("instantiations", "instantiations", &[], &[]);
 }
 
+// nightly-2023-09-02 fixed bug in report generation, so the latest report is
+// not the same as the old report.
+#[rustversion::attr(before(1.74), ignore)]
 #[test]
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
+// feature(no_coverage) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
@@ -136,6 +143,7 @@ fn no_coverage() {
     }
 }
 
+// feature(no_coverage) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn coverage_helper() {
@@ -207,6 +215,9 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
     }
 }
 
+// nightly-2023-09-02 fixed bug in report generation, so the latest report is
+// not the same as the old report.
+#[rustversion::attr(before(1.74), ignore)]
 #[test]
 fn clean_ws() {
     let model = "merge";
