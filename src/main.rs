@@ -1147,14 +1147,11 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
     }
 
     for &excluded in &excluded {
-        let included = match contains.get(&excluded) {
-            Some(included) => included,
-            None => {
-                let package_path =
-                    excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
-                excluded_path.push(package_path.to_owned());
-                continue;
-            }
+        let Some(included) = contains.get(&excluded) else {
+            let package_path =
+                excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
+            excluded_path.push(package_path.to_owned());
+            continue;
         };
 
         for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {
