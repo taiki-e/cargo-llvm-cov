@@ -569,7 +569,7 @@ cargo-llvm-cov --json | some-program
 cargo +stable install cargo-llvm-cov --locked
 ```
 
-Currently, installing cargo-llvm-cov requires rustc 1.64+.
+Currently, installing cargo-llvm-cov requires rustc 1.66+.
 
 cargo-llvm-cov is usually runnable with Cargo versions older than the Rust version
 required for installation (e.g., `cargo +1.60 llvm-cov`). Currently, to run
