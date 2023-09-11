@@ -47,6 +47,7 @@ walkdir = "2.2.3"
 
 [dev-dependencies]
 easy-ext = "1"
+ignore = "0.4"
 rustversion = "1"
 tempfile = "3"
 

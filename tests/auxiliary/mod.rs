@@ -12,7 +12,6 @@ use camino::Utf8Path;
 use easy_ext::ext;
 use fs_err as fs;
 use tempfile::TempDir;
-use walkdir::WalkDir;
 
 pub fn fixtures_path() -> &'static Utf8Path {
     Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
@@ -105,7 +104,8 @@ pub fn test_project(model: &str) -> Result<TempDir> {
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
 
-    for entry in WalkDir::new(&model_path).into_iter().filter_map(Result::ok) {
+    for entry in ignore::WalkBuilder::new(&model_path).hidden(false).build().filter_map(Result::ok)
+    {
         let from = entry.path();
         let to = &workspace_root.join(from.strip_prefix(&model_path)?);
         if from.is_dir() {
