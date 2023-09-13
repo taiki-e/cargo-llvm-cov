@@ -454,14 +454,14 @@ cargo llvm-cov --open --ignore-filename-regex build
 
 ### Exclude function from coverage
 
-To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
+To exclude the specific function from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
 
-Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
+Since `#[coverage(off)]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn exclude_from_coverage() {
     // ...
 }
@@ -472,7 +472,11 @@ cfgs are set under the following conditions:
 - `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
 - `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
-If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate.
+If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
+
+cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of coverage-helper crate.
+
+**Note:** `#[coverage(off)]` was previously named `#[no_coverage]`. When using `#[no_coverage]` in the old nightly, replace `feature(coverage_attribute)` with `feature(no_coverage)`, `coverage(off)` with `no_coverage`, and `coverage-helper` 0.2+ with `coverage-helper` 0.1.
 
 ### Continuous Integration
 
