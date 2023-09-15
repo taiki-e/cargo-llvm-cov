@@ -116,7 +116,7 @@ fn cargo_config() {
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
-// feature(no_coverage) requires nightly
+// feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
@@ -143,7 +143,7 @@ fn no_coverage() {
     }
 }
 
-// feature(no_coverage) requires nightly
+// feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn coverage_helper() {

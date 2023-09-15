@@ -1,4 +1,4 @@
-    1|       |#![cfg_attr(coverage_nightly, feature(no_coverage))]
+    1|       |#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
     2|       |
     3|       |use coverage_helper::test;
     4|       |

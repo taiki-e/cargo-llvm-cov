@@ -6,4 +6,4 @@ edition = "2021"
 [workspace]
 
 [dependencies]
-coverage-helper = "0.1"
+coverage-helper = "0.2"
