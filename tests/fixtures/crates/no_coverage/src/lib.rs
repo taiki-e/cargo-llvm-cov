@@ -1,4 +1,4 @@
-#![cfg_attr(coverage, feature(no_coverage))]
+#![cfg_attr(coverage, feature(coverage_attribute))]
 
 fn func(x: i32) {
     match x {
@@ -10,7 +10,7 @@ fn func(x: i32) {
     }
 }
 
-#[cfg_attr(coverage, no_coverage)]
+#[cfg_attr(coverage, coverage(off))]
 #[test]
 fn fn_level() {
     func(0);
@@ -20,17 +20,17 @@ fn fn_level() {
     }
 }
 
-// #[no_coverage] has no effect on expressions.
+// #[coverage(off)] has no effect on expressions.
 #[test]
 fn expr_level() {
     if false {
-        #[cfg_attr(coverage, no_coverage)]
+        #[cfg_attr(coverage, coverage(off))]
         func(2);
     }
 }
 
-// #[no_coverage] has no effect on modules.
-#[cfg_attr(coverage, no_coverage)]
+// #[coverage(off)] has no effect on modules.
+#[cfg_attr(coverage, coverage(off))]
 mod mod_level {
     use super::func;
 
