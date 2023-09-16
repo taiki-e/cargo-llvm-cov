@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Based on rust-lang/rust's rust-demangler.
 //
 // Source:

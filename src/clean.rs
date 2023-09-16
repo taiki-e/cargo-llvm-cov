@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
 // - https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/ops/cargo_clean.rs

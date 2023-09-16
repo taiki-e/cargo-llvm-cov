@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // TODO: this may no longer needed since regex 1.9.
 
 use std::mem;

@@ -1,1 +1,1 @@
-git ls-files '*.sh' # TODO: check more files
+git ls-files | grep -v '^tests/fixtures/'

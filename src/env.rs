@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 pub(crate) use std::env::*;
 use std::{env, ffi::OsString};
 

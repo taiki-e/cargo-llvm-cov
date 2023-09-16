@@ -250,19 +250,22 @@ if [[ -f tools/.tidy-check-license-headers ]]; then
     info "checking license headers (experimental)"
     failed_files=''
     for p in $(eval $(<tools/.tidy-check-license-headers)); do
-        # TODO: More file types?
         case "$(basename "${p}")" in
-            *.sh) prefix=("# ") ;;
-            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S) prefix=("// " "/* ") ;;
+            *.stderr | *.expanded.rs) continue ;; # generated files
+            *.sh | *.py | *.rb | *Dockerfile) prefix=("# ") ;;
+            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S | *.js) prefix=("// " "/* ") ;;
             *.ld | *.x) prefix=("/* ") ;;
-            *) error "unrecognized file type: ${p}" ;;
+            # TODO: More file types?
+            *) continue ;;
         esac
         # TODO: The exact line number is not actually important; it is important
         # that it be part of the top-level comments of the file.
         line="1"
-        case "${p}" in
-            *.sh) line="2" ;; # shebang
-        esac
+        if IFS= LC_ALL=C read -rn3 -d '' shebang <"${p}" && [[ "${shebang}" == '#!/' ]]; then
+            line="2"
+        elif [[ "${p}" == *"Dockerfile" ]] && IFS= LC_ALL=C read -rn9 -d '' syntax <"${p}" && [[ "${syntax}" == '# syntax=' ]]; then
+            line="2"
+        fi
         header_found=''
         for pre in "${prefix[@]}"; do
             if [[ "$(grep -E -n "${pre}SPDX-License-Identifier: " "${p}")" == "${line}:${pre}SPDX-License-Identifier: "* ]]; then
