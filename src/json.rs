@@ -2,7 +2,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
-    fmt::{Debug, Formatter},
+    fmt,
 };
 
 use anyhow::{Context as _, Result};
@@ -371,8 +371,8 @@ impl Segment {
     }
 }
 
-impl Debug for Segment {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Segment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Segment")
             .field("line", &self.line())
             .field("col", &self.col())
@@ -470,8 +470,8 @@ impl RegionLocation {
     }
 }
 
-impl Debug for Region {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Region {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Region")
             .field("line_start", &self.line_start())
             .field("column_start", &self.column_start())
