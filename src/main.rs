@@ -1,15 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![forbid(unsafe_code)]
-#![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(clippy::pedantic)]
-#![allow(
-    clippy::match_same_arms,
-    clippy::similar_names,
-    clippy::single_match_else,
-    clippy::struct_excessive_bools,
-    clippy::too_many_lines
-)]
+#![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub, clippy::pedantic)]
+#![allow(clippy::similar_names, clippy::struct_excessive_bools, clippy::too_many_lines)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
@@ -676,9 +669,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
     let profile = match cx.args.profile.as_deref() {
         None if cx.args.release => "release",
-        None => "debug",
         Some("release" | "bench") => "release",
-        Some("dev" | "test") => "debug",
+        None | Some("dev" | "test") => "debug",
         Some(p) => p,
     };
     target_dir.push(profile);
