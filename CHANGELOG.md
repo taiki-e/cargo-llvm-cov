@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where codes in the standard library are not being properly excluded from reports when using a custom toolchain. ([#310](https://github.com/taiki-e/cargo-llvm-cov/pull/310))
+
+- Document a way to display coverage in VS Code.
+
 ## [0.5.31] - 2023-08-24
 
 - Fix empty source path generated in cobertura.xml. ([#309](https://github.com/taiki-e/cargo-llvm-cov/pull/309), thanks @mstyura)

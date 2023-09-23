@@ -24,7 +24,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
-  - [VS Code integration](#vs-code-integration)
+  - [Display coverage in VS Code](#display-coverage-in-vs-code)
   - [Environment variables](#environment-variables)
   - [Additional JSON information](#additional-json-information)
 - [Installation](#installation)
@@ -526,11 +526,11 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
 
 Note that [the way Codecov shows region/branch coverage is not very good](https://github.com/taiki-e/cargo-llvm-cov/pull/255#issuecomment-1513318191).
 
-### VS Code integration
+### Display coverage in VS Code
 
 You can display coverage in VS Code using [Coverage Gutters](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters).
 
-Coverage Gutters supports LCOV and detects `lcov.info` files at the top level or in the `coverage` directory. Below is an example command to generate the coverage file.
+Coverage Gutters supports lcov style coverage file and detects `lcov.info` files at the top level or in the `coverage` directory. Below is an example command to generate the coverage file.
 
 ```sh
 cargo llvm-cov --lcov --output-path lcov.info
