@@ -1074,11 +1074,11 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         //       We may have a directory like tests/support, so maybe we need both?
         if cx.args.remap_path_prefix {
             out.push(format!(
-                r"(^|{SEPARATOR})(rustc{SEPARATOR}[0-9a-f]+|tests|examples|benches){SEPARATOR}"
+                r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
             ));
         } else {
             out.push(format!(
-                r"{SEPARATOR}rustc{SEPARATOR}[0-9a-f]+{SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
+                r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
                 regex::escape(cx.ws.metadata.workspace_root.as_str())
             ));
         }
