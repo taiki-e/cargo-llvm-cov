@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.5.33] - 2023-09-26
 
-- Fix "The file was not recognized as a valid object file" on WSL. ([#317](https://github.com/taiki-e/cargo-llvm-cov/pull/317))
+- Fix "The file was not recognized as a valid object file" error on WSL. ([#317](https://github.com/taiki-e/cargo-llvm-cov/pull/317))
 
 ## [0.5.32] - 2023-09-23
 
