@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix "The file was not recognized as a valid object file" on WSL. ([#317](https://github.com/taiki-e/cargo-llvm-cov/pull/317))
+
 ## [0.5.32] - 2023-09-23
 
 - Fix an issue where codes in the standard library are not being properly excluded from reports when using a custom toolchain. ([#311](https://github.com/taiki-e/cargo-llvm-cov/pull/311))
