@@ -11,6 +11,7 @@ instrprof
 libdir
 libhello
 microkernel
+MSYSTEM
 nextest
 notcovered
 pacman

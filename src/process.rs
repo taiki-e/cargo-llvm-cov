@@ -190,10 +190,10 @@ impl fmt::Display for ProcessBuilder {
             for (key, val) in &self.env {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
-                    if cfg!(windows) {
-                        write!(f, "set {key}={val}&& ")?;
-                    } else {
+                    if is_unix_terminal() {
                         write!(f, "{key}={val} ")?;
+                    } else {
+                        write!(f, "set {key}={val}&& ")?;
                     }
                 }
             }
@@ -244,4 +244,9 @@ fn process_error(mut msg: String, status: Option<ExitStatus>, output: Option<&Ou
     }
 
     Error::msg(msg)
+}
+
+fn is_unix_terminal() -> bool {
+    // https://github.com/sfackler/shell-escape/blob/9bfec037f6fde99a7e4caf029919b0bb4b808c85/src/lib.rs#L18
+    cfg!(unix) || std::env::var_os("MSYSTEM").is_some()
 }
