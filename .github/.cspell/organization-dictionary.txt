@@ -160,6 +160,7 @@ esac
 euxo
 gsub
 libc
+markdownlint
 moreutils
 msys
 noninteractive

@@ -81,7 +81,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         fi
         check_diff $(git ls-files '*.rs')
     else
-        warn "'rustup' is not installed"
+        warn "'rustup' is not installed; skipped Rust code style check"
     fi
     cast_without_turbofish=$(grep -n -E '\.cast\(\)' $(git ls-files '*.rs') || true)
     if [[ -n "${cast_without_turbofish}" ]]; then
@@ -168,7 +168,7 @@ if [[ -n "$(git ls-files '*.c')$(git ls-files '*.cpp')" ]]; then
         clang-format -i $(git ls-files '*.c') $(git ls-files '*.cpp')
         check_diff $(git ls-files '*.c') $(git ls-files '*.cpp')
     else
-        warn "'clang-format' is not installed"
+        warn "'clang-format' is not installed; skipped C/C++ code style check"
     fi
 fi
 
@@ -176,11 +176,11 @@ fi
 if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')" ]]; then
     info "checking YAML/JavaScript/JSON code style"
     if type -P npm &>/dev/null; then
-        echo "+ npx prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
-        npx prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
+        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
+        npx -y prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
         check_diff $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
     else
-        warn "'npm' is not installed"
+        warn "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
     fi
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
@@ -190,7 +190,7 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
                 # The top-level permissions must be weak as they are referenced by all jobs.
                 permissions=$(yq '.permissions' "${workflow}" | jq -c)
                 case "${permissions}" in
-                    '{"contents":"read"}' | '{"contents":"none"}' | '{}') ;;
+                    '{"contents":"read"}' | '{"contents":"none"}') ;;
                     null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
                     *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
                 esac
@@ -210,13 +210,28 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
                 fi
             done
         else
-            warn "'jq' or 'yq' is not installed"
+            warn "'jq' or 'yq' is not installed; skipped GitHub workflow check"
         fi
     fi
 fi
 if [[ -n "$(git ls-files '*.yaml')" ]]; then
     error "please use '.yml' instead of '.yaml' for consistency"
     git ls-files '*.yaml'
+fi
+
+# Markdown (if exists)
+if [[ -n "$(git ls-files '*.md')" ]]; then
+    info "checking Markdown style"
+    if type -P npm &>/dev/null; then
+        echo "+ npx -y markdownlint-cli2 \$(git ls-files '*.md')"
+        npx -y markdownlint-cli2 $(git ls-files '*.md')
+    else
+        warn "'npm' is not installed; skipped Markdown style check"
+    fi
+fi
+if [[ -n "$(git ls-files '*.markdown')" ]]; then
+    error "please use '.md' instead of '.markdown' for consistency"
+    git ls-files '*.markdown'
 fi
 
 # Shell scripts
@@ -226,7 +241,7 @@ if type -P shfmt &>/dev/null; then
     shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
 else
-    warn "'shfmt' is not installed"
+    warn "'shfmt' is not installed; skipped Shell scripts style check"
 fi
 if type -P shellcheck &>/dev/null; then
     echo "+ shellcheck \$(git ls-files '*.sh')"
@@ -241,7 +256,7 @@ if type -P shellcheck &>/dev/null; then
         fi
     fi
 else
-    warn "'shellcheck' is not installed"
+    warn "'shellcheck' is not installed; skipped Shell scripts style check"
 fi
 
 # License check
@@ -268,9 +283,10 @@ if [[ -f tools/.tidy-check-license-headers ]]; then
         fi
         header_found=''
         for pre in "${prefix[@]}"; do
+            # TODO: check that the license is valid as SPDX and is allowed in this project.
             if [[ "$(grep -E -n "${pre}SPDX-License-Identifier: " "${p}")" == "${line}:${pre}SPDX-License-Identifier: "* ]]; then
                 header_found='1'
-                continue
+                break
             fi
         done
         if [[ -z "${header_found}" ]]; then
@@ -308,13 +324,14 @@ if [[ -f .cspell.json ]]; then
         fi
         config_old=$(<.cspell.json)
         config_new=$(grep <<<"${config_old}" -v ' *//' | jq 'del(.dictionaries[] | select(index("organization-dictionary") | not))' | jq 'del(.dictionaryDefinitions[] | select(.name == "organization-dictionary" | not))')
+        trap -- 'echo "${config_old}" >.cspell.json; echo >&2 "$0: trapped SIGINT"; exit 1' SIGINT
         echo "${config_new}" >.cspell.json
         if [[ -n "${has_rust}" ]]; then
-            dependencies_words=$(npx <<<"${dependencies}" cspell stdin --no-progress --no-summary --words-only --unique || true)
+            dependencies_words=$(npx <<<"${dependencies}" -y cspell stdin --no-progress --no-summary --words-only --unique || true)
         fi
-        all_words=$(npx cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v "${project_dictionary//\./\\.}" || true)) || true)
-        # TODO: handle SIGINT
+        all_words=$(npx -y cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v "${project_dictionary//\./\\.}" || true)) || true)
         echo "${config_old}" >.cspell.json
+        trap - SIGINT
         cat >.github/.cspell/rust-dependencies.txt <<EOF
 // This file is @generated by $(basename "$0").
 // It is not intended for manual editing.
@@ -327,8 +344,8 @@ EOF
             echo "warning: you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
         fi
 
-        echo "+ npx cspell --no-progress --no-summary \$(git ls-files)"
-        if ! npx cspell --no-progress --no-summary $(git ls-files); then
+        echo "+ npx -y cspell --no-progress --no-summary \$(git ls-files)"
+        if ! npx -y cspell --no-progress --no-summary $(git ls-files); then
             error "spellcheck failed: please fix uses of above words or add to ${project_dictionary} if correct"
         fi
 
@@ -360,7 +377,7 @@ EOF
             echo "======================================="
         fi
     else
-        warn "'npm' is not installed"
+        warn "'npm' is not installed; skipped spell check"
     fi
 fi
 
