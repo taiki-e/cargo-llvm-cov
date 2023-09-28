@@ -18,10 +18,13 @@ pacman
 profdata
 profraw
 rustfilt
+rustix
 tempdir
 TESTNAME
+thiserror
 tmpdir
 trybuild
+winapi
 xargo
 Xdemangler
 xtask
