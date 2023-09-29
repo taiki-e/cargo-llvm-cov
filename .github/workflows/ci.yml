@@ -64,7 +64,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install Rust
-        run: rustup toolchain add ${{ matrix.rust }} --no-self-update --component llvm-tools-preview && rustup default ${{ matrix.rust }}
+        run: rustup toolchain add ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       - run: rustup toolchain add nightly --no-self-update
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-minimal-versions

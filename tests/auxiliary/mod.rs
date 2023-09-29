@@ -7,6 +7,7 @@ use std::{
     mem,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
+    sync::OnceLock,
 };
 
 use anyhow::{Context as _, Result};
@@ -19,7 +20,16 @@ pub fn fixtures_path() -> &'static Utf8Path {
     Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
 }
 
+fn ensure_llvm_tools_installed() {
+    static TEST_VERSION: OnceLock<()> = OnceLock::new();
+    TEST_VERSION.get_or_init(|| {
+        // Install component first to avoid component installation conflicts.
+        let _ = Command::new("rustup").args(["component", "add", "llvm-tools-preview"]).output();
+    });
+}
+
 pub fn cargo_llvm_cov(subcommand: &str) -> Command {
+    ensure_llvm_tools_installed();
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
     cmd.arg("llvm-cov");
     if !subcommand.is_empty() {
