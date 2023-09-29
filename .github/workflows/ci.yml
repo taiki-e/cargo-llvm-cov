@@ -75,14 +75,14 @@ jobs:
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
       - run: |
-          set -euxo pipefail
+          set -eEuxo pipefail
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
-          set -euxo pipefail
+          set -eEuxo pipefail
           git clone --depth 1 https://github.com/taiki-e/easytime.git
           cd easytime
           cargo llvm-cov test --doctests --text --fail-under-lines 30

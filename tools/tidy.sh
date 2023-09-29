@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 # shellcheck disable=SC2046
-set -euo pipefail
+set -eEuo pipefail
 IFS=$'\n\t'
 cd "$(dirname "$0")"/..
 
