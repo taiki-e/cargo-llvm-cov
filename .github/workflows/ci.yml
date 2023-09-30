@@ -32,13 +32,13 @@ concurrency:
 
 jobs:
   deny:
-    uses: taiki-e/workflows/.github/workflows/deny.yml@main
+    uses: taiki-e/github-actions/.github/workflows/deny.yml@main
   msrv:
-    uses: taiki-e/workflows/.github/workflows/msrv.yml@main
+    uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
     with:
       event_name: ${{ github.event_name }}
   tidy:
-    uses: taiki-e/workflows/.github/workflows/tidy.yml@main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@main
 
   test:
     strategy:
