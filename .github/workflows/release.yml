@@ -45,6 +45,7 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
+  # NB: sync with build job in ci.yml.
   upload-assets:
     name: ${{ matrix.target }}
     if: github.repository_owner == 'taiki-e'
@@ -52,7 +53,6 @@ jobs:
       - create-release
     strategy:
       matrix:
-        # When updating this list, the reminder to update the target list in ci.yml.
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl

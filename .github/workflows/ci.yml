@@ -98,12 +98,12 @@ jobs:
       - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
       - run: cargo minimal-versions build --workspace --no-private --all-features
 
+  # NB: sync with upload-assets job in release.yml.
   build:
     name: build (${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
-        # When updating this list, the reminder to update the target list in release.yml.
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl
@@ -115,6 +115,8 @@ jobs:
             os: macos-11
           - target: x86_64-pc-windows-msvc
             os: windows-2019
+          - target: universal-apple-darwin
+            os: macos-11
     runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
     timeout-minutes: 60
     steps:
@@ -128,13 +130,20 @@ jobs:
           target: ${{ matrix.target }}
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
         if: endsWith(matrix.target, 'windows-msvc')
-      - run: cargo build --target ${{ matrix.target }}
-      - run: cargo build --target ${{ matrix.target }} --release
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          dry-run: true
+          bin: cargo-llvm-cov
+          target: ${{ matrix.target }}
+          tar: all
+          zip: windows
+          ref: refs/tags/dummy
+          token: dummy
       # For debugging
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/cargo-llvm-cov*
+          path: cargo-llvm-cov-${{ matrix.target }}.*
 
   miri:
     runs-on: ubuntu-latest
