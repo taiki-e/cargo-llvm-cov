@@ -129,14 +129,16 @@ pub fn test_project(model: &str) -> Result<TempDir> {
 }
 
 fn git_ls_files(dir: &Path, filters: &[&str]) -> Result<Vec<(String, PathBuf)>> {
-    let output = Command::new("git")
-        .arg("ls-files")
-        .args(filters)
-        .current_dir(dir)
-        .output()
-        .with_context(|| format!("failed to run `git ls-files {filters:?}`"))?;
+    let mut cmd = Command::new("git");
+    cmd.arg("ls-files").args(filters).current_dir(dir);
+    let output = cmd.output().with_context(|| format!("could not execute process `{cmd:?}`"))?;
     if !output.status.success() {
-        bail!("failed to run `git ls-files {filters:?}`");
+        bail!(
+            "process didn't exit successfully: `{cmd:?}`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+            "-".repeat(60),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
     }
     Ok(str::from_utf8(&output.stdout)?
         .lines()
