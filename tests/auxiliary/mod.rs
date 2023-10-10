@@ -7,10 +7,11 @@ use std::{
     mem,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
+    str,
     sync::OnceLock,
 };
 
-use anyhow::{Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use camino::Utf8Path;
 use easy_ext::ext;
 use fs_err as fs;
@@ -116,18 +117,41 @@ pub fn test_project(model: &str) -> Result<TempDir> {
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
 
-    for entry in ignore::WalkBuilder::new(&model_path).hidden(false).build().filter_map(Result::ok)
-    {
-        let from = entry.path();
-        let to = &workspace_root.join(from.strip_prefix(&model_path)?);
-        if from.is_dir() {
-            fs::create_dir_all(to)?;
-        } else {
-            fs::copy(from, to)?;
+    for (file_name, from) in git_ls_files(model_path.as_std_path(), &[])? {
+        let to = &workspace_root.join(file_name);
+        if !to.parent().unwrap().is_dir() {
+            fs::create_dir_all(to.parent().unwrap())?;
         }
+        fs::copy(from, to)?;
     }
 
     Ok(tmpdir)
+}
+
+fn git_ls_files(dir: &Path, filters: &[&str]) -> Result<Vec<(String, PathBuf)>> {
+    let output = Command::new("git")
+        .arg("ls-files")
+        .args(filters)
+        .current_dir(dir)
+        .output()
+        .with_context(|| format!("failed to run `git ls-files {filters:?}`"))?;
+    if !output.status.success() {
+        bail!("failed to run `git ls-files {filters:?}`");
+    }
+    Ok(str::from_utf8(&output.stdout)?
+        .lines()
+        .map(str::trim)
+        .filter_map(|f| {
+            if f.is_empty() {
+                return None;
+            }
+            let p = dir.join(f);
+            if !p.exists() {
+                return None;
+            }
+            Some((f.to_owned(), p))
+        })
+        .collect())
 }
 
 pub fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {

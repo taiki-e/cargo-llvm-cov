@@ -3,6 +3,8 @@
 #![warn(rust_2018_idioms)]
 #![cfg(not(miri))] // Miri doesn't support file with non-default mode: https://github.com/rust-lang/miri/pull/2720
 
+mod auxiliary;
+
 use anyhow::Context as _;
 use auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
@@ -11,8 +13,6 @@ use auxiliary::{
 use camino::Utf8Path;
 use fs_err as fs;
 use tempfile::tempdir;
-
-mod auxiliary;
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
 
