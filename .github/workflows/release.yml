@@ -45,12 +45,10 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
-  # NB: sync with build job in ci.yml.
   upload-assets:
     name: ${{ matrix.target }}
     if: github.repository_owner == 'taiki-e'
-    needs:
-      - create-release
+    needs: create-release
     strategy:
       matrix:
         include:
