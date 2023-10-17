@@ -190,7 +190,14 @@ fn locate_project(cargo: &OsStr) -> Result<String> {
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-metadata.html
 fn metadata(cargo: &OsStr, manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
-    let mut cmd = cmd!(cargo, "metadata", "--format-version=1", "--manifest-path", manifest_path);
+    let mut cmd = cmd!(
+        cargo,
+        "metadata",
+        "--format-version=1",
+        "--no-deps",
+        "--manifest-path",
+        manifest_path
+    );
     serde_json::from_str(&cmd.read()?).with_context(|| format!("failed to parse output from {cmd}"))
 }
 
