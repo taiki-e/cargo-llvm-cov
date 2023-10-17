@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve performance and reduce disc usage by passing `--no-deps` to `cargo metadata`.
+
 ## [0.5.33] - 2023-09-26
 
 - Fix "The file was not recognized as a valid object file" error on WSL. ([#317](https://github.com/taiki-e/cargo-llvm-cov/pull/317))
