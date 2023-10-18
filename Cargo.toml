@@ -25,7 +25,7 @@ resolver = "2"
 
 [dependencies]
 anyhow = "1.0.47"
-camino = { version = "1.0.5", features = ["serde1"] }
+camino = "1.0.5"
 cargo-config2 = "0.1.5"
 duct = "0.13.1"
 fs-err = "2.5"

@@ -158,8 +158,10 @@ impl LlvmCovJsonExport {
     }
 
     pub fn inject(&mut self, manifest_path: Utf8PathBuf) {
-        self.cargo_llvm_cov =
-            Some(CargoLlvmCov { version: env!("CARGO_PKG_VERSION"), manifest_path });
+        self.cargo_llvm_cov = Some(CargoLlvmCov {
+            version: env!("CARGO_PKG_VERSION"),
+            manifest_path: manifest_path.into_string(),
+        });
     }
 
     /// Gets the minimal lines coverage of all files.
@@ -520,7 +522,7 @@ struct CargoLlvmCov {
     /// requirements on specific versions.
     version: &'static str,
     /// Resolved path to the `Cargo.toml` manifest.
-    manifest_path: Utf8PathBuf,
+    manifest_path: String,
 }
 
 #[cfg(test)]
