@@ -97,7 +97,7 @@ echo "============== CHANGELOG =============="
 echo "${changes}"
 echo "======================================="
 
-metadata=$(cargo metadata --format-version=1 --all-features --no-deps)
+metadata=$(cargo metadata --format-version=1 --no-deps)
 prev_version=''
 manifest_paths=()
 for id in $(jq <<<"${metadata}" '.workspace_members[]'); do

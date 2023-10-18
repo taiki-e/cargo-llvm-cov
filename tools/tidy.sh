@@ -114,7 +114,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
     done
     # Make sure that public Rust crates don't contain executables.
     failed_files=''
-    metadata=$(cargo metadata --format-version=1 --all-features --no-deps)
+    metadata=$(cargo metadata --format-version=1 --no-deps)
     has_public_crate=''
     for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
         pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
@@ -314,7 +314,7 @@ if [[ -f .cspell.json ]]; then
                 if [[ "${manifest_path}" != "Cargo.toml" ]] && ! grep -Eq '\[workspace\]' "${manifest_path}"; then
                     continue
                 fi
-                metadata=$(cargo metadata --format-version=1 --all-features --no-deps --manifest-path "${manifest_path}")
+                metadata=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}")
                 for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
                     dependencies+="$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})" | jq -r '.dependencies[].name')"$'\n'
                 done
