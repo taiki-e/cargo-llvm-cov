@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve compile time.
+
 ## [0.5.34] - 2023-10-17
 
 - Improve performance and reduce disc usage by passing `--no-deps` to `cargo metadata`.
