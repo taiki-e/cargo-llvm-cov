@@ -12,13 +12,12 @@ use std::{
 };
 
 use anyhow::{bail, Context as _, Result};
-use camino::Utf8Path;
 use easy_ext::ext;
 use fs_err as fs;
 use tempfile::TempDir;
 
-pub fn fixtures_path() -> &'static Utf8Path {
-    Utf8Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
+pub fn fixtures_path() -> &'static Path {
+    Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
 }
 
 fn ensure_llvm_tools_installed() {
@@ -81,7 +80,7 @@ pub fn test_report(
     assert_output(output_path, expected)
 }
 
-pub fn assert_output(output_path: &Utf8Path, expected: &str) -> Result<()> {
+pub fn assert_output(output_path: &Path, expected: &str) -> Result<()> {
     if env::var_os("CI").is_some() {
         let mut child = Command::new("git")
             .args(["--no-pager", "diff", "--no-index", "--"])
@@ -95,7 +94,7 @@ pub fn assert_output(output_path: &Utf8Path, expected: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn normalize_output(output_path: &Utf8Path, args: &[&str]) -> Result<()> {
+pub fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
     if args.contains(&"--json") {
         let s = fs::read_to_string(output_path)?;
         let mut json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&s).unwrap();
@@ -117,7 +116,7 @@ pub fn test_project(model: &str) -> Result<TempDir> {
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
 
-    for (file_name, from) in git_ls_files(model_path.as_std_path(), &[])? {
+    for (file_name, from) in git_ls_files(&model_path, &[])? {
         let to = &workspace_root.join(file_name);
         if !to.parent().unwrap().is_dir() {
             fs::create_dir_all(to.parent().unwrap())?;

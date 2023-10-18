@@ -5,12 +5,13 @@
 
 mod auxiliary;
 
+use std::path::Path;
+
 use anyhow::Context as _;
 use auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
     test_project, test_report, CommandExt,
 };
-use camino::Utf8Path;
 use fs_err as fs;
 use tempfile::tempdir;
 
@@ -175,11 +176,10 @@ fn merge() {
 #[test]
 fn merge_failure_mode_all() {
     let tempdir = tempdir().unwrap();
-    let output_dir = Utf8Path::from_path(tempdir.path()).unwrap();
-    merge_with_failure_mode(output_dir, true);
+    merge_with_failure_mode(tempdir.path(), true);
 }
 
-fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
+fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     let model = "merge";
     fs::create_dir_all(output_dir).unwrap();
     for (extension, args) in test_set() {
