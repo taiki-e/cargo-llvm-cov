@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.35] - 2023-10-18
+
 - Improve compile time.
 
 ## [0.5.34] - 2023-10-17
@@ -558,7 +560,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.34...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.35...HEAD
+[0.5.35]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.34...v0.5.35
 [0.5.34]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.33...v0.5.34
 [0.5.33]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.32...v0.5.33
 [0.5.32]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.31...v0.5.32
