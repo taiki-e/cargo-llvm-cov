@@ -8,7 +8,8 @@ use std::{
 use anyhow::{Context as _, Result};
 use camino::Utf8PathBuf;
 use regex::Regex;
-use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
+use serde::ser::{Serialize, SerializeMap, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
 // https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
