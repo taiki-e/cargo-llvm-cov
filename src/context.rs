@@ -8,12 +8,12 @@ use std::{
 
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
-use cargo_metadata::PackageId;
 
 use crate::{
     cargo::Workspace,
     cli::{self, Args, Subcommand},
     env,
+    metadata::{Metadata, PackageId},
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
     term,
@@ -221,7 +221,7 @@ impl Context {
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
     for id in pkg_ids {
-        re.or(&ws.metadata[id].name);
+        re.or(&ws.metadata.packages[id].name);
     }
     re.build().unwrap()
 }
@@ -232,18 +232,14 @@ pub(crate) struct WorkspaceMembers {
 }
 
 impl WorkspaceMembers {
-    fn new(
-        exclude: &[String],
-        exclude_from_report: &[String],
-        metadata: &cargo_metadata::Metadata,
-    ) -> Self {
+    fn new(exclude: &[String], exclude_from_report: &[String], metadata: &Metadata) -> Self {
         let mut excluded = vec![];
         let mut included = vec![];
         if !exclude.is_empty() || !exclude_from_report.is_empty() {
             for id in &metadata.workspace_members {
                 // --exclude flag doesn't handle `name:version` format
-                if exclude.contains(&metadata[id].name)
-                    || exclude_from_report.contains(&metadata[id].name)
+                if exclude.contains(&metadata.packages[id].name)
+                    || exclude_from_report.contains(&metadata.packages[id].name)
                 {
                     excluded.push(id.clone());
                 } else {

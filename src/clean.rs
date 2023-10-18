@@ -8,7 +8,6 @@ use std::path::Path;
 
 use anyhow::Result;
 use camino::Utf8Path;
-use cargo_metadata::PackageId;
 use walkdir::WalkDir;
 
 use crate::{
@@ -16,6 +15,7 @@ use crate::{
     cli::{self, Args, ManifestOptions},
     context::Context,
     fs,
+    metadata::PackageId,
     regex_vec::{RegexVec, RegexVecBuilder},
     term,
 };
@@ -56,7 +56,7 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         .workspace_members
         .included
         .iter()
-        .flat_map(|id| ["--package", &cx.ws.metadata[id].name])
+        .flat_map(|id| ["--package", &cx.ws.metadata.packages[id].name])
         .collect();
     let mut cmd = cx.cargo();
     cmd.arg("clean").args(package_args);
@@ -77,7 +77,7 @@ fn clean_ws(
     clean_ws_inner(ws, pkg_ids, verbose != 0)?;
 
     let package_args: Vec<_> =
-        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata[id].name]).collect();
+        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata.packages[id].name]).collect();
     let mut args_set = vec![vec![]];
     if ws.target_dir.join("release").exists() {
         args_set.push(vec!["--release"]);
@@ -127,7 +127,7 @@ fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Resul
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]{7,})?$");
     for id in pkg_ids {
-        re.or(&ws.metadata[id].name.replace('-', "(-|_)"));
+        re.or(&ws.metadata.packages[id].name.replace('-', "(-|_)"));
     }
     re.build().unwrap()
 }

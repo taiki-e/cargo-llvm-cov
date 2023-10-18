@@ -21,7 +21,6 @@ rustfilt
 rustix
 tempdir
 TESTNAME
-thiserror
 tmpdir
 trybuild
 winapi

@@ -10,13 +10,14 @@ use crate::{
     cli::{ManifestOptions, Subcommand},
     context::Context,
     env,
+    metadata::Metadata,
     process::ProcessBuilder,
 };
 
 pub(crate) struct Workspace {
     pub(crate) name: String,
     pub(crate) config: Config,
-    pub(crate) metadata: cargo_metadata::Metadata,
+    pub(crate) metadata: Metadata,
     pub(crate) current_manifest: Utf8PathBuf,
 
     pub(crate) target_dir: Utf8PathBuf,
@@ -44,7 +45,7 @@ impl Workspace {
         // Metadata and config
         let config = Config::load()?;
         let current_manifest = package_root(config.cargo(), options.manifest_path.as_deref())?;
-        let metadata = metadata(config.cargo(), &current_manifest)?;
+        let metadata = Metadata::new(current_manifest.as_std_path(), config.cargo())?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
             bail!("cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}");
@@ -186,19 +187,6 @@ fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8P
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-locate-project.html
 fn locate_project(cargo: &OsStr) -> Result<String> {
     cmd!(cargo, "locate-project", "--message-format", "plain").read()
-}
-
-// https://doc.rust-lang.org/nightly/cargo/commands/cargo-metadata.html
-fn metadata(cargo: &OsStr, manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
-    let mut cmd = cmd!(
-        cargo,
-        "metadata",
-        "--format-version=1",
-        "--no-deps",
-        "--manifest-path",
-        manifest_path
-    );
-    serde_json::from_str(&cmd.read()?).with_context(|| format!("failed to parse output from {cmd}"))
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
