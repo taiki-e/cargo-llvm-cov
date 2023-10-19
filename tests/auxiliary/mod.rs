@@ -14,7 +14,6 @@ use std::{
 use anyhow::{bail, Context as _, Result};
 use easy_ext::ext;
 use fs_err as fs;
-use tempfile::TempDir;
 
 pub fn fixtures_path() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
@@ -111,7 +110,7 @@ pub fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn test_project(model: &str) -> Result<TempDir> {
+pub fn test_project(model: &str) -> Result<tempfile::TempDir> {
     let tmpdir = tempfile::tempdir()?;
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
