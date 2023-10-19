@@ -95,13 +95,11 @@ xtensa
 aclass
 acqrel
 alloc
-bools
 builtins
 bytecount
 canonicalize
 cfgs
 concat
-consts
 ctypes
 dealloc
 deque
@@ -114,6 +112,7 @@ impls
 inlateout
 intrinsics
 lateout
+libdir
 mclass
 memcpy
 msrv
@@ -169,6 +168,7 @@ norc
 nproc
 objcopy
 objdump
+pacman
 pipefail
 powerset
 proto
@@ -178,4 +178,6 @@ shellcheckrc
 SIGABRT
 SIGILL
 subcmd
+tempdir
 tlsv
+tmpdir
