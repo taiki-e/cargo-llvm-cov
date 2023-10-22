@@ -2,7 +2,12 @@
 
 #![forbid(unsafe_code)]
 #![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub, clippy::pedantic)]
-#![allow(clippy::similar_names, clippy::struct_excessive_bools, clippy::too_many_lines)]
+#![allow(
+    clippy::similar_names,
+    clippy::struct_excessive_bools,
+    clippy::struct_field_names,
+    clippy::too_many_lines
+)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
