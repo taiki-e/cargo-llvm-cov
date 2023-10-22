@@ -98,7 +98,7 @@ jobs:
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
-      - run: cargo minimal-versions build --workspace --no-private --all-features
+      - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features
 
   miri:
     runs-on: ubuntu-latest
