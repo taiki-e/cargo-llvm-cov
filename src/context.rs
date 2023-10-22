@@ -88,13 +88,6 @@ impl Context {
             );
         }
 
-        // target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
-        // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
-        // https://github.com/rust-lang/rust/issues/85658
-        // https://github.com/rust-lang/rust/blob/1.70.0/src/bootstrap/dist.rs#L2189
-        let mut rustlib: Utf8PathBuf = ws.rustc_print("target-libdir")?.into();
-        rustlib.pop(); // lib
-        rustlib.push("bin");
         let (llvm_cov, llvm_profdata): (PathBuf, PathBuf) = match (
             env::var_os("LLVM_COV").map(PathBuf::from),
             env::var_os("LLVM_PROFDATA").map(PathBuf::from),
@@ -106,10 +99,16 @@ impl Context {
                 } else if llvm_profdata_env.is_some() {
                     warn!("setting only LLVM_PROFDATA environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
                 }
-                let llvm_cov: PathBuf =
-                    rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX)).into();
-                let llvm_profdata: PathBuf =
-                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX)).into();
+                // --print target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
+                // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
+                // https://github.com/rust-lang/rust/issues/85658
+                // https://github.com/rust-lang/rust/blob/1.70.0/src/bootstrap/dist.rs#L2189
+                let mut rustlib: PathBuf = ws.rustc_print("target-libdir")?.into();
+                rustlib.pop(); // lib
+                rustlib.push("bin");
+                let llvm_cov = rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX));
+                let llvm_profdata =
+                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX));
                 // Check if required tools are installed.
                 if !llvm_cov.exists() || !llvm_profdata.exists() {
                     let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
