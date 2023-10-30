@@ -104,6 +104,12 @@ OPTIONS:
         --include-build-script
             Include build script in coverage report
 
+        --doctests
+            Including doc tests (unstable)
+
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
+            more.
+
     -q, --quiet
             Display one character per test instead of one line
 

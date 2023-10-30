@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `--doctests` flag in `cargo llvm-cov report` and `cargo llvm-cov show-env`.
+
 ## [0.5.35] - 2023-10-18
 
 - Improve compile time.

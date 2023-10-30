@@ -510,6 +510,7 @@ impl Args {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
+                Subcommand::ShowEnv | Subcommand::Report if doctests => {}
                 Subcommand::Nextest => bail!("doctest is not supported for nextest"),
                 _ => unexpected(flag, subcommand)?,
             }

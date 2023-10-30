@@ -412,6 +412,8 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov report --lcov # generate report without tests
 ```
 
+Note: To include coverage for doctests you also need to pass `--doctests` to `cargo llvm-cov report`.
+
 ### Get coverage of C/C++ code linked to Rust library/binary
 
 Set `CC`, `CXX`, `LLVM_COV`, and `LLVM_PROFDATA` environment variables to Clang/LLVM compatible with the LLVM version used in rustc, and run cargo-llvm-cov with `--include-ffi` flag.
@@ -444,6 +446,8 @@ cargo llvm-cov report --lcov # Generate report without tests.
 ```
 
 Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest` commands.
+
+Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
 
 ### Exclude file from coverage
 

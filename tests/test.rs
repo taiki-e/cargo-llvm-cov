@@ -313,10 +313,12 @@ fn invalid_arg() {
                     .arg("--doc")
                     .assert_failure()
                     .stderr_contains("invalid option '--doc'");
-                cargo_llvm_cov(subcommand)
-                    .arg("--doctests")
-                    .assert_failure()
-                    .stderr_contains("invalid option '--doctests'");
+                if subcommand != "show-env" {
+                    cargo_llvm_cov(subcommand)
+                        .arg("--doctests")
+                        .assert_failure()
+                        .stderr_contains("invalid option '--doctests'");
+                }
             }
         }
         if !matches!(subcommand, "" | "nextest") {
