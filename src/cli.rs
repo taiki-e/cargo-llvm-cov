@@ -144,7 +144,6 @@ pub(crate) struct Args {
 }
 
 impl Args {
-    #[allow(clippy::collapsible_if)]
     pub(crate) fn parse() -> Result<Self> {
         const SUBCMD: &str = "llvm-cov";
 
@@ -464,13 +463,11 @@ impl Args {
                     let val = val.into_string().unwrap();
                     if subcommand == Subcommand::None {
                         subcommand = val.parse::<Subcommand>()?;
-                        if subcommand == Subcommand::Demangle {
-                            if args.len() != 1 {
-                                unexpected(
-                                    args.iter().find(|&arg| arg != "demangle").unwrap(),
-                                    subcommand,
-                                )?;
-                            }
+                        if subcommand == Subcommand::Demangle && args.len() != 1 {
+                            unexpected(
+                                args.iter().find(|&arg| arg != "demangle").unwrap(),
+                                subcommand,
+                            )?;
                         }
                         after_subcommand = true;
                     } else {

@@ -65,6 +65,9 @@ fi
 # Rust (if exists)
 if [[ -n "$(git ls-files '*.rs')" ]]; then
     info "checking Rust code style"
+    if [[ ! -e .rustfmt.toml ]]; then
+        warn "could not found .rustfmt.toml in the repository root"
+    fi
     if type -P rustup &>/dev/null; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
@@ -119,6 +122,10 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
     for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
         pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
         publish=$(jq <<<"${pkg}" -r '.publish')
+        manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
+        if ! grep -q '^\[lints\]' "${manifest_path}"; then
+            warn "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
+        fi
         # Publishing is unrestricted if null, and forbidden if an empty array.
         if [[ "${publish}" == "[]" ]]; then
             continue
@@ -127,11 +134,19 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
     done
     if [[ -n "${has_public_crate}" ]]; then
         info "checking file permissions"
-        if [[ -f Cargo.toml ]] && grep -Eq '^\[package\]' Cargo.toml && ! grep -Eq '^publish = false' Cargo.toml; then
-            if ! grep -Eq '^exclude = \[.*\.\*.*\]' Cargo.toml; then
-                error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
-            elif ! grep -Eq '^exclude = \[.*/tools.*\]' Cargo.toml; then
-                error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+        if [[ -f Cargo.toml ]]; then
+            root_manifest=$(cargo locate-project --message-format=plain --manifest-path Cargo.toml)
+            root_pkg=$(jq <<<"${metadata}" ".packages[] | select(.manifest_path == \"${root_manifest}\")")
+            if [[ -n "${root_pkg}" ]]; then
+                publish=$(jq <<<"${root_pkg}" -r '.publish')
+                # Publishing is unrestricted if null, and forbidden if an empty array.
+                if [[ "${publish}" != "[]" ]]; then
+                    if ! grep -Eq '^exclude = \[.*\.\*.*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+                    elif ! grep -Eq '^exclude = \[.*/tools.*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+                    fi
+                fi
             fi
         fi
         for p in $(git ls-files); do
@@ -158,27 +173,30 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
 fi
 
 # C/C++ (if exists)
-if [[ -n "$(git ls-files '*.c')$(git ls-files '*.cpp')" ]]; then
+if [[ -n "$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')" ]]; then
     info "checking C/C++ code style"
     if [[ ! -e .clang-format ]]; then
-        warn "could not fount .clang-format in the repository root"
+        warn "could not found .clang-format in the repository root"
     fi
     if type -P clang-format &>/dev/null; then
-        echo "+ clang-format -i \$(git ls-files '*.c') \$(git ls-files '*.cpp')"
-        clang-format -i $(git ls-files '*.c') $(git ls-files '*.cpp')
-        check_diff $(git ls-files '*.c') $(git ls-files '*.cpp')
+        echo "+ clang-format -i \$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')"
+        clang-format -i $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
+        check_diff $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
     else
         warn "'clang-format' is not installed; skipped C/C++ code style check"
     fi
 fi
 
 # YAML/JavaScript/JSON (if exists)
-if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')" ]]; then
+if [[ -n "$(git ls-files '*.yml' '*.js' '*.json')" ]]; then
     info "checking YAML/JavaScript/JSON code style"
+    if [[ ! -e .editorconfig ]]; then
+        warn "could not found .editorconfig in the repository root"
+    fi
     if type -P npm &>/dev/null; then
-        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
-        npx -y prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
-        check_diff $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
+        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml' '*.js' '*.json')"
+        npx -y prettier -l -w $(git ls-files '*.yml' '*.js' '*.json')
+        check_diff $(git ls-files '*.yml' '*.js' '*.json')
     else
         warn "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
     fi
@@ -188,7 +206,7 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
         if type -P jq &>/dev/null && type -P yq &>/dev/null; then
             for workflow in .github/workflows/*.yml; do
                 # The top-level permissions must be weak as they are referenced by all jobs.
-                permissions=$(yq '.permissions' "${workflow}" | jq -c)
+                permissions=$(yq -c '.permissions' "${workflow}")
                 case "${permissions}" in
                     '{"contents":"read"}' | '{"contents":"none"}') ;;
                     null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
@@ -222,6 +240,9 @@ fi
 # Markdown (if exists)
 if [[ -n "$(git ls-files '*.md')" ]]; then
     info "checking Markdown style"
+    if [[ ! -e .markdownlint.yml ]]; then
+        warn "could not found .markdownlint.yml in the repository root"
+    fi
     if type -P npm &>/dev/null; then
         echo "+ npx -y markdownlint-cli2 \$(git ls-files '*.md')"
         npx -y markdownlint-cli2 $(git ls-files '*.md')
@@ -237,6 +258,9 @@ fi
 # Shell scripts
 info "checking Shell scripts"
 if type -P shfmt &>/dev/null; then
+    if [[ ! -e .editorconfig ]]; then
+        warn "could not found .editorconfig in the repository root"
+    fi
     echo "+ shfmt -l -w \$(git ls-files '*.sh')"
     shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
@@ -244,6 +268,9 @@ else
     warn "'shfmt' is not installed; skipped Shell scripts style check"
 fi
 if type -P shellcheck &>/dev/null; then
+    if [[ ! -e .shellcheckrc ]]; then
+        warn "could not found .shellcheckrc in the repository root"
+    fi
     echo "+ shellcheck \$(git ls-files '*.sh')"
     if ! shellcheck $(git ls-files '*.sh'); then
         should_fail=1

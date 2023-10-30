@@ -15,7 +15,7 @@ use anyhow::{bail, Context as _, Result};
 use easy_ext::ext;
 use fs_err as fs;
 
-pub fn fixtures_path() -> &'static Path {
+pub(crate) fn fixtures_path() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
 }
 
@@ -27,7 +27,7 @@ fn ensure_llvm_tools_installed() {
     });
 }
 
-pub fn cargo_llvm_cov(subcommand: &str) -> Command {
+pub(crate) fn cargo_llvm_cov(subcommand: &str) -> Command {
     ensure_llvm_tools_installed();
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"));
     cmd.arg("llvm-cov");
@@ -48,7 +48,7 @@ pub fn cargo_llvm_cov(subcommand: &str) -> Command {
 }
 
 #[track_caller]
-pub fn test_report(
+pub(crate) fn test_report(
     model: &str,
     name: &str,
     extension: &str,
@@ -79,7 +79,7 @@ pub fn test_report(
     assert_output(output_path, expected)
 }
 
-pub fn assert_output(output_path: &Path, expected: &str) -> Result<()> {
+pub(crate) fn assert_output(output_path: &Path, expected: &str) -> Result<()> {
     if env::var_os("CI").is_some() {
         let mut child = Command::new("git")
             .args(["--no-pager", "diff", "--no-index", "--"])
@@ -93,7 +93,7 @@ pub fn assert_output(output_path: &Path, expected: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
+pub(crate) fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
     if args.contains(&"--json") {
         let s = fs::read_to_string(output_path)?;
         let mut json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&s).unwrap();
@@ -110,7 +110,7 @@ pub fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-pub fn test_project(model: &str) -> Result<tempfile::TempDir> {
+pub(crate) fn test_project(model: &str) -> Result<tempfile::TempDir> {
     let tmpdir = tempfile::tempdir()?;
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
@@ -154,7 +154,7 @@ fn git_ls_files(dir: &Path, filters: &[&str]) -> Result<Vec<(String, PathBuf)>> 
         .collect())
 }
 
-pub fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {
+pub(crate) fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {
     let target_dir = workspace_root.join("target").join("llvm-cov-target");
     let path = fs::read_dir(target_dir)?.filter_map(Result::ok).find_map(|entry| {
         let path = entry.path();
@@ -194,7 +194,7 @@ fn perturb_header(path: impl AsRef<Path>) -> Result<()> {
 #[ext(CommandExt)]
 impl Command {
     #[track_caller]
-    pub fn assert_output(&mut self) -> AssertOutput {
+    pub(crate) fn assert_output(&mut self) -> AssertOutput {
         let output = self.output().context("could not execute process").unwrap();
         AssertOutput {
             stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
@@ -204,7 +204,7 @@ impl Command {
     }
 
     #[track_caller]
-    pub fn assert_success(&mut self) -> AssertOutput {
+    pub(crate) fn assert_success(&mut self) -> AssertOutput {
         let output = self.assert_output();
         assert!(
             output.status.success(),
@@ -217,7 +217,7 @@ impl Command {
     }
 
     #[track_caller]
-    pub fn assert_failure(&mut self) -> AssertOutput {
+    pub(crate) fn assert_failure(&mut self) -> AssertOutput {
         let output = self.assert_output();
         assert!(
             !output.status.success(),
@@ -230,7 +230,7 @@ impl Command {
     }
 }
 
-pub struct AssertOutput {
+pub(crate) struct AssertOutput {
     stdout: String,
     stderr: String,
     status: ExitStatus,
@@ -243,7 +243,7 @@ fn line_separated(lines: &str) -> impl Iterator<Item = &'_ str> {
 impl AssertOutput {
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
     #[track_caller]
-    pub fn stderr_contains(&self, pats: impl AsRef<str>) -> &Self {
+    pub(crate) fn stderr_contains(&self, pats: impl AsRef<str>) -> &Self {
         for pat in line_separated(pats.as_ref()) {
             assert!(
                 self.stderr.contains(pat),
@@ -257,7 +257,7 @@ impl AssertOutput {
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]
-    pub fn stdout_contains(&self, pats: impl AsRef<str>) -> &Self {
+    pub(crate) fn stdout_contains(&self, pats: impl AsRef<str>) -> &Self {
         for pat in line_separated(pats.as_ref()) {
             assert!(
                 self.stdout.contains(pat),
@@ -271,7 +271,7 @@ impl AssertOutput {
 
     /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
     #[track_caller]
-    pub fn stdout_not_contains(&self, pats: impl AsRef<str>) -> &Self {
+    pub(crate) fn stdout_not_contains(&self, pats: impl AsRef<str>) -> &Self {
         for pat in line_separated(pats.as_ref()) {
             assert!(
                 !self.stdout.contains(pat),
