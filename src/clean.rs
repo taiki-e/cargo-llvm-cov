@@ -93,7 +93,7 @@ fn clean_ws(
         cmd.args(["clean", "--target-dir", ws.target_dir.as_str()]).args(&package_args);
         cmd.args(args);
         if verbose > 0 {
-            cmd.arg(format!("-{}", "v".repeat(verbose as usize)));
+            cmd.arg(format!("-{}", "v".repeat(usize::from(verbose))));
         }
         manifest.cargo_args(&mut cmd);
         cmd.dir(&ws.metadata.workspace_root);
