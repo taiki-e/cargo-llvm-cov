@@ -16,6 +16,7 @@ wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/488
 build.allow-build-scripts = [
     { name = "anyhow" },
     { name = "camino" },
+    { name = "fs-err" },
     { name = "libc" },
     { name = "proc-macro2" },
     { name = "rustix" }, # via is-terminal
