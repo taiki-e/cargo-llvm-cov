@@ -86,8 +86,14 @@ OPTIONS:
         --hide-instantiations
             Hide instantiations from report
 
+        --fail-under-functions <MIN>
+            Exit with a status of 1 if the total function coverage is less than MIN percent
+
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
+
+        --fail-under-regions <MIN>
+            Exit with a status of 1 if the total region coverage is less than MIN percent
 
         --fail-uncovered-lines <MAX>
             Exit with a status of 1 if the uncovered lines are greater than MAX
