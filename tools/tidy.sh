@@ -123,7 +123,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
         publish=$(jq <<<"${pkg}" -r '.publish')
         manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
-        if ! grep -q '^\[lints\]' "${manifest_path}"; then
+        if ! grep -q '^\[lints\]' "${manifest_path}" && ! grep -q '^\[lints\.rust\]' "${manifest_path}"; then
             warn "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
         fi
         # Publishing is unrestricted if null, and forbidden if an empty array.
