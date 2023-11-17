@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.37] - 2023-11-17
+
 - Add `--fail-under-{functions,regions}` options. ([#323](https://github.com/taiki-e/cargo-llvm-cov/pull/323), thanks @CobaltCause)
 
 ## [0.5.36] - 2023-10-30
@@ -566,7 +568,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.36...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.37...HEAD
+[0.5.37]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.36...v0.5.37
 [0.5.36]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.35...v0.5.36
 [0.5.35]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.34...v0.5.35
 [0.5.34]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.33...v0.5.34
