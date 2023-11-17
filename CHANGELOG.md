@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--fail-under-{functions,regions}` options. ([#323](https://github.com/taiki-e/cargo-llvm-cov/pull/323), thanks @CobaltCause)
+
 ## [0.5.36] - 2023-10-30
 
 - Support `--doctests` flag in `cargo llvm-cov report` and `cargo llvm-cov show-env`.
