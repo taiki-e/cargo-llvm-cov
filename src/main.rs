@@ -19,7 +19,7 @@ use std::{
 use anyhow::{bail, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Flags;
-use cargo_llvm_cov::json::{CodeCovJsonExport, LlvmCovJsonExport};
+use cargo_llvm_cov::json::{CodeCovJsonExport, CoverageKind, LlvmCovJsonExport};
 use regex::Regex;
 use walkdir::WalkDir;
 
@@ -485,7 +485,9 @@ fn generate_report(cx: &Context) -> Result<()> {
         .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
         .context("failed to generate report")?;
 
-    if cx.args.cov.fail_under_lines.is_some()
+    if cx.args.cov.fail_under_functions.is_some()
+        || cx.args.cov.fail_under_lines.is_some()
+        || cx.args.cov.fail_under_regions.is_some()
         || cx.args.cov.fail_uncovered_functions.is_some()
         || cx.args.cov.fail_uncovered_lines.is_some()
         || cx.args.cov.fail_uncovered_regions.is_some()
@@ -496,10 +498,32 @@ fn generate_report(cx: &Context) -> Result<()> {
             .get_json(cx, &object_files, ignore_filename_regex.as_ref())
             .context("failed to get json")?;
 
+        if let Some(fail_under_functions) = cx.args.cov.fail_under_functions {
+            // Handle --fail-under-functions.
+            let functions_percent = json
+                .get_coverage_percent(CoverageKind::Functions)
+                .context("failed to get function coverage")?;
+            if functions_percent < fail_under_functions {
+                term::error::set(true);
+            }
+        }
+
         if let Some(fail_under_lines) = cx.args.cov.fail_under_lines {
             // Handle --fail-under-lines.
-            let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
+            let lines_percent = json
+                .get_coverage_percent(CoverageKind::Lines)
+                .context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
+                term::error::set(true);
+            }
+        }
+
+        if let Some(fail_under_regions) = cx.args.cov.fail_under_regions {
+            // Handle --fail-under-regions.
+            let regions_percent = json
+                .get_coverage_percent(CoverageKind::Regions)
+                .context("failed to get region coverage")?;
+            if regions_percent < fail_under_regions {
                 term::error::set(true);
             }
         }

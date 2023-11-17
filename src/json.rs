@@ -146,6 +146,24 @@ impl CodeCovJsonExport {
 /// Files -> list of uncovered lines.
 pub(crate) type UncoveredLines = BTreeMap<String, Vec<u64>>;
 
+#[non_exhaustive]
+#[derive(Clone, Copy)]
+pub enum CoverageKind {
+    Functions,
+    Lines,
+    Regions,
+}
+
+impl AsRef<str> for CoverageKind {
+    fn as_ref(&self) -> &'static str {
+        match self {
+            CoverageKind::Functions => "functions",
+            CoverageKind::Lines => "lines",
+            CoverageKind::Regions => "regions",
+        }
+    }
+}
+
 impl LlvmCovJsonExport {
     pub fn demangle(&mut self) {
         for data in &mut self.data {
@@ -165,12 +183,13 @@ impl LlvmCovJsonExport {
     }
 
     /// Gets the minimal lines coverage of all files.
-    pub fn get_lines_percent(&self) -> Result<f64> {
+    pub fn get_coverage_percent(&self, kind: CoverageKind) -> Result<f64> {
         let mut count = 0_f64;
         let mut covered = 0_f64;
         for data in &self.data {
             let totals = &data.totals.as_object().context("totals is not an object")?;
-            let lines = &totals["lines"].as_object().context("no lines")?;
+            let lines =
+                &totals[kind.as_ref()].as_object().context(format!("no {}", kind.as_ref()))?;
             count += lines["count"].as_f64().context("no count")?;
             covered += lines["covered"].as_f64().context("no covered")?;
         }
@@ -555,8 +574,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_get_lines_percent() {
+    fn test_get_coverage_percent(kind: CoverageKind) {
+        let expected = match kind {
+            CoverageKind::Functions => 100_f64,
+            CoverageKind::Lines => 68.181_818_181_818_19,
+            CoverageKind::Regions => 66.666_666_666_666_67,
+        };
+
         // There are 5 different percentages, make sure we pick the correct one.
         let file = format!(
             "{}/tests/fixtures/coverage-reports/no_coverage/no_coverage.json",
@@ -565,10 +589,25 @@ mod tests {
         let s = fs::read_to_string(file).unwrap();
         let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
 
-        let percent = json.get_lines_percent().unwrap();
+        let actual = json.get_coverage_percent(kind).unwrap();
 
         let error_margin = f64::EPSILON;
-        assert!((percent - 68.181_818_181_818_19).abs() < error_margin, "{percent}");
+        assert!((actual - expected).abs() < error_margin, "{actual}");
+    }
+
+    #[test]
+    fn test_get_functions_percent() {
+        test_get_coverage_percent(CoverageKind::Functions);
+    }
+
+    #[test]
+    fn test_get_lines_percent() {
+        test_get_coverage_percent(CoverageKind::Lines);
+    }
+
+    #[test]
+    fn test_get_regions_percent() {
+        test_get_coverage_percent(CoverageKind::Regions);
     }
 
     #[test]

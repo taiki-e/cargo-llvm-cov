@@ -226,7 +226,9 @@ impl Args {
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
         let mut no_report = false;
+        let mut fail_under_functions = None;
         let mut fail_under_lines = None;
+        let mut fail_under_regions = None;
         let mut fail_uncovered_lines = None;
         let mut fail_uncovered_regions = None;
         let mut fail_uncovered_functions = None;
@@ -398,7 +400,9 @@ impl Args {
                 Long("no-cfg-coverage") => parse_flag!(no_cfg_coverage),
                 Long("no-cfg-coverage-nightly") => parse_flag!(no_cfg_coverage_nightly),
                 Long("no-report") => parse_flag!(no_report),
+                Long("fail-under-functions") => parse_opt!(fail_under_functions),
                 Long("fail-under-lines") => parse_opt!(fail_under_lines),
+                Long("fail-under-regions") => parse_opt!(fail_under_regions),
                 Long("fail-uncovered-lines") => parse_opt!(fail_uncovered_lines),
                 Long("fail-uncovered-regions") => parse_opt!(fail_uncovered_regions),
                 Long("fail-uncovered-functions") => parse_opt!(fail_uncovered_functions),
@@ -816,7 +820,9 @@ impl Args {
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,
                 no_report,
+                fail_under_functions,
                 fail_under_lines,
+                fail_under_regions,
                 fail_uncovered_lines,
                 fail_uncovered_regions,
                 fail_uncovered_functions,
@@ -1025,8 +1031,12 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) no_cfg_coverage_nightly: bool,
     /// Run tests, but don't generate coverage report
     pub(crate) no_report: bool,
+    /// Exit with a status of 1 if the total function coverage is less than MIN percent.
+    pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
     pub(crate) fail_under_lines: Option<f64>,
+    /// Exit with a status of 1 if the total region coverage is less than MIN percent.
+    pub(crate) fail_under_regions: Option<f64>,
     /// Exit with a status of 1 if the uncovered lines are greater than MAX.
     pub(crate) fail_uncovered_lines: Option<u64>,
     /// Exit with a status of 1 if the uncovered regions are greater than MAX.
