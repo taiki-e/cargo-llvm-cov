@@ -699,7 +699,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [codecov]: https://codecov.io
 [coverage-helper]: https://github.com/taiki-e/coverage-helper
 [instrument-coverage]: https://doc.rust-lang.org/rustc/instrument-coverage.html
-[nextest]: https://nexte.st
+[nextest]: https://nexte.st/book/test-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
