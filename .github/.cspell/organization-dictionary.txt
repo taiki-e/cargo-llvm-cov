@@ -104,7 +104,6 @@ concat
 ctypes
 dealloc
 deque
-docsrs
 doctest
 doctests
 hasher

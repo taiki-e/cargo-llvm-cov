@@ -1,6 +1,5 @@
 bindeps
 binstall
-codecov
 compiletest
 demangler
 doctestbins
