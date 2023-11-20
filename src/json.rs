@@ -154,12 +154,12 @@ pub enum CoverageKind {
     Regions,
 }
 
-impl AsRef<str> for CoverageKind {
-    fn as_ref(&self) -> &'static str {
+impl CoverageKind {
+    fn as_str(self) -> &'static str {
         match self {
-            CoverageKind::Functions => "functions",
-            CoverageKind::Lines => "lines",
-            CoverageKind::Regions => "regions",
+            Self::Functions => "functions",
+            Self::Lines => "lines",
+            Self::Regions => "regions",
         }
     }
 }
@@ -189,7 +189,7 @@ impl LlvmCovJsonExport {
         for data in &self.data {
             let totals = &data.totals.as_object().context("totals is not an object")?;
             let lines =
-                &totals[kind.as_ref()].as_object().context(format!("no {}", kind.as_ref()))?;
+                &totals[kind.as_str()].as_object().context(format!("no {}", kind.as_str()))?;
             count += lines["count"].as_f64().context("no count")?;
             covered += lines["covered"].as_f64().context("no covered")?;
         }
