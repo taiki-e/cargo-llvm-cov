@@ -38,7 +38,6 @@ androideabi
 armeb
 armebv
 armv
-asmjs
 atmega
 bpfeb
 bpfel
