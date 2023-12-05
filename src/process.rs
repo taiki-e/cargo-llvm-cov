@@ -53,7 +53,7 @@ impl ProcessBuilder {
     pub(crate) fn new(program: impl Into<OsString>) -> Self {
         let mut this = Self {
             program: program.into(),
-            args: Vec::new(),
+            args: vec![],
             env: BTreeMap::new(),
             dir: None,
             stdout_to_stderr: false,
