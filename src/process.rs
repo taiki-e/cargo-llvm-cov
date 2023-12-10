@@ -184,7 +184,7 @@ impl ProcessBuilder {
 // Based on https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`")?;
+        f.write_str("`")?;
 
         if self.display_env_vars.get() {
             for (key, val) in &self.env {
@@ -199,13 +199,13 @@ impl fmt::Display for ProcessBuilder {
             }
         }
 
-        write!(f, "{}", escape(self.program.to_string_lossy()))?;
+        f.write_str(&escape(self.program.to_string_lossy()))?;
 
         for arg in &self.args {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
-        write!(f, "`")?;
+        f.write_str("`")?;
 
         Ok(())
     }
