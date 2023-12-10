@@ -100,18 +100,16 @@ fn bin_crate() {
     }
 }
 
-// nightly-2023-09-02 fixed bug in report generation, so the latest report is
-// not the same as the old report.
-#[rustversion::attr(before(1.74), ignore)]
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
     run("instantiations", "instantiations", &[], &[]);
 }
 
-// nightly-2023-09-02 fixed bug in report generation, so the latest report is
-// not the same as the old report.
-#[rustversion::attr(before(1.74), ignore)]
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
@@ -165,7 +163,7 @@ fn coverage_helper() {
 #[test]
 fn merge() {
     // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if cfg!(windows) || cfg!(all(target_arch = "x86_64", target_os = "macos")) {
+    if !cfg!(all(target_arch = "x86_64", target_os = "linux")) {
         return;
     }
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
@@ -216,9 +214,8 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     }
 }
 
-// nightly-2023-09-02 fixed bug in report generation, so the latest report is
-// not the same as the old report.
-#[rustversion::attr(before(1.74), ignore)]
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn clean_ws() {
     let model = "merge";
