@@ -88,7 +88,8 @@ impl Workspace {
         let output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let name = metadata.workspace_root.file_name().expect("Don't use / as workspace root").to_owned();
+        let name =
+            metadata.workspace_root.file_name().expect("Don't use / as workspace root").to_owned();
         let profdata_file = target_dir.join(format!("{name}.profdata"));
 
         Ok(Self {
