@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix panic when running tests at `/` such as in docker. ([#326](https://github.com/taiki-e/cargo-llvm-cov/pull/326), thanks @MikeDevresse)
+
 ## [0.5.37] - 2023-11-17
 
 - Add `--fail-under-{functions,regions}` options. ([#323](https://github.com/taiki-e/cargo-llvm-cov/pull/323), thanks @CobaltCause)
