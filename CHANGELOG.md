@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.39] - 2023-12-16
+
 - Remove dependency on `is-terminal`.
 
 ## [0.5.38] - 2023-12-13
@@ -574,7 +576,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.38...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.39...HEAD
+[0.5.39]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.38...v0.5.39
 [0.5.38]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.37...v0.5.38
 [0.5.37]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.36...v0.5.37
 [0.5.36]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.35...v0.5.36
