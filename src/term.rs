@@ -52,7 +52,7 @@ impl From<cargo_config2::Color> for Coloring {
 static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
 // Errors during argument parsing are returned before set_coloring, so check is_terminal first.
 pub(crate) fn init_coloring() {
-    if !is_terminal::IsTerminal::is_terminal(&std::io::stderr()) {
+    if !std::io::IsTerminal::is_terminal(&std::io::stderr()) {
         COLORING.store(Coloring::NEVER, Ordering::Relaxed);
     }
 }
