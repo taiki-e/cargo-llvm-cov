@@ -19,7 +19,6 @@ build.allow-build-scripts = [
     { name = "fs-err" },
     { name = "libc" },
     { name = "proc-macro2" },
-    { name = "rustix" }, # via is-terminal
     { name = "serde_json" },
     { name = "serde" },
     { name = "winapi-i686-pc-windows-gnu" },
