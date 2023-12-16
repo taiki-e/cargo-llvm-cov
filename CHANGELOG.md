@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Remove dependency on `is-terminal`.
+
 ## [0.5.38] - 2023-12-13
 
 - Fix panic when running tests at `/` such as in docker. ([#326](https://github.com/taiki-e/cargo-llvm-cov/pull/326), thanks @MikeDevresse)
