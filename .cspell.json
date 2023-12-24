@@ -5,7 +5,7 @@
   "dictionaryDefinitions": [
     {
       "name": "organization-dictionary",
-      "path": "./.github/.cspell/organization-dictionary.txt",
+      "path": "https://raw.githubusercontent.com/taiki-e/github-actions/HEAD/.github/.cspell/organization-dictionary.txt",
       "addWords": true
     },
     {
