@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::{ffi::OsString, mem, str::FromStr};
 
 use anyhow::{bail, format_err, Error, Result};
@@ -142,7 +144,6 @@ pub(crate) struct Args {
 }
 
 impl Args {
-    #[allow(clippy::collapsible_if)]
     pub(crate) fn parse() -> Result<Self> {
         const SUBCMD: &str = "llvm-cov";
 
@@ -177,6 +178,7 @@ impl Args {
 
         let mut cargo_args = vec![];
         let mut subcommand = Subcommand::None;
+        let mut after_subcommand = false;
 
         let mut manifest_path = None;
         let mut frozen = false;
@@ -220,11 +222,13 @@ impl Args {
         let mut failure_mode = None;
         let mut ignore_filename_regex = None;
         let mut disable_default_ignore_filename_regex = false;
-        let mut hide_instantiations = false;
+        let mut show_instantiations = false;
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
         let mut no_report = false;
+        let mut fail_under_functions = None;
         let mut fail_under_lines = None;
+        let mut fail_under_regions = None;
         let mut fail_uncovered_lines = None;
         let mut fail_uncovered_regions = None;
         let mut fail_uncovered_functions = None;
@@ -252,6 +256,7 @@ impl Args {
                         multi_arg(&arg)?;
                     }
                     Store::push(&mut $opt, &parser.value()?.into_string().unwrap())?;
+                    after_subcommand = false;
                 }};
             }
             macro_rules! parse_opt_passthrough {
@@ -287,14 +292,19 @@ impl Args {
                         }
                         Value(_) => unreachable!(),
                     }
+                    after_subcommand = false;
                 }};
             }
             macro_rules! parse_flag {
-                ($flag:ident $(,)?) => {
+                ($flag:ident $(,)?) => {{
                     if mem::replace(&mut $flag, true) {
                         multi_arg(&arg)?;
                     }
-                };
+                    #[allow(unused_assignments)]
+                    {
+                        after_subcommand = false;
+                    }
+                }};
             }
             macro_rules! parse_flag_passthrough {
                 ($flag:ident $(,)?) => {{
@@ -303,7 +313,7 @@ impl Args {
                 }};
             }
             macro_rules! passthrough {
-                () => {
+                () => {{
                     match arg {
                         Long(flag) => {
                             let flag = format!("--{}", flag);
@@ -322,7 +332,8 @@ impl Args {
                         }
                         Value(_) => unreachable!(),
                     }
-                };
+                    after_subcommand = false;
+                }};
             }
 
             match arg {
@@ -385,11 +396,18 @@ impl Args {
                 Long("disable-default-ignore-filename-regex") => {
                     parse_flag!(disable_default_ignore_filename_regex);
                 }
-                Long("hide-instantiations") => parse_flag!(hide_instantiations),
+                Long("show-instantiations") => parse_flag!(show_instantiations),
+                Long("hide-instantiations") => {
+                    // The following warning is a hint, so it should not be promoted to an error.
+                    let _guard = term::warn::ignore();
+                    warn!("--hide-instantiations is now enabled by default");
+                }
                 Long("no-cfg-coverage") => parse_flag!(no_cfg_coverage),
                 Long("no-cfg-coverage-nightly") => parse_flag!(no_cfg_coverage_nightly),
                 Long("no-report") => parse_flag!(no_report),
+                Long("fail-under-functions") => parse_opt!(fail_under_functions),
                 Long("fail-under-lines") => parse_opt!(fail_under_lines),
+                Long("fail-under-regions") => parse_opt!(fail_under_regions),
                 Long("fail-uncovered-lines") => parse_opt!(fail_uncovered_lines),
                 Long("fail-uncovered-regions") => parse_opt!(fail_uncovered_regions),
                 Long("fail-uncovered-functions") => parse_opt!(fail_uncovered_functions),
@@ -399,7 +417,10 @@ impl Args {
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
 
-                Short('v') | Long("verbose") => verbose += 1,
+                Short('v') | Long("verbose") => {
+                    verbose += 1;
+                    after_subcommand = false;
+                }
                 Short('h') | Long("help") => {
                     print!("{}", Subcommand::help_text(subcommand));
                     std::process::exit(0);
@@ -419,13 +440,15 @@ impl Args {
                 Long("target-dir") => unexpected(&format_arg(&arg), subcommand)?,
 
                 // Handle known options for can_passthrough=false subcommands
-                Short('Z') => {
-                    parse_opt_passthrough!(());
-                }
+                Short('Z') => parse_opt_passthrough!(()),
                 Short('F' | 'j') | Long("features" | "jobs")
                     if matches!(
                         subcommand,
-                        Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest | Subcommand::NextestArchive
+                        Subcommand::None
+                            | Subcommand::Test
+                            | Subcommand::Run
+                            | Subcommand::Nextest
+                            | Subcommand::NextestArchive
                     ) =>
                 {
                     parse_opt_passthrough!(());
@@ -438,7 +461,11 @@ impl Args {
                     | "--ignore-rust-version",
                 ) if matches!(
                     subcommand,
-                    Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest | Subcommand::NextestArchive
+                    Subcommand::None
+                        | Subcommand::Test
+                        | Subcommand::Run
+                        | Subcommand::Nextest
+                        | Subcommand::NextestArchive
                 ) =>
                 {
                     passthrough!();
@@ -453,16 +480,32 @@ impl Args {
                     let val = val.into_string().unwrap();
                     if subcommand == Subcommand::None {
                         subcommand = val.parse::<Subcommand>()?;
-                        if subcommand == Subcommand::Demangle {
-                            if args.len() != 1 {
-                                unexpected(
-                                    args.iter().find(|&arg| arg != "demangle").unwrap(),
-                                    subcommand,
-                                )?;
-                            }
+                        if subcommand == Subcommand::Demangle && args.len() != 1 {
+                            unexpected(
+                                args.iter().find(|&arg| arg != "demangle").unwrap(),
+                                subcommand,
+                            )?;
                         }
+                        after_subcommand = true;
                     } else {
+                        if after_subcommand
+                            && subcommand == Subcommand::Nextest
+                            && matches!(
+                                val.as_str(),
+                                // from `cargo nextest --help`
+                                "list" | "run" | "archive" | "show-config" | "self" | "help"
+                            )
+                        {
+                            // The following warning is a hint, so it should not be promoted to an error.
+                            let _guard = term::warn::ignore();
+                            warn!(
+                                "note that `{val}` is treated as test filter instead of subcommand \
+                                 because `cargo llvm-cov nextest` internally calls `cargo nextest \
+                                 run`"
+                            );
+                        }
                         cargo_args.push(val);
+                        after_subcommand = false;
                     }
                 }
                 _ => unexpected(&format_arg(&arg), subcommand)?,
@@ -484,7 +527,10 @@ impl Args {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
-                Subcommand::Nextest | Subcommand::NextestArchive => bail!("doctest is not supported for nextest"),
+                Subcommand::ShowEnv | Subcommand::Report if doctests => {}
+                Subcommand::Nextest | Subcommand::NextestArchive => {
+                    bail!("doctest is not supported for nextest")
+                }
                 _ => unexpected(flag, subcommand)?,
             }
         }
@@ -535,7 +581,11 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest | Subcommand::NextestArchive => {}
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Run
+            | Subcommand::Nextest
+            | Subcommand::NextestArchive => {}
             _ => {
                 if !bin.is_empty() {
                     unexpected("--bin", subcommand)?;
@@ -564,7 +614,11 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Test | Subcommand::Nextest | Subcommand::NextestArchive | Subcommand::Clean => {}
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Nextest
+            | Subcommand::NextestArchive
+            | Subcommand::Clean => {}
             _ => {
                 if workspace {
                     unexpected("--workspace", subcommand)?;
@@ -785,11 +839,13 @@ impl Args {
                 failure_mode,
                 ignore_filename_regex,
                 disable_default_ignore_filename_regex,
-                hide_instantiations,
+                show_instantiations,
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,
                 no_report,
+                fail_under_functions,
                 fail_under_lines,
+                fail_under_regions,
                 fail_uncovered_lines,
                 fail_uncovered_regions,
                 fail_uncovered_functions,
@@ -852,7 +908,6 @@ pub(crate) enum Subcommand {
 
     /// Run tests with cargo nextest
     Nextest,
-
 
     NextestArchive,
 
@@ -996,16 +1051,20 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
     pub(crate) disable_default_ignore_filename_regex: bool,
-    /// Hide instantiations from report
-    pub(crate) hide_instantiations: bool,
+    /// Show instantiations in report
+    pub(crate) show_instantiations: bool,
     /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
     pub(crate) no_cfg_coverage: bool,
     /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
     pub(crate) no_cfg_coverage_nightly: bool,
     /// Run tests, but don't generate coverage report
     pub(crate) no_report: bool,
+    /// Exit with a status of 1 if the total function coverage is less than MIN percent.
+    pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
     pub(crate) fail_under_lines: Option<f64>,
+    /// Exit with a status of 1 if the total region coverage is less than MIN percent.
+    pub(crate) fail_under_regions: Option<f64>,
     /// Exit with a status of 1 if the uncovered lines are greater than MAX.
     pub(crate) fail_uncovered_lines: Option<u64>,
     /// Exit with a status of 1 if the uncovered regions are greater than MAX.

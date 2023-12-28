@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 # shellcheck disable=SC2046
-set -euo pipefail
+set -eEuo pipefail
 IFS=$'\n\t'
 cd "$(dirname "$0")"/..
 
@@ -65,6 +65,9 @@ fi
 # Rust (if exists)
 if [[ -n "$(git ls-files '*.rs')" ]]; then
     info "checking Rust code style"
+    if [[ ! -e .rustfmt.toml ]]; then
+        warn "could not found .rustfmt.toml in the repository root"
+    fi
     if type -P rustup &>/dev/null; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
@@ -81,7 +84,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         fi
         check_diff $(git ls-files '*.rs')
     else
-        warn "'rustup' is not installed"
+        warn "'rustup' is not installed; skipped Rust code style check"
     fi
     cast_without_turbofish=$(grep -n -E '\.cast\(\)' $(git ls-files '*.rs') || true)
     if [[ -n "${cast_without_turbofish}" ]]; then
@@ -112,32 +115,90 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         echo "${new}" >"${lib}"
         check_diff "${lib}"
     done
+    # Make sure that public Rust crates don't contain executables.
+    failed_files=''
+    metadata=$(cargo metadata --format-version=1 --no-deps)
+    has_public_crate=''
+    for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
+        pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
+        publish=$(jq <<<"${pkg}" -r '.publish')
+        manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
+        if ! grep -q '^\[lints\]' "${manifest_path}" && ! grep -q '^\[lints\.rust\]' "${manifest_path}"; then
+            warn "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
+        fi
+        # Publishing is unrestricted if null, and forbidden if an empty array.
+        if [[ "${publish}" == "[]" ]]; then
+            continue
+        fi
+        has_public_crate='1'
+    done
+    if [[ -n "${has_public_crate}" ]]; then
+        info "checking file permissions"
+        if [[ -f Cargo.toml ]]; then
+            root_manifest=$(cargo locate-project --message-format=plain --manifest-path Cargo.toml)
+            root_pkg=$(jq <<<"${metadata}" ".packages[] | select(.manifest_path == \"${root_manifest}\")")
+            if [[ -n "${root_pkg}" ]]; then
+                publish=$(jq <<<"${root_pkg}" -r '.publish')
+                # Publishing is unrestricted if null, and forbidden if an empty array.
+                if [[ "${publish}" != "[]" ]]; then
+                    if ! grep -Eq '^exclude = \[.*\.\*.*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+                    elif ! grep -Eq '^exclude = \[.*/tools.*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+                    fi
+                fi
+            fi
+        fi
+        for p in $(git ls-files); do
+            # Skip directories.
+            if [[ -d "${p}" ]]; then
+                continue
+            fi
+            # Top-level hidden files/directories and tools/* are excluded from crates.io (ensured by the above check).
+            # TODO: fully respect exclude field in Cargo.toml.
+            case "${p}" in
+                .* | tools/*) continue ;;
+            esac
+            if [[ -x "${p}" ]]; then
+                failed_files+="${p}"$'\n'
+            fi
+        done
+        if [[ -n "${failed_files}" ]]; then
+            error "file-permissions-check failed: executable should be in tools/ directory"
+            echo "======================================="
+            echo -n "${failed_files}"
+            echo "======================================="
+        fi
+    fi
 fi
 
 # C/C++ (if exists)
-if [[ -n "$(git ls-files '*.c')$(git ls-files '*.cpp')" ]]; then
+if [[ -n "$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')" ]]; then
     info "checking C/C++ code style"
     if [[ ! -e .clang-format ]]; then
-        warn "could not fount .clang-format in the repository root"
+        warn "could not found .clang-format in the repository root"
     fi
     if type -P clang-format &>/dev/null; then
-        echo "+ clang-format -i \$(git ls-files '*.c') \$(git ls-files '*.cpp')"
-        clang-format -i $(git ls-files '*.c') $(git ls-files '*.cpp')
-        check_diff $(git ls-files '*.c') $(git ls-files '*.cpp')
+        echo "+ clang-format -i \$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')"
+        clang-format -i $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
+        check_diff $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
     else
-        warn "'clang-format' is not installed"
+        warn "'clang-format' is not installed; skipped C/C++ code style check"
     fi
 fi
 
 # YAML/JavaScript/JSON (if exists)
-if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')" ]]; then
+if [[ -n "$(git ls-files '*.yml' '*.js' '*.json')" ]]; then
     info "checking YAML/JavaScript/JSON code style"
+    if [[ ! -e .editorconfig ]]; then
+        warn "could not found .editorconfig in the repository root"
+    fi
     if type -P npm &>/dev/null; then
-        echo "+ npx prettier -l -w \$(git ls-files '*.yml') \$(git ls-files '*.js') \$(git ls-files '*.json')"
-        npx prettier -l -w $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
-        check_diff $(git ls-files '*.yml') $(git ls-files '*.js') $(git ls-files '*.json')
+        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml' '*.js' '*.json')"
+        npx -y prettier -l -w $(git ls-files '*.yml' '*.js' '*.json')
+        check_diff $(git ls-files '*.yml' '*.js' '*.json')
     else
-        warn "'npm' is not installed"
+        warn "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
     fi
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
@@ -145,9 +206,9 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
         if type -P jq &>/dev/null && type -P yq &>/dev/null; then
             for workflow in .github/workflows/*.yml; do
                 # The top-level permissions must be weak as they are referenced by all jobs.
-                permissions=$(yq '.permissions' "${workflow}" | jq -c)
+                permissions=$(yq -c '.permissions' "${workflow}")
                 case "${permissions}" in
-                    '{"contents":"read"}' | '{"contents":"none"}' | '{}') ;;
+                    '{"contents":"read"}' | '{"contents":"none"}') ;;
                     null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
                     *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
                 esac
@@ -167,7 +228,7 @@ if [[ -n "$(git ls-files '*.yml')$(git ls-files '*.js')$(git ls-files '*.json')"
                 fi
             done
         else
-            warn "'jq' or 'yq' is not installed"
+            warn "'jq' or 'yq' is not installed; skipped GitHub workflow check"
         fi
     fi
 fi
@@ -176,16 +237,40 @@ if [[ -n "$(git ls-files '*.yaml')" ]]; then
     git ls-files '*.yaml'
 fi
 
+# Markdown (if exists)
+if [[ -n "$(git ls-files '*.md')" ]]; then
+    info "checking Markdown style"
+    if [[ ! -e .markdownlint.yml ]]; then
+        warn "could not found .markdownlint.yml in the repository root"
+    fi
+    if type -P npm &>/dev/null; then
+        echo "+ npx -y markdownlint-cli2 \$(git ls-files '*.md')"
+        npx -y markdownlint-cli2 $(git ls-files '*.md')
+    else
+        warn "'npm' is not installed; skipped Markdown style check"
+    fi
+fi
+if [[ -n "$(git ls-files '*.markdown')" ]]; then
+    error "please use '.md' instead of '.markdown' for consistency"
+    git ls-files '*.markdown'
+fi
+
 # Shell scripts
 info "checking Shell scripts"
 if type -P shfmt &>/dev/null; then
+    if [[ ! -e .editorconfig ]]; then
+        warn "could not found .editorconfig in the repository root"
+    fi
     echo "+ shfmt -l -w \$(git ls-files '*.sh')"
     shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
 else
-    warn "'shfmt' is not installed"
+    warn "'shfmt' is not installed; skipped Shell scripts style check"
 fi
 if type -P shellcheck &>/dev/null; then
+    if [[ ! -e .shellcheckrc ]]; then
+        warn "could not found .shellcheckrc in the repository root"
+    fi
     echo "+ shellcheck \$(git ls-files '*.sh')"
     if ! shellcheck $(git ls-files '*.sh'); then
         should_fail=1
@@ -198,7 +283,7 @@ if type -P shellcheck &>/dev/null; then
         fi
     fi
 else
-    warn "'shellcheck' is not installed"
+    warn "'shellcheck' is not installed; skipped Shell scripts style check"
 fi
 
 # License check
@@ -207,24 +292,28 @@ if [[ -f tools/.tidy-check-license-headers ]]; then
     info "checking license headers (experimental)"
     failed_files=''
     for p in $(eval $(<tools/.tidy-check-license-headers)); do
-        # TODO: More file types?
         case "$(basename "${p}")" in
-            *.sh) prefix=("# ") ;;
-            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S) prefix=("// " "/* ") ;;
+            *.stderr | *.expanded.rs) continue ;; # generated files
+            *.sh | *.py | *.rb | *Dockerfile) prefix=("# ") ;;
+            *.rs | *.c | *.h | *.cpp | *.hpp | *.s | *.S | *.js) prefix=("// " "/* ") ;;
             *.ld | *.x) prefix=("/* ") ;;
-            *) error "unrecognized file type: ${p}" ;;
+            # TODO: More file types?
+            *) continue ;;
         esac
         # TODO: The exact line number is not actually important; it is important
         # that it be part of the top-level comments of the file.
         line="1"
-        case "${p}" in
-            *.sh) line="2" ;; # shebang
-        esac
+        if IFS= LC_ALL=C read -rn3 -d '' shebang <"${p}" && [[ "${shebang}" == '#!/' ]]; then
+            line="2"
+        elif [[ "${p}" == *"Dockerfile" ]] && IFS= LC_ALL=C read -rn9 -d '' syntax <"${p}" && [[ "${syntax}" == '# syntax=' ]]; then
+            line="2"
+        fi
         header_found=''
         for pre in "${prefix[@]}"; do
+            # TODO: check that the license is valid as SPDX and is allowed in this project.
             if [[ "$(grep -E -n "${pre}SPDX-License-Identifier: " "${p}")" == "${line}:${pre}SPDX-License-Identifier: "* ]]; then
                 header_found='1'
-                continue
+                break
             fi
         done
         if [[ -z "${header_found}" ]]; then
@@ -252,7 +341,7 @@ if [[ -f .cspell.json ]]; then
                 if [[ "${manifest_path}" != "Cargo.toml" ]] && ! grep -Eq '\[workspace\]' "${manifest_path}"; then
                     continue
                 fi
-                metadata=$(cargo metadata --format-version=1 --all-features --no-deps --manifest-path "${manifest_path}")
+                metadata=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}")
                 for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
                     dependencies+="$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})" | jq -r '.dependencies[].name')"$'\n'
                 done
@@ -261,14 +350,15 @@ if [[ -f .cspell.json ]]; then
             dependencies=$(sed <<<"${dependencies}" 's/[0-9_-]/\n/g' | LC_ALL=C sort -f -u)
         fi
         config_old=$(<.cspell.json)
-        config_new=$(grep <<<"${config_old}" -v ' *//' | jq 'del(.dictionaries[] | select(index("organization-dictionary") | not))' | jq 'del(.dictionaryDefinitions[] | select(.name == "organization-dictionary" | not))')
+        config_new=$(grep <<<"${config_old}" -v '^ *//' | jq 'del(.dictionaries[] | select(index("organization-dictionary") | not))' | jq 'del(.dictionaryDefinitions[] | select(.name == "organization-dictionary" | not))')
+        trap -- 'echo "${config_old}" >.cspell.json; echo >&2 "$0: trapped SIGINT"; exit 1' SIGINT
         echo "${config_new}" >.cspell.json
         if [[ -n "${has_rust}" ]]; then
-            dependencies_words=$(npx <<<"${dependencies}" cspell stdin --no-progress --no-summary --words-only --unique || true)
+            dependencies_words=$(npx <<<"${dependencies}" -y cspell stdin --no-progress --no-summary --words-only --unique || true)
         fi
-        all_words=$(npx cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v "${project_dictionary//\./\\.}" || true)) || true)
-        # TODO: handle SIGINT
+        all_words=$(npx -y cspell --no-progress --no-summary --words-only --unique $(git ls-files | (grep -v "${project_dictionary//\./\\.}" || true)) || true)
         echo "${config_old}" >.cspell.json
+        trap - SIGINT
         cat >.github/.cspell/rust-dependencies.txt <<EOF
 // This file is @generated by $(basename "$0").
 // It is not intended for manual editing.
@@ -281,8 +371,8 @@ EOF
             echo "warning: you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
         fi
 
-        echo "+ npx cspell --no-progress --no-summary \$(git ls-files)"
-        if ! npx cspell --no-progress --no-summary $(git ls-files); then
+        echo "+ npx -y cspell --no-progress --no-summary \$(git ls-files)"
+        if ! npx -y cspell --no-progress --no-summary $(git ls-files); then
             error "spellcheck failed: please fix uses of above words or add to ${project_dictionary} if correct"
         fi
 
@@ -314,7 +404,7 @@ EOF
             echo "======================================="
         fi
     else
-        warn "'npm' is not installed"
+        warn "'npm' is not installed; skipped spell check"
     fi
 fi
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::{
     ffi::OsString,
     io::{self, Write},
@@ -6,12 +8,12 @@ use std::{
 
 use anyhow::{bail, Result};
 use camino::Utf8PathBuf;
-use cargo_metadata::PackageId;
 
 use crate::{
     cargo::Workspace,
     cli::{self, Args, Subcommand},
     env,
+    metadata::{Metadata, PackageId},
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
     term,
@@ -72,17 +74,41 @@ impl Context {
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
+        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+            && (!args.cov.no_cfg_coverage
+                || ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly)
+        {
+            let mut cfgs = String::new();
+            let mut flags = String::new();
+            if !args.cov.no_cfg_coverage {
+                cfgs.push_str("cfg(coverage)");
+                flags.push_str("--no-cfg-coverage");
+            }
+            if ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly {
+                if cfgs.is_empty() {
+                    cfgs.push_str("cfg(coverage_nightly)");
+                    flags.push_str("--no-cfg-coverage-nightly");
+                } else {
+                    cfgs.push_str(" and cfg(coverage_nightly)");
+                    flags.push_str(" and --no-cfg-coverage-nightly");
+                }
+            }
+            info!("cargo-llvm-cev currently setting {cfgs}; you can opt-out it by passing {flags}");
+        }
         if args.cov.output_dir.is_none() && args.cov.html {
             args.cov.output_dir = Some(ws.output_dir.clone());
         }
+        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+            && env::var_os("CARGO_LLVM_COV_SHOW_ENV").is_some()
+        {
+            warn!(
+                "cargo-llvm-cov subcommands other than report and clean may not work correctly \
+                 in context where environment variables are set by show-env; consider using \
+                 normal {} commands",
+                if args.subcommand == Subcommand::Nextest { "cargo-nextest" } else { "cargo" }
+            );
+        }
 
-        // target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
-        // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
-        // https://github.com/rust-lang/rust/issues/85658
-        // https://github.com/rust-lang/rust/blob/1.70.0/src/bootstrap/dist.rs#L2189
-        let mut rustlib: Utf8PathBuf = ws.rustc_print("target-libdir")?.into();
-        rustlib.pop(); // lib
-        rustlib.push("bin");
         let (llvm_cov, llvm_profdata): (PathBuf, PathBuf) = match (
             env::var_os("LLVM_COV").map(PathBuf::from),
             env::var_os("LLVM_PROFDATA").map(PathBuf::from),
@@ -94,10 +120,16 @@ impl Context {
                 } else if llvm_profdata_env.is_some() {
                     warn!("setting only LLVM_PROFDATA environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
                 }
-                let llvm_cov: PathBuf =
-                    rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX)).into();
-                let llvm_profdata: PathBuf =
-                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX)).into();
+                // --print target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
+                // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
+                // https://github.com/rust-lang/rust/issues/85658
+                // https://github.com/rust-lang/rust/blob/1.70.0/src/bootstrap/dist.rs#L2189
+                let mut rustlib: PathBuf = ws.rustc_print("target-libdir")?.into();
+                rustlib.pop(); // lib
+                rustlib.push("bin");
+                let llvm_cov = rustlib.join(format!("llvm-cov{}", env::consts::EXE_SUFFIX));
+                let llvm_profdata =
+                    rustlib.join(format!("llvm-profdata{}", env::consts::EXE_SUFFIX));
                 // Check if required tools are installed.
                 if !llvm_cov.exists() || !llvm_profdata.exists() {
                     let sysroot: Utf8PathBuf = ws.rustc_print("sysroot")?.into();
@@ -209,7 +241,7 @@ impl Context {
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
     for id in pkg_ids {
-        re.or(&ws.metadata[id].name);
+        re.or(&ws.metadata.packages[id].name);
     }
     re.build().unwrap()
 }
@@ -220,18 +252,14 @@ pub(crate) struct WorkspaceMembers {
 }
 
 impl WorkspaceMembers {
-    fn new(
-        exclude: &[String],
-        exclude_from_report: &[String],
-        metadata: &cargo_metadata::Metadata,
-    ) -> Self {
+    fn new(exclude: &[String], exclude_from_report: &[String], metadata: &Metadata) -> Self {
         let mut excluded = vec![];
         let mut included = vec![];
         if !exclude.is_empty() || !exclude_from_report.is_empty() {
             for id in &metadata.workspace_members {
                 // --exclude flag doesn't handle `name:version` format
-                if exclude.contains(&metadata[id].name)
-                    || exclude_from_report.contains(&metadata[id].name)
+                if exclude.contains(&metadata.packages[id].name)
+                    || exclude_from_report.contains(&metadata.packages[id].name)
                 {
                     excluded.push(id.clone());
                 } else {

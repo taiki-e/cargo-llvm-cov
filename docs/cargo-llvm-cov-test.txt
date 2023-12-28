@@ -92,8 +92,8 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
-        --hide-instantiations
-            Hide instantiations from report
+        --show-instantiations
+            Show instantiations in report
 
         --no-cfg-coverage
             Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
@@ -108,8 +108,14 @@ OPTIONS:
         --no-clean
             Build without cleaning any old build artifacts
 
+        --fail-under-functions <MIN>
+            Exit with a status of 1 if the total function coverage is less than MIN percent
+
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
+
+        --fail-under-regions <MIN>
+            Exit with a status of 1 if the total region coverage is less than MIN percent
 
         --fail-uncovered-lines <MAX>
             Exit with a status of 1 if the uncovered lines are greater than MAX

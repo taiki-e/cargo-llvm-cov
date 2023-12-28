@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::{
     cell::Cell,
     collections::BTreeMap,
@@ -8,7 +10,7 @@ use std::{
     str,
 };
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Error, Result};
 use shell_escape::escape;
 
 macro_rules! cmd {
@@ -51,13 +53,12 @@ impl ProcessBuilder {
     pub(crate) fn new(program: impl Into<OsString>) -> Self {
         let mut this = Self {
             program: program.into(),
-            args: Vec::new(),
+            args: vec![],
             env: BTreeMap::new(),
             dir: None,
             stdout_to_stderr: false,
             display_env_vars: Cell::new(false),
         };
-        this.env("CARGO_INCREMENTAL", "0");
         this.env_remove("LLVM_COV_FLAGS");
         this.env_remove("LLVM_PROFDATA_FLAGS");
         this
@@ -112,17 +113,16 @@ impl ProcessBuilder {
     /// status to an error.
     pub(crate) fn run(&mut self) -> Result<Output> {
         let output = self.build().unchecked().run().with_context(|| {
-            ProcessError::new(&format!("could not execute process {self}"), None, None)
+            process_error(format!("could not execute process {self}"), None, None)
         })?;
         if output.status.success() {
             Ok(output)
         } else {
-            Err(ProcessError::new(
-                &format!("process didn't exit successfully: {self}"),
+            Err(process_error(
+                format!("process didn't exit successfully: {self}"),
                 Some(output.status),
                 Some(&output),
-            )
-            .into())
+            ))
         }
     }
 
@@ -131,17 +131,16 @@ impl ProcessBuilder {
     pub(crate) fn run_with_output(&mut self) -> Result<Output> {
         let output =
             self.build().stdout_capture().stderr_capture().unchecked().run().with_context(
-                || ProcessError::new(&format!("could not execute process {self}"), None, None),
+                || process_error(format!("could not execute process {self}"), None, None),
             )?;
         if output.status.success() {
             Ok(output)
         } else {
-            Err(ProcessError::new(
-                &format!("process didn't exit successfully: {self}"),
+            Err(process_error(
+                format!("process didn't exit successfully: {self}"),
                 Some(output.status),
                 Some(&output),
-            )
-            .into())
+            ))
         }
     }
 
@@ -185,77 +184,69 @@ impl ProcessBuilder {
 // Based on https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
 impl fmt::Display for ProcessBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`")?;
+        f.write_str("`")?;
 
         if self.display_env_vars.get() {
             for (key, val) in &self.env {
                 if let Some(val) = val {
                     let val = escape(val.to_string_lossy());
-                    if cfg!(windows) {
-                        write!(f, "set {key}={val}&& ")?;
-                    } else {
+                    if is_unix_terminal() {
                         write!(f, "{key}={val} ")?;
+                    } else {
+                        write!(f, "set {key}={val}&& ")?;
                     }
                 }
             }
         }
 
-        write!(f, "{}", self.program.to_string_lossy())?;
+        f.write_str(&escape(self.program.to_string_lossy()))?;
 
         for arg in &self.args {
             write!(f, " {}", escape(arg.to_string_lossy()))?;
         }
 
-        write!(f, "`")?;
+        f.write_str("`")?;
 
         Ok(())
     }
 }
 
 // Based on https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/errors.rs
-#[derive(Debug)]
-struct ProcessError {
-    /// A detailed description to show to the user why the process failed.
-    desc: String,
-}
-
-impl ProcessError {
-    /// Creates a new process error.
-    ///
-    /// `status` can be `None` if the process did not launch.
-    /// `output` can be `None` if the process did not launch, or output was not captured.
-    fn new(msg: &str, status: Option<ExitStatus>, output: Option<&Output>) -> Self {
-        let exit = match status {
-            Some(s) => s.to_string(),
-            None => "never executed".to_string(),
-        };
-        let mut desc = format!("{msg} ({exit})");
-
-        if let Some(out) = output {
-            match str::from_utf8(&out.stdout) {
-                Ok(s) if !s.trim().is_empty() => {
-                    desc.push_str("\n--- stdout\n");
-                    desc.push_str(s);
-                }
-                Ok(_) | Err(_) => {}
-            }
-            match str::from_utf8(&out.stderr) {
-                Ok(s) if !s.trim().is_empty() => {
-                    desc.push_str("\n--- stderr\n");
-                    desc.push_str(s);
-                }
-                Ok(_) | Err(_) => {}
-            }
+/// Creates a new process error.
+///
+/// `status` can be `None` if the process did not launch.
+/// `output` can be `None` if the process did not launch, or output was not captured.
+fn process_error(mut msg: String, status: Option<ExitStatus>, output: Option<&Output>) -> Error {
+    match status {
+        Some(s) => {
+            msg.push_str(" (");
+            msg.push_str(&s.to_string());
+            msg.push(')');
         }
-
-        Self { desc }
+        None => msg.push_str(" (never executed)"),
     }
+
+    if let Some(out) = output {
+        match str::from_utf8(&out.stdout) {
+            Ok(s) if !s.trim().is_empty() => {
+                msg.push_str("\n--- stdout\n");
+                msg.push_str(s);
+            }
+            Ok(_) | Err(_) => {}
+        }
+        match str::from_utf8(&out.stderr) {
+            Ok(s) if !s.trim().is_empty() => {
+                msg.push_str("\n--- stderr\n");
+                msg.push_str(s);
+            }
+            Ok(_) | Err(_) => {}
+        }
+    }
+
+    Error::msg(msg)
 }
 
-impl fmt::Display for ProcessError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.desc, f)
-    }
+fn is_unix_terminal() -> bool {
+    // https://github.com/sfackler/shell-escape/blob/9bfec037f6fde99a7e4caf029919b0bb4b808c85/src/lib.rs#L18
+    cfg!(unix) || std::env::var_os("MSYSTEM").is_some()
 }
-
-impl std::error::Error for ProcessError {}

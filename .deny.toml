@@ -6,12 +6,32 @@ unsound = "deny"
 yanked = "deny"
 notice = "deny"
 git-fetch-with-cli = true
-ignore = []
+ignore = [
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "warn"
-wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/448
+wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/488
+build.allow-build-scripts = [
+    { name = "anyhow" },
+    { name = "camino" },
+    { name = "fs-err" },
+    { name = "libc" },
+    { name = "proc-macro2" },
+    { name = "serde_json" },
+    { name = "serde" },
+    { name = "winapi-i686-pc-windows-gnu" },
+    { name = "winapi-x86_64-pc-windows-gnu" },
+    { name = "winapi" },
+    { name = "windows_aarch64_gnullvm" },
+    { name = "windows_aarch64_msvc" },
+    { name = "windows_i686_gnu" },
+    { name = "windows_i686_msvc" },
+    { name = "windows_x86_64_gnu" },
+    { name = "windows_x86_64_gnullvm" },
+    { name = "windows_x86_64_msvc" },
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]

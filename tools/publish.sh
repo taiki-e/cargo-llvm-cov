@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0 OR MIT
-set -euo pipefail
+set -eEuo pipefail
 IFS=$'\n\t'
 cd "$(dirname "$0")"/..
 
@@ -97,11 +97,11 @@ echo "============== CHANGELOG =============="
 echo "${changes}"
 echo "======================================="
 
-metadata="$(cargo metadata --format-version=1 --all-features --no-deps)"
+metadata=$(cargo metadata --format-version=1 --no-deps)
 prev_version=''
 manifest_paths=()
 for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
-    pkg="$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")"
+    pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
     publish=$(jq <<<"${pkg}" -r '.publish')
     # Publishing is unrestricted if null, and forbidden if an empty array.
     if [[ "${publish}" == "[]" ]]; then

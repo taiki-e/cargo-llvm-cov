@@ -1,13 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![forbid(unsafe_code)]
-#![warn(rust_2018_idioms, single_use_lifetimes, unreachable_pub)]
-#![warn(clippy::pedantic)]
-#![allow(
-    clippy::match_same_arms,
-    clippy::similar_names,
-    clippy::single_match_else,
-    clippy::struct_excessive_bools,
-    clippy::too_many_lines
-)]
+#![allow(clippy::struct_field_names)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
@@ -25,7 +19,7 @@ use std::{
 use anyhow::{bail, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Flags;
-use cargo_llvm_cov::json::{CodeCovJsonExport, LlvmCovJsonExport};
+use cargo_llvm_cov::json::{CodeCovJsonExport, CoverageKind, LlvmCovJsonExport};
 use regex::Regex;
 use walkdir::WalkDir;
 
@@ -33,6 +27,7 @@ use crate::{
     cargo::Workspace,
     cli::{Args, ShowEnvOptions, Subcommand},
     context::Context,
+    metadata::Metadata,
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
     term::Coloring,
@@ -51,6 +46,7 @@ mod context;
 mod demangle;
 mod env;
 mod fs;
+mod metadata;
 mod regex_vec;
 
 fn main() {
@@ -77,7 +73,7 @@ fn try_main() -> Result<()> {
             let cx = &Context::new(args)?;
             let stdout = io::stdout();
             let writer =
-                &mut ShowEnvWriter { target: stdout.lock(), options: cx.args.show_env.clone() };
+                &mut ShowEnvWriter { writer: stdout.lock(), options: cx.args.show_env.clone() };
             set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
@@ -159,14 +155,15 @@ impl EnvTarget for ProcessBuilder {
 }
 
 struct ShowEnvWriter<W: io::Write> {
-    target: W,
+    writer: W,
     options: ShowEnvOptions,
 }
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         let prefix = if self.options.export_prefix { "export " } else { "" };
-        writeln!(self.target, r#"{prefix}{key}="{value}""#).context("failed to write env to stdout")
+        writeln!(self.writer, "{prefix}{key}={}", shell_escape::escape(value.into()))
+            .context("failed to write env to stdout")
     }
     fn unset(&mut self, key: &str) -> Result<()> {
         if env::var_os(key).is_some() {
@@ -186,7 +183,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         } else {
             flags.push("-Z");
             flags.push("instrument-coverage");
-            if cfg!(windows) {
+            if cx.ws.target_for_config.triple().contains("-windows") {
                 // `-C codegen-units=1` is needed to work around link error on windows
                 // https://github.com/rust-lang/rust/issues/85461
                 // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
@@ -196,19 +193,24 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
-        // Workaround for https://github.com/rust-lang/rust/issues/91092
-        // TODO: skip passing this on newer nightly that includes https://github.com/rust-lang/rust/pull/111469.
-        flags.push("-C");
-        flags.push("llvm-args=--instrprof-atomic-counter-update-all");
+        // Workaround for https://github.com/rust-lang/rust/issues/91092.
+        // Unnecessary since https://github.com/rust-lang/rust/pull/111469.
+        if cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor <= 71
+            || !cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor < 71
+        {
+            flags.push("-C");
+            flags.push("llvm-args=--instrprof-atomic-counter-update-all");
+        }
         if !cx.args.cov.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
-        if cx.ws.nightly && !cx.args.cov.no_cfg_coverage_nightly {
+        if cx.ws.rustc_version.nightly && !cx.args.cov.no_cfg_coverage_nightly {
             flags.push("--cfg=coverage_nightly");
         }
     }
 
-    let llvm_profile_file = if is_nextest {
+    let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
+    if is_nextest {
         // https://github.com/taiki-e/cargo-llvm-cov/issues/258
         // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
         // Select the number of threads that is the same as the one nextest uses by default here.
@@ -221,14 +223,15 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         // - Even if the number of threads specified by the user is greater than
         //   available cores, it is expected that the number of threads that can
         //   write simultaneously will not exceed the number of available cores.
-        cx.ws.target_dir.join(format!(
-            "{}-%p-%{}m.profraw",
-            cx.ws.name,
+        llvm_profile_file_name.push_str(&format!(
+            "-%{}m",
             std::thread::available_parallelism().map_or(1, usize::from)
-        ))
+        ));
     } else {
-        cx.ws.target_dir.join(format!("{}-%p-%m.profraw", cx.ws.name))
-    };
+        llvm_profile_file_name.push_str("-%m");
+    }
+    llvm_profile_file_name.push_str(".profraw");
+    let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
 
     let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
     push_common_flags(cx, rustflags);
@@ -312,8 +315,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         env.set(cxxflags_key, &cxxflags)?;
     }
     env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
-    env.set("CARGO_INCREMENTAL", "0")?;
     env.set("CARGO_LLVM_COV", "1")?;
+    if cx.args.subcommand == Subcommand::ShowEnv {
+        env.set("CARGO_LLVM_COV_SHOW_ENV", "1")?;
+    }
     Ok(())
 }
 
@@ -503,7 +508,9 @@ fn generate_report(cx: &Context) -> Result<()> {
         .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
         .context("failed to generate report")?;
 
-    if cx.args.cov.fail_under_lines.is_some()
+    if cx.args.cov.fail_under_functions.is_some()
+        || cx.args.cov.fail_under_lines.is_some()
+        || cx.args.cov.fail_under_regions.is_some()
         || cx.args.cov.fail_uncovered_functions.is_some()
         || cx.args.cov.fail_uncovered_lines.is_some()
         || cx.args.cov.fail_uncovered_regions.is_some()
@@ -514,10 +521,32 @@ fn generate_report(cx: &Context) -> Result<()> {
             .get_json(cx, &object_files, ignore_filename_regex.as_ref())
             .context("failed to get json")?;
 
+        if let Some(fail_under_functions) = cx.args.cov.fail_under_functions {
+            // Handle --fail-under-functions.
+            let functions_percent = json
+                .get_coverage_percent(CoverageKind::Functions)
+                .context("failed to get function coverage")?;
+            if functions_percent < fail_under_functions {
+                term::error::set(true);
+            }
+        }
+
         if let Some(fail_under_lines) = cx.args.cov.fail_under_lines {
             // Handle --fail-under-lines.
-            let lines_percent = json.get_lines_percent().context("failed to get line coverage")?;
+            let lines_percent = json
+                .get_coverage_percent(CoverageKind::Lines)
+                .context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
+                term::error::set(true);
+            }
+        }
+
+        if let Some(fail_under_regions) = cx.args.cov.fail_under_regions {
+            // Handle --fail-under-regions.
+            let regions_percent = json
+                .get_coverage_percent(CoverageKind::Regions)
+                .context("failed to get region coverage")?;
+            if regions_percent < fail_under_regions {
                 term::error::set(true);
             }
         }
@@ -532,8 +561,11 @@ fn generate_report(cx: &Context) -> Result<()> {
         }
         if let Some(fail_uncovered_lines) = cx.args.cov.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered =
-                json.count_uncovered_lines().context("failed to count uncovered lines")?;
+            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered = uncovered_files
+                .iter()
+                .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
+
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
             }
@@ -592,7 +624,15 @@ fn merge_profraw(cx: &Context) -> Result<()> {
             .join(format!("{}-*.profraw", cx.ws.name))
             .as_str(),
     )?
-    .filter_map(Result::ok);
+    .filter_map(Result::ok)
+    .collect::<Vec<_>>();
+    if profraw_files.is_empty() {
+        warn!(
+            "not found *.profraw files in {}; this may occur if target directory is accidentally \
+             cleared, or running report subcommand without running any tests or binaries",
+            cx.ws.target_dir
+        );
+    }
     let mut input_files = String::new();
     for path in profraw_files {
         input_files.push_str(
@@ -634,6 +674,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     if p.file_name()
                         .map_or(false, |f| f == "incremental" || f == ".fingerprint" || f == "out")
                     {
+                        // Ignore incremental compilation related files and output from build scripts.
                         return false;
                     }
                 } else if let Some(stem) = p.file_stem() {
@@ -656,9 +697,24 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             })
             .filter_map(Result::ok)
     }
+    fn is_object(cx: &Context, f: &Path) -> bool {
+        let ext = f.extension().unwrap_or_default();
+        // is_executable::is_executable doesn't work well on WSL.
+        // https://github.com/taiki-e/cargo-llvm-cov/issues/316
+        if ext == "d" {
+            return false;
+        }
+        if cx.ws.target_for_config.triple().contains("-windows")
+            && (ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll"))
+        {
+            return true;
+        }
+        is_executable::is_executable(f)
+    }
 
     let re = Targets::new(&cx.ws).pkg_hash_re()?;
     let mut files = vec![];
+    let mut searched_dir = String::new();
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
     // environment variable, pass all compiled executables.
     // This is not the ideal way, but the way unstable book says it is cannot support them.
@@ -676,15 +732,14 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
     let profile = match cx.args.profile.as_deref() {
         None if cx.args.release => "release",
-        None => "debug",
-        Some(p) if matches!(p, "release" | "bench") => "release",
-        Some(p) if matches!(p, "dev" | "test") => "debug",
+        Some("release" | "bench") => "release",
+        None | Some("dev" | "test") => "debug",
         Some(p) => p,
     };
     target_dir.push(profile);
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
-        if is_executable::is_executable(f) {
+        if is_object(cx, f) {
             if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
                 if re.is_match(file_stem) {
                     files.push(make_relative(cx, f).to_owned().into_os_string());
@@ -692,6 +747,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
     }
+    searched_dir.push_str(target_dir.as_str());
     if cx.args.doctests {
         for f in glob::glob(
             Utf8Path::new(&glob::Pattern::escape(cx.ws.doctests_dir.as_str()))
@@ -700,23 +756,25 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         )?
         .filter_map(Result::ok)
         {
-            if is_executable::is_executable(&f) {
+            if is_object(cx, &f) {
                 files.push(make_relative(cx, &f).to_owned().into_os_string());
             }
         }
+        searched_dir.push(',');
+        searched_dir.push_str(cx.ws.doctests_dir.as_str());
     }
 
     // trybuild
-    let mut trybuild_target = cx.ws.trybuild_target();
+    let mut trybuild_target_dir = cx.ws.trybuild_target_dir();
     if let Some(target) = &cx.args.target {
-        trybuild_target.push(target);
+        trybuild_target_dir.push(target);
     }
     // Currently, trybuild always use debug build.
-    trybuild_target.push("debug");
-    if trybuild_target.is_dir() {
+    trybuild_target_dir.push("debug");
+    if trybuild_target_dir.is_dir() {
         let mut trybuild_targets = vec![];
-        for metadata in trybuild_metadata(&cx.ws.metadata.target_directory)? {
-            for package in metadata.packages {
+        for metadata in trybuild_metadata(&cx.ws, &cx.ws.metadata.target_directory)? {
+            for package in metadata.packages.into_values() {
                 for target in package.targets {
                     trybuild_targets.push(target.name);
                 }
@@ -725,23 +783,32 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !trybuild_targets.is_empty() {
             let re =
                 Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|"))).unwrap();
-            for entry in walk_target_dir(cx, &trybuild_target) {
+            for entry in walk_target_dir(cx, &trybuild_target_dir) {
                 let path = make_relative(cx, entry.path());
                 if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                     if re.is_match(file_stem) {
                         continue;
                     }
                 }
-                if is_executable::is_executable(path) {
+                if is_object(cx, path) {
                     files.push(path.to_owned().into_os_string());
                 }
             }
+            searched_dir.push(',');
+            searched_dir.push_str(trybuild_target_dir.as_str());
         }
     }
 
     // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
     files.sort_unstable();
 
+    if files.is_empty() {
+        warn!(
+            "not found object files (searched directories: {searched_dir}); this may occur if \
+             show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
+             commands such as nextest archive are used",
+        );
+    }
     Ok(files)
 }
 
@@ -755,7 +822,7 @@ impl Targets {
         let mut packages = BTreeSet::new();
         let mut targets = BTreeSet::new();
         for id in &ws.metadata.workspace_members {
-            let pkg = &ws.metadata[id];
+            let pkg = &ws.metadata.packages[id];
             packages.insert(pkg.name.clone());
             for t in &pkg.targets {
                 targets.insert(t.name.clone());
@@ -778,20 +845,22 @@ impl Targets {
 
 /// Collects metadata for packages generated by trybuild. If the trybuild test
 /// directory is not found, it returns an empty vector.
-fn trybuild_metadata(target_dir: &Utf8Path) -> Result<Vec<cargo_metadata::Metadata>> {
-    let trybuild_dir = &target_dir.join("tests");
+fn trybuild_metadata(ws: &Workspace, target_dir: &Utf8Path) -> Result<Vec<Metadata>> {
+    // https://github.com/dtolnay/trybuild/pull/219
+    let mut trybuild_dir = target_dir.join("tests").join("trybuild");
     if !trybuild_dir.is_dir() {
-        return Ok(vec![]);
+        trybuild_dir.pop();
+        if !trybuild_dir.is_dir() {
+            return Ok(vec![]);
+        }
     }
     let mut metadata = vec![];
     for entry in fs::read_dir(trybuild_dir)?.filter_map(Result::ok) {
-        let manifest_path = entry.path().join("Cargo.toml");
+        let manifest_path = &entry.path().join("Cargo.toml");
         if !manifest_path.is_file() {
             continue;
         }
-        metadata.push(
-            cargo_metadata::MetadataCommand::new().manifest_path(manifest_path).no_deps().exec()?,
-        );
+        metadata.push(Metadata::new(manifest_path, ws.config.cargo())?);
     }
     Ok(metadata)
 }
@@ -880,9 +949,10 @@ impl Format {
         match self {
             Self::Text | Self::Html => {
                 cmd.args([
-                    &format!("-show-instantiations={}", !cx.args.cov.hide_instantiations),
+                    &format!("-show-instantiations={}", cx.args.cov.show_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
+                    "-show-branches=count",
                     &format!("-Xdemangler={}", cx.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
@@ -913,7 +983,11 @@ impl Format {
             }
             let lcov = cmd.read()?;
             // Convert to XML
-            let cdata = lcov2cobertura::parse_lines(lcov.as_bytes().lines(), "", &[])?;
+            let cdata = lcov2cobertura::parse_lines(
+                lcov.as_bytes().lines(),
+                &cx.ws.metadata.workspace_root,
+                &[],
+            )?;
             let demangler = lcov2cobertura::RustDemangler::new();
             let now = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
@@ -1030,10 +1104,8 @@ impl Format {
 }
 
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
-    #[cfg(not(windows))]
-    const SEPARATOR: &str = "/";
-    #[cfg(windows)]
-    const SEPARATOR: &str = "\\\\"; // On windows, we should escape the separator.
+    // On Windows, we should escape the separator.
+    const SEPARATOR: &str = if cfg!(windows) { "\\\\" } else { "/" };
 
     #[derive(Default)]
     struct Out(String);
@@ -1063,11 +1135,11 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         //       We may have a directory like tests/support, so maybe we need both?
         if cx.args.remap_path_prefix {
             out.push(format!(
-                r"(^|{SEPARATOR})(rustc{SEPARATOR}[0-9a-f]+|tests|examples|benches){SEPARATOR}"
+                r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
             ));
         } else {
             out.push(format!(
-                r"{SEPARATOR}rustc{SEPARATOR}[0-9a-f]+{SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
+                r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
                 regex::escape(cx.ws.metadata.workspace_root.as_str())
             ));
         }
@@ -1102,13 +1174,13 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         .workspace_members
         .excluded
         .iter()
-        .map(|id| cx.ws.metadata[id].manifest_path.parent().unwrap())
+        .map(|id| cx.ws.metadata.packages[id].manifest_path.parent().unwrap())
         .collect();
     let included = cx
         .workspace_members
         .included
         .iter()
-        .map(|id| cx.ws.metadata[id].manifest_path.parent().unwrap());
+        .map(|id| cx.ws.metadata.packages[id].manifest_path.parent().unwrap());
     let mut excluded_path = vec![];
     let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
     for included in included {
@@ -1130,14 +1202,11 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
     }
 
     for &excluded in &excluded {
-        let included = match contains.get(&excluded) {
-            Some(included) => included,
-            None => {
-                let package_path =
-                    excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
-                excluded_path.push(package_path.to_owned());
-                continue;
-            }
+        let Some(included) = contains.get(&excluded) else {
+            let package_path =
+                excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
+            excluded_path.push(package_path.to_owned());
+            continue;
         };
 
         for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Refs:
 // - https://doc.rust-lang.org/nightly/cargo/commands/cargo-clean.html
 // - https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/ops/cargo_clean.rs
@@ -6,7 +8,6 @@ use std::path::Path;
 
 use anyhow::Result;
 use camino::Utf8Path;
-use cargo_metadata::PackageId;
 use walkdir::WalkDir;
 
 use crate::{
@@ -14,6 +15,7 @@ use crate::{
     cli::{self, Args, ManifestOptions},
     context::Context,
     fs,
+    metadata::PackageId,
     regex_vec::{RegexVec, RegexVecBuilder},
     term,
 };
@@ -54,7 +56,7 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         .workspace_members
         .included
         .iter()
-        .flat_map(|id| ["--package", &cx.ws.metadata[id].name])
+        .flat_map(|id| ["--package", &cx.ws.metadata.packages[id].name])
         .collect();
     let mut cmd = cx.cargo();
     cmd.arg("clean").args(package_args);
@@ -75,7 +77,7 @@ fn clean_ws(
     clean_ws_inner(ws, pkg_ids, verbose != 0)?;
 
     let package_args: Vec<_> =
-        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata[id].name]).collect();
+        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata.packages[id].name]).collect();
     let mut args_set = vec![vec![]];
     if ws.target_dir.join("release").exists() {
         args_set.push(vec!["--release"]);
@@ -91,7 +93,7 @@ fn clean_ws(
         cmd.args(["clean", "--target-dir", ws.target_dir.as_str()]).args(&package_args);
         cmd.args(args);
         if verbose > 0 {
-            cmd.arg(format!("-{}", "v".repeat(verbose as usize)));
+            cmd.arg(format!("-{}", "v".repeat(usize::from(verbose))));
         }
         manifest.cargo_args(&mut cmd);
         cmd.dir(&ws.metadata.workspace_root);
@@ -125,16 +127,16 @@ fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Resul
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]{7,})?$");
     for id in pkg_ids {
-        re.or(&ws.metadata[id].name.replace('-', "(-|_)"));
+        re.or(&ws.metadata.packages[id].name.replace('-', "(-|_)"));
     }
     re.build().unwrap()
 }
 
 fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
-    let trybuild_target = ws.trybuild_target();
+    let trybuild_target_dir = ws.trybuild_target_dir();
     let re = pkg_hash_re(ws, pkg_ids);
 
-    for e in WalkDir::new(trybuild_target).into_iter().filter_map(Result::ok) {
+    for e in WalkDir::new(trybuild_target_dir).into_iter().filter_map(Result::ok) {
         let path = e.path();
         if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
             if re.is_match(file_stem) {

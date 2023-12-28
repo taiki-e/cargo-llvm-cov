@@ -1,5 +1,3 @@
-#![warn(rust_2018_idioms, unsafe_op_in_unsafe_fn)]
-
 extern "C" {
     fn hello_c();
     fn hello_cpp();

@@ -1,23 +1,26 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::{
     collections::{BTreeMap, HashMap},
-    fmt::{Debug, Formatter},
+    fmt,
 };
 
 use anyhow::{Context as _, Result};
 use camino::Utf8PathBuf;
 use regex::Regex;
-use serde::{ser::SerializeMap, Deserialize, Serialize, Serializer};
+use serde::ser::{Serialize, SerializeMap, Serializer};
+use serde_derive::{Deserialize, Serialize};
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct LlvmCovJsonExport {
     /// List of one or more export objects
-    pub(crate) data: Vec<Export>,
+    data: Vec<Export>,
     // llvm.coverage.json.export
     #[serde(rename = "type")]
-    pub(crate) type_: String,
-    pub(crate) version: String,
+    type_: String,
+    version: String,
     /// Additional information injected into the export data.
     #[serde(skip_deserializing, skip_serializing_if = "Option::is_none")]
     cargo_llvm_cov: Option<CargoLlvmCov>,
@@ -26,10 +29,10 @@ pub struct LlvmCovJsonExport {
 /// <https://docs.codecov.com/docs/codecov-custom-coverage-format>
 ///
 /// This represents the fraction: `{covered}/{count}`.
-#[derive(Default, Debug)]
-pub(crate) struct CodeCovCoverage {
-    pub(crate) count: u64,
-    pub(crate) covered: u64,
+#[derive(Debug, Default)]
+struct CodeCovCoverage {
+    count: u64,
+    covered: u64,
 }
 
 impl Serialize for CodeCovCoverage {
@@ -43,7 +46,7 @@ impl Serialize for CodeCovCoverage {
 
 /// line -> coverage in fraction
 #[derive(Default)]
-pub struct CodeCovExport(BTreeMap<u64, CodeCovCoverage>);
+struct CodeCovExport(BTreeMap<u64, CodeCovCoverage>);
 
 /// Custom serialize [`CodeCovExport`] as "string" -> JSON (as function)
 /// Serialize as "string" -> JSON
@@ -63,7 +66,7 @@ impl Serialize for CodeCovExport {
 #[derive(Default, Serialize)]
 pub struct CodeCovJsonExport {
     /// filename -> list of uncovered lines.
-    pub(crate) coverage: BTreeMap<String, CodeCovExport>,
+    coverage: BTreeMap<String, CodeCovExport>,
 }
 
 impl CodeCovJsonExport {
@@ -141,7 +144,25 @@ impl CodeCovJsonExport {
 }
 
 /// Files -> list of uncovered lines.
-pub(crate) type UncoveredLines = BTreeMap<String, Vec<u64>>;
+type UncoveredLines = BTreeMap<String, Vec<u64>>;
+
+#[non_exhaustive]
+#[derive(Clone, Copy)]
+pub enum CoverageKind {
+    Functions,
+    Lines,
+    Regions,
+}
+
+impl CoverageKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Functions => "functions",
+            Self::Lines => "lines",
+            Self::Regions => "regions",
+        }
+    }
+}
 
 impl LlvmCovJsonExport {
     pub fn demangle(&mut self) {
@@ -155,17 +176,20 @@ impl LlvmCovJsonExport {
     }
 
     pub fn inject(&mut self, manifest_path: Utf8PathBuf) {
-        self.cargo_llvm_cov =
-            Some(CargoLlvmCov { version: env!("CARGO_PKG_VERSION"), manifest_path });
+        self.cargo_llvm_cov = Some(CargoLlvmCov {
+            version: env!("CARGO_PKG_VERSION"),
+            manifest_path: manifest_path.into_string(),
+        });
     }
 
     /// Gets the minimal lines coverage of all files.
-    pub fn get_lines_percent(&self) -> Result<f64> {
+    pub fn get_coverage_percent(&self, kind: CoverageKind) -> Result<f64> {
         let mut count = 0_f64;
         let mut covered = 0_f64;
         for data in &self.data {
             let totals = &data.totals.as_object().context("totals is not an object")?;
-            let lines = &totals["lines"].as_object().context("no lines")?;
+            let lines =
+                &totals[kind.as_str()].as_object().context(format!("no {}", kind.as_str()))?;
             count += lines["count"].as_f64().context("no count")?;
             covered += lines["covered"].as_f64().context("no covered")?;
         }
@@ -222,13 +246,13 @@ impl LlvmCovJsonExport {
                     if !uncovered_lines.is_empty() {
                         uncovered_files
                             .entry(file_name.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .append(&mut uncovered_lines);
                     }
                     if !covered_lines.is_empty() {
                         covered_files
                             .entry(file_name.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .append(&mut covered_lines);
                     }
                 }
@@ -294,83 +318,78 @@ impl LlvmCovJsonExport {
 /// Json representation of one `CoverageMapping`
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct Export {
+struct Export {
     /// List of objects describing coverage for files
-    pub(crate) files: Vec<File>,
+    files: Vec<File>,
     /// List of objects describing coverage for functions
     ///
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) functions: Option<Vec<Function>>,
-    pub(crate) totals: serde_json::Value,
+    functions: Option<Vec<Function>>,
+    totals: serde_json::Value,
 }
 
 /// Coverage for a single file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct File {
+struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
-    // https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
+    // https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) branches: Option<Vec<serde_json::Value>>,
+    branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
     ///
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) expansions: Option<Vec<serde_json::Value>>,
-    pub(crate) filename: String,
+    expansions: Option<Vec<serde_json::Value>>,
+    filename: String,
     /// List of Segments contained in the file
     ///
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) segments: Option<Vec<Segment>>,
+    segments: Option<Vec<Segment>>,
     /// Object summarizing the coverage for this file
-    pub(crate) summary: Summary,
+    summary: Summary,
 }
 
 /// Describes a segment of the file with a counter
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct Segment(
-    /* Line */ pub(crate) u64,
-    /* Col */ pub(crate) u64,
-    /* Count */ pub(crate) u64,
-    /* HasCount */ pub(crate) bool,
-    /* IsRegionEntry */ pub(crate) bool,
-    /* IsGapRegion */ pub(crate) bool,
+struct Segment(
+    /* Line */ u64,
+    /* Col */ u64,
+    /* Count */ u64,
+    /* HasCount */ bool,
+    /* IsRegionEntry */ bool,
+    /* IsGapRegion */ bool,
 );
 
 impl Segment {
-    pub(crate) fn line(&self) -> u64 {
+    fn line(&self) -> u64 {
         self.0
     }
-
-    pub(crate) fn col(&self) -> u64 {
+    fn col(&self) -> u64 {
         self.1
     }
-
-    pub(crate) fn count(&self) -> u64 {
+    fn count(&self) -> u64 {
         self.2
     }
-
-    pub(crate) fn has_count(&self) -> bool {
+    fn has_count(&self) -> bool {
         self.3
     }
-
-    pub(crate) fn is_region_entry(&self) -> bool {
+    fn is_region_entry(&self) -> bool {
         self.4
     }
-
-    pub(crate) fn is_gap_region(&self) -> bool {
+    fn is_gap_region(&self) -> bool {
         self.5
     }
 }
 
-impl Debug for Segment {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Segment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Segment")
             .field("line", &self.line())
             .field("col", &self.col())
@@ -382,69 +401,77 @@ impl Debug for Segment {
     }
 }
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-16.0.0/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
+// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
 /// Coverage info for a single function
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct Function {
-    pub(crate) branches: Vec<serde_json::Value>,
-    pub(crate) count: u64,
+struct Function {
+    branches: Vec<serde_json::Value>,
+    count: u64,
     /// List of filenames that the function relates to
-    pub(crate) filenames: Vec<String>,
-    pub(crate) name: String,
-    pub(crate) regions: Vec<Region>,
+    filenames: Vec<String>,
+    name: String,
+    regions: Vec<Region>,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct Region(
-    /* LineStart */ pub(crate) u64,
-    /* ColumnStart */ pub(crate) u64,
-    /* LineEnd */ pub(crate) u64,
-    /* ColumnEnd */ pub(crate) u64,
-    /* ExecutionCount */ pub(crate) u64,
-    /* FileID */ pub(crate) u64,
-    /* ExpandedFileID */ pub(crate) u64,
-    /* Kind */ pub(crate) u64,
+struct Region(
+    /* LineStart */ u64,
+    /* ColumnStart */ u64,
+    /* LineEnd */ u64,
+    /* ColumnEnd */ u64,
+    /* ExecutionCount */ u64,
+    /* FileID */ u64,
+    /* ExpandedFileID */ u64,
+    /* Kind */ u64,
 );
 
 impl Region {
-    pub(crate) fn line_start(&self) -> u64 {
+    fn line_start(&self) -> u64 {
         self.0
     }
-
-    pub(crate) fn column_start(&self) -> u64 {
+    fn column_start(&self) -> u64 {
         self.1
     }
-
-    pub(crate) fn line_end(&self) -> u64 {
+    fn line_end(&self) -> u64 {
         self.2
     }
-
-    pub(crate) fn column_end(&self) -> u64 {
+    fn column_end(&self) -> u64 {
         self.3
     }
-
-    pub(crate) fn execution_count(&self) -> u64 {
+    fn execution_count(&self) -> u64 {
         self.4
     }
-
-    pub(crate) fn file_id(&self) -> u64 {
+    fn file_id(&self) -> u64 {
         self.5
     }
-
-    pub(crate) fn expanded_file_id(&self) -> u64 {
+    fn expanded_file_id(&self) -> u64 {
         self.6
     }
-
-    pub(crate) fn kind(&self) -> u64 {
+    fn kind(&self) -> u64 {
         self.7
+    }
+}
+
+impl fmt::Debug for Region {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Region")
+            .field("line_start", &self.line_start())
+            .field("column_start", &self.column_start())
+            .field("line_end", &self.line_end())
+            .field("column_end", &self.column_end())
+            .field("execution_count", &self.execution_count())
+            .field("file_id", &self.file_id())
+            .field("expanded_file_id", &self.expanded_file_id())
+            .field("kind", &self.kind())
+            .finish()
     }
 }
 
 /// The location of a region
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
-pub(crate) struct RegionLocation {
+struct RegionLocation {
     start_line: u64,
     end_line: u64,
     start_column: u64,
@@ -468,45 +495,30 @@ impl RegionLocation {
     }
 }
 
-impl Debug for Region {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Region")
-            .field("line_start", &self.line_start())
-            .field("column_start", &self.column_start())
-            .field("line_end", &self.line_end())
-            .field("column_end", &self.column_end())
-            .field("execution_count", &self.execution_count())
-            .field("file_id", &self.file_id())
-            .field("expanded_file_id", &self.expanded_file_id())
-            .field("kind", &self.kind())
-            .finish()
-    }
-}
-
 /// Object summarizing the coverage for this file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct Summary {
+struct Summary {
     /// Object summarizing branch coverage
-    pub(crate) branches: CoverageCounts,
+    branches: CoverageCounts,
     /// Object summarizing function coverage
-    pub(crate) functions: CoverageCounts,
-    pub(crate) instantiations: CoverageCounts,
+    functions: CoverageCounts,
+    instantiations: CoverageCounts,
     /// Object summarizing line coverage
-    pub(crate) lines: CoverageCounts,
+    lines: CoverageCounts,
     /// Object summarizing region coverage
-    pub(crate) regions: CoverageCounts,
+    regions: CoverageCounts,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-pub(crate) struct CoverageCounts {
-    pub(crate) count: u64,
-    pub(crate) covered: u64,
+struct CoverageCounts {
+    count: u64,
+    covered: u64,
     // Currently only branches and regions has this field.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) notcovered: Option<u64>,
-    pub(crate) percent: f64,
+    notcovered: Option<u64>,
+    percent: f64,
 }
 
 /// Information that is not part of the llvm-cov JSON export, but instead injected afterwards by us.
@@ -517,7 +529,7 @@ struct CargoLlvmCov {
     /// requirements on specific versions.
     version: &'static str,
     /// Resolved path to the `Cargo.toml` manifest.
-    manifest_path: Utf8PathBuf,
+    manifest_path: String,
 }
 
 #[cfg(test)]
@@ -550,8 +562,13 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_get_lines_percent() {
+    fn test_get_coverage_percent(kind: CoverageKind) {
+        let expected = match kind {
+            CoverageKind::Functions => 100_f64,
+            CoverageKind::Lines => 68.181_818_181_818_19,
+            CoverageKind::Regions => 66.666_666_666_666_67,
+        };
+
         // There are 5 different percentages, make sure we pick the correct one.
         let file = format!(
             "{}/tests/fixtures/coverage-reports/no_coverage/no_coverage.json",
@@ -560,10 +577,25 @@ mod tests {
         let s = fs::read_to_string(file).unwrap();
         let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
 
-        let percent = json.get_lines_percent().unwrap();
+        let actual = json.get_coverage_percent(kind).unwrap();
 
         let error_margin = f64::EPSILON;
-        assert!((percent - 68.181_818_181_818_19).abs() < error_margin, "{percent}");
+        assert!((actual - expected).abs() < error_margin, "{actual}");
+    }
+
+    #[test]
+    fn test_get_functions_percent() {
+        test_get_coverage_percent(CoverageKind::Functions);
+    }
+
+    #[test]
+    fn test_get_lines_percent() {
+        test_get_coverage_percent(CoverageKind::Lines);
+    }
+
+    #[test]
+    fn test_get_regions_percent() {
+        test_get_coverage_percent(CoverageKind::Regions);
     }
 
     #[test]

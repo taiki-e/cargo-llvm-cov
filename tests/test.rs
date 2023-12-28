@@ -1,23 +1,25 @@
-#![warn(rust_2018_idioms)]
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![cfg(not(miri))] // Miri doesn't support file with non-default mode: https://github.com/rust-lang/miri/pull/2720
+
+mod auxiliary;
+
+use std::path::Path;
 
 use anyhow::Context as _;
 use auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
     test_project, test_report, CommandExt,
 };
-use camino::Utf8Path;
 use fs_err as fs;
 use tempfile::tempdir;
-
-mod auxiliary;
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
 
 fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     vec![
-        ("txt", &["--text"]),
-        ("hide-instantiations.txt", &["--text", "--hide-instantiations"]),
+        ("txt", &["--text", "--show-instantiations"]),
+        ("hide-instantiations.txt", &["--text"]),
         ("summary.txt", &[]),
         ("json", &["--json", "--summary-only"]),
         // TODO: full JSON output is unstable between platform.
@@ -98,18 +100,23 @@ fn bin_crate() {
     }
 }
 
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
     run("instantiations", "instantiations", &[], &[]);
 }
 
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
+// feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
@@ -136,6 +143,7 @@ fn no_coverage() {
     }
 }
 
+// feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn coverage_helper() {
@@ -155,7 +163,7 @@ fn coverage_helper() {
 #[test]
 fn merge() {
     // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if cfg!(windows) || cfg!(all(target_arch = "x86_64", target_os = "macos")) {
+    if !cfg!(all(target_arch = "x86_64", target_os = "linux")) {
         return;
     }
     let output_dir = fixtures_path().join("coverage-reports").join("merge");
@@ -165,11 +173,10 @@ fn merge() {
 #[test]
 fn merge_failure_mode_all() {
     let tempdir = tempdir().unwrap();
-    let output_dir = Utf8Path::from_path(tempdir.path()).unwrap();
-    merge_with_failure_mode(output_dir, true);
+    merge_with_failure_mode(tempdir.path(), true);
 }
 
-fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
+fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     let model = "merge";
     fs::create_dir_all(output_dir).unwrap();
     for (extension, args) in test_set() {
@@ -207,6 +214,8 @@ fn merge_with_failure_mode(output_dir: &Utf8Path, failure_mode_all: bool) {
     }
 }
 
+// nightly-2023-12-10 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.76), ignore)]
 #[test]
 fn clean_ws() {
     let model = "merge";
@@ -301,10 +310,12 @@ fn invalid_arg() {
                     .arg("--doc")
                     .assert_failure()
                     .stderr_contains("invalid option '--doc'");
-                cargo_llvm_cov(subcommand)
-                    .arg("--doctests")
-                    .assert_failure()
-                    .stderr_contains("invalid option '--doctests'");
+                if subcommand != "show-env" {
+                    cargo_llvm_cov(subcommand)
+                        .arg("--doctests")
+                        .assert_failure()
+                        .stderr_contains("invalid option '--doctests'");
+                }
             }
         }
         if !matches!(subcommand, "" | "nextest") {

@@ -10,7 +10,7 @@ on:
       - main
       - dev
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 env:
@@ -32,13 +32,15 @@ concurrency:
 
 jobs:
   deny:
-    uses: taiki-e/workflows/.github/workflows/deny.yml@main
+    uses: taiki-e/github-actions/.github/workflows/deny.yml@main
   msrv:
-    uses: taiki-e/workflows/.github/workflows/msrv.yml@main
+    uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
     with:
       event_name: ${{ github.event_name }}
+  release-dry-run:
+    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
   tidy:
-    uses: taiki-e/workflows/.github/workflows/tidy.yml@main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@main
 
   test:
     strategy:
@@ -50,7 +52,7 @@ jobs:
           # fixed bugs in report generation, so the latest report is not the
           # same as the old report.
           # - rust: '1.60'
-          # - rust: stable
+          - rust: stable
           - rust: beta
           - rust: nightly
           - rust: nightly
@@ -60,11 +62,11 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install Rust
-        run: rustup toolchain add ${{ matrix.rust }} --no-self-update --component llvm-tools-preview && rustup default ${{ matrix.rust }}
+        run: rustup toolchain add ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       - run: rustup toolchain add nightly --no-self-update
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-minimal-versions
@@ -75,69 +77,40 @@ jobs:
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
       - run: |
-          set -euxo pipefail
-          cargo llvm-cov nextest --text
-          cargo llvm-cov nextest --text --profile default --cargo-profile dev
+          set -eEuxo pipefail
+          cargo llvm-cov nextest --text --fail-under-lines 50
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
-          set -euxo pipefail
-          git clone https://github.com/taiki-e/easytime.git
+          set -eEuxo pipefail
+          git clone --depth 1 https://github.com/taiki-e/easytime.git
           cd easytime
-          cargo llvm-cov test --doctests --text
+          cargo llvm-cov test --doctests --text --fail-under-lines 30
+          # Test minimum runnable Cargo version.
+          rustup toolchain add 1.60 --no-self-update
+          cargo +1.60 llvm-cov test --text --fail-under-lines 30
+          cd ..
+          # Test trybuild compatibility.
+          git clone --depth 1 https://github.com/taiki-e/easy-ext.git
+          cd easy-ext
+          cargo llvm-cov --text --test compiletest --fail-under-lines 70
         if: startsWith(matrix.rust, 'nightly')
-      - run: cargo minimal-versions build --workspace --all-features --ignore-private
-
-  build:
-    name: build (${{ matrix.target }})
-    strategy:
-      fail-fast: false
-      matrix:
-        # When updating this list, the reminder to update the target list in release.yml.
-        include:
-          - target: aarch64-unknown-linux-gnu
-          - target: aarch64-unknown-linux-musl
-          - target: aarch64-apple-darwin
-            os: macos-11
-          - target: x86_64-unknown-linux-gnu
-          - target: x86_64-unknown-linux-musl
-          - target: x86_64-apple-darwin
-            os: macos-11
-          - target: x86_64-pc-windows-msvc
-            os: windows-2019
-    runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          persist-credentials: false
-      - name: Install Rust
-        run: rustup update stable --no-self-update
-      - run: rustup target add ${{ matrix.target }}
-      - uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
-        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
-        if: endsWith(matrix.target, 'windows-msvc')
-      - run: cargo build --target ${{ matrix.target }}
-      - run: cargo build --target ${{ matrix.target }} --release
-      # For debugging
-      - uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/cargo-llvm-cov*
+      - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
+      - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features
 
   miri:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install Rust
         run: rustup toolchain add nightly --no-self-update --component miri && rustup default nightly
       - run: cargo miri test --workspace --all-features
         env:
-          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-symbolic-alignment-check -Zmiri-retag-fields -Zmiri-disable-isolation
+          MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-symbolic-alignment-check -Zmiri-disable-isolation
           RUSTDOCFLAGS: ${{ env.RUSTDOCFLAGS }} -Z randomize-layout
           RUSTFLAGS: ${{ env.RUSTFLAGS }} -Z randomize-layout

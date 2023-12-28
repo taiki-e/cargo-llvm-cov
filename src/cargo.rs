@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::ffi::OsStr;
 
 use anyhow::{bail, format_err, Context as _, Result};
@@ -8,13 +10,14 @@ use crate::{
     cli::{ManifestOptions, Subcommand, Args},
     context::Context,
     env,
+    metadata::Metadata,
     process::ProcessBuilder,
 };
 
 pub(crate) struct Workspace {
     pub(crate) name: String,
     pub(crate) config: Config,
-    pub(crate) metadata: cargo_metadata::Metadata,
+    pub(crate) metadata: Metadata,
     pub(crate) current_manifest: Utf8PathBuf,
 
     pub(crate) target_dir: Utf8PathBuf,
@@ -25,7 +28,7 @@ pub(crate) struct Workspace {
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_for_cli: Option<String>,
-    pub(crate) nightly: bool,
+    pub(crate) rustc_version: RustcVersion,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
     /// Whether `-Z doctest-in-workspace` is needed.
@@ -42,7 +45,7 @@ impl Workspace {
         // Metadata and config
         let config = Config::load()?;
         let current_manifest = package_root(config.cargo(), options.manifest_path.as_deref())?;
-        let metadata = metadata(config.cargo(), &current_manifest)?;
+        let metadata = Metadata::new(current_manifest.as_std_path(), config.cargo())?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
             bail!("cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}");
@@ -50,14 +53,14 @@ impl Workspace {
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
         let rustc = ProcessBuilder::from(config.rustc().clone());
-        let nightly = rustc_version(&rustc)?;
+        let rustc_version = rustc_version(&rustc)?;
 
-        if doctests && !nightly {
+        if doctests && !rustc_version.nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
-        if !stable_coverage && !nightly {
+        if !stable_coverage && !rustc_version.nightly {
             bail!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
@@ -67,7 +70,7 @@ impl Workspace {
         if doctests {
             need_doctest_in_workspace = cmd!(config.cargo(), "-Z", "help")
                 .read()
-                .map_or(false, |s| s.contains("doctest-in-workspace"))
+                .map_or(false, |s| s.contains("doctest-in-workspace"));
         }
 
         let target_dir =
@@ -85,7 +88,7 @@ impl Workspace {
         let output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 
-        let name = metadata.workspace_root.file_name().unwrap().to_owned();
+        let name = metadata.workspace_root.file_name().unwrap_or("default").to_owned();
         let profdata_file = target_dir.join(format!("{name}.profdata"));
 
         Ok(Self {
@@ -100,7 +103,7 @@ impl Workspace {
             rustc,
             target_for_config,
             target_for_cli,
-            nightly,
+            rustc_version,
             stable_coverage,
             need_doctest_in_workspace,
         })
@@ -130,33 +133,46 @@ impl Workspace {
             .into())
     }
 
-    pub(crate) fn trybuild_target(&self) -> Utf8PathBuf {
-        let mut trybuild_dir = self.metadata.target_directory.join("tests/trybuild");
-        if !trybuild_dir.is_dir() {
-            trybuild_dir = self.metadata.target_directory.join("tests");
+    pub(crate) fn trybuild_target_dir(&self) -> Utf8PathBuf {
+        // https://github.com/dtolnay/trybuild/pull/219
+        let mut trybuild_target_dir = self.metadata.target_directory.join("tests").join("trybuild");
+        if !trybuild_target_dir.is_dir() {
+            trybuild_target_dir.pop();
+            trybuild_target_dir.push("target");
         }
-        let mut trybuild_target = trybuild_dir.join("target");
-        // https://github.com/dtolnay/trybuild/pull/219 specifies tests/trybuild as the target
-        // directory, which is a bit odd since build artifacts are generated in the same directory
-        // as the test project.
-        if !trybuild_target.is_dir() {
-            trybuild_target.pop();
-        }
-        trybuild_target
+        trybuild_target_dir
     }
 }
 
-fn rustc_version(rustc: &ProcessBuilder) -> Result<bool> {
+pub(crate) struct RustcVersion {
+    pub(crate) minor: u32,
+    pub(crate) nightly: bool,
+}
+
+fn rustc_version(rustc: &ProcessBuilder) -> Result<RustcVersion> {
     let mut cmd = rustc.clone();
     cmd.args(["--version", "--verbose"]);
     let verbose_version = cmd.read()?;
-    let version = verbose_version
+    let release = verbose_version
         .lines()
         .find_map(|line| line.strip_prefix("release: "))
         .ok_or_else(|| format_err!("unexpected version output from `{cmd}`: {verbose_version}"))?;
-    let (_version, channel) = version.split_once('-').unwrap_or_default();
-    let nightly = channel == "nightly" || channel == "dev";
-    Ok(nightly)
+    let (version, channel) = release.split_once('-').unwrap_or((release, ""));
+    let mut digits = version.splitn(3, '.');
+    let minor = (|| {
+        let major = digits.next()?.parse::<u32>().ok()?;
+        if major != 1 {
+            return None;
+        }
+        let minor = digits.next()?.parse::<u32>().ok()?;
+        let _patch = digits.next().unwrap_or("0").parse::<u32>().ok()?;
+        Some(minor)
+    })()
+    .ok_or_else(|| format_err!("unable to determine rustc version"))?;
+    let nightly = channel == "nightly"
+        || channel == "dev"
+        || env::var("RUSTC_BOOTSTRAP")?.as_deref() == Some("1");
+    Ok(RustcVersion { minor, nightly })
 }
 
 fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
@@ -171,12 +187,6 @@ fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8P
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-locate-project.html
 fn locate_project(cargo: &OsStr) -> Result<String> {
     cmd!(cargo, "locate-project", "--message-format", "plain").read()
-}
-
-// https://doc.rust-lang.org/nightly/cargo/commands/cargo-metadata.html
-fn metadata(cargo: &OsStr, manifest_path: &Utf8Path) -> Result<cargo_metadata::Metadata> {
-    let mut cmd = cmd!(cargo, "metadata", "--format-version=1", "--manifest-path", manifest_path);
-    serde_json::from_str(&cmd.read()?).with_context(|| format!("failed to parse output from {cmd}"))
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
@@ -247,7 +257,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
 
     // If `-vv` is passed, propagate `-v` to cargo.
     if cx.args.verbose > 1 {
-        cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
+        cmd.arg(format!("-{}", "v".repeat(usize::from(cx.args.verbose) - 1)));
     }
 }
 

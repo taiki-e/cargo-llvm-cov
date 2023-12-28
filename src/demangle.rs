@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Based on rust-lang/rust's rust-demangler.
 //
 // Source:
@@ -25,7 +27,7 @@ fn create_disambiguator_re() -> Regex {
 
 fn demangle_lines(lines: Lines<'_>) -> Vec<String> {
     let strip_crate_disambiguators = create_disambiguator_re();
-    let mut demangled_lines = Vec::new();
+    let mut demangled_lines = vec![];
     for mangled in lines {
         let mut demangled = demangle(mangled).to_string();
         demangled = strip_crate_disambiguators.replace_all(&demangled, REPLACE_COLONS).to_string();

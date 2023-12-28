@@ -24,12 +24,12 @@ defaults:
 jobs:
   create-release:
     if: github.repository_owner == 'taiki-e'
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install Rust
@@ -48,11 +48,9 @@ jobs:
   upload-assets:
     name: ${{ matrix.target }}
     if: github.repository_owner == 'taiki-e'
-    needs:
-      - create-release
+    needs: create-release
     strategy:
       matrix:
-        # When updating this list, the reminder to update the target list in ci.yml.
         include:
           - target: aarch64-unknown-linux-gnu
           - target: aarch64-unknown-linux-musl
@@ -71,7 +69,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install Rust
@@ -79,9 +77,10 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-        if: matrix.os == '' || startsWith(matrix.os, 'ubuntu')
       - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
-        if: endsWith(matrix.target, 'windows-msvc')
+        if: contains(matrix.target, '-windows-msvc')
+      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static -C link-self-contained=yes" >>"${GITHUB_ENV}"
+        if: contains(matrix.target, '-linux-musl')
       - uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: cargo-llvm-cov

@@ -83,11 +83,17 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
-        --hide-instantiations
-            Hide instantiations from report
+        --show-instantiations
+            Show instantiations in report
+
+        --fail-under-functions <MIN>
+            Exit with a status of 1 if the total function coverage is less than MIN percent
 
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
+
+        --fail-under-regions <MIN>
+            Exit with a status of 1 if the total region coverage is less than MIN percent
 
         --fail-uncovered-lines <MAX>
             Exit with a status of 1 if the uncovered lines are greater than MAX
@@ -103,6 +109,12 @@ OPTIONS:
 
         --include-build-script
             Include build script in coverage report
+
+        --doctests
+            Including doc tests (unstable)
+
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for
+            more.
 
     -q, --quiet
             Display one character per test instead of one line

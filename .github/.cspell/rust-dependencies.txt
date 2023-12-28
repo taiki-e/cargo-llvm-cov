@@ -4,8 +4,6 @@
 camino
 cobertura
 demangle
-itertools
-lcov
 lexopt
 rustversion
 tempfile

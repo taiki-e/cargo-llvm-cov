@@ -10,6 +10,78 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.5.39] - 2023-12-16
+
+- Remove dependency on `is-terminal`.
+
+## [0.5.38] - 2023-12-13
+
+- Fix panic when running tests at `/` such as in docker. ([#326](https://github.com/taiki-e/cargo-llvm-cov/pull/326), thanks @MikeDevresse)
+
+## [0.5.37] - 2023-11-17
+
+- Add `--fail-under-{functions,regions}` options. ([#323](https://github.com/taiki-e/cargo-llvm-cov/pull/323), thanks @CobaltCause)
+
+## [0.5.36] - 2023-10-30
+
+- Support `--doctests` flag in `cargo llvm-cov report` and `cargo llvm-cov show-env`.
+
+## [0.5.35] - 2023-10-18
+
+- Improve compile time.
+
+## [0.5.34] - 2023-10-17
+
+- Improve performance and reduce disc usage by passing `--no-deps` to `cargo metadata`.
+
+## [0.5.33] - 2023-09-26
+
+- Fix "The file was not recognized as a valid object file" error on WSL. ([#317](https://github.com/taiki-e/cargo-llvm-cov/pull/317))
+
+## [0.5.32] - 2023-09-23
+
+- Fix an issue where codes in the standard library are not being properly excluded from reports when using a custom toolchain. ([#311](https://github.com/taiki-e/cargo-llvm-cov/pull/311))
+
+- Document a way to display coverage in VS Code.
+
+## [0.5.31] - 2023-08-24
+
+- Fix empty source path generated in cobertura.xml. ([#309](https://github.com/taiki-e/cargo-llvm-cov/pull/309), thanks @mstyura)
+
+- Prepare for future branch coverage support. ([#308](https://github.com/taiki-e/cargo-llvm-cov/pull/308), thanks @Swatinem)
+
+## [0.5.30] - 2023-08-23
+
+- Fix an issue where coverage is not collected or fails to generate coverage on `cdylib` or proc-macro crate on Windows. ([#307](https://github.com/taiki-e/cargo-llvm-cov/pull/307))
+
+- Escape values that are shown by `show-env` subcommand. ([#307](https://github.com/taiki-e/cargo-llvm-cov/pull/307))
+
+## [0.5.29] - 2023-08-23
+
+- Diagnostics improvements. ([#302](https://github.com/taiki-e/cargo-llvm-cov/pull/302))
+
+## [0.5.28] - 2023-08-22
+
+- Diagnostics improvements. ([#305](https://github.com/taiki-e/cargo-llvm-cov/pull/305), [#306](https://github.com/taiki-e/cargo-llvm-cov/pull/306))
+
+## [0.5.27] - 2023-08-14
+
+- Allow nightly to be specified by setting `RUSTC_BOOTSTRAP=1`, the same as for rustc and cargo. ([#298](https://github.com/taiki-e/cargo-llvm-cov/pull/298), thanks @RocketJas)
+
+## [0.5.26] - 2023-08-12
+
+- Fix support for `trybuild` 1.0.76+. ([#301](https://github.com/taiki-e/cargo-llvm-cov/pull/301))
+
+## [0.5.25] - 2023-08-06
+
+- Use `--show-missing-lines` logic in `--fail-uncovered-lines`. ([#277](https://github.com/taiki-e/cargo-llvm-cov/pull/277), thanks @michaelvlach)
+
+- cargo-llvm-cov no longer sets the `CARGO_INCREMENTAL=0` environment variable. ([#297](https://github.com/taiki-e/cargo-llvm-cov/pull/297))
+
+## [0.5.24] - 2023-07-28
+
+- Update `cargo_metadata` to 0.17.
+
 ## [0.5.23] - 2023-07-07
 
 - Inject additional contextual information about cargo-llvm-cov into the JSON output of llvm-cov. ([#289](https://github.com/taiki-e/cargo-llvm-cov/pull/289), thanks @dnaka91)
@@ -504,7 +576,23 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.23...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.39...HEAD
+[0.5.39]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.38...v0.5.39
+[0.5.38]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.37...v0.5.38
+[0.5.37]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.36...v0.5.37
+[0.5.36]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.35...v0.5.36
+[0.5.35]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.34...v0.5.35
+[0.5.34]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.33...v0.5.34
+[0.5.33]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.32...v0.5.33
+[0.5.32]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.31...v0.5.32
+[0.5.31]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.30...v0.5.31
+[0.5.30]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.29...v0.5.30
+[0.5.29]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.28...v0.5.29
+[0.5.28]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.27...v0.5.28
+[0.5.27]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.26...v0.5.27
+[0.5.26]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.25...v0.5.26
+[0.5.25]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.24...v0.5.25
+[0.5.24]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.23...v0.5.24
 [0.5.23]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.20...v0.5.21

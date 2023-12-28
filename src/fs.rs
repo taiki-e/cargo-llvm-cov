@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 pub(crate) use std::fs::Metadata;
 use std::{ffi::OsStr, io, path::Path};
 
-pub(crate) use fs_err::*;
+pub(crate) use fs_err::{create_dir_all, read_dir, symlink_metadata, write};
 
 /// Removes a file from the filesystem **if exists**.
 pub(crate) fn remove_file(path: impl AsRef<Path>) -> io::Result<()> {

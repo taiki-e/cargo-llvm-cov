@@ -2,8 +2,8 @@
 name = "merge"
 version = "0.0.0"
 
-[workspace]
-
 [features]
 a = []
 b = []
+
+[workspace]

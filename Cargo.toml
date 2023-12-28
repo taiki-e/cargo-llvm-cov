@@ -1,12 +1,12 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.5.23"
+version = "0.5.39"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.70"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
-categories = ["command-line-utilities", "development-tools", "development-tools::cargo-plugins", "development-tools::testing"]
+categories = ["command-line-utilities", "development-tools::cargo-plugins", "development-tools::testing"]
 exclude = ["/.*", "/tools"]
 description = """
 Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-coverage).
@@ -20,26 +20,22 @@ pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
 bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
 
-[workspace]
-resolver = "2"
-
 [dependencies]
 anyhow = "1.0.47"
-camino = "1.0.3"
-cargo_metadata = "0.15"
+camino = "1.0.5"
 cargo-config2 = "0.1.5"
 duct = "0.13.1"
 fs-err = "2.5"
 glob = "0.3"
 home = "0.5"
 is_executable = "1"
-is-terminal = "0.4"
 lcov2cobertura = "1.0.1"
 lexopt = "0.3"
 opener = "0.6"
 regex = { version = "1.3", default-features = false, features = ["perf", "std"] }
 rustc-demangle = "0.1.21"
-serde = { version = "1.0.103", features = ["derive"] }
+serde = "1.0.103"
+serde_derive = "1.0.103"
 serde_json = "1"
 shell-escape = "0.1.5"
 termcolor = "1.1.2"
@@ -47,9 +43,51 @@ walkdir = "2.2.3"
 
 [dev-dependencies]
 easy-ext = "1"
-itertools = "0.11"
 rustversion = "1"
 tempfile = "3"
 
+[lints]
+workspace = true
+
+[workspace]
+resolver = "2"
+
+# This table is shared by projects under https://github.com/taiki-e.
+# It is not intended for manual editing.
+[workspace.lints.rust]
+improper_ctypes = "warn"
+improper_ctypes_definitions = "warn"
+non_ascii_idents = "warn"
+rust_2018_idioms = "warn"
+single_use_lifetimes = "warn"
+unreachable_pub = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+[workspace.lints.clippy]
+all = "warn" # Downgrade deny-by-default lints
+pedantic = "warn"
+as_ptr_cast_mut = "warn"
+default_union_representation = "warn"
+inline_asm_x86_att_syntax = "warn"
+trailing_empty_array = "warn"
+transmute_undefined_repr = "warn"
+undocumented_unsafe_blocks = "warn"
+# Suppress buggy or noisy clippy lints
+borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286
+doc_markdown = { level = "allow", priority = 1 }
+float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
+manual_assert = { level = "allow", priority = 1 }
+manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
+missing_errors_doc = { level = "allow", priority = 1 }
+module_name_repetitions = { level = "allow", priority = 1 }
+similar_names = { level = "allow", priority = 1 }
+single_match = { level = "allow", priority = 1 }
+single_match_else = { level = "allow", priority = 1 }
+struct_excessive_bools = { level = "allow", priority = 1 }
+too_many_arguments = { level = "allow", priority = 1 }
+too_many_lines = { level = "allow", priority = 1 }
+type_complexity = { level = "allow", priority = 1 }
+
 [profile.release]
+codegen-units = 1
+lto = true
 strip = "symbols"

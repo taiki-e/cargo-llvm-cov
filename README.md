@@ -24,6 +24,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
+  - [Display coverage in VS Code](#display-coverage-in-vs-code)
   - [Environment variables](#environment-variables)
   - [Additional JSON information](#additional-json-information)
 - [Installation](#installation)
@@ -132,8 +133,8 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
-        --hide-instantiations
-            Hide instantiations from report
+        --show-instantiations
+            Show instantiations in report
 
         --no-cfg-coverage
             Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
@@ -148,8 +149,14 @@ OPTIONS:
         --no-clean
             Build without cleaning any old build artifacts
 
+        --fail-under-functions <MIN>
+            Exit with a status of 1 if the total function coverage is less than MIN percent
+
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
+
+        --fail-under-regions <MIN>
+            Exit with a status of 1 if the total region coverage is less than MIN percent
 
         --fail-uncovered-lines <MAX>
             Exit with a status of 1 if the uncovered lines are greater than MAX
@@ -411,6 +418,8 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov report --lcov # generate report without tests
 ```
 
+Note: To include coverage for doctests you also need to pass `--doctests` to `cargo llvm-cov report`.
+
 ### Get coverage of C/C++ code linked to Rust library/binary
 
 Set `CC`, `CXX`, `LLVM_COV`, and `LLVM_PROFDATA` environment variables to Clang/LLVM compatible with the LLVM version used in rustc, and run cargo-llvm-cov with `--include-ffi` flag.
@@ -428,8 +437,11 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 `cargo test`, `cargo run`, and [`cargo nextest`][nextest] are available as builtin, but cargo-llvm-cov can also be used for arbitrary binaries built using cargo (including other cargo subcommands or external tests that use make, [xtask], etc.)
 
 ```sh
-source <(cargo llvm-cov show-env --export-prefix) # Set the environment variables needed to get coverage.
-cargo llvm-cov clean --workspace # Remove artifacts that may affect the coverage results.
+# Set the environment variables needed to get coverage.
+source <(cargo llvm-cov show-env --export-prefix)
+# Remove artifacts that may affect the coverage results.
+# This command should be called after show-env.
+cargo llvm-cov clean --workspace
 # Above two commands should be called before build binaries.
 
 cargo build # Build rust binaries.
@@ -438,6 +450,10 @@ cargo build # Build rust binaries.
 
 cargo llvm-cov report --lcov # Generate report without tests.
 ```
+
+Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest` commands.
+
+Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
 
 ### Exclude file from coverage
 
@@ -449,14 +465,14 @@ cargo llvm-cov --open --ignore-filename-regex build
 
 ### Exclude function from coverage
 
-To exclude the specific function from coverage, use the [`#[no_coverage]` attribute][rust-lang/rust#84605].
+To exclude the specific function from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
 
-Since `#[no_coverage]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
+Since `#[coverage(off)]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
-#![cfg_attr(coverage_nightly, feature(no_coverage))]
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-#[cfg_attr(coverage_nightly, no_coverage)]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn exclude_from_coverage() {
     // ...
 }
@@ -467,7 +483,11 @@ cfgs are set under the following conditions:
 - `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
 - `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
-If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate.
+If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
+
+cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of coverage-helper crate.
+
+**Note:** `#[coverage(off)]` was previously named `#[no_coverage]`. When using `#[no_coverage]` in the old nightly, replace `feature(coverage_attribute)` with `feature(no_coverage)`, `coverage(off)` with `no_coverage`, and `coverage-helper` 0.2+ with `coverage-helper` 0.1.
 
 ### Continuous Integration
 
@@ -484,7 +504,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Rust
         run: rustup update stable
       - name: Install cargo-llvm-cov
@@ -515,6 +535,18 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
 ```
 
 Note that [the way Codecov shows region/branch coverage is not very good](https://github.com/taiki-e/cargo-llvm-cov/pull/255#issuecomment-1513318191).
+
+### Display coverage in VS Code
+
+You can display coverage in VS Code using [Coverage Gutters](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters).
+
+Coverage Gutters supports lcov style coverage file and detects `lcov.info` files at the top level or in the `coverage` directory. Below is an example command to generate the coverage file.
+
+```sh
+cargo llvm-cov --lcov --output-path lcov.info
+```
+
+You may need to click the "Watch" label in the bottom bar of VS Code to display coverage.
 
 ### Environment variables
 
@@ -564,7 +596,7 @@ cargo-llvm-cov --json | some-program
 cargo +stable install cargo-llvm-cov --locked
 ```
 
-Currently, installing cargo-llvm-cov requires rustc 1.64+.
+Currently, installing cargo-llvm-cov requires rustc 1.70+.
 
 cargo-llvm-cov is usually runnable with Cargo versions older than the Rust version
 required for installation (e.g., `cargo +1.60 llvm-cov`). Currently, to run
@@ -583,7 +615,7 @@ Prebuilt binaries are available for macOS, Linux (gnu and musl), and Windows (st
 # Get host target
 host=$(rustc -Vv | grep host | sed 's/host: //')
 # Download binary and install to $HOME/.cargo/bin
-curl -LsSf https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz | tar xzf - -C $HOME/.cargo/bin
+curl --proto '=https' --tlsv1.2 -fsSL https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz | tar xzf - -C "$HOME/.cargo/bin"
 ```
 
 </details>
@@ -627,7 +659,7 @@ scoop install cargo-llvm-cov
 <!-- omit in toc -->
 ### Via cargo-binstall
 
-You can install cargo-llvm-cov using [cargo-binstall](https://github.com/ryankurte/cargo-binstall):
+You can install cargo-llvm-cov using [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
 
 ```sh
 cargo binstall cargo-llvm-cov
@@ -636,7 +668,7 @@ cargo binstall cargo-llvm-cov
 <!-- omit in toc -->
 ### Via pacman (Arch Linux)
 
-You can install cargo-llvm-cov from the [community repository](https://archlinux.org/packages/community/x86_64/cargo-llvm-cov):
+You can install cargo-llvm-cov from the [extra repository](https://archlinux.org/packages/extra/x86_64/cargo-llvm-cov):
 
 ```sh
 pacman -S cargo-llvm-cov
@@ -667,7 +699,7 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [codecov]: https://codecov.io
 [coverage-helper]: https://github.com/taiki-e/coverage-helper
 [instrument-coverage]: https://doc.rust-lang.org/rustc/instrument-coverage.html
-[nextest]: https://nexte.st
+[nextest]: https://nexte.st/book/test-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
 [rust-lang/rust#79649]: https://github.com/rust-lang/rust/issues/79649
 [rust-lang/rust#84605]: https://github.com/rust-lang/rust/issues/84605
