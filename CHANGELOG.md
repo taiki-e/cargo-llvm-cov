@@ -10,6 +10,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Make `--hide-instantiations` flag default, and add `--show-instantiations` flag to allow opt-in of the previous behavior. ([#330](https://github.com/taiki-e/cargo-llvm-cov/pull/330))
+
+- Support `cargo llvm-cov nextest --archive-file`. ([#266](https://github.com/taiki-e/cargo-llvm-cov/pull/266), thanks @magnusja)
+
+- Add hint about cfgs. ([#330](https://github.com/taiki-e/cargo-llvm-cov/pull/330))
+
 ## [0.5.39] - 2023-12-16
 
 - Remove dependency on `is-terminal`.
