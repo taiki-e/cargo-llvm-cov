@@ -74,6 +74,27 @@ impl Context {
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
+        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+            && (!args.cov.no_cfg_coverage
+                || ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly)
+        {
+            let mut cfgs = String::new();
+            let mut flags = String::new();
+            if !args.cov.no_cfg_coverage {
+                cfgs.push_str("cfg(coverage)");
+                flags.push_str("--no-cfg-coverage");
+            }
+            if ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly {
+                if cfgs.is_empty() {
+                    cfgs.push_str("cfg(coverage_nightly)");
+                    flags.push_str("--no-cfg-coverage-nightly");
+                } else {
+                    cfgs.push_str(" and cfg(coverage_nightly)");
+                    flags.push_str(" and --no-cfg-coverage-nightly");
+                }
+            }
+            info!("cargo-llvm-cev currently setting {cfgs}; you can opt-out it by passing {flags}");
+        }
         if args.cov.output_dir.is_none() && args.cov.html {
             args.cov.output_dir = Some(ws.output_dir.clone());
         }
