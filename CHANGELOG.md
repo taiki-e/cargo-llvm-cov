@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.0] - 2023-12-28
+
 - Make `--hide-instantiations` flag default, and add `--show-instantiations` flag to allow opt-in of the previous behavior. ([#330](https://github.com/taiki-e/cargo-llvm-cov/pull/330))
 
 - Support `cargo llvm-cov nextest --archive-file`. ([#266](https://github.com/taiki-e/cargo-llvm-cov/pull/266), thanks @magnusja)
@@ -582,7 +584,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.39...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.39...v0.6.0
 [0.5.39]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.38...v0.5.39
 [0.5.38]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.37...v0.5.38
 [0.5.37]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.36...v0.5.37
