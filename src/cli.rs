@@ -368,10 +368,10 @@ impl Args {
 
                 // build options
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
-                Long("profile") if subcommand != Subcommand::Nextest => {
+                Long("profile") if !subcommand.is_nextest_based() => {
                     parse_opt_passthrough!(profile);
                 }
-                Long("cargo-profile") if subcommand == Subcommand::Nextest => {
+                Long("cargo-profile") if subcommand.is_nextest_based() => {
                     parse_opt_passthrough!(profile);
                 }
                 Long("target") => parse_opt_passthrough!(target),
@@ -909,6 +909,7 @@ pub(crate) enum Subcommand {
     /// Run tests with cargo nextest
     Nextest,
 
+    /// Build and archive tests with cargo nextest
     NextestArchive,
 
     // internal (unstable)
@@ -956,6 +957,10 @@ impl Subcommand {
             Self::NextestArchive => "nextest-archive",
             Self::Demangle => "demangle",
         }
+    }
+
+    pub(crate) fn is_nextest_based(self) -> bool {
+        matches!(self, Self::Nextest | Self::NextestArchive)
     }
 }
 

@@ -105,7 +105,7 @@ impl Context {
                 "cargo-llvm-cov subcommands other than report and clean may not work correctly \
                  in context where environment variables are set by show-env; consider using \
                  normal {} commands",
-                if args.subcommand == Subcommand::Nextest { "cargo-nextest" } else { "cargo" }
+                if args.subcommand.is_nextest_based() { "cargo-nextest" } else { "cargo" }
             );
         }
 
