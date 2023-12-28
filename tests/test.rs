@@ -18,8 +18,8 @@ const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextes
 
 fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     vec![
-        ("txt", &["--text"]),
-        ("hide-instantiations.txt", &["--text", "--hide-instantiations"]),
+        ("txt", &["--text", "--show-instantiations"]),
+        ("hide-instantiations.txt", &["--text"]),
         ("summary.txt", &[]),
         ("json", &["--json", "--summary-only"]),
         // TODO: full JSON output is unstable between platform.

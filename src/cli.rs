@@ -222,7 +222,7 @@ impl Args {
         let mut failure_mode = None;
         let mut ignore_filename_regex = None;
         let mut disable_default_ignore_filename_regex = false;
-        let mut hide_instantiations = false;
+        let mut show_instantiations = false;
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
         let mut no_report = false;
@@ -396,7 +396,12 @@ impl Args {
                 Long("disable-default-ignore-filename-regex") => {
                     parse_flag!(disable_default_ignore_filename_regex);
                 }
-                Long("hide-instantiations") => parse_flag!(hide_instantiations),
+                Long("show-instantiations") => parse_flag!(show_instantiations),
+                Long("hide-instantiations") => {
+                    // The following warning is a hint, so it should not be promoted to an error.
+                    let _guard = term::warn::ignore();
+                    warn!("--hide-instantiations is now enabled by default");
+                }
                 Long("no-cfg-coverage") => parse_flag!(no_cfg_coverage),
                 Long("no-cfg-coverage-nightly") => parse_flag!(no_cfg_coverage_nightly),
                 Long("no-report") => parse_flag!(no_report),
@@ -816,7 +821,7 @@ impl Args {
                 failure_mode,
                 ignore_filename_regex,
                 disable_default_ignore_filename_regex,
-                hide_instantiations,
+                show_instantiations,
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,
                 no_report,
@@ -1023,8 +1028,8 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
     pub(crate) disable_default_ignore_filename_regex: bool,
-    /// Hide instantiations from report
-    pub(crate) hide_instantiations: bool,
+    /// Show instantiations in report
+    pub(crate) show_instantiations: bool,
     /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
     pub(crate) no_cfg_coverage: bool,
     /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
