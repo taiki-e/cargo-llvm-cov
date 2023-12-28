@@ -82,6 +82,9 @@ jobs:
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
+          cd ../real1
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst
+          cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -eEuxo pipefail
