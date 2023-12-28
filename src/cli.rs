@@ -368,10 +368,10 @@ impl Args {
 
                 // build options
                 Short('r') | Long("release") => parse_flag_passthrough!(release),
-                Long("profile") if subcommand != Subcommand::Nextest => {
+                Long("profile") if !subcommand.is_nextest_based() => {
                     parse_opt_passthrough!(profile);
                 }
-                Long("cargo-profile") if subcommand == Subcommand::Nextest => {
+                Long("cargo-profile") if subcommand.is_nextest_based() => {
                     parse_opt_passthrough!(profile);
                 }
                 Long("target") => parse_opt_passthrough!(target),
@@ -444,7 +444,11 @@ impl Args {
                 Short('F' | 'j') | Long("features" | "jobs")
                     if matches!(
                         subcommand,
-                        Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest
+                        Subcommand::None
+                            | Subcommand::Test
+                            | Subcommand::Run
+                            | Subcommand::Nextest
+                            | Subcommand::NextestArchive
                     ) =>
                 {
                     parse_opt_passthrough!(());
@@ -457,7 +461,11 @@ impl Args {
                     | "--ignore-rust-version",
                 ) if matches!(
                     subcommand,
-                    Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest
+                    Subcommand::None
+                        | Subcommand::Test
+                        | Subcommand::Run
+                        | Subcommand::Nextest
+                        | Subcommand::NextestArchive
                 ) =>
                 {
                     passthrough!();
@@ -520,12 +528,14 @@ impl Args {
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
                 Subcommand::ShowEnv | Subcommand::Report if doctests => {}
-                Subcommand::Nextest => bail!("doctest is not supported for nextest"),
+                Subcommand::Nextest | Subcommand::NextestArchive => {
+                    bail!("doctest is not supported for nextest")
+                }
                 _ => unexpected(flag, subcommand)?,
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Nextest => {}
+            Subcommand::None | Subcommand::Nextest | Subcommand::NextestArchive => {}
             Subcommand::Test => {
                 if no_run {
                     unexpected("--no-run", subcommand)?;
@@ -571,7 +581,11 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest => {}
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Run
+            | Subcommand::Nextest
+            | Subcommand::NextestArchive => {}
             _ => {
                 if !bin.is_empty() {
                     unexpected("--bin", subcommand)?;
@@ -600,7 +614,11 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Test | Subcommand::Nextest | Subcommand::Clean => {}
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Nextest
+            | Subcommand::NextestArchive
+            | Subcommand::Clean => {}
             _ => {
                 if workspace {
                     unexpected("--workspace", subcommand)?;
@@ -891,6 +909,9 @@ pub(crate) enum Subcommand {
     /// Run tests with cargo nextest
     Nextest,
 
+    /// Build and archive tests with cargo nextest
+    NextestArchive,
+
     // internal (unstable)
     Demangle,
 }
@@ -902,10 +923,12 @@ static CARGO_LLVM_COV_REPORT_USAGE: &str = include_str!("../docs/cargo-llvm-cov-
 static CARGO_LLVM_COV_CLEAN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-clean.txt");
 static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-cov-show-env.txt");
 static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
+static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
+    include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
 
 impl Subcommand {
     fn can_passthrough(subcommand: Self) -> bool {
-        matches!(subcommand, Self::Test | Self::Run | Self::Nextest)
+        matches!(subcommand, Self::Test | Self::Run | Self::Nextest | Self::NextestArchive)
     }
 
     fn help_text(subcommand: Self) -> &'static str {
@@ -917,6 +940,7 @@ impl Subcommand {
             Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest => CARGO_LLVM_COV_NEXTEST_USAGE,
+            Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
             Self::Demangle => "", // internal API
         }
     }
@@ -930,8 +954,13 @@ impl Subcommand {
             Self::Clean => "clean",
             Self::ShowEnv => "show-env",
             Self::Nextest => "nextest",
+            Self::NextestArchive => "nextest-archive",
             Self::Demangle => "demangle",
         }
+    }
+
+    pub(crate) fn is_nextest_based(self) -> bool {
+        matches!(self, Self::Nextest | Self::NextestArchive)
     }
 }
 
@@ -946,6 +975,7 @@ impl FromStr for Subcommand {
             "clean" => Ok(Self::Clean),
             "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest),
+            "nextest-archive" => Ok(Self::NextestArchive),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
         }
