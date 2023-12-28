@@ -83,8 +83,8 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
-        --hide-instantiations
-            Hide instantiations from report
+        --show-instantiations
+            Show instantiations in report
 
         --fail-under-functions <MIN>
             Exit with a status of 1 if the total function coverage is less than MIN percent

@@ -921,7 +921,7 @@ impl Format {
         match self {
             Self::Text | Self::Html => {
                 cmd.args([
-                    &format!("-show-instantiations={}", !cx.args.cov.hide_instantiations),
+                    &format!("-show-instantiations={}", cx.args.cov.show_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     "-show-branches=count",
@@ -1076,7 +1076,7 @@ impl Format {
 }
 
 fn ignore_filename_regex(cx: &Context) -> Option<String> {
-    // On windows, we should escape the separator.
+    // On Windows, we should escape the separator.
     const SEPARATOR: &str = if cfg!(windows) { "\\\\" } else { "/" };
 
     #[derive(Default)]
