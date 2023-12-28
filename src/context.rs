@@ -142,6 +142,8 @@ impl Context {
                         // suggest installing llvm-tools-preview via rustup.
                         // Include --toolchain flag because the user may be using toolchain
                         // override shorthand (+toolchain).
+                        // Note: In some toolchain versions llvm-tools-preview can also be installed as llvm-tools,
+                        // but it is an upstream bug. https://github.com/rust-lang/rust/issues/119164
                         let mut cmd = cmd!(
                             "rustup",
                             "component",
