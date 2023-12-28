@@ -922,6 +922,8 @@ static CARGO_LLVM_COV_REPORT_USAGE: &str = include_str!("../docs/cargo-llvm-cov-
 static CARGO_LLVM_COV_CLEAN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-clean.txt");
 static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-cov-show-env.txt");
 static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
+static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
+    include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
 
 impl Subcommand {
     fn can_passthrough(subcommand: Self) -> bool {
@@ -937,7 +939,7 @@ impl Subcommand {
             Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest => CARGO_LLVM_COV_NEXTEST_USAGE,
-            Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_USAGE,
+            Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
             Self::Demangle => "", // internal API
         }
     }
