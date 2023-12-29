@@ -93,7 +93,7 @@ impl Context {
                     flags.push_str(" and --no-cfg-coverage-nightly");
                 }
             }
-            info!("cargo-llvm-cev currently setting {cfgs}; you can opt-out it by passing {flags}");
+            info!("cargo-llvm-cov currently setting {cfgs}; you can opt-out it by passing {flags}");
         }
         if args.cov.output_dir.is_none() && args.cov.html {
             args.cov.output_dir = Some(ws.output_dir.clone());
