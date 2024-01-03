@@ -195,9 +195,11 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
         // Workaround for https://github.com/rust-lang/rust/issues/91092.
         // Unnecessary since https://github.com/rust-lang/rust/pull/111469.
-        if cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor <= 71
-            || !cx.ws.rustc_version.nightly && cx.ws.rustc_version.minor < 71
-        {
+        if if cx.ws.rustc_version.nightly {
+            cx.ws.rustc_version.minor <= 71
+        } else {
+            cx.ws.rustc_version.minor < 71
+        } {
             flags.push("-C");
             flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         }
