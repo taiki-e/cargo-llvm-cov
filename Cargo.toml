@@ -57,6 +57,7 @@ resolver = "2"
 [workspace.lints.rust]
 improper_ctypes = "warn"
 improper_ctypes_definitions = "warn"
+missing_debug_implementations = "warn"
 non_ascii_idents = "warn"
 rust_2018_idioms = "warn"
 single_use_lifetimes = "warn"
