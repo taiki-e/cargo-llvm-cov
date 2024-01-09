@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 #![forbid(unsafe_code)]
-#![allow(clippy::struct_field_names)]
 
 // Refs:
 // - https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html
