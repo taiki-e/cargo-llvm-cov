@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `--target` option for `cargo llvm-cov nextest --archive-file`. ([#334](https://github.com/taiki-e/cargo-llvm-cov/pull/334))
+
+- Support `--no-cfg-coverage` and `--no-cfg-coverage-nightly` flags in `cargo llvm-cov show-env`. ([#333](https://github.com/taiki-e/cargo-llvm-cov/pull/333))
+
 ## [0.6.0] - 2023-12-28
 
 - Make `--hide-instantiations` flag default, and add `--show-instantiations` flag to allow opt-in of the previous behavior. ([#330](https://github.com/taiki-e/cargo-llvm-cov/pull/330))
