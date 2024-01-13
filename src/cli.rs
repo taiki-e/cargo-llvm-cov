@@ -596,12 +596,6 @@ impl Args {
                 if !exclude_from_report.is_empty() {
                     unexpected("--exclude-from-report", subcommand)?;
                 }
-                if no_cfg_coverage {
-                    unexpected("--no-cfg-coverage", subcommand)?;
-                }
-                if no_cfg_coverage_nightly {
-                    unexpected("--no-cfg-coverage-nightly", subcommand)?;
-                }
                 if no_report {
                     unexpected("--no-report", subcommand)?;
                 }
@@ -610,6 +604,22 @@ impl Args {
                 }
                 if ignore_run_fail {
                     unexpected("--ignore-run-fail", subcommand)?;
+                }
+            }
+        }
+        match subcommand {
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Run
+            | Subcommand::Nextest
+            | Subcommand::NextestArchive
+            | Subcommand::ShowEnv => {}
+            _ => {
+                if no_cfg_coverage {
+                    unexpected("--no-cfg-coverage", subcommand)?;
+                }
+                if no_cfg_coverage_nightly {
+                    unexpected("--no-cfg-coverage-nightly", subcommand)?;
                 }
             }
         }

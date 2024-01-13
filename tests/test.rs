@@ -288,15 +288,17 @@ fn show_env() {
 #[allow(clippy::single_element_loop)]
 #[test]
 fn invalid_arg() {
-    for subcommand in ["", "run", "clean", "show-env", "nextest"] {
+    for subcommand in
+        ["", "test", "run", "report", "clean", "show-env", "nextest", "nextest-archive"]
+    {
         if subcommand != "show-env" {
             cargo_llvm_cov(subcommand)
                 .arg("--export-prefix")
                 .assert_failure()
                 .stderr_contains("invalid option '--export-prefix'");
         }
-        if !subcommand.is_empty() {
-            if subcommand == "nextest" {
+        if !matches!(subcommand, "" | "test") {
+            if matches!(subcommand, "nextest" | "nextest-archive") {
                 cargo_llvm_cov(subcommand)
                     .arg("--doc")
                     .assert_failure()
@@ -310,7 +312,7 @@ fn invalid_arg() {
                     .arg("--doc")
                     .assert_failure()
                     .stderr_contains("invalid option '--doc'");
-                if subcommand != "show-env" {
+                if !matches!(subcommand, "report" | "show-env") {
                     cargo_llvm_cov(subcommand)
                         .arg("--doctests")
                         .assert_failure()
@@ -318,7 +320,7 @@ fn invalid_arg() {
                 }
             }
         }
-        if !matches!(subcommand, "" | "nextest") {
+        if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive") {
             for arg in [
                 "--lib",
                 "--bins",
@@ -339,13 +341,11 @@ fn invalid_arg() {
                 ));
             }
         }
-        if !matches!(subcommand, "" | "nextest" | "run") {
+        if !matches!(subcommand, "" | "test" | "run" | "nextest" | "nextest-archive") {
             for arg in [
                 "--bin=v",
                 "--example=v",
                 "--exclude-from-report=v",
-                "--no-cfg-coverage",
-                "--no-cfg-coverage-nightly",
                 "--no-report",
                 "--no-clean",
                 "--ignore-run-fail",
@@ -356,7 +356,15 @@ fn invalid_arg() {
                 ));
             }
         }
-        if !matches!(subcommand, "" | "nextest" | "clean") {
+        if !matches!(subcommand, "" | "test" | "run" | "nextest" | "nextest-archive" | "show-env") {
+            for arg in ["--no-cfg-coverage", "--no-cfg-coverage-nightly"] {
+                cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
+                    "invalid option '{}' for subcommand '{subcommand}'",
+                    arg.strip_suffix("=v").unwrap_or(arg)
+                ));
+            }
+        }
+        if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive" | "clean") {
             for arg in ["--workspace"] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
                     "invalid option '{}' for subcommand '{subcommand}'",
