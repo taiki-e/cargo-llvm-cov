@@ -90,7 +90,7 @@ fn try_main() -> Result<()> {
                 generate_report(cx)?;
             }
         }
-        Subcommand::Nextest => {
+        Subcommand::Nextest { .. } => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
@@ -721,9 +721,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
-    if cx.args.subcommand == Subcommand::Nextest
-        && cx.args.cargo_args.iter().any(|a| a == "--archive-file")
-    {
+    if matches!(cx.args.subcommand, Subcommand::Nextest { archive_file: true }) {
         target_dir.push("target");
     }
     // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html

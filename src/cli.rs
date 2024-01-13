@@ -374,7 +374,7 @@ impl Args {
                 Long("cargo-profile") if subcommand.is_nextest_based() => {
                     parse_opt_passthrough!(profile);
                 }
-                Long("target") => parse_opt_passthrough!(target),
+                Long("target") => parse_opt!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
@@ -447,7 +447,7 @@ impl Args {
                         Subcommand::None
                             | Subcommand::Test
                             | Subcommand::Run
-                            | Subcommand::Nextest
+                            | Subcommand::Nextest { .. }
                             | Subcommand::NextestArchive
                     ) =>
                 {
@@ -464,7 +464,7 @@ impl Args {
                     Subcommand::None
                         | Subcommand::Test
                         | Subcommand::Run
-                        | Subcommand::Nextest
+                        | Subcommand::Nextest { .. }
                         | Subcommand::NextestArchive
                 ) =>
                 {
@@ -489,7 +489,7 @@ impl Args {
                         after_subcommand = true;
                     } else {
                         if after_subcommand
-                            && subcommand == Subcommand::Nextest
+                            && matches!(subcommand, Subcommand::Nextest { .. })
                             && matches!(
                                 val.as_str(),
                                 // from `cargo nextest --help`
@@ -514,6 +514,12 @@ impl Args {
 
         term::set_coloring(&mut color);
 
+        if matches!(subcommand, Subcommand::Nextest { .. }) {
+            subcommand = Subcommand::Nextest {
+                archive_file: cargo_args.iter().any(|a| a == "--archive-file"),
+            };
+        }
+
         // unexpected options
         match subcommand {
             Subcommand::ShowEnv => {}
@@ -528,14 +534,14 @@ impl Args {
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
                 Subcommand::ShowEnv | Subcommand::Report if doctests => {}
-                Subcommand::Nextest | Subcommand::NextestArchive => {
+                Subcommand::Nextest { .. } | Subcommand::NextestArchive => {
                     bail!("doctest is not supported for nextest")
                 }
                 _ => unexpected(flag, subcommand)?,
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Nextest | Subcommand::NextestArchive => {}
+            Subcommand::None | Subcommand::Nextest { .. } | Subcommand::NextestArchive => {}
             Subcommand::Test => {
                 if no_run {
                     unexpected("--no-run", subcommand)?;
@@ -584,7 +590,7 @@ impl Args {
             Subcommand::None
             | Subcommand::Test
             | Subcommand::Run
-            | Subcommand::Nextest
+            | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive => {}
             _ => {
                 if !bin.is_empty() {
@@ -611,7 +617,7 @@ impl Args {
             Subcommand::None
             | Subcommand::Test
             | Subcommand::Run
-            | Subcommand::Nextest
+            | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
             | Subcommand::ShowEnv => {}
             _ => {
@@ -626,7 +632,7 @@ impl Args {
         match subcommand {
             Subcommand::None
             | Subcommand::Test
-            | Subcommand::Nextest
+            | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
             | Subcommand::Clean => {}
             _ => {
@@ -917,7 +923,9 @@ pub(crate) enum Subcommand {
     ShowEnv,
 
     /// Run tests with cargo nextest
-    Nextest,
+    Nextest {
+        archive_file: bool,
+    },
 
     /// Build and archive tests with cargo nextest
     NextestArchive,
@@ -938,7 +946,7 @@ static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
 
 impl Subcommand {
     fn can_passthrough(subcommand: Self) -> bool {
-        matches!(subcommand, Self::Test | Self::Run | Self::Nextest | Self::NextestArchive)
+        matches!(subcommand, Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive)
     }
 
     fn help_text(subcommand: Self) -> &'static str {
@@ -949,7 +957,7 @@ impl Subcommand {
             Self::Report => CARGO_LLVM_COV_REPORT_USAGE,
             Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
-            Self::Nextest => CARGO_LLVM_COV_NEXTEST_USAGE,
+            Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
             Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
             Self::Demangle => "", // internal API
         }
@@ -963,14 +971,14 @@ impl Subcommand {
             Self::Report => "report",
             Self::Clean => "clean",
             Self::ShowEnv => "show-env",
-            Self::Nextest => "nextest",
+            Self::Nextest { .. } => "nextest",
             Self::NextestArchive => "nextest-archive",
             Self::Demangle => "demangle",
         }
     }
 
     pub(crate) fn is_nextest_based(self) -> bool {
-        matches!(self, Self::Nextest | Self::NextestArchive)
+        matches!(self, Self::Nextest { .. } | Self::NextestArchive)
     }
 }
 
@@ -984,7 +992,7 @@ impl FromStr for Subcommand {
             "report" => Ok(Self::Report),
             "clean" => Ok(Self::Clean),
             "show-env" => Ok(Self::ShowEnv),
-            "nextest" => Ok(Self::Nextest),
+            "nextest" => Ok(Self::Nextest { archive_file: false }),
             "nextest-archive" => Ok(Self::NextestArchive),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),

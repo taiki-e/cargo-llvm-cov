@@ -85,6 +85,11 @@ jobs:
           cd ../real1
           cargo llvm-cov nextest-archive --archive-file a.tar.zst
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
+          rm a.tar.zst
+          cargo clean
+          host=$(rustc -Vv | grep host | sed 's/host: //')
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
+          cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70 --target "${host}"
         working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -eEuxo pipefail

@@ -215,6 +215,12 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.arg("--exclude");
         cmd.arg(exclude);
     }
+    if !matches!(cx.args.subcommand, Subcommand::Nextest { archive_file: true }) {
+        if let Some(target) = &cx.args.target {
+            cmd.arg("--target");
+            cmd.arg(target);
+        }
+    }
 
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
@@ -265,9 +271,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/265
 fn add_target_dir(args: &Args, cmd: &mut ProcessBuilder, target_dir: &Utf8Path) {
-    if args.subcommand == Subcommand::Nextest
-        && args.cargo_args.contains(&"--archive-file".to_string())
-    {
+    if matches!(args.subcommand, Subcommand::Nextest { archive_file: true }) {
         cmd.arg("--extract-to");
     } else {
         cmd.arg("--target-dir");
