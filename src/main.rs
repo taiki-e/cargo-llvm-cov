@@ -11,7 +11,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
     io::{self, BufRead, Write},
-    path::Path,
+    path::{Path, PathBuf},
     time::SystemTime,
 };
 
@@ -104,6 +104,15 @@ fn try_main() -> Result<()> {
             clean::clean_partial(cx)?;
             create_dirs(cx)?;
             archive_nextest(cx)?;
+        }
+        Subcommand::WasmPack => {
+            let cx = &Context::new(args)?;
+            clean::clean_partial(cx)?;
+            create_dirs(cx)?;
+            wasm_pack_test(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
+            }
         }
         Subcommand::None | Subcommand::Test => {
             let cx = &Context::new(args)?;
@@ -496,6 +505,72 @@ fn run_run(cx: &Context) -> Result<()> {
     Ok(())
 }
 
+// Sanitizes the crate name so we know which .ll file to compile
+fn crate_name_to_llvm_name(crate_name: &str) -> String {
+    crate_name.replace('-', "_")
+}
+
+fn compile_ll_file(cx: &Context, prefix: &str) -> Result<()> {
+    // There are multiple ll files generated per crate, but only one wasm which has
+    // an ll file with the same file stem sitting next to it.
+    // That's the ll file we want.
+    let path = wasm_target_dir(&cx.ws);
+    let glob = glob::glob(
+        Utf8Path::new(&glob::Pattern::escape(&path.to_string()))
+            .join(format!("{prefix}-*.wasm"))
+            .as_str(),
+    )?;
+    let Some(newest) = glob
+        .filter_map(Result::ok)
+        .max_by_key(|p| std::fs::metadata(p).unwrap().created().unwrap())
+    else {
+        return Ok(());
+    };
+
+    let stem = newest.file_stem().unwrap().to_str().unwrap();
+    let src = format!("{path}/{stem}.ll");
+    let dst = format!("{path}/{stem}.o");
+
+    let mut cmd = cmd!("clang");
+    cmd.arg(src);
+    cmd.arg("-Wno-override-module");
+    cmd.arg("-c");
+    cmd.arg("-o");
+    cmd.arg(dst);
+    cmd.run()?;
+    Ok(())
+}
+
+fn compile_ll_files(cx: &Context) -> Result<()> {
+    for id in &cx.ws.metadata.workspace_members {
+        let prefix = crate_name_to_llvm_name(&cx.ws.metadata.packages[&id].name);
+        compile_ll_file(cx, &prefix)?;
+    }
+    Ok(())
+}
+
+fn wasm_profraw_prefix(ws: &Workspace) -> String {
+    format!("{}-", ws.name)
+}
+
+fn wasm_pack_test(cx: &Context) -> Result<()> {
+    let mut cmd = cmd!("wasm-pack");
+    cmd.arg("test");
+    cmd.arg("--coverage");
+    cmd.args(["--profraw-out", &cx.ws.target_dir.to_string()]);
+    cmd.args(["--profraw-prefix", &wasm_profraw_prefix(&cx.ws)]);
+    cmd.args(cx.args.cargo_args.clone());
+    cmd.args(["--target-dir", cx.ws.target_dir.as_ref()]);
+
+    // Emit llvm-ir to obtain debug info (https://github.com/hknio/code-coverage-for-webassembly)
+    cmd.env("RUSTFLAGS", "-Cinstrument-coverage -Zno-profiler-runtime --emit=llvm-ir");
+    cmd.run()?;
+
+    compile_ll_files(cx)?;
+
+    Ok(())
+}
+
 fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
     if cx.args.cov.no_report
         || cx.args.cov.output_dir.is_some()
@@ -509,9 +584,17 @@ fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
-    merge_profraw(cx).context("failed to merge profile data")?;
+    let profraws = merge_profraw(cx).context("failed to merge profile data")?;
 
-    let object_files = object_files(cx).context("failed to collect object files")?;
+    let mut object_files = object_files(cx).context("failed to collect object files")?;
+    object_files.append(&mut wasm_object_files(&cx.ws, &profraws));
+    if object_files.is_empty() {
+        warn!(
+            "not found object files (this may occur if \
+             show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
+             commands such as nextest archive are used",
+        );
+    }
     let ignore_filename_regex = ignore_filename_regex(cx);
     let format = Format::from_args(cx);
     format
@@ -613,6 +696,10 @@ fn generate_report(cx: &Context) -> Result<()> {
     Ok(())
 }
 
+fn wasm_target_dir(ws: &Workspace) -> Utf8PathBuf {
+    format!("{}/wasm32-unknown-unknown/debug/deps", ws.target_dir).into()
+}
+
 fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
     match &cx.ws.config.doc.browser {
         Some(browser) => {
@@ -627,7 +714,7 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-fn merge_profraw(cx: &Context) -> Result<()> {
+fn merge_profraw(cx: &Context) -> Result<Vec<PathBuf>> {
     // Convert raw profile data.
     let profraw_files = glob::glob(
         Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str())).join("*.profraw").as_str(),
@@ -642,7 +729,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         );
     }
     let mut input_files = String::new();
-    for path in profraw_files {
+    for path in &profraw_files {
         input_files.push_str(
             path.to_str().with_context(|| format!("{path:?} contains invalid utf-8 data"))?,
         );
@@ -666,7 +753,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         status!("Running", "{cmd}");
     }
     cmd.stdout_to_stderr().run()?;
-    Ok(())
+    Ok(profraw_files)
 }
 
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
@@ -807,15 +894,26 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
 
     // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
     files.sort_unstable();
-
-    if files.is_empty() {
-        warn!(
-            "not found object files (searched directories: {searched_dir}); this may occur if \
-             show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
-             commands such as nextest archive are used",
-        );
-    }
     Ok(files)
+}
+
+fn wasm_object_files(ws: &Workspace, profraws: &[PathBuf]) -> Vec<OsString> {
+    let mut ret = Vec::new();
+    for file in profraws {
+        let fname = file.file_name().unwrap().to_str().unwrap();
+        let prefix = format!("{}wbg-tmp-", wasm_profraw_prefix(ws));
+        let Some(stem): Option<PathBuf> = fname
+            .strip_prefix(&prefix)
+            .and_then(|s| s.strip_suffix(".wasm.profraw"))
+            .map(|s| s.into())
+        else {
+            // Didn't match prefix or suffix
+            continue;
+        };
+        let obj = wasm_target_dir(ws).join(format!("{}.o", stem.display()));
+        ret.push(obj.as_os_str().to_owned())
+    }
+    ret
 }
 
 struct Targets {
@@ -951,6 +1049,7 @@ impl Format {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
         }
+        cmd.args(["--sources", "."]);
 
         match self {
             Self::Text | Self::Html => {
