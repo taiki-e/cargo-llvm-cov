@@ -14,6 +14,7 @@ nextest
 notcovered
 profdata
 profraw
+profraws
 rustfilt
 TESTNAME
 trybuild
@@ -21,3 +22,4 @@ winapi
 xargo
 Xdemangler
 xtask
+Cinstrument

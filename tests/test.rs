@@ -341,7 +341,8 @@ fn invalid_arg() {
                 ));
             }
         }
-        if !matches!(subcommand, "" | "test" | "run" | "nextest" | "nextest-archive") {
+        if !matches!(subcommand, "" | "test" | "run" | "nextest" | "nextest-archive" | "wasm-pack")
+        {
             for arg in [
                 "--bin=v",
                 "--example=v",

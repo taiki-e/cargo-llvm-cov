@@ -17,7 +17,7 @@ use crate::{
     fs,
     metadata::PackageId,
     regex_vec::{RegexVec, RegexVecBuilder},
-    term,
+    term, wasm_target_dir,
 };
 
 pub(crate) fn run(args: &mut Args) -> Result<()> {

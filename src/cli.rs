@@ -541,7 +541,10 @@ impl Args {
             }
         }
         match subcommand {
-            Subcommand::None | Subcommand::Nextest { .. } | Subcommand::NextestArchive => {}
+            Subcommand::None
+            | Subcommand::Nextest { .. }
+            | Subcommand::NextestArchive
+            | Subcommand::WasmPack => {}
             Subcommand::Test => {
                 if no_run {
                     unexpected("--no-run", subcommand)?;
@@ -591,7 +594,8 @@ impl Args {
             | Subcommand::Test
             | Subcommand::Run
             | Subcommand::Nextest { .. }
-            | Subcommand::NextestArchive => {}
+            | Subcommand::NextestArchive
+            | Subcommand::WasmPack => {}
             _ => {
                 if !bin.is_empty() {
                     unexpected("--bin", subcommand)?;
@@ -619,6 +623,7 @@ impl Args {
             | Subcommand::Run
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
+            | Subcommand::WasmPack
             | Subcommand::ShowEnv => {}
             _ => {
                 if no_cfg_coverage {
@@ -634,7 +639,8 @@ impl Args {
             | Subcommand::Test
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
-            | Subcommand::Clean => {}
+            | Subcommand::Clean
+            | Subcommand::WasmPack => {}
             _ => {
                 if workspace {
                     unexpected("--workspace", subcommand)?;
@@ -930,6 +936,9 @@ pub(crate) enum Subcommand {
     /// Build and archive tests with cargo nextest
     NextestArchive,
 
+    /// Run tests with wasm-pack
+    WasmPack,
+
     // internal (unstable)
     Demangle,
 }
@@ -946,7 +955,10 @@ static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
 
 impl Subcommand {
     fn can_passthrough(subcommand: Self) -> bool {
-        matches!(subcommand, Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive)
+        matches!(
+            subcommand,
+            Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive | Self::WasmPack
+        )
     }
 
     fn help_text(subcommand: Self) -> &'static str {
@@ -959,6 +971,7 @@ impl Subcommand {
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
             Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
+            Self::WasmPack => todo!(),
             Self::Demangle => "", // internal API
         }
     }
@@ -973,6 +986,7 @@ impl Subcommand {
             Self::ShowEnv => "show-env",
             Self::Nextest { .. } => "nextest",
             Self::NextestArchive => "nextest-archive",
+            Self::WasmPack => "wasm-pack",
             Self::Demangle => "demangle",
         }
     }
@@ -994,6 +1008,7 @@ impl FromStr for Subcommand {
             "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest { archive_file: false }),
             "nextest-archive" => Ok(Self::NextestArchive),
+            "wasm-pack" => Ok(Self::WasmPack),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
         }
