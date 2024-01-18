@@ -1049,7 +1049,6 @@ impl Format {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
         }
-        cmd.args(["--sources", "."]);
 
         match self {
             Self::Text | Self::Html => {
