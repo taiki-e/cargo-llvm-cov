@@ -558,6 +558,7 @@ You can override these environment variables to change cargo-llvm-cov's behavior
 - `LLVM_PROFDATA` -- Override the path to `llvm-profdata`. See `LLVM_COV` environment variable for more.
 - `LLVM_COV_FLAGS` -- A space-separated list of additional flags to pass to all `llvm-cov` invocations that cargo-llvm-cov performs. See [LLVM documentation](https://llvm.org/docs/CommandGuide/llvm-cov.html) for available options.
 - `LLVM_PROFDATA_FLAGS` -- A space-separated list of additional flags to pass to all `llvm-profdata` invocations that cargo-llvm-cov performs. See [LLVM documentation](https://llvm.org/docs/CommandGuide/llvm-profdata.html) for available options.
+- `LLVM_PROFILE_FILE_NAME` -- Override the file name (the final component of the path) of the `LLVM_PROFILE_FILE`. See [LLVM documentation](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program) for available syntax.
 
 See also [environment variables that Cargo reads](https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-reads). cargo-llvm-cov respects many of them.
 
