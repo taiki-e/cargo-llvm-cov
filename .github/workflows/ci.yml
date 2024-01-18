@@ -94,8 +94,9 @@ jobs:
       #   working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -eEuxo pipefail
-          git clone --depth 1 https://github.com/taiki-e/easytime.git
+          git clone https://github.com/taiki-e/easytime.git
           cd easytime
+          git checkout 7ecb6e6
           cargo llvm-cov test --doctests --text --fail-under-lines 30
           # Test minimum runnable Cargo version.
           rustup toolchain add 1.60 --no-self-update
