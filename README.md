@@ -16,21 +16,23 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 
 **Table of Contents:**
 
-- [Usage](#usage)
-  - [Basic usage](#basic-usage)
-  - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
-  - [Get coverage of C/C++ code linked to Rust library/binary](#get-coverage-of-cc-code-linked-to-rust-librarybinary)
-  - [Get coverage of external tests](#get-coverage-of-external-tests)
-  - [Exclude file from coverage](#exclude-file-from-coverage)
-  - [Exclude function from coverage](#exclude-function-from-coverage)
-  - [Continuous Integration](#continuous-integration)
-  - [Display coverage in VS Code](#display-coverage-in-vs-code)
-  - [Environment variables](#environment-variables)
-  - [Additional JSON information](#additional-json-information)
-- [Installation](#installation)
-- [Known limitations](#known-limitations)
-- [Related Projects](#related-projects)
-- [License](#license)
+- [cargo-llvm-cov](#cargo-llvm-cov)
+  - [Usage](#usage)
+    - [Basic usage](#basic-usage)
+    - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
+    - [Get coverage of `wasm-pack test`](#get-coverage-of-wasm-pack-test)
+    - [Get coverage of C/C++ code linked to Rust library/binary](#get-coverage-of-cc-code-linked-to-rust-librarybinary)
+    - [Get coverage of external tests](#get-coverage-of-external-tests)
+    - [Exclude file from coverage](#exclude-file-from-coverage)
+    - [Exclude function from coverage](#exclude-function-from-coverage)
+    - [Continuous Integration](#continuous-integration)
+    - [Display coverage in VS Code](#display-coverage-in-vs-code)
+    - [Environment variables](#environment-variables)
+    - [Additional JSON information](#additional-json-information)
+  - [Installation](#installation)
+  - [Known limitations](#known-limitations)
+  - [Related Projects](#related-projects)
+  - [License](#license)
 
 ## Usage
 
@@ -419,6 +421,18 @@ cargo llvm-cov report --lcov # generate report without tests
 ```
 
 Note: To include coverage for doctests you also need to pass `--doctests` to `cargo llvm-cov report`.
+
+### Get coverage of `wasm-pack test`
+
+You can use the `wasm-pack` subcommand to run `wasm-pack test` and get coverage output from that.
+
+```sh
+cargo llvm-cov wasm-pack --chrome --headless
+```
+
+You can also merge this with normal `cargo test` [by following the instructions on merging](https://github.com/taiki-e/cargo-llvm-cov/pull/338).
+
+Note: This command is  experimental and sometimes breaks requiring a `cargo clean` to continue.
 
 ### Get coverage of C/C++ code linked to Rust library/binary
 
