@@ -900,6 +900,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
 fn wasm_object_files(ws: &Workspace, profraws: &[PathBuf]) -> Vec<OsString> {
     let mut ret = Vec::new();
     for file in profraws {
+        // The profraws on this list definitely have file names which are valid utf8
+        // otherwise they wouldn't have made it onto the list
         let fname = file.file_name().unwrap().to_str().unwrap();
         let prefix = format!("{}wbg-tmp-", wasm_profraw_prefix(ws));
         let Some(stem): Option<PathBuf> = fname
