@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support setting file name of `LLVM_PROFILE_FILE`. ([#340](https://github.com/taiki-e/cargo-llvm-cov/pull/340))
+
 ## [0.6.1] - 2024-01-13
 
 - Support `--target` option for `cargo llvm-cov nextest --archive-file`. ([#334](https://github.com/taiki-e/cargo-llvm-cov/pull/334))

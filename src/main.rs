@@ -210,28 +210,37 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
     }
 
-    let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
-    if is_nextest {
-        // https://github.com/taiki-e/cargo-llvm-cov/issues/258
-        // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
-        // Select the number of threads that is the same as the one nextest uses by default here.
-        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
-        // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
-        // TODO: should we respect custom test-threads?
-        // - If the number of threads specified by the user is negative or
-        //   less or equal to available cores, it should not really be a problem
-        //   because it does not exceed the number of available cores.
-        // - Even if the number of threads specified by the user is greater than
-        //   available cores, it is expected that the number of threads that can
-        //   write simultaneously will not exceed the number of available cores.
-        llvm_profile_file_name.push_str(&format!(
-            "-%{}m",
-            std::thread::available_parallelism().map_or(1, usize::from)
-        ));
-    } else {
-        llvm_profile_file_name.push_str("-%m");
-    }
-    llvm_profile_file_name.push_str(".profraw");
+    let llvm_profile_file_name =
+        if let Some(llvm_profile_file_name) = env::var("LLVM_PROFILE_FILE_NAME")? {
+            if !llvm_profile_file_name.ends_with(".profraw") {
+                bail!("extension of LLVM_PROFILE_FILE_NAME must be 'profraw'");
+            }
+            llvm_profile_file_name
+        } else {
+            let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
+            if is_nextest {
+                // https://github.com/taiki-e/cargo-llvm-cov/issues/258
+                // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+                // Select the number of threads that is the same as the one nextest uses by default here.
+                // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
+                // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
+                // TODO: should we respect custom test-threads?
+                // - If the number of threads specified by the user is negative or
+                //   less or equal to available cores, it should not really be a problem
+                //   because it does not exceed the number of available cores.
+                // - Even if the number of threads specified by the user is greater than
+                //   available cores, it is expected that the number of threads that can
+                //   write simultaneously will not exceed the number of available cores.
+                llvm_profile_file_name.push_str(&format!(
+                    "-%{}m",
+                    std::thread::available_parallelism().map_or(1, usize::from)
+                ));
+            } else {
+                llvm_profile_file_name.push_str("-%m");
+            }
+            llvm_profile_file_name.push_str(".profraw");
+            llvm_profile_file_name
+        };
     let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
 
     let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
@@ -621,9 +630,7 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
 fn merge_profraw(cx: &Context) -> Result<()> {
     // Convert raw profile data.
     let profraw_files = glob::glob(
-        Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str()))
-            .join(format!("{}-*.profraw", cx.ws.name))
-            .as_str(),
+        Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str())).join("*.profraw").as_str(),
     )?
     .filter_map(Result::ok)
     .collect::<Vec<_>>();
