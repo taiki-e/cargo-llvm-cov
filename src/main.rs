@@ -709,7 +709,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         let ext = f.extension().unwrap_or_default();
         // is_executable::is_executable doesn't work well on WSL.
         // https://github.com/taiki-e/cargo-llvm-cov/issues/316
-        if ext == "d" {
+        // https://github.com/taiki-e/cargo-llvm-cov/issues/342
+        if ext == "d" || ext == "rmeta" {
             return false;
         }
         if cx.ws.target_for_config.triple().contains("-windows")
