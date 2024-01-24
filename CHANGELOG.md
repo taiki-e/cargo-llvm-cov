@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.3] - 2024-01-24
+
 - Fix "The file was not recognized as a valid object file" error with `--doc`/`--doctests` flag on WSL. ([#343](https://github.com/taiki-e/cargo-llvm-cov/pull/343))
 
 ## [0.6.2] - 2024-01-18
@@ -596,7 +598,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.5.39...v0.6.0
