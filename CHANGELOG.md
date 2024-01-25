@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Make `home` dependency Windows-only dependency.
+
 ## [0.6.3] - 2024-01-24
 
 - Fix "The file was not recognized as a valid object file" error with `--doc`/`--doctests` flag on WSL. ([#343](https://github.com/taiki-e/cargo-llvm-cov/pull/343))

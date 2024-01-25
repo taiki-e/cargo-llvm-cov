@@ -27,7 +27,6 @@ cargo-config2 = "0.1.5"
 duct = "0.13.1"
 fs-err = "2.5"
 glob = "0.3"
-home = "0.5"
 is_executable = "1"
 lcov2cobertura = "1.0.1"
 lexopt = "0.3"
@@ -40,6 +39,9 @@ serde_json = "1"
 shell-escape = "0.1.5"
 termcolor = "1.1.2"
 walkdir = "2.2.3"
+
+[target.'cfg(windows)'.dependencies]
+home = "0.5"
 
 [dev-dependencies]
 easy-ext = "1"

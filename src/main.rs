@@ -1152,16 +1152,16 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         }
         out.push_abs_path(&cx.ws.target_dir);
         if cx.args.remap_path_prefix {
-            if let Some(path) = home::home_dir() {
+            if let Some(path) = env::home_dir() {
                 out.push_abs_path(path);
             }
         }
-        if let Ok(path) = home::cargo_home() {
+        if let Some(path) = env::cargo_home_with_cwd(&cx.current_dir) {
             let path = regex::escape(&path.as_os_str().to_string_lossy());
             let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
             out.push(path);
         }
-        if let Ok(path) = home::rustup_home() {
+        if let Some(path) = env::rustup_home_with_cwd(&cx.current_dir) {
             out.push_abs_path(path.join("toolchains"));
         }
         for path in resolve_excluded_paths(cx) {
