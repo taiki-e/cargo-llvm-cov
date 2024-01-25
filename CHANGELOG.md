@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.4] - 2024-01-25
+
 - Make `home` dependency Windows-only dependency.
 
 ## [0.6.3] - 2024-01-24
@@ -600,7 +602,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.0...v0.6.1
