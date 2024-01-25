@@ -11,7 +11,7 @@
    11|      1|}
    12|       |
    13|       |#[cfg_attr(coverage, coverage(off))]
-   14|      1|#[test]
+   14|       |#[test]
    15|      1|fn fn_level() {
    16|      1|    func(0);
    17|      1|
@@ -21,7 +21,7 @@
    21|      1|}
    22|       |
    23|       |// #[coverage(off)] has no effect on expressions.
-   24|      1|#[test]
+   24|       |#[test]
    25|      1|fn expr_level() {
    26|      1|    if false {
    27|      0|        #[cfg_attr(coverage, coverage(off))]
@@ -34,7 +34,7 @@
    34|       |mod mod_level {
    35|       |    use super::func;
    36|       |
-   37|      1|    #[test]
+   37|       |    #[test]
    38|      1|    fn mod_level() {
    39|      1|        if false {
    40|      0|            func(3);

@@ -8,7 +8,7 @@ member1/src/lib.rs:
     7|       |    }
     8|      2|}
     9|       |
-   10|      1|#[test]
+   10|       |#[test]
    11|      1|fn test() {
    12|      1|    func(1);
    13|      1|    func(3);

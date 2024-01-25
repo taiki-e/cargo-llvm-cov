@@ -6,7 +6,7 @@
     6|       |    }
     7|      2|}
     8|       |
-    9|      2|#[test]
+    9|       |#[test]
    10|      1|fn test() {
    11|      1|    #[cfg(feature = "a")]
    12|      1|    assert!(!func(1));

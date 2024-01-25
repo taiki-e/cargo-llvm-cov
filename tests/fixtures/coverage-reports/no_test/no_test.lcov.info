@@ -1,10 +1,10 @@
 SF:src/lib.rs
-FNF:2
-FNH:2
+FNF:1
+FNH:1
 BRF:0
 BRH:0
-LF:2
-LH:2
+LF:1
+LH:1
 end_of_record
 SF:src/module.rs
 FNF:1

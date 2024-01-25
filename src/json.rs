@@ -148,6 +148,7 @@ type UncoveredLines = BTreeMap<String, Vec<u64>>;
 
 #[non_exhaustive]
 #[derive(Clone, Copy)]
+#[cfg_attr(test, derive(Debug))]
 pub enum CoverageKind {
     Functions,
     Lines,
@@ -565,8 +566,8 @@ mod tests {
     fn test_get_coverage_percent(kind: CoverageKind) {
         let expected = match kind {
             CoverageKind::Functions => 100_f64,
-            CoverageKind::Lines => 68.181_818_181_818_19,
-            CoverageKind::Regions => 66.666_666_666_666_67,
+            CoverageKind::Lines => 63.157_894_736_842_1,
+            CoverageKind::Regions => 60.,
         };
 
         // There are 5 different percentages, make sure we pick the correct one.
@@ -580,7 +581,7 @@ mod tests {
         let actual = json.get_coverage_percent(kind).unwrap();
 
         let error_margin = f64::EPSILON;
-        assert!((actual - expected).abs() < error_margin, "{actual}");
+        assert!((actual - expected).abs() < error_margin, "kind={kind:?},actual={actual}");
     }
 
     #[test]

@@ -27,7 +27,7 @@ member2/src/lib.rs:
    16|       |    }
    17|      2|}
    18|       |
-   19|      1|#[test]
+   19|       |#[test]
    20|      1|fn test() {
    21|      1|    func2(0);
    22|      1|    func2(2);
