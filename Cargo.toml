@@ -54,7 +54,7 @@ workspace = true
 [workspace]
 resolver = "2"
 
-# This table is shared by projects under https://github.com/taiki-e.
+# This table is shared by projects under github.com/taiki-e.
 # It is not intended for manual editing.
 [workspace.lints.rust]
 improper_ctypes = "warn"
