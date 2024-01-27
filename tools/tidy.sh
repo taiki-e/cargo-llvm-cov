@@ -91,6 +91,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         error "please replace \`.cast()\` with \`.cast::<type_name>()\`:"
         echo "${cast_without_turbofish}"
     fi
+    # Sync readme and crate-level doc.
     first='1'
     for readme in $(git ls-files '*README.md'); do
         if ! grep -q '^<!-- tidy:crate-doc:start -->' "${readme}"; then
