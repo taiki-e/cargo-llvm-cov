@@ -76,22 +76,21 @@ jobs:
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
-      # TODO: cargo bug: https://github.com/nextest-rs/nextest/issues/1232
-      # - run: |
-      #     set -eEuxo pipefail
-      #     cargo llvm-cov nextest --text --fail-under-lines 50
-      #     cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
-      #     cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
-      #     cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
-      #     cd ../real1
-      #     cargo llvm-cov nextest-archive --archive-file a.tar.zst
-      #     cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
-      #     rm a.tar.zst
-      #     cargo clean
-      #     host=$(rustc -Vv | grep host | sed 's/host: //')
-      #     cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
-      #     cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70 --target "${host}"
-      #   working-directory: tests/fixtures/crates/bin_crate
+      - run: |
+          set -eEuxo pipefail
+          cargo llvm-cov nextest --text --fail-under-lines 50
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
+          cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
+          cd ../real1
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst
+          cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
+          rm a.tar.zst
+          cargo clean
+          host=$(rustc -Vv | grep host | sed 's/host: //')
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
+          cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70 --target "${host}"
+        working-directory: tests/fixtures/crates/bin_crate
       - run: |
           set -eEuxo pipefail
           git clone https://github.com/taiki-e/easytime.git
