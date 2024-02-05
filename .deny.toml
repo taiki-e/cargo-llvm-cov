@@ -12,7 +12,8 @@ ignore = [
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "warn"
-wildcards = "allow" # https://github.com/EmbarkStudios/cargo-deny/issues/488
+wildcards = "deny"
+allow-wildcard-paths = true
 build.allow-build-scripts = [
     { name = "anyhow" },
     { name = "camino" },
@@ -50,4 +51,5 @@ allow = [
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-allow-git = []
+allow-git = [
+]
