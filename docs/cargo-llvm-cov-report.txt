@@ -65,6 +65,11 @@ OPTIONS:
 
             This flag can only be used together with --json, --lcov, or --cobertura.
 
+        --skip-functions
+            Skip exporting per-function coverage data.
+
+            This flag can only be used together with --json, --lcov, or --cobertura.
+
         --output-path <PATH>
             Specify a file to write coverage data into.
 
