@@ -976,6 +976,9 @@ impl Format {
                 if cx.args.cov.summary_only {
                     cmd.arg("-summary-only");
                 }
+                if cx.args.cov.skip_functions {
+                    cmd.arg("-skip-functions");
+                }
             }
             Self::None => {}
         }

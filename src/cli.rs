@@ -234,6 +234,7 @@ impl Args {
         let mut fail_uncovered_functions = None;
         let mut show_missing_lines = false;
         let mut include_build_script = false;
+        let mut skip_functions = false;
 
         // build options
         let mut release = false;
@@ -389,6 +390,7 @@ impl Args {
                 Long("html") => parse_flag!(html),
                 Long("open") => parse_flag!(open),
                 Long("summary-only") => parse_flag!(summary_only),
+                Long("skip-functions") => parse_flag!(skip_functions),
                 Long("output-path") => parse_opt!(output_path),
                 Long("output-dir") => parse_opt!(output_dir),
                 Long("failure-mode") => parse_opt!(failure_mode),
@@ -784,6 +786,12 @@ impl Args {
                 conflicts(flag, "--open")?;
             }
         }
+        if skip_functions {
+            let flag = "--skip-functions";
+            if html {
+                conflicts(flag, "--html")?;
+            }
+        }
         if output_dir.is_some() {
             let flag = "--output-dir";
             if json {
@@ -867,6 +875,7 @@ impl Args {
                 fail_uncovered_functions,
                 show_missing_lines,
                 include_build_script,
+                skip_functions,
             },
             show_env: ShowEnvOptions { export_prefix },
             doctests,
@@ -1100,6 +1109,8 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
+    /// Skip functions in coverage report.
+    pub(crate) skip_functions: bool,
 }
 
 impl LlvmCovOptions {

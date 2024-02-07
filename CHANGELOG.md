@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `skip-functions` parameter to coverage generation.
+
 ## [0.6.4] - 2024-01-25
 
 - Make `home` dependency Windows-only dependency.
