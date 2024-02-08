@@ -108,14 +108,14 @@ impl Target {
     }
 }
 
-#[allow(clippy::option_option)]
-fn allow_null<T>(value: Value, f: impl FnOnce(Value) -> Option<T>) -> Option<Option<T>> {
-    if value.is_null() {
-        Some(None)
-    } else {
-        f(value).map(Some)
-    }
-}
+// #[allow(clippy::option_option)]
+// fn allow_null<T>(value: Value, f: impl FnOnce(Value) -> Option<T>) -> Option<Option<T>> {
+//     if value.is_null() {
+//         Some(None)
+//     } else {
+//         f(value).map(Some)
+//     }
+// }
 
 fn into_string<S: From<String>>(value: Value) -> Option<S> {
     if let Value::String(string) = value {
@@ -131,23 +131,23 @@ fn into_array(value: Value) -> Option<Vec<Value>> {
         None
     }
 }
-fn into_object(value: Value) -> Option<Object> {
-    if let Value::Object(object) = value {
-        Some(object)
-    } else {
-        None
-    }
-}
+// fn into_object(value: Value) -> Option<Object> {
+//     if let Value::Object(object) = value {
+//         Some(object)
+//     } else {
+//         None
+//     }
+// }
 
 trait ObjectExt {
     fn remove_string<S: From<String>>(&mut self, key: &'static str) -> ParseResult<S>;
     fn remove_array(&mut self, key: &'static str) -> ParseResult<Vec<Value>>;
-    fn remove_object(&mut self, key: &'static str) -> ParseResult<Object>;
-    fn remove_nullable<T>(
-        &mut self,
-        key: &'static str,
-        f: impl FnOnce(Value) -> Option<T>,
-    ) -> ParseResult<Option<T>>;
+    // fn remove_object(&mut self, key: &'static str) -> ParseResult<Object>;
+    // fn remove_nullable<T>(
+    //     &mut self,
+    //     key: &'static str,
+    //     f: impl FnOnce(Value) -> Option<T>,
+    // ) -> ParseResult<Option<T>>;
 }
 
 impl ObjectExt for Object {
@@ -157,14 +157,14 @@ impl ObjectExt for Object {
     fn remove_array(&mut self, key: &'static str) -> ParseResult<Vec<Value>> {
         self.remove(key).and_then(into_array).ok_or(key)
     }
-    fn remove_object(&mut self, key: &'static str) -> ParseResult<Object> {
-        self.remove(key).and_then(into_object).ok_or(key)
-    }
-    fn remove_nullable<T>(
-        &mut self,
-        key: &'static str,
-        f: impl FnOnce(Value) -> Option<T>,
-    ) -> ParseResult<Option<T>> {
-        self.remove(key).and_then(|v| allow_null(v, f)).ok_or(key)
-    }
+    // fn remove_object(&mut self, key: &'static str) -> ParseResult<Object> {
+    //     self.remove(key).and_then(into_object).ok_or(key)
+    // }
+    // fn remove_nullable<T>(
+    //     &mut self,
+    //     key: &'static str,
+    //     f: impl FnOnce(Value) -> Option<T>,
+    // ) -> ParseResult<Option<T>> {
+    //     self.remove(key).and_then(|v| allow_null(v, f)).ok_or(key)
+    // }
 }
