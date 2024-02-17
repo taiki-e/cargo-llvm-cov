@@ -153,6 +153,12 @@
           "covered": 24,
           "percent": 57.14285714285714
         },
+        "mcdc": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
         "regions": {
           "count": 31,
           "covered": 14,

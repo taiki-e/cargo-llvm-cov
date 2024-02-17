@@ -49,6 +49,7 @@
   ],
   "ignorePaths": [
     "**/fixtures/*.json",
+    "tests/fixtures/coverage-reports/**",
     // mangled names in test data case a lot of FP.
     "**/src/demangle.rs"
   ]
