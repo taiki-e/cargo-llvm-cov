@@ -138,6 +138,8 @@ pub(crate) struct Args {
 
     pub(crate) manifest: ManifestOptions,
 
+    pub(crate) archive_file: Option<String>,
+
     pub(crate) cargo_args: Vec<String>,
     /// Arguments for the test binary
     pub(crate) rest: Vec<String>,
@@ -248,6 +250,9 @@ impl Args {
 
         // show-env options
         let mut export_prefix = false;
+
+        // nextest options
+        let mut archive_file = None;
 
         let mut parser = lexopt::Parser::from_args(args.clone());
         while let Some(arg) = parser.next()? {
@@ -419,6 +424,10 @@ impl Args {
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
 
+                Long("archive-file") if matches!(subcommand, Subcommand::Nextest { .. }) => {
+                    parse_opt_passthrough!(archive_file);
+                }
+
                 Short('v') | Long("verbose") => {
                     verbose += 1;
                     after_subcommand = false;
@@ -503,7 +512,7 @@ impl Args {
                             warn!(
                                 "note that `{val}` is treated as test filter instead of subcommand \
                                  because `cargo llvm-cov nextest` internally calls `cargo nextest \
-                                 run`"
+                                 run`; if you want to use `nextest archive`, please use `cargo llvm-cov nextest-archive`"
                             );
                         }
                         cargo_args.push(val);
@@ -517,9 +526,7 @@ impl Args {
         term::set_coloring(&mut color);
 
         if matches!(subcommand, Subcommand::Nextest { .. }) {
-            subcommand = Subcommand::Nextest {
-                archive_file: cargo_args.iter().any(|a| a == "--archive-file"),
-            };
+            subcommand = Subcommand::Nextest { archive_file: archive_file.is_some() };
         }
 
         // unexpected options
@@ -905,6 +912,7 @@ impl Args {
             include_ffi,
             no_clean,
             manifest: ManifestOptions { manifest_path, frozen, locked, offline },
+            archive_file,
             cargo_args,
             rest,
         })
