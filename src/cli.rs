@@ -1268,7 +1268,6 @@ mod tests {
         process::{Command, Stdio},
     };
 
-    use anyhow::Result;
     use fs_err as fs;
 
     use super::*;
