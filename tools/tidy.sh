@@ -238,6 +238,21 @@ if [[ -n "$(git ls-files '*.yaml')" ]]; then
     git ls-files '*.yaml'
 fi
 
+# TOML (if exists)
+if [[ -n "$(git ls-files '*.toml')" ]]; then
+    info "checking TOML style"
+    if [[ ! -e .taplo.toml ]]; then
+        warn "could not found .taplo.toml in the repository root"
+    fi
+    if type -P npm &>/dev/null; then
+        echo "+ npx -y @taplo/cli fmt \$(git ls-files '*.toml')"
+        npx -y @taplo/cli fmt $(git ls-files '*.toml')
+        check_diff $(git ls-files '*.toml')
+    else
+        warn "'npm' is not installed; skipped TOML style check"
+    fi
+fi
+
 # Markdown (if exists)
 if [[ -n "$(git ls-files '*.md')" ]]; then
     info "checking Markdown style"
