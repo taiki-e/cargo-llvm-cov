@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.6] - 2024-02-22
+
 - cargo-llvm-cov no longer needs to pass `--target`/`--release`/`--cargo-profile` to `cargo llvm-cov nextest --archive-file` in most cases. Options passed to `cargo llvm-cov nextest-archive` are now respected. ([#349](https://github.com/taiki-e/cargo-llvm-cov/pull/349))
 
 - Support `--release` and `--cargo-profile` options for `cargo llvm-cov nextest-archive`. ([#348](https://github.com/taiki-e/cargo-llvm-cov/pull/348))
@@ -610,7 +612,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.2...v0.6.3
