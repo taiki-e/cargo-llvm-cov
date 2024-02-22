@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.6.6] - 2024-02-22
 
-- cargo-llvm-cov no longer needs to pass `--target`/`--release`/`--cargo-profile` to `cargo llvm-cov nextest --archive-file` in most cases. Options passed to `cargo llvm-cov nextest-archive` are now respected. ([#349](https://github.com/taiki-e/cargo-llvm-cov/pull/349))
+- It is no longer needed to pass `--target`/`--release`/`--cargo-profile` to `cargo llvm-cov nextest --archive-file` in most cases. Options passed to `cargo llvm-cov nextest-archive` are now respected. ([#349](https://github.com/taiki-e/cargo-llvm-cov/pull/349))
 
 - Support `--release` and `--cargo-profile` options for `cargo llvm-cov nextest-archive`. ([#348](https://github.com/taiki-e/cargo-llvm-cov/pull/348))
 
