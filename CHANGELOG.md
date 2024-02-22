@@ -10,7 +10,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- Support `--release` and `--cargo-profile` options for `cargo llvm-cov nextest --archive-file`. ([#348](https://github.com/taiki-e/cargo-llvm-cov/pull/348))
+- cargo-llvm-cov no longer needs to pass `--target`/`--release`/`--cargo-profile` to `cargo llvm-cov nextest --archive-file` in most cases. Options passed to `cargo llvm-cov nextest-archive` are now respected. ([#349](https://github.com/taiki-e/cargo-llvm-cov/pull/349))
+
+- Support `--release` and `--cargo-profile` options for `cargo llvm-cov nextest-archive`. ([#348](https://github.com/taiki-e/cargo-llvm-cov/pull/348))
 
 ## [0.6.5] - 2024-02-07
 
@@ -30,7 +32,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [0.6.1] - 2024-01-13
 
-- Support `--target` option for `cargo llvm-cov nextest --archive-file`. ([#334](https://github.com/taiki-e/cargo-llvm-cov/pull/334))
+- Support `--target` option for `cargo llvm-cov nextest-archive`. ([#334](https://github.com/taiki-e/cargo-llvm-cov/pull/334))
 
 - Support `--no-cfg-coverage` and `--no-cfg-coverage-nightly` flags in `cargo llvm-cov show-env`. ([#333](https://github.com/taiki-e/cargo-llvm-cov/pull/333))
 

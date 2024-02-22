@@ -10,7 +10,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
-    io::{self, BufRead, Write},
+    io::{self, BufRead, Read, Write},
     path::Path,
     time::SystemTime,
 };
@@ -20,6 +20,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Flags;
 use cargo_llvm_cov::json::{CodeCovJsonExport, CoverageKind, LlvmCovJsonExport};
 use regex::Regex;
+use serde_derive::Deserialize;
+use tar::Archive;
 use walkdir::WalkDir;
 
 use crate::{
@@ -729,21 +731,71 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
+    let mut auto_detect_profile = false;
     if matches!(cx.args.subcommand, Subcommand::Nextest { archive_file: true }) {
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        struct BinariesMetadata {
+            rust_build_meta: RustBuildMeta,
+        }
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "kebab-case")]
+        struct RustBuildMeta {
+            base_output_directories: Vec<String>,
+        }
         target_dir.push("target");
+        let archive_file = cx.args.archive_file.as_ref().unwrap();
+        let decoder = ruzstd::StreamingDecoder::new(fs::File::open(archive_file)?)?;
+        let mut archive = Archive::new(decoder);
+        let mut binaries_metadata = vec![];
+        for entry in archive.entries()? {
+            let mut entry = entry?;
+            let path = entry.path()?;
+            if path.ends_with("target/nextest/binaries-metadata.json") {
+                entry.read_to_end(&mut binaries_metadata)?;
+                break;
+            }
+        }
+        if binaries_metadata.is_empty() {
+            warn!("not found binaries-metadata.json in nextest archive {archive_file:?}");
+        } else {
+            match serde_json::from_slice::<BinariesMetadata>(&binaries_metadata) {
+                // TODO: what multiple base_output_directories means?
+                Ok(binaries_metadata)
+                    if binaries_metadata.rust_build_meta.base_output_directories.len() == 1 =>
+                {
+                    if cx.args.target.is_some() {
+                        info!("--target flag is no longer needed because detection from nextest archive is now supported");
+                    }
+                    if cx.args.release {
+                        info!("--release flag is no longer needed because detection from nextest archive is now supported");
+                    }
+                    if cx.args.profile.is_some() {
+                        info!("--cargo-profile flag is no longer needed because detection from nextest archive is now supported");
+                    }
+                    target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
+                    auto_detect_profile = true;
+                }
+                res => {
+                    warn!("found binaries-metadata.json in nextest archive {archive_file:?}, but has unsupported or incompatible format: {res:?}");
+                }
+            }
+        }
     }
-    // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
-    if let Some(target) = &cx.args.target {
-        target_dir.push(target);
+    if !auto_detect_profile {
+        // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
+        if let Some(target) = &cx.args.target {
+            target_dir.push(target);
+        }
+        // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
+        let profile = match cx.args.profile.as_deref() {
+            None if cx.args.release => "release",
+            Some("release" | "bench") => "release",
+            None | Some("dev" | "test") => "debug",
+            Some(p) => p,
+        };
+        target_dir.push(profile);
     }
-    // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-    let profile = match cx.args.profile.as_deref() {
-        None if cx.args.release => "release",
-        Some("release" | "bench") => "release",
-        None | Some("dev" | "test") => "debug",
-        Some(p) => p,
-    };
-    target_dir.push(profile);
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
         if is_object(cx, f) {
@@ -813,7 +865,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         warn!(
             "not found object files (searched directories: {searched_dir}); this may occur if \
              show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
-             commands such as nextest archive are used",
+             commands are used",
         );
     }
     Ok(files)

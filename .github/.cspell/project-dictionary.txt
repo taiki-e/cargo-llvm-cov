@@ -16,6 +16,7 @@ profdata
 profraw
 rmeta
 rustfilt
+rustix
 TESTNAME
 trybuild
 winapi
