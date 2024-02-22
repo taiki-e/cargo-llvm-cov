@@ -368,12 +368,12 @@ impl Args {
                 Long("exclude-from-report") => parse_opt!(exclude_from_report),
 
                 // build options
-                Short('r') | Long("release") => parse_flag_passthrough!(release),
+                Short('r') | Long("release") => parse_flag!(release),
                 Long("profile") if !subcommand.is_nextest_based() => {
-                    parse_opt_passthrough!(profile);
+                    parse_opt!(profile);
                 }
                 Long("cargo-profile") if subcommand.is_nextest_based() => {
-                    parse_opt_passthrough!(profile);
+                    parse_opt!(profile);
                 }
                 Long("target") => parse_opt!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),

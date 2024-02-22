@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `--release` and `--cargo-profile` options for `cargo llvm-cov nextest --archive-file`. ([#348](https://github.com/taiki-e/cargo-llvm-cov/pull/348))
+
 ## [0.6.5] - 2024-02-07
 
 - Add `--skip-functions` flag to coverage generation. ([#346](https://github.com/taiki-e/cargo-llvm-cov/pull/346), thanks @mlveggo)

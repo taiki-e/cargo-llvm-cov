@@ -220,6 +220,17 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
             cmd.arg("--target");
             cmd.arg(target);
         }
+        if cx.args.release {
+            cmd.arg("--release");
+        }
+        if let Some(profile) = &cx.args.profile {
+            if cx.args.subcommand.is_nextest_based() {
+                cmd.arg("--cargo-profile");
+            } else {
+                cmd.arg("--profile");
+            }
+            cmd.arg(profile);
+        }
     }
 
     cmd.arg("--manifest-path");

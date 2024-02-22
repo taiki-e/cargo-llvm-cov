@@ -8,3 +8,6 @@ member2 = { path = "member1/member2" }
 
 [workspace]
 members = ["member1", "member1/member2"]
+
+[profile.custom]
+inherits = "dev"
