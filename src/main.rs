@@ -784,9 +784,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
     if !auto_detect_profile {
         // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
-        if let Some(target) = &cx.args.target {
-            target_dir.push(target);
-        }
+        target_dir.push(cx.args.target.as_deref().unwrap_or("target"));
         // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
         let profile = match cx.args.profile.as_deref() {
             None if cx.args.release => "release",
