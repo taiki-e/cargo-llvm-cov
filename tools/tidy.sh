@@ -15,7 +15,8 @@ trap 's=$?; echo >&2 "$0: error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}
 # - shfmt
 # - shellcheck
 # - npm
-# - jq and yq
+# - jq
+# - python
 # - rustup (if Rust code exists)
 # - clang-format (if C/C++ code exists)
 #
@@ -52,6 +53,11 @@ error() {
         echo >&2 "error: $*"
     fi
     should_fail=1
+}
+venv() {
+    local bin="$1"
+    shift
+    "${venv_bin}/${bin}${exe}" "$@"
 }
 
 if [[ $# -gt 0 ]]; then
@@ -204,32 +210,54 @@ if [[ -n "$(git ls-files '*.yml' '*.js' '*.json')" ]]; then
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
         info "checking GitHub workflows"
-        if type -P jq &>/dev/null && type -P yq &>/dev/null; then
-            for workflow in .github/workflows/*.yml; do
-                # The top-level permissions must be weak as they are referenced by all jobs.
-                permissions=$(yq -c '.permissions' "${workflow}")
-                case "${permissions}" in
-                    '{"contents":"read"}' | '{"contents":"none"}') ;;
-                    null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
-                    *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
-                esac
-                # Make sure the 'needs' section is not out of date.
-                if grep -q '# tidy:needs' "${workflow}" && ! grep -Eq '# *needs: \[' "${workflow}"; then
-                    # shellcheck disable=SC2207
-                    jobs_actual=($(yq '.jobs' "${workflow}" | jq -r 'keys_unsorted[]'))
-                    unset 'jobs_actual[${#jobs_actual[@]}-1]'
-                    # shellcheck disable=SC2207
-                    jobs_expected=($(yq -r '.jobs."ci-success".needs[]' "${workflow}"))
-                    if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
-                        printf -v jobs '%s, ' "${jobs_actual[@]}"
-                        sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" "${workflow}"
-                        check_diff "${workflow}"
-                        error "${workflow}: please update 'needs' section in 'ci-success' job"
-                    fi
+        if type -P jq &>/dev/null; then
+            if type -P python3 &>/dev/null || type -P python &>/dev/null; then
+                py_suffix=''
+                if type -P python3 &>/dev/null; then
+                    py_suffix='3'
                 fi
-            done
+                exe=''
+                venv_bin='.venv/bin'
+                case "$(uname -s)" in
+                    MINGW* | MSYS* | CYGWIN* | Windows_NT)
+                        exe='.exe'
+                        venv_bin='.venv/Scripts'
+                        ;;
+                esac
+                if [[ ! -d .venv ]]; then
+                    "python${py_suffix}" -m venv .venv
+                fi
+                if [[ ! -e "${venv_bin}/yq${exe}" ]]; then
+                    venv "pip${py_suffix}" install yq
+                fi
+                for workflow in .github/workflows/*.yml; do
+                    # The top-level permissions must be weak as they are referenced by all jobs.
+                    permissions=$(venv yq -c '.permissions' "${workflow}")
+                    case "${permissions}" in
+                        '{"contents":"read"}' | '{"contents":"none"}') ;;
+                        null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
+                        *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
+                    esac
+                    # Make sure the 'needs' section is not out of date.
+                    if grep -q '# tidy:needs' "${workflow}" && ! grep -Eq '# *needs: \[' "${workflow}"; then
+                        # shellcheck disable=SC2207
+                        jobs_actual=($(venv yq '.jobs' "${workflow}" | jq -r 'keys_unsorted[]'))
+                        unset 'jobs_actual[${#jobs_actual[@]}-1]'
+                        # shellcheck disable=SC2207
+                        jobs_expected=($(venv yq -r '.jobs."ci-success".needs[]' "${workflow}"))
+                        if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
+                            printf -v jobs '%s, ' "${jobs_actual[@]}"
+                            sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" "${workflow}"
+                            check_diff "${workflow}"
+                            error "${workflow}: please update 'needs' section in 'ci-success' job"
+                        fi
+                    fi
+                done
+            else
+                warn "'python3' is not installed; skipped GitHub workflow check"
+            fi
         else
-            warn "'jq' or 'yq' is not installed; skipped GitHub workflow check"
+            warn "'jq' is not installed; skipped GitHub workflow check"
         fi
     fi
 fi
