@@ -61,7 +61,6 @@ resolver = "2"
 [workspace.lints.rust]
 improper_ctypes = "warn"
 improper_ctypes_definitions = "warn"
-missing_debug_implementations = "warn"
 non_ascii_idents = "warn"
 rust_2018_idioms = "warn"
 single_use_lifetimes = "warn"
@@ -79,6 +78,7 @@ undocumented_unsafe_blocks = "warn"
 # Suppress buggy or noisy clippy lints
 bool_assert_comparison = { level = "allow", priority = 1 }
 borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286
+declare_interior_mutable_const = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7665
 doc_markdown = { level = "allow", priority = 1 }
 float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
 manual_assert = { level = "allow", priority = 1 }

@@ -293,7 +293,6 @@ fn show_env() {
     cargo_llvm_cov("show-env").arg("--export-prefix").assert_success().stdout_contains("export");
 }
 
-#[allow(clippy::single_element_loop)]
 #[test]
 fn invalid_arg() {
     for subcommand in
@@ -373,10 +372,14 @@ fn invalid_arg() {
             }
         }
         if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive" | "clean") {
-            for arg in ["--workspace"] {
+            for arg in ["--workspace", "--all"] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
                     "invalid option '{}' for subcommand '{subcommand}'",
-                    arg.strip_suffix("=v").unwrap_or(arg)
+                    if arg == "--all" {
+                        "--workspace"
+                    } else {
+                        arg.strip_suffix("=v").unwrap_or(arg)
+                    }
                 ));
             }
         }
