@@ -97,4 +97,3 @@ type_complexity = { level = "allow", priority = 1 }
 [profile.release]
 codegen-units = 1
 lto = true
-strip = "symbols"
