@@ -1,0 +1,26 @@
+cargo-llvm-cov-afl
+
+Use cargo llvm-cov afl to fuzz test your Rust projects with American Fuzzy Lop (AFL), a powerful fuzz testing tool that automatically finds bugs by feeding unexpected inputs to your programs.
+
+SUBCOMMANDS:
+  addseeds       Invoke afl-addseeds
+  analyze        Invoke afl-analyze
+  cmin           Invoke afl-cmin
+  config         Build or rebuild AFL++
+  fuzz           Invoke afl-fuzz
+  gotcpu         Invoke afl-gotcpu
+  plot           Invoke afl-plot
+  showmap        Invoke afl-showmap
+  system-config  Invoke afl-system-config (beware, called with sudo!)
+  tmin           Invoke afl-tmin
+  whatsup        Invoke afl-whatsup
+  help           Print this message or the help of the given subcommand(s)
+
+Arguments:
+  [ARGS]...  
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+
+In addition to the subcommands above, Cargo subcommands are also supported (see `cargo help` for a list of all Cargo subcommands).

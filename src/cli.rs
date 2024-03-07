@@ -947,6 +947,9 @@ pub(crate) enum Subcommand {
     /// Build and archive tests with cargo nextest
     NextestArchive,
 
+    /// Run afl with cargo nextest
+    Afl,
+
     // internal (unstable)
     Demangle,
 }
@@ -960,6 +963,7 @@ static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-co
 static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
 static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
     include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
+static CARGO_LLVM_COV_AFL_USAGE: &str = include_str!("../docs/cargo-llvm-cov-afl.txt");
 
 impl Subcommand {
     fn can_passthrough(subcommand: Self) -> bool {
@@ -976,6 +980,7 @@ impl Subcommand {
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
             Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
+            Self::Afl => CARGO_LLVM_COV_AFL_USAGE,
             Self::Demangle => "", // internal API
         }
     }
@@ -990,6 +995,7 @@ impl Subcommand {
             Self::ShowEnv => "show-env",
             Self::Nextest { .. } => "nextest",
             Self::NextestArchive => "nextest-archive",
+            Self::Afl => "afl",
             Self::Demangle => "demangle",
         }
     }
@@ -1011,6 +1017,7 @@ impl FromStr for Subcommand {
             "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest { archive_file: false }),
             "nextest-archive" => Ok(Self::NextestArchive),
+            "afl" => Ok(Self::Afl),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
         }

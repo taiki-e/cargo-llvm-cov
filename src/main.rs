@@ -107,6 +107,15 @@ fn try_main() -> Result<()> {
             create_dirs(cx)?;
             archive_nextest(cx)?;
         }
+        Subcommand::Afl => {
+            let cx = &Context::new(args)?;
+            clean::clean_partial(cx)?;
+            create_dirs(cx)?;
+            run_afl(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
+            }
+        }
         Subcommand::None | Subcommand::Test => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
@@ -489,6 +498,63 @@ fn run_run(cx: &Context) -> Result<()> {
     } else {
         cargo.arg("run");
         cargo::test_or_run_args(cx, &mut cargo);
+        if term::verbose() {
+            status!("Running", "{cargo}");
+        }
+        stdout_to_stderr(cx, &mut cargo);
+        cargo.run()?;
+    }
+    Ok(())
+}
+
+fn run_afl(cx: &Context) -> Result<()> {
+    let mut cargo = cx.cargo();
+
+    set_env(cx, &mut cargo, IsNextest(false))?;
+
+    let indir = "inputs/";
+    let outdir = "outputs/";
+
+    fs::create_dir_all(indir)?;
+    fs::create_dir_all(outdir)?;
+
+    if !cx.args.ignore_run_fail {
+        {
+            let mut cargo = cargo.clone();
+
+            cargo.arg("afl").arg("build");
+            cargo.arg("--target-dir").arg(cx.ws.target_dir.as_str());
+            if term::verbose() {
+                status!("Running", "{cargo}");
+                cargo.stdout_to_stderr().run()?;
+            } else {
+                // Capture output to prevent duplicate warnings from appearing in two runs.
+                cargo.run_with_output()?;
+            }
+        }
+
+        // prepare seeds
+        let seeds = vec!["example input 1", "sample data 2", "test case 3"];
+
+        for (index, seed) in seeds.into_iter().enumerate() {
+            let file_path = format!("{}seed_{}.txt", indir, index);
+            let path = Path::new(&file_path);
+            let mut file = fs::File::create(&path)?;
+            file.write_all(seed.as_bytes())?;
+        }
+
+        // set AFL_FUZZER_LOOPCOUNT to 1000 to avoid AFL loop infinitely!
+        // AFL maybe exits a process several minutes later and produce a cov file.
+        cargo.set("AFL_FUZZER_LOOPCOUNT", "20")?;
+        cargo.arg("afl").arg("fuzz");
+        cargo.arg("-V").arg("10");
+        // set in and out
+        cargo.arg("-i").arg(indir);
+        cargo.arg("-o").arg(outdir);
+        // set the execuable
+        let bin_file = cx.ws.target_dir.join("debug").join(cx.ws.name.clone()).to_string();
+        cargo.arg(bin_file.as_str());
+
         if term::verbose() {
             status!("Running", "{cargo}");
         }
