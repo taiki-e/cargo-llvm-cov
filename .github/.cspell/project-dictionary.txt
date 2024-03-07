@@ -29,3 +29,4 @@ gotcpu
 showmap
 tmin
 whatsup
+LOOPCOUNT
