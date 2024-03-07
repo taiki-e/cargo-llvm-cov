@@ -512,11 +512,11 @@ fn run_afl(cx: &Context) -> Result<()> {
 
     set_env(cx, &mut cargo, IsNextest(false))?;
 
-    let indir = "inputs/";
-    let outdir = "outputs/";
+    let input_dir = "inputs/";
+    let output_dir = "outputs/";
 
-    fs::create_dir_all(indir)?;
-    fs::create_dir_all(outdir)?;
+    fs::create_dir_all(input_dir)?;
+    fs::create_dir_all(output_dir)?;
 
     if !cx.args.ignore_run_fail {
         {
@@ -537,21 +537,21 @@ fn run_afl(cx: &Context) -> Result<()> {
         let seeds = vec!["example input 1", "sample data 2", "test case 3"];
 
         for (index, seed) in seeds.into_iter().enumerate() {
-            let file_path = format!("{}seed_{}.txt", indir, index);
+            let file_path = format!("{}seed_{}.txt", input_dir, index);
             let path = Path::new(&file_path);
             let mut file = fs::File::create(&path)?;
             file.write_all(seed.as_bytes())?;
         }
 
-        // set AFL_FUZZER_LOOPCOUNT to 1000 to avoid AFL loop infinitely!
+        // set afl's loop count to 1000 to avoid AFL loop infinitely!
         // AFL maybe exits a process several minutes later and produce a cov file.
         cargo.set("AFL_FUZZER_LOOPCOUNT", "20")?;
         cargo.arg("afl").arg("fuzz");
         cargo.arg("-V").arg("10");
         // set in and out
-        cargo.arg("-i").arg(indir);
-        cargo.arg("-o").arg(outdir);
-        // set the execuable
+        cargo.arg("-i").arg(input_dir);
+        cargo.arg("-o").arg(output_dir);
+        // set the executable
         let bin_file = cx.ws.target_dir.join("debug").join(cx.ws.name.clone()).to_string();
         cargo.arg(bin_file.as_str());
 
