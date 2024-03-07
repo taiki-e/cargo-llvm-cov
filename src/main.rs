@@ -537,9 +537,9 @@ fn run_afl(cx: &Context) -> Result<()> {
         let seeds = vec!["example input 1", "sample data 2", "test case 3"];
 
         for (index, seed) in seeds.into_iter().enumerate() {
-            let file_path = format!("{}seed_{}.txt", input_dir, index);
+            let file_path = format!("{input_dir}seed_{index}.txt");
             let path = Path::new(&file_path);
-            let mut file = fs::File::create(&path)?;
+            let mut file = fs::File::create(path)?;
             file.write_all(seed.as_bytes())?;
         }
 
