@@ -1169,7 +1169,7 @@ pub(crate) fn merge_config_to_args(
 ) {
     // CLI flags are prefer over config values.
     if target.is_none() {
-        *target = ws.target_for_cli.clone();
+        target.clone_from(&ws.target_for_cli);
     }
     if *verbose == 0 {
         *verbose = u8::from(ws.config.term.verbose.unwrap_or(false));
