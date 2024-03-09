@@ -64,7 +64,7 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/github-actions/checkout@main
+      - uses: taiki-e/checkout-action@v1
       - name: Install Rust
         run: rustup toolchain add ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
       - run: rustup toolchain add nightly --no-self-update

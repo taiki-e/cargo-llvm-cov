@@ -53,7 +53,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: taiki-e/github-actions/checkout@main
+      - uses: taiki-e/checkout-action@v1
       - name: Install Rust
         run: rustup update stable --no-self-update
       - uses: taiki-e/setup-cross-toolchain-action@v1
