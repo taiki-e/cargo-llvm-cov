@@ -23,3 +23,10 @@ winapi
 xargo
 Xdemangler
 xtask
+addseeds
+cmin
+gotcpu
+showmap
+tmin
+whatsup
+LOOPCOUNT
