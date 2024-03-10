@@ -44,7 +44,6 @@ mod cargo;
 mod clean;
 mod cli;
 mod context;
-mod demangle;
 mod env;
 mod fs;
 mod metadata;
@@ -68,7 +67,9 @@ fn try_main() -> Result<()> {
     term::verbose::set(args.verbose != 0);
 
     match args.subcommand {
-        Subcommand::Demangle => demangle::run()?,
+        Subcommand::Demangle => {
+            rustc_demangle::demangle_stream(&mut io::stdin().lock(), &mut io::stdout(), false)?;
+        }
         Subcommand::Clean => clean::run(&mut args)?,
         Subcommand::ShowEnv => {
             let cx = &Context::new(args)?;
