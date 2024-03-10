@@ -223,8 +223,8 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
         if cx.args.release {
             cmd.arg("--release");
         }
-        if let Some(profile) = &cx.args.profile {
-            if cx.args.subcommand.is_nextest_based() {
+        if let Some(profile) = &cx.args.cargo_profile {
+            if cx.args.subcommand.call_cargo_nextest() {
                 cmd.arg("--cargo-profile");
             } else {
                 cmd.arg("--profile");
@@ -253,7 +253,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.args.release {
         cmd.arg("--release");
     }
-    if let Some(profile) = &cx.args.profile {
+    if let Some(profile) = &cx.args.cargo_profile {
         cmd.arg("--profile");
         cmd.arg(profile);
     }

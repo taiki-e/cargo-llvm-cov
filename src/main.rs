@@ -79,7 +79,7 @@ fn try_main() -> Result<()> {
             set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
         }
-        Subcommand::Report => {
+        Subcommand::Report { .. } => {
             let cx = &Context::new(args)?;
             create_dirs(cx)?;
             generate_report(cx)?;
@@ -733,7 +733,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
     let mut auto_detect_profile = false;
-    if matches!(cx.args.subcommand, Subcommand::Nextest { archive_file: true }) {
+    if cx.args.subcommand.read_nextest_archive() {
         #[derive(Debug, Deserialize)]
         #[serde(rename_all = "kebab-case")]
         struct BinariesMetadata {
@@ -745,7 +745,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             base_output_directories: Vec<String>,
         }
         target_dir.push("target");
-        let archive_file = cx.args.archive_file.as_ref().unwrap();
+        let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
         let decoder = ruzstd::StreamingDecoder::new(fs::File::open(archive_file)?)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
@@ -771,7 +771,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     if cx.args.release {
                         info!("--release flag is no longer needed because detection from nextest archive is now supported");
                     }
-                    if cx.args.profile.is_some() {
+                    if cx.args.cargo_profile.is_some() {
                         info!("--cargo-profile flag is no longer needed because detection from nextest archive is now supported");
                     }
                     target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
@@ -789,7 +789,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             target_dir.push(target);
         }
         // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-        let profile = match cx.args.profile.as_deref() {
+        let profile = match cx.args.cargo_profile.as_deref() {
             None if cx.args.release => "release",
             Some("release" | "bench") => "release",
             None | Some("dev" | "test") => "debug",

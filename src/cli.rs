@@ -87,9 +87,9 @@ pub(crate) struct Args {
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
     ///
-    /// On `cargo llvm-cov nextest` this is the value of `--cargo-profile` option,
-    /// otherwise this is the value of  `--profile` option.
-    pub(crate) profile: Option<String>,
+    /// On `cargo llvm-cov nextest`/`cargo llvm-cov nextest-archive` this is the
+    /// value of `--cargo-profile` option, otherwise this is the value of  `--profile` option.
+    pub(crate) cargo_profile: Option<String>,
     // /// Space or comma separated list of features to activate
     // pub(crate) features: Vec<String>,
     // /// Activate all available features
@@ -138,11 +138,281 @@ pub(crate) struct Args {
 
     pub(crate) manifest: ManifestOptions,
 
-    pub(crate) archive_file: Option<String>,
+    pub(crate) nextest_archive_file: Option<String>,
 
     pub(crate) cargo_args: Vec<String>,
     /// Arguments for the test binary
     pub(crate) rest: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum Subcommand {
+    /// Run tests and generate coverage report.
+    None,
+
+    /// Run tests and generate coverage report.
+    Test,
+
+    /// Run a binary or example and generate coverage report.
+    Run,
+
+    /// Generate coverage report.
+    Report {
+        nextest_archive_file: bool,
+    },
+
+    /// Remove artifacts that cargo-llvm-cov has generated in the past
+    Clean,
+
+    /// Output the environment set by cargo-llvm-cov to build Rust projects.
+    ShowEnv,
+
+    /// Run tests with cargo nextest
+    Nextest {
+        archive_file: bool,
+    },
+
+    /// Build and archive tests with cargo nextest
+    NextestArchive,
+
+    // internal (unstable)
+    Demangle,
+}
+
+static CARGO_LLVM_COV_USAGE: &str = include_str!("../docs/cargo-llvm-cov.txt");
+static CARGO_LLVM_COV_TEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-test.txt");
+static CARGO_LLVM_COV_RUN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-run.txt");
+static CARGO_LLVM_COV_REPORT_USAGE: &str = include_str!("../docs/cargo-llvm-cov-report.txt");
+static CARGO_LLVM_COV_CLEAN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-clean.txt");
+static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-cov-show-env.txt");
+static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
+static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
+    include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
+
+impl Subcommand {
+    fn can_passthrough(subcommand: Self) -> bool {
+        matches!(subcommand, Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive)
+    }
+
+    fn help_text(subcommand: Self) -> &'static str {
+        match subcommand {
+            Self::None => CARGO_LLVM_COV_USAGE,
+            Self::Test => CARGO_LLVM_COV_TEST_USAGE,
+            Self::Run => CARGO_LLVM_COV_RUN_USAGE,
+            Self::Report { .. } => CARGO_LLVM_COV_REPORT_USAGE,
+            Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
+            Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
+            Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
+            Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
+            Self::Demangle => "", // internal API
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "",
+            Self::Test => "test",
+            Self::Run => "run",
+            Self::Report { .. } => "report",
+            Self::Clean => "clean",
+            Self::ShowEnv => "show-env",
+            Self::Nextest { .. } => "nextest",
+            Self::NextestArchive => "nextest-archive",
+            Self::Demangle => "demangle",
+        }
+    }
+
+    pub(crate) fn call_cargo_nextest(self) -> bool {
+        matches!(self, Self::Nextest { .. } | Self::NextestArchive)
+    }
+    pub(crate) fn read_nextest_archive(self) -> bool {
+        matches!(
+            self,
+            Self::Nextest { archive_file: true } | Self::Report { nextest_archive_file: true }
+        )
+    }
+}
+
+impl FromStr for Subcommand {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "test" | "t" => Ok(Self::Test),
+            "run" | "r" => Ok(Self::Run),
+            "report" => Ok(Self::Report { nextest_archive_file: false }),
+            "clean" => Ok(Self::Clean),
+            "show-env" => Ok(Self::ShowEnv),
+            "nextest" => Ok(Self::Nextest { archive_file: false }),
+            "nextest-archive" => Ok(Self::NextestArchive),
+            "demangle" => Ok(Self::Demangle),
+            _ => bail!("unrecognized subcommand {s}"),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct LlvmCovOptions {
+    /// Export coverage data in "json" format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=text`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) json: bool,
+    /// Export coverage data in "lcov" format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=lcov`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) lcov: bool,
+
+    /// Export coverage data in "cobertura" XML format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) cobertura: bool,
+
+    /// Export coverage data in "Codecov Custom Coverage" format
+    ///
+    /// If --output-path is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov export -format=json` and then converts to codecov.json.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
+    pub(crate) codecov: bool,
+
+    /// Generate coverage report in “text” format
+    ///
+    /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
+    ///
+    /// This internally calls `llvm-cov show -format=text`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+    pub(crate) text: bool,
+    /// Generate coverage report in "html" format
+    ///
+    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov/html` directory.
+    ///
+    /// This internally calls `llvm-cov show -format=html`.
+    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
+    pub(crate) html: bool,
+    /// Generate coverage reports in "html" format and open them in a browser after the operation.
+    ///
+    /// See --html for more.
+    pub(crate) open: bool,
+
+    /// Export only summary information for each file in the coverage data
+    ///
+    /// This flag can only be used together with --json, --lcov, --cobertura, or --codecov.
+    // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
+    pub(crate) summary_only: bool,
+
+    /// Specify a file to write coverage data into.
+    ///
+    /// This flag can only be used together with --json, --lcov, --cobertura, --codecov, or --text.
+    /// See --output-dir for --html and --open.
+    pub(crate) output_path: Option<Utf8PathBuf>,
+    /// Specify a directory to write coverage report into (default to `target/llvm-cov`).
+    ///
+    /// This flag can only be used together with --text, --html, or --open.
+    /// See also --output-path.
+    // If the format flag is not specified, this flag is no-op.
+    pub(crate) output_dir: Option<Utf8PathBuf>,
+
+    /// Fail if `any` or `all` profiles cannot be merged (default to `any`)
+    pub(crate) failure_mode: Option<String>,
+    /// Skip source code files with file paths that match the given regular expression.
+    pub(crate) ignore_filename_regex: Option<String>,
+    // For debugging (unstable)
+    pub(crate) disable_default_ignore_filename_regex: bool,
+    /// Show instantiations in report
+    pub(crate) show_instantiations: bool,
+    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
+    pub(crate) no_cfg_coverage: bool,
+    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
+    pub(crate) no_cfg_coverage_nightly: bool,
+    /// Run tests, but don't generate coverage report
+    pub(crate) no_report: bool,
+    /// Exit with a status of 1 if the total function coverage is less than MIN percent.
+    pub(crate) fail_under_functions: Option<f64>,
+    /// Exit with a status of 1 if the total line coverage is less than MIN percent.
+    pub(crate) fail_under_lines: Option<f64>,
+    /// Exit with a status of 1 if the total region coverage is less than MIN percent.
+    pub(crate) fail_under_regions: Option<f64>,
+    /// Exit with a status of 1 if the uncovered lines are greater than MAX.
+    pub(crate) fail_uncovered_lines: Option<u64>,
+    /// Exit with a status of 1 if the uncovered regions are greater than MAX.
+    pub(crate) fail_uncovered_regions: Option<u64>,
+    /// Exit with a status of 1 if the uncovered functions are greater than MAX.
+    pub(crate) fail_uncovered_functions: Option<u64>,
+    /// Show lines with no coverage.
+    pub(crate) show_missing_lines: bool,
+    /// Include build script in coverage report.
+    pub(crate) include_build_script: bool,
+    /// Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
+    pub(crate) dep_coverage: Option<String>,
+    /// Skip functions in coverage report.
+    pub(crate) skip_functions: bool,
+}
+
+impl LlvmCovOptions {
+    pub(crate) const fn show(&self) -> bool {
+        self.text || self.html
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ShowEnvOptions {
+    /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
+    pub(crate) export_prefix: bool,
+}
+
+// https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
+#[derive(Debug, Default)]
+pub(crate) struct ManifestOptions {
+    /// Path to Cargo.toml
+    pub(crate) manifest_path: Option<Utf8PathBuf>,
+    /// Require Cargo.lock and cache are up to date
+    pub(crate) frozen: bool,
+    /// Require Cargo.lock is up to date
+    pub(crate) locked: bool,
+    /// Run without accessing the network
+    pub(crate) offline: bool,
+}
+
+impl ManifestOptions {
+    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
+        // Skip --manifest-path because it is set based on Workspace::current_manifest.
+        if self.frozen {
+            cmd.arg("--frozen");
+        }
+        if self.locked {
+            cmd.arg("--locked");
+        }
+        if self.offline {
+            cmd.arg("--offline");
+        }
+    }
+}
+
+pub(crate) fn merge_config_to_args(
+    ws: &crate::cargo::Workspace,
+    target: &mut Option<String>,
+    verbose: &mut u8,
+    color: &mut Option<Coloring>,
+) {
+    // CLI flags are prefer over config values.
+    if target.is_none() {
+        target.clone_from(&ws.target_for_cli);
+    }
+    if *verbose == 0 {
+        *verbose = u8::from(ws.config.term.verbose.unwrap_or(false));
+    }
+    if color.is_none() {
+        *color = ws.config.term.color.map(Into::into);
+    }
 }
 
 impl Args {
@@ -241,7 +511,6 @@ impl Args {
 
         // build options
         let mut release = false;
-        let mut profile = None;
         let mut target = None;
         let mut coverage_target_only = false;
         let mut remap_path_prefix = false;
@@ -252,8 +521,11 @@ impl Args {
         // show-env options
         let mut export_prefix = false;
 
-        // nextest options
+        // options ambiguous between nextest-related and others
+        let mut profile = None;
+        let mut cargo_profile = None;
         let mut archive_file = None;
+        let mut nextest_archive_file = None;
 
         let mut parser = lexopt::Parser::from_args(args.clone());
         while let Some(arg) = parser.next()? {
@@ -375,12 +647,9 @@ impl Args {
 
                 // build options
                 Short('r') | Long("release") => parse_flag!(release),
-                Long("profile") if !subcommand.is_nextest_based() => {
-                    parse_opt!(profile);
-                }
-                Long("cargo-profile") if subcommand.is_nextest_based() => {
-                    parse_opt!(profile);
-                }
+                // ambiguous between nextest-related and others will be handled later
+                Long("profile") => parse_opt!(profile),
+                Long("cargo-profile") => parse_opt!(cargo_profile),
                 Long("target") => parse_opt!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
@@ -426,9 +695,9 @@ impl Args {
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
 
-                Long("archive-file") if matches!(subcommand, Subcommand::Nextest { .. }) => {
-                    parse_opt_passthrough!(archive_file);
-                }
+                // ambiguous between nextest-related and others will be handled later
+                Long("archive-file") => parse_opt_passthrough!(archive_file),
+                Long("nextest-archive-file") => parse_opt!(nextest_archive_file),
 
                 Short('v') | Long("verbose") => {
                     verbose += 1;
@@ -527,10 +796,6 @@ impl Args {
 
         term::set_coloring(&mut color);
 
-        if matches!(subcommand, Subcommand::Nextest { .. }) {
-            subcommand = Subcommand::Nextest { archive_file: archive_file.is_some() };
-        }
-
         // unexpected options
         match subcommand {
             Subcommand::ShowEnv => {}
@@ -544,7 +809,7 @@ impl Args {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
-                Subcommand::ShowEnv | Subcommand::Report if doctests => {}
+                Subcommand::ShowEnv | Subcommand::Report { .. } if doctests => {}
                 Subcommand::Nextest { .. } | Subcommand::NextestArchive => {
                     bail!("doctest is not supported for nextest")
                 }
@@ -853,7 +1118,41 @@ impl Args {
         }
         if no_run {
             // --no-run is deprecated alias for report
-            subcommand = Subcommand::Report;
+            subcommand = Subcommand::Report { nextest_archive_file: false };
+        }
+
+        // nextest-related
+        if subcommand.call_cargo_nextest() {
+            if let Some(profile) = profile {
+                // nextest profile will be propagated
+                cargo_args.push("--profile".to_owned());
+                cargo_args.push(profile);
+            }
+            if nextest_archive_file.is_some() {
+                bail!("'--nextest-archive-file' is report-specific option; did you mean '--archive-file'?");
+            }
+            nextest_archive_file = archive_file;
+            if let Subcommand::Nextest { archive_file: f } = &mut subcommand {
+                *f = nextest_archive_file.is_some();
+            }
+        } else {
+            if cargo_profile.is_some() {
+                bail!("'--cargo-profile' is nextest-specific option; did you mean '--profile'?");
+            }
+            cargo_profile = profile;
+            if let Subcommand::Report { nextest_archive_file: f } = &mut subcommand {
+                if archive_file.is_some() {
+                    bail!("'--archive-file' is nextest-specific option; did you mean '--nextest-archive-file'?");
+                }
+                *f = nextest_archive_file.is_some();
+            } else {
+                if archive_file.is_some() {
+                    bail!("'--archive-file' is nextest-specific option and not supported for this subcommand");
+                }
+                if nextest_archive_file.is_some() {
+                    bail!("'--nextest-archive-file' is report-specific option and not supported for this subcommand");
+                }
+            }
         }
 
         Ok(Self {
@@ -906,7 +1205,7 @@ impl Args {
             exclude_from_test,
             exclude_from_report,
             release,
-            profile,
+            cargo_profile,
             target,
             coverage_target_only,
             verbose: verbose.try_into().unwrap_or(u8::MAX),
@@ -915,272 +1214,10 @@ impl Args {
             include_ffi,
             no_clean,
             manifest: ManifestOptions { manifest_path, frozen, locked, offline },
-            archive_file,
+            nextest_archive_file,
             cargo_args,
             rest,
         })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) enum Subcommand {
-    /// Run tests and generate coverage report.
-    None,
-
-    /// Run tests and generate coverage report.
-    Test,
-
-    /// Run a binary or example and generate coverage report.
-    Run,
-
-    /// Generate coverage report.
-    Report,
-
-    /// Remove artifacts that cargo-llvm-cov has generated in the past
-    Clean,
-
-    /// Output the environment set by cargo-llvm-cov to build Rust projects.
-    ShowEnv,
-
-    /// Run tests with cargo nextest
-    Nextest {
-        archive_file: bool,
-    },
-
-    /// Build and archive tests with cargo nextest
-    NextestArchive,
-
-    // internal (unstable)
-    Demangle,
-}
-
-static CARGO_LLVM_COV_USAGE: &str = include_str!("../docs/cargo-llvm-cov.txt");
-static CARGO_LLVM_COV_TEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-test.txt");
-static CARGO_LLVM_COV_RUN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-run.txt");
-static CARGO_LLVM_COV_REPORT_USAGE: &str = include_str!("../docs/cargo-llvm-cov-report.txt");
-static CARGO_LLVM_COV_CLEAN_USAGE: &str = include_str!("../docs/cargo-llvm-cov-clean.txt");
-static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-cov-show-env.txt");
-static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
-static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
-    include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
-
-impl Subcommand {
-    fn can_passthrough(subcommand: Self) -> bool {
-        matches!(subcommand, Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive)
-    }
-
-    fn help_text(subcommand: Self) -> &'static str {
-        match subcommand {
-            Self::None => CARGO_LLVM_COV_USAGE,
-            Self::Test => CARGO_LLVM_COV_TEST_USAGE,
-            Self::Run => CARGO_LLVM_COV_RUN_USAGE,
-            Self::Report => CARGO_LLVM_COV_REPORT_USAGE,
-            Self::Clean => CARGO_LLVM_COV_CLEAN_USAGE,
-            Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
-            Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
-            Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
-            Self::Demangle => "", // internal API
-        }
-    }
-
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::None => "",
-            Self::Test => "test",
-            Self::Run => "run",
-            Self::Report => "report",
-            Self::Clean => "clean",
-            Self::ShowEnv => "show-env",
-            Self::Nextest { .. } => "nextest",
-            Self::NextestArchive => "nextest-archive",
-            Self::Demangle => "demangle",
-        }
-    }
-
-    pub(crate) fn is_nextest_based(self) -> bool {
-        matches!(self, Self::Nextest { .. } | Self::NextestArchive)
-    }
-}
-
-impl FromStr for Subcommand {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "test" | "t" => Ok(Self::Test),
-            "run" | "r" => Ok(Self::Run),
-            "report" => Ok(Self::Report),
-            "clean" => Ok(Self::Clean),
-            "show-env" => Ok(Self::ShowEnv),
-            "nextest" => Ok(Self::Nextest { archive_file: false }),
-            "nextest-archive" => Ok(Self::NextestArchive),
-            "demangle" => Ok(Self::Demangle),
-            _ => bail!("unrecognized subcommand {s}"),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct LlvmCovOptions {
-    /// Export coverage data in "json" format
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=text`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    pub(crate) json: bool,
-    /// Export coverage data in "lcov" format
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=lcov`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    pub(crate) lcov: bool,
-
-    /// Export coverage data in "cobertura" XML format
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=lcov` and then converts to cobertura.xml.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    pub(crate) cobertura: bool,
-
-    /// Export coverage data in "Codecov Custom Coverage" format
-    ///
-    /// If --output-path is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov export -format=json` and then converts to codecov.json.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
-    pub(crate) codecov: bool,
-
-    /// Generate coverage report in “text” format
-    ///
-    /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
-    ///
-    /// This internally calls `llvm-cov show -format=text`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    pub(crate) text: bool,
-    /// Generate coverage report in "html" format
-    ///
-    /// If --output-dir is not specified, the report will be generated in `target/llvm-cov/html` directory.
-    ///
-    /// This internally calls `llvm-cov show -format=html`.
-    /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-show> for more.
-    pub(crate) html: bool,
-    /// Generate coverage reports in "html" format and open them in a browser after the operation.
-    ///
-    /// See --html for more.
-    pub(crate) open: bool,
-
-    /// Export only summary information for each file in the coverage data
-    ///
-    /// This flag can only be used together with --json, --lcov, --cobertura, or --codecov.
-    // If the format flag is not specified, this flag is no-op because the only summary is displayed anyway.
-    pub(crate) summary_only: bool,
-
-    /// Specify a file to write coverage data into.
-    ///
-    /// This flag can only be used together with --json, --lcov, --cobertura, --codecov, or --text.
-    /// See --output-dir for --html and --open.
-    pub(crate) output_path: Option<Utf8PathBuf>,
-    /// Specify a directory to write coverage report into (default to `target/llvm-cov`).
-    ///
-    /// This flag can only be used together with --text, --html, or --open.
-    /// See also --output-path.
-    // If the format flag is not specified, this flag is no-op.
-    pub(crate) output_dir: Option<Utf8PathBuf>,
-
-    /// Fail if `any` or `all` profiles cannot be merged (default to `any`)
-    pub(crate) failure_mode: Option<String>,
-    /// Skip source code files with file paths that match the given regular expression.
-    pub(crate) ignore_filename_regex: Option<String>,
-    // For debugging (unstable)
-    pub(crate) disable_default_ignore_filename_regex: bool,
-    /// Show instantiations in report
-    pub(crate) show_instantiations: bool,
-    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
-    pub(crate) no_cfg_coverage: bool,
-    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
-    pub(crate) no_cfg_coverage_nightly: bool,
-    /// Run tests, but don't generate coverage report
-    pub(crate) no_report: bool,
-    /// Exit with a status of 1 if the total function coverage is less than MIN percent.
-    pub(crate) fail_under_functions: Option<f64>,
-    /// Exit with a status of 1 if the total line coverage is less than MIN percent.
-    pub(crate) fail_under_lines: Option<f64>,
-    /// Exit with a status of 1 if the total region coverage is less than MIN percent.
-    pub(crate) fail_under_regions: Option<f64>,
-    /// Exit with a status of 1 if the uncovered lines are greater than MAX.
-    pub(crate) fail_uncovered_lines: Option<u64>,
-    /// Exit with a status of 1 if the uncovered regions are greater than MAX.
-    pub(crate) fail_uncovered_regions: Option<u64>,
-    /// Exit with a status of 1 if the uncovered functions are greater than MAX.
-    pub(crate) fail_uncovered_functions: Option<u64>,
-    /// Show lines with no coverage.
-    pub(crate) show_missing_lines: bool,
-    /// Include build script in coverage report.
-    pub(crate) include_build_script: bool,
-    /// Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
-    pub(crate) dep_coverage: Option<String>,
-    /// Skip functions in coverage report.
-    pub(crate) skip_functions: bool,
-}
-
-impl LlvmCovOptions {
-    pub(crate) const fn show(&self) -> bool {
-        self.text || self.html
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ShowEnvOptions {
-    /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
-    pub(crate) export_prefix: bool,
-}
-
-// https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
-#[derive(Debug, Default)]
-pub(crate) struct ManifestOptions {
-    /// Path to Cargo.toml
-    pub(crate) manifest_path: Option<Utf8PathBuf>,
-    /// Require Cargo.lock and cache are up to date
-    pub(crate) frozen: bool,
-    /// Require Cargo.lock is up to date
-    pub(crate) locked: bool,
-    /// Run without accessing the network
-    pub(crate) offline: bool,
-}
-
-impl ManifestOptions {
-    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
-        // Skip --manifest-path because it is set based on Workspace::current_manifest.
-        if self.frozen {
-            cmd.arg("--frozen");
-        }
-        if self.locked {
-            cmd.arg("--locked");
-        }
-        if self.offline {
-            cmd.arg("--offline");
-        }
-    }
-}
-
-pub(crate) fn merge_config_to_args(
-    ws: &crate::cargo::Workspace,
-    target: &mut Option<String>,
-    verbose: &mut u8,
-    color: &mut Option<Coloring>,
-) {
-    // CLI flags are prefer over config values.
-    if target.is_none() {
-        target.clone_from(&ws.target_for_cli);
-    }
-    if *verbose == 0 {
-        *verbose = u8::from(ws.config.term.verbose.unwrap_or(false));
-    }
-    if color.is_none() {
-        *color = ws.config.term.color.map(Into::into);
     }
 }
 

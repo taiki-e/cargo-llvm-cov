@@ -77,7 +77,7 @@ impl Context {
                  not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
-        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+        if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
             && (!args.cov.no_cfg_coverage
                 || ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly)
         {
@@ -101,14 +101,14 @@ impl Context {
         if args.cov.output_dir.is_none() && args.cov.html {
             args.cov.output_dir = Some(ws.output_dir.clone());
         }
-        if !matches!(args.subcommand, Subcommand::Report | Subcommand::Clean)
+        if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
             && env::var_os("CARGO_LLVM_COV_SHOW_ENV").is_some()
         {
             warn!(
                 "cargo-llvm-cov subcommands other than report and clean may not work correctly \
                  in context where environment variables are set by show-env; consider using \
                  normal {} commands",
-                if args.subcommand.is_nextest_based() { "cargo-nextest" } else { "cargo" }
+                if args.subcommand.call_cargo_nextest() { "cargo-nextest" } else { "cargo" }
             );
         }
 
