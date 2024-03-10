@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.7] - 2024-03-10
+
 - Add `--nextest-archive-file` option to `cargo llvm-cov report` to support calling it for the result of `cargo llvm-cov nextest --archive-file`. ([#355](https://github.com/taiki-e/cargo-llvm-cov/pull/355))
 
 - Add unstable `--dep-coverage` option to show coverage of th specified dependency instead of the crates in the current workspace. ([#353](https://github.com/taiki-e/cargo-llvm-cov/pull/353))
@@ -616,7 +618,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.3...v0.6.4
