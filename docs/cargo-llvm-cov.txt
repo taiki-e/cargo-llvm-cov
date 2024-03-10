@@ -69,11 +69,6 @@ OPTIONS:
 
             This flag can only be used together with --json, --lcov, or --cobertura.
 
-        --skip-functions
-            Skip exporting per-function coverage data.
-
-            This flag can only be used together with --json, --lcov, or --cobertura.
-
         --output-path <PATH>
             Specify a file to write coverage data into.
 
@@ -131,6 +126,14 @@ OPTIONS:
 
         --include-build-script
             Include build script in coverage report
+
+        --dep-coverage <NAME>
+            Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
+
+        --skip-functions
+            Skip exporting per-function coverage data.
+
+            This flag can only be used together with --json, --lcov, or --cobertura.
 
         --doctests
             Including doc tests (unstable)

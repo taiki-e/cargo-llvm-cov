@@ -16,7 +16,7 @@ use serde_derive::{Deserialize, Serialize};
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct LlvmCovJsonExport {
     /// List of one or more export objects
-    data: Vec<Export>,
+    pub data: Vec<Export>,
     // llvm.coverage.json.export
     #[serde(rename = "type")]
     type_: String,
@@ -319,9 +319,9 @@ impl LlvmCovJsonExport {
 /// Json representation of one `CoverageMapping`
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-struct Export {
+pub struct Export {
     /// List of objects describing coverage for files
-    files: Vec<File>,
+    pub files: Vec<File>,
     /// List of objects describing coverage for functions
     ///
     /// This is None if report is summary-only.
@@ -333,7 +333,7 @@ struct Export {
 /// Coverage for a single file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
-struct File {
+pub struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
@@ -345,7 +345,7 @@ struct File {
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
     expansions: Option<Vec<serde_json::Value>>,
-    filename: String,
+    pub filename: String,
     /// List of Segments contained in the file
     ///
     /// This is None if report is summary-only.
