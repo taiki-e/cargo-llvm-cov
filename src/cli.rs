@@ -236,6 +236,7 @@ impl Args {
         let mut fail_uncovered_functions = None;
         let mut show_missing_lines = false;
         let mut include_build_script = false;
+        let mut dep_coverage = None;
         let mut skip_functions = false;
 
         // build options
@@ -420,6 +421,7 @@ impl Args {
                 Long("fail-uncovered-functions") => parse_opt!(fail_uncovered_functions),
                 Long("show-missing-lines") => parse_flag!(show_missing_lines),
                 Long("include-build-script") => parse_flag!(include_build_script),
+                Long("dep-coverage") => parse_opt!(dep_coverage),
 
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
@@ -882,6 +884,7 @@ impl Args {
                 fail_uncovered_functions,
                 show_missing_lines,
                 include_build_script,
+                dep_coverage,
                 skip_functions,
             },
             show_env: ShowEnvOptions { export_prefix },
@@ -1117,6 +1120,8 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
+    /// Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
+    pub(crate) dep_coverage: Option<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
 }

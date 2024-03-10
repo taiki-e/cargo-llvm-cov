@@ -62,6 +62,9 @@ impl Context {
             if args.cov.disable_default_ignore_filename_regex {
                 warn!("--disable-default-ignore-filename-regex option is unstable");
             }
+            if args.cov.dep_coverage.is_some() {
+                warn!("--dep-coverage option is unstable");
+            }
             if args.doc {
                 warn!("--doc option is unstable");
             } else if args.doctests {

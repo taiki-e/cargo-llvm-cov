@@ -514,7 +514,7 @@ fn generate_report(cx: &Context) -> Result<()> {
     merge_profraw(cx).context("failed to merge profile data")?;
 
     let object_files = object_files(cx).context("failed to collect object files")?;
-    let ignore_filename_regex = ignore_filename_regex(cx);
+    let ignore_filename_regex = ignore_filename_regex(cx, &object_files)?;
     let format = Format::from_args(cx);
     format
         .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
@@ -1165,7 +1165,7 @@ impl Format {
     }
 }
 
-fn ignore_filename_regex(cx: &Context) -> Option<String> {
+fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Option<String>> {
     // On Windows, we should escape the separator.
     const SEPARATOR: &str = if cfg!(windows) { "\\\\" } else { "/" };
 
@@ -1193,41 +1193,65 @@ fn ignore_filename_regex(cx: &Context) -> Option<String> {
         out.push(ignore_filename);
     }
     if !cx.args.cov.disable_default_ignore_filename_regex {
-        // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
-        //       We may have a directory like tests/support, so maybe we need both?
-        if cx.args.remap_path_prefix {
-            out.push(format!(
-                r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
-            ));
+        if let Some(dep) = &cx.args.cov.dep_coverage {
+            let format = Format::Json;
+            let json = format.get_json(cx, object_files, None).context("failed to get json")?;
+            let crates_io_re = Regex::new(&format!("{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"))?;
+            let dep_re = Regex::new(&format!("{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}{dep}-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"))?;
+            let mut set = BTreeSet::new();
+            for data in &json.data {
+                for file in &data.files {
+                    // TODO: non-crates-io
+                    if let Some(crates_io) = crates_io_re.find(&file.filename) {
+                        if !dep_re.is_match(crates_io.as_str()) {
+                            set.insert(crates_io.as_str());
+                        }
+                    } else {
+                        // TODO: dedup
+                        set.insert(&file.filename);
+                    }
+                }
+            }
+            for f in set {
+                out.push(f);
+            }
         } else {
-            out.push(format!(
-                r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
-                regex::escape(cx.ws.metadata.workspace_root.as_str())
-            ));
-        }
-        out.push_abs_path(&cx.ws.target_dir);
-        if cx.args.remap_path_prefix {
-            if let Some(path) = env::home_dir() {
+            // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
+            //       We may have a directory like tests/support, so maybe we need both?
+            if cx.args.remap_path_prefix {
+                out.push(format!(
+                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
+                ));
+            } else {
+                out.push(format!(
+                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
+                    regex::escape(cx.ws.metadata.workspace_root.as_str())
+                ));
+            }
+            out.push_abs_path(&cx.ws.target_dir);
+            if cx.args.remap_path_prefix {
+                if let Some(path) = env::home_dir() {
+                    out.push_abs_path(path);
+                }
+            }
+            if let Some(path) = env::cargo_home_with_cwd(&cx.current_dir) {
+                let path = regex::escape(&path.as_os_str().to_string_lossy());
+                let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
+                out.push(path);
+            }
+            if let Some(path) = env::rustup_home_with_cwd(&cx.current_dir) {
+                out.push_abs_path(path.join("toolchains"));
+            }
+            for path in resolve_excluded_paths(cx) {
                 out.push_abs_path(path);
             }
-        }
-        if let Some(path) = env::cargo_home_with_cwd(&cx.current_dir) {
-            let path = regex::escape(&path.as_os_str().to_string_lossy());
-            let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
-            out.push(path);
-        }
-        if let Some(path) = env::rustup_home_with_cwd(&cx.current_dir) {
-            out.push_abs_path(path.join("toolchains"));
-        }
-        for path in resolve_excluded_paths(cx) {
-            out.push_abs_path(path);
         }
     }
 
     if out.0.is_empty() {
-        None
+        Ok(None)
     } else {
-        Some(out.0)
+        Ok(Some(out.0))
     }
 }
 
