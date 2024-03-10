@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--nextest-archive-file` option to `cargo llvm-cov report` to support calling it for the result of `cargo llvm-cov nextest --archive-file`. ([#355](https://github.com/taiki-e/cargo-llvm-cov/pull/355))
+
+- Add unstable `--dep-coverage` option to show coverage of th specified dependency instead of the crates in the current workspace. ([#353](https://github.com/taiki-e/cargo-llvm-cov/pull/353))
+
 ## [0.6.6] - 2024-02-22
 
 - It is no longer needed to pass `--target`/`--release`/`--cargo-profile` to `cargo llvm-cov nextest --archive-file` in most cases. Options passed to `cargo llvm-cov nextest-archive` are now respected. ([#349](https://github.com/taiki-e/cargo-llvm-cov/pull/349))
