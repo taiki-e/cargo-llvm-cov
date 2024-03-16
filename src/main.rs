@@ -220,6 +220,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             }
             llvm_profile_file_name
         } else {
+            // TODO: remove %p (for nextest?) by default? https://github.com/taiki-e/cargo-llvm-cov/issues/335#issuecomment-1890349373
             let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
             if is_nextest {
                 // https://github.com/taiki-e/cargo-llvm-cov/issues/258
@@ -236,6 +237,9 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 //   write simultaneously will not exceed the number of available cores.
                 llvm_profile_file_name.push_str(&format!(
                     "-%{}m",
+                    // TODO: clamp to 1..=9?
+                    // https://doc.rust-lang.org/rustc/instrument-coverage.html#running-the-instrumented-binary-to-generate-raw-coverage-profiling-data
+                    // > N must be between 1 and 9
                     std::thread::available_parallelism().map_or(1, usize::from)
                 ));
             } else {
