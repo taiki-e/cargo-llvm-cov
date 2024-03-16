@@ -40,6 +40,7 @@ impl Workspace {
         options: &ManifestOptions,
         target: Option<&str>,
         doctests: bool,
+        branch: bool,
         show_env: bool,
     ) -> Result<Self> {
         // Metadata and config
@@ -57,6 +58,9 @@ impl Workspace {
 
         if doctests && !rustc_version.nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
+        }
+        if branch && !rustc_version.nightly {
+            bail!("--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");

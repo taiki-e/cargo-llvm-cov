@@ -8,7 +8,7 @@ Cargo subcommand to easily use LLVM source-based code coverage.
 
 This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] and provides:
 
-- Generate very precise coverage data. (line coverage and region coverage)
+- Generate very precise coverage data. (line, region, and branch coverage. branch coverage is currently optional and requires nightly, see [#8] for more)
 - Support `cargo test`, `cargo run`, and [`cargo nextest`][nextest] with command-line interface compatible with cargo.
 - Support for proc-macro, including coverage of UI tests.
 - Support for doc tests. (this is currently optional and requires nightly, see [#2] for more)
@@ -180,6 +180,9 @@ OPTIONS:
             Skip exporting per-function coverage data.
 
             This flag can only be used together with --json, --lcov, or --cobertura.
+
+        --branch
+            Include branch coverage. (unstable)
 
         --doctests
             Including doc tests (unstable)
@@ -685,7 +688,7 @@ pacman -S cargo-llvm-cov
 
 ## Known limitations
 
-- Branch coverage is not supported yet. See [#8] and [rust-lang/rust#79649] for more.
+- Support for branch coverage is unstable. See [#8] and [rust-lang/rust#79649] for more.
 - Support for doc tests is unstable and has known issues. See [#2] and [rust-lang/rust#79417] for more.
 
 See also [the code-coverage-related issues reported in rust-lang/rust](https://github.com/rust-lang/rust/labels/A-code-coverage).
