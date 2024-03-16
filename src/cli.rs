@@ -355,7 +355,7 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) dep_coverage: Option<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
-    /// Include branch coverage. (unstable)
+    /// Enable branch coverage. (unstable)
     pub(crate) branch: bool,
 }
 

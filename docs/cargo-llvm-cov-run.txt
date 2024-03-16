@@ -136,7 +136,7 @@ OPTIONS:
             This flag can only be used together with --json, --lcov, or --cobertura.
 
         --branch
-            Include branch coverage. (unstable)
+            Enable branch coverage. (unstable)
 
         --ignore-run-fail
             Run all tests regardless of failure and generate report

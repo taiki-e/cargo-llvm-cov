@@ -182,7 +182,7 @@ OPTIONS:
             This flag can only be used together with --json, --lcov, or --cobertura.
 
         --branch
-            Include branch coverage. (unstable)
+            Enable branch coverage. (unstable)
 
         --doctests
             Including doc tests (unstable)
