@@ -76,7 +76,8 @@ jobs:
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
-      - run: |
+      - name: Test cargo llvm-cov nextest
+        run: |
           set -eEuxo pipefail
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
@@ -103,20 +104,35 @@ jobs:
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
         working-directory: tests/fixtures/crates/bin_crate
-      - run: |
+      - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
+        run: |
           set -eEuxo pipefail
+
+          # Test nightly-specific options
           git clone https://github.com/taiki-e/easytime.git
-          cd easytime
+          pushd easytime >/dev/null
           git checkout 7ecb6e6
           cargo llvm-cov test --doctests --text --fail-under-lines 30
+          popd >/dev/null
+          pushd tests/fixtures/crates/cargo_config >/dev/null
+          # TODO: --fail-under-branches?
+          cargo llvm-cov test --branch --text --fail-under-lines 80
+          popd >/dev/null
+          pushd easytime >/dev/null
+          cargo llvm-cov test --branch --doctests --text --fail-under-lines 30
+          popd >/dev/null
+
           # Test minimum runnable Cargo version.
           rustup toolchain add 1.60 --no-self-update
+          pushd easytime >/dev/null
           cargo +1.60 llvm-cov test --text --fail-under-lines 30
-          cd ..
+          popd >/dev/null
+
           # Test trybuild compatibility.
           git clone --depth 1 https://github.com/taiki-e/easy-ext.git
-          cd easy-ext
+          pushd easy-ext >/dev/null
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
+          popd >/dev/null
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
       - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features

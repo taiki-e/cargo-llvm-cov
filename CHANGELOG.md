@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add unstable `--branch` flag to include branch coverage. ([#356](https://github.com/taiki-e/cargo-llvm-cov/pull/356))
+
 ## [0.6.7] - 2024-03-10
 
 - Add `--nextest-archive-file` option to `cargo llvm-cov report` to support calling it for the result of `cargo llvm-cov nextest --archive-file`. ([#355](https://github.com/taiki-e/cargo-llvm-cov/pull/355))

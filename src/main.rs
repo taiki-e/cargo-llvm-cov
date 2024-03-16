@@ -195,13 +195,19 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
+        if cx.args.cov.branch {
+            // Tracking issue: https://github.com/rust-lang/rust/issues/79649
+            flags.push("-Z");
+            flags.push("coverage-options=branch");
+        }
         // Workaround for https://github.com/rust-lang/rust/issues/91092.
         // Unnecessary since https://github.com/rust-lang/rust/pull/111469.
-        if if cx.ws.rustc_version.nightly {
+        let needs_atomic_counter_workaround = if cx.ws.rustc_version.nightly {
             cx.ws.rustc_version.minor <= 71
         } else {
             cx.ws.rustc_version.minor < 71
-        } {
+        };
+        if needs_atomic_counter_workaround {
             flags.push("-C");
             flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         }

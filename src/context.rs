@@ -46,7 +46,13 @@ pub(crate) struct Context {
 impl Context {
     pub(crate) fn new(mut args: Args) -> Result<Self> {
         let show_env = args.subcommand == Subcommand::ShowEnv;
-        let ws = Workspace::new(&args.manifest, args.target.as_deref(), args.doctests, show_env)?;
+        let ws = Workspace::new(
+            &args.manifest,
+            args.target.as_deref(),
+            args.doctests,
+            args.cov.branch,
+            show_env,
+        )?;
         cli::merge_config_to_args(&ws, &mut args.target, &mut args.verbose, &mut args.color);
         term::set_coloring(&mut args.color);
         term::verbose::set(args.verbose != 0);
@@ -64,6 +70,9 @@ impl Context {
             }
             if args.cov.dep_coverage.is_some() {
                 warn!("--dep-coverage option is unstable");
+            }
+            if args.cov.branch {
+                warn!("--branch option is unstable");
             }
             if args.doc {
                 warn!("--doc option is unstable");
