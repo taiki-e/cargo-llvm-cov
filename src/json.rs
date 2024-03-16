@@ -73,7 +73,7 @@ impl CodeCovJsonExport {
     fn from_export(value: Export, ignore_filename_regex: Option<&Regex>) -> Self {
         let functions = value.functions.unwrap_or_default();
 
-        let mut regions = BTreeMap::new();
+        let mut regions = HashMap::new();
 
         for func in functions {
             for filename in func.filenames {
@@ -82,12 +82,11 @@ impl CodeCovJsonExport {
                         continue;
                     }
                 }
+                // region location to covered
+                let coverage: &mut HashMap<RegionLocation, bool> =
+                    regions.entry(filename).or_default();
                 for region in &func.regions {
                     let loc = RegionLocation::from(region);
-
-                    // region location to covered
-                    let coverage: &mut HashMap<RegionLocation, bool> =
-                        regions.entry(filename.clone()).or_default();
 
                     let covered = coverage.entry(loc).or_default();
 
