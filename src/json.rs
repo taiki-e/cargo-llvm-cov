@@ -578,9 +578,7 @@ mod tests {
         let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
 
         let actual = json.get_coverage_percent(kind).unwrap();
-
-        let error_margin = f64::EPSILON;
-        assert!((actual - expected).abs() < error_margin, "kind={kind:?},actual={actual}");
+        assert_eq!(actual, expected, "kind={kind:?},actual={actual}");
     }
 
     #[test]
