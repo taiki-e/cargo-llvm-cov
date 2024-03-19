@@ -8,12 +8,12 @@ error_on_line_overflow = true
 # Override the default formatting style.
 # See https://internals.rust-lang.org/t/running-rustfmt-on-rust-lang-rust-and-other-rust-lang-repositories/8732/81.
 use_small_heuristics = "Max"
-# See https://github.com/rust-dev-tools/fmt-rfcs/issues/149.
+# This is the default of 2024 edition https://github.com/rust-lang/rust/pull/114764.
 # This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3370)
 overflow_delimited_expr = true
-# This is unstable (tracking issue: none).
+# This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/4991).
 imports_granularity = "Crate"
-# This is unstable (tracking issue: none).
+# This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/5083).
 group_imports = "StdExternalCrate"
 
 # Apply rustfmt to more places.
