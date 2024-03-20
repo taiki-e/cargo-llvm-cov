@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 
-use anyhow::{bail, format_err, Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Config;
 
@@ -28,7 +28,7 @@ pub(crate) struct Workspace {
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_for_cli: Option<String>,
-    pub(crate) rustc_version: RustcVersion,
+    pub(crate) rustc_version: cargo_config2::RustcVersion,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
     /// Whether `-Z doctest-in-workspace` is needed.
@@ -54,7 +54,9 @@ impl Workspace {
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
         let rustc = ProcessBuilder::from(config.rustc().clone());
-        let rustc_version = rustc_version(&rustc)?;
+        let mut rustc_version = config.rustc_version()?;
+        rustc_version.nightly =
+            rustc_version.nightly || std::env::var("RUSTC_BOOTSTRAP").ok().as_deref() == Some("1");
 
         if doctests && !rustc_version.nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
@@ -145,39 +147,6 @@ impl Workspace {
             trybuild_target_dir.push("target");
         }
         trybuild_target_dir
-    }
-}
-
-fn rustc_version(rustc: &ProcessBuilder) -> Result<RustcVersion> {
-    let mut cmd = rustc.clone();
-    // Use verbose version output because the packagers add extra strings to the normal version output.
-    cmd.args(["--version", "--verbose"]);
-    let verbose_version = cmd.read()?;
-    RustcVersion::parse(&verbose_version)
-        .ok_or_else(|| format_err!("unexpected version output from {cmd}: {verbose_version}"))
-}
-
-pub(crate) struct RustcVersion {
-    pub(crate) minor: u32,
-    pub(crate) nightly: bool,
-}
-
-impl RustcVersion {
-    fn parse(verbose_version: &str) -> Option<Self> {
-        let release = verbose_version.lines().find_map(|line| line.strip_prefix("release: "))?;
-        let (version, channel) = release.split_once('-').unwrap_or((release, ""));
-        let mut digits = version.splitn(3, '.');
-        let major = digits.next()?;
-        if major != "1" {
-            return None;
-        }
-        let minor = digits.next()?.parse::<u32>().ok()?;
-        let _patch = digits.next().unwrap_or("0").parse::<u32>().ok()?;
-        let nightly = channel == "nightly"
-            || channel == "dev"
-            || std::env::var("RUSTC_BOOTSTRAP").ok().as_deref() == Some("1");
-
-        Some(Self { minor, nightly })
     }
 }
 
