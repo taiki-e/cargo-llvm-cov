@@ -203,9 +203,9 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         // Workaround for https://github.com/rust-lang/rust/issues/91092.
         // Unnecessary since https://github.com/rust-lang/rust/pull/111469.
         let needs_atomic_counter_workaround = if cx.ws.rustc_version.nightly {
-            cx.ws.rustc_version.minor <= 71
+            cx.ws.rustc_version.major_minor() <= (1, 71)
         } else {
-            cx.ws.rustc_version.minor < 71
+            cx.ws.rustc_version.major_minor() < (1, 71)
         };
         if needs_atomic_counter_workaround {
             flags.push("-C");
