@@ -181,6 +181,8 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     fn push_common_flags(cx: &Context, flags: &mut Flags) {
         if cx.ws.stable_coverage {
             flags.push("-C");
+            // TODO: if user already set -C instrument-coverage=..., respect it
+            // https://doc.rust-lang.org/rustc/instrument-coverage.html#-c-instrument-coverageoptions
             flags.push("instrument-coverage");
         } else {
             flags.push("-Z");

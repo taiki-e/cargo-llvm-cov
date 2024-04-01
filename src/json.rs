@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+// Refs: https://github.com/llvm/llvm-project/blob/llvmorg-18.1.2/llvm/tools/llvm-cov/CoverageExporterJson.cpp
+// TODO: reflect https://github.com/llvm/llvm-project/commit/8ecbb0404d740d1ab173554e47cef39cd5e3ef8c#diff-e5de2b538138d03e13b43901f61adc61992516c742991ebaf1a13f2f8623910a?
+
 use std::{
     collections::{BTreeMap, HashMap},
     fmt,
@@ -11,7 +14,6 @@ use regex::Regex;
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde_derive::{Deserialize, Serialize};
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L13-L47
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 pub struct LlvmCovJsonExport {
@@ -336,7 +338,6 @@ pub struct File {
     /// List of Branches in the file
     ///
     /// This is None if report is summary-only.
-    // https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L92
     #[serde(skip_serializing_if = "Option::is_none")]
     branches: Option<Vec<serde_json::Value>>,
     /// List of expansion records
@@ -355,7 +356,6 @@ pub struct File {
 }
 
 /// Describes a segment of the file with a counter
-// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L79
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 struct Segment(
@@ -401,7 +401,6 @@ impl fmt::Debug for Segment {
     }
 }
 
-// https://github.com/llvm/llvm-project/blob/llvmorg-17.0.0-rc2/llvm/tools/llvm-cov/CoverageExporterJson.cpp#L258
 /// Coverage info for a single function
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
