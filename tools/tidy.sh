@@ -122,8 +122,9 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         echo "${new}" >"${lib}"
         check_diff "${lib}"
     done
-    # Make sure that public Rust crates don't contain executables.
-    failed_files=''
+    # Make sure that public Rust crates don't contain executables and binaries.
+    executables=''
+    binaries=''
     metadata=$(cargo metadata --format-version=1 --no-deps)
     has_public_crate=''
     for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
@@ -140,7 +141,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         has_public_crate='1'
     done
     if [[ -n "${has_public_crate}" ]]; then
-        info "checking file permissions"
+        info "checking public crates don't contain executables and binaries"
         if [[ -f Cargo.toml ]]; then
             root_manifest=$(cargo locate-project --message-format=plain --manifest-path Cargo.toml)
             root_pkg=$(jq <<<"${metadata}" ".packages[] | select(.manifest_path == \"${root_manifest}\")")
@@ -167,13 +168,24 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
                 .* | tools/*) continue ;;
             esac
             if [[ -x "${p}" ]]; then
-                failed_files+="${p}"$'\n'
+                executables+="${p}"$'\n'
+            fi
+            # Use diff instead of file because file treats an empty file as a binary
+            # https://unix.stackexchange.com/questions/275516/is-there-a-convenient-way-to-classify-files-as-binary-or-text#answer-402870
+            if (diff .gitattributes "${p}" || true) | grep -q '^Binary file'; then
+                binaries+="${p}"$'\n'
             fi
         done
-        if [[ -n "${failed_files}" ]]; then
-            error "file-permissions-check failed: executable should be in tools/ directory"
+        if [[ -n "${executables}" ]]; then
+            error "file-permissions-check failed: executables are only allowed to be present in directories that are excluded from crates.io"
             echo "======================================="
-            echo -n "${failed_files}"
+            echo -n "${executables}"
+            echo "======================================="
+        fi
+        if [[ -n "${binaries}" ]]; then
+            error "file-permissions-check failed: binaries are only allowed to be present in directories that are excluded from crates.io"
+            echo "======================================="
+            echo -n "${binaries}"
             echo "======================================="
         fi
     fi

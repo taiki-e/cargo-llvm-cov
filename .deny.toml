@@ -14,6 +14,11 @@ ignore = [
 multiple-versions = "warn"
 wildcards = "deny"
 allow-wildcard-paths = true
+build.executables = "deny"
+build.interpreted = "deny"
+build.include-dependencies = true
+build.include-workspace = false # covered by tools/tidy.sh
+build.include-archives = true
 build.allow-build-scripts = [
     { name = "anyhow" },
     { name = "camino" },
@@ -35,12 +40,22 @@ build.allow-build-scripts = [
     { name = "windows_x86_64_gnullvm" },
     { name = "windows_x86_64_msvc" },
 ]
+build.bypass = [
+    # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
+    { name = "winapi-i686-pc-windows-gnu", allow-globs = ["lib/*.a"] },
+    { name = "winapi-x86_64-pc-windows-gnu", allow-globs = ["lib/*.a"] },
+    { name = "windows_aarch64_gnullvm", allow-globs = ["lib/*.a"] },
+    { name = "windows_aarch64_msvc", allow-globs = ["lib/*.lib"] },
+    { name = "windows_i686_gnu", allow-globs = ["lib/*.a"] },
+    { name = "windows_i686_msvc", allow-globs = ["lib/*.lib"] },
+    { name = "windows_x86_64_gnu", allow-globs = ["lib/*.a"] },
+    { name = "windows_x86_64_gnullvm", allow-globs = ["lib/*.a"] },
+    { name = "windows_x86_64_msvc", allow-globs = ["lib/*.lib"] },
+]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
-default = "deny"
-unlicensed = "deny"
-copyleft = "deny"
+version = 2
 unused-allowed-license = "deny"
 private.ignore = true
 allow = [
