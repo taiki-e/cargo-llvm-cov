@@ -655,7 +655,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         }
         warn!(
             "not found *.profraw files in {}; this may occur if target directory is accidentally \
-                 cleared, or running report subcommand without running any tests or binaries",
+             cleared, or running report subcommand without running any tests or binaries",
             cx.ws.target_dir
         );
     }
