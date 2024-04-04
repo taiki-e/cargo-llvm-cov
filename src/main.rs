@@ -652,13 +652,12 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     if profraw_files.is_empty() {
         if cx.ws.profdata_file.exists() {
             return Ok(());
-        } else {
-            warn!(
-                "not found *.profraw files in {}; this may occur if target directory is accidentally \
-                 cleared, or running report subcommand without running any tests or binaries",
-                cx.ws.target_dir
-            );
         }
+        warn!(
+            "not found *.profraw files in {}; this may occur if target directory is accidentally \
+                 cleared, or running report subcommand without running any tests or binaries",
+            cx.ws.target_dir
+        );
     }
     let mut input_files = String::new();
     for path in profraw_files {
