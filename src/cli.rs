@@ -351,7 +351,7 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
-    /// Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
+    /// Show coverage of the specified dependency instead of the crates in the current workspace. (unstable)
     pub(crate) dep_coverage: Option<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,

@@ -133,7 +133,7 @@ OPTIONS:
             Include build script in coverage report
 
         --dep-coverage <NAME>
-            Show coverage of th specified dependency instead of the crates in the current workspace. (unstable)
+            Show coverage of the specified dependency instead of the crates in the current workspace. (unstable)
 
         --skip-functions
             Skip exporting per-function coverage data.
