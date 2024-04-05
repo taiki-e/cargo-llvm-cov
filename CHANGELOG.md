@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Skip merging profraw data if profraw files don't exist and a profdata file already exists. ([#360](https://github.com/taiki-e/cargo-llvm-cov/pull/360), thanks @weiznich)
+
+- Update `opener` to 0.7.
+
 ## [0.6.8] - 2024-03-16
 
 - Add unstable `--branch` flag to enable branch coverage. ([#356](https://github.com/taiki-e/cargo-llvm-cov/pull/356))
