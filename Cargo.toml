@@ -85,6 +85,7 @@ manual_assert = { level = "allow", priority = 1 }
 manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
 missing_errors_doc = { level = "allow", priority = 1 }
 module_name_repetitions = { level = "allow", priority = 1 }
+nonminimal_bool = { level = "allow", priority = 1 } # buggy https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+nonminimal_bool
 similar_names = { level = "allow", priority = 1 }
 single_match = { level = "allow", priority = 1 }
 single_match_else = { level = "allow", priority = 1 }
