@@ -18,9 +18,9 @@ pub(crate) enum Coloring {
 }
 
 impl Coloring {
-    const AUTO: u8 = Self::Auto as _;
-    const ALWAYS: u8 = Self::Always as _;
-    const NEVER: u8 = Self::Never as _;
+    const AUTO: u8 = Self::Auto as u8;
+    const ALWAYS: u8 = Self::Always as u8;
+    const NEVER: u8 = Self::Never as u8;
 
     pub(crate) const fn cargo_color(self) -> &'static str {
         match self {
@@ -62,7 +62,7 @@ pub(crate) fn set_coloring(color: &mut Option<Coloring>) {
         // If coloring is already set to never by init_coloring, respect it.
         *color = Some(Coloring::Never);
     } else {
-        COLORING.store(new as _, Ordering::Relaxed);
+        COLORING.store(new as u8, Ordering::Relaxed);
     }
 }
 fn coloring() -> ColorChoice {
