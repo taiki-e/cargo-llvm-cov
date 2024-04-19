@@ -652,16 +652,22 @@ When used with [nextest]:
 <!-- omit in toc -->
 ### Via Homebrew
 
-You can install [cargo-llvm-cov using Homebrew tap on macOS and Linux](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb):
+You can install cargo-llvm-cov from the [Homebrew tap maintained by us](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb) (x86_64/aarch64 macOS, x86_64/aarch64 Linux):
 
 ```sh
 brew install taiki-e/tap/cargo-llvm-cov
 ```
 
+Alternatively, you can install cargo-llvm-cov from [homebrew-core](https://formulae.brew.sh/formula/cargo-llvm-cov) (x86_64/aarch64 macOS, x86_64 Linux):
+
+```sh
+brew install cargo-llvm-cov
+```
+
 <!-- omit in toc -->
 ### Via Scoop (Windows)
 
-You can install [cargo-llvm-cov using Scoop](https://github.com/taiki-e/scoop-bucket/blob/HEAD/bucket/cargo-llvm-cov.json):
+You can install cargo-llvm-cov from the [Scoop bucket maintained by us](https://github.com/taiki-e/scoop-bucket/blob/HEAD/bucket/cargo-llvm-cov.json):
 
 ```sh
 scoop bucket add taiki-e https://github.com/taiki-e/scoop-bucket
