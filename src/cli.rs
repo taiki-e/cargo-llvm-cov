@@ -1280,7 +1280,7 @@ fn multi_arg(flag: &lexopt::Arg<'_>) -> Result<()> {
 fn requires(flag: &str, requires: &[&str]) -> Result<()> {
     let with = match requires.len() {
         0 => unreachable!(),
-        1 => requires[0].to_string(),
+        1 => requires[0].to_owned(),
         2 => format!("either {} or {}", requires[0], requires[1]),
         _ => {
             let mut with = String::new();

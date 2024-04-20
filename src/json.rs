@@ -629,7 +629,7 @@ mod tests {
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
         let expected: UncoveredLines =
-            vec![("src/lib.rs".to_string(), vec![7, 8, 9])].into_iter().collect();
+            vec![("src/lib.rs".to_owned(), vec![7, 8, 9])].into_iter().collect();
         assert_eq!(uncovered_lines, expected);
     }
 
@@ -669,7 +669,7 @@ mod tests {
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
         let expected: UncoveredLines =
-            vec![("src/lib.rs".to_string(), vec![15, 17])].into_iter().collect();
+            vec![("src/lib.rs".to_owned(), vec![15, 17])].into_iter().collect();
         // This was just '11', i.e. there were two problems:
         // 1) line 11 has a serde macro which expands to multiple functions; some of those were
         //    covered, which should be presented as a "covered" 11th line.
