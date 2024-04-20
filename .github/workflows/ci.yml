@@ -99,7 +99,7 @@ jobs:
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           rm a.tar.zst
           cargo clean
-          host=$(rustc -Vv | grep host | sed 's/host: //')
+          host=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70

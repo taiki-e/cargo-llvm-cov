@@ -1,0 +1,10 @@
+# https://github.com/DavidAnson/markdownlint#rules--aliases
+config:
+  line-length: false
+  no-duplicate-heading: false
+  no-inline-html: false
+  no-emphasis-as-heading: false
+
+# https://github.com/DavidAnson/markdownlint-cli2#markdownlint-cli2jsonc
+noBanner: true
+noProgress: true

@@ -35,16 +35,13 @@ check_diff() {
         fi
     fi
 }
+check_config() {
+    if [[ ! -e "$1" ]]; then
+        error "could not found $1 in the repository root"
+    fi
+}
 info() {
     echo >&2 "info: $*"
-}
-warn() {
-    if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-        echo "::warning::$*"
-    else
-        echo >&2 "warning: $*"
-    fi
-    should_fail=1
 }
 error() {
     if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
@@ -71,14 +68,12 @@ fi
 # Rust (if exists)
 if [[ -n "$(git ls-files '*.rs')" ]]; then
     info "checking Rust code style"
-    if [[ ! -e .rustfmt.toml ]]; then
-        warn "could not found .rustfmt.toml in the repository root"
-    fi
+    check_config .rustfmt.toml
     if type -P rustup &>/dev/null; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
         # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
-        rustc_version=$(rustc -Vv | grep 'release: ' | sed 's/release: //')
+        rustc_version=$(rustc -vV | grep '^release:' | cut -d' ' -f2)
         if [[ "${rustc_version}" == *"nightly"* ]] || [[ "${rustc_version}" == *"dev"* ]]; then
             rustup component add rustfmt &>/dev/null
             echo "+ rustfmt \$(git ls-files '*.rs')"
@@ -90,7 +85,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         fi
         check_diff $(git ls-files '*.rs')
     else
-        warn "'rustup' is not installed; skipped Rust code style check"
+        error "'rustup' is not installed; skipped Rust code style check"
     fi
     cast_without_turbofish=$(grep -n -E '\.cast\(\)' $(git ls-files '*.rs') || true)
     if [[ -n "${cast_without_turbofish}" ]]; then
@@ -132,7 +127,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
         publish=$(jq <<<"${pkg}" -r '.publish')
         manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
         if ! grep -q '^\[lints\]' "${manifest_path}" && ! grep -q '^\[lints\.rust\]' "${manifest_path}"; then
-            warn "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
+            error "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
         fi
         # Publishing is unrestricted if null, and forbidden if an empty array.
         if [[ "${publish}" == "[]" ]]; then
@@ -149,10 +144,14 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
                 publish=$(jq <<<"${root_pkg}" -r '.publish')
                 # Publishing is unrestricted if null, and forbidden if an empty array.
                 if [[ "${publish}" != "[]" ]]; then
-                    if ! grep -Eq '^exclude = \[.*\.\*.*\]' Cargo.toml; then
-                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
-                    elif ! grep -Eq '^exclude = \[.*/tools.*\]' Cargo.toml; then
-                        error "top-level Cargo.toml of real manifest should have exclude field with \"/.*\" and \"/tools\""
+                    if ! grep -Eq '^exclude = \[.*"/\.\*".*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/.*\""
+                    fi
+                    if [[ -e tools ]] && ! grep -Eq '^exclude = \[.*"/tools".*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/tools\" if it exists"
+                    fi
+                    if [[ -e target-specs ]] && ! grep -Eq '^exclude = \[.*"/target-specs".*\]' Cargo.toml; then
+                        error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/target-specs\" if it exists"
                     fi
                 fi
             fi
@@ -165,7 +164,7 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
             # Top-level hidden files/directories and tools/* are excluded from crates.io (ensured by the above check).
             # TODO: fully respect exclude field in Cargo.toml.
             case "${p}" in
-                .* | tools/*) continue ;;
+                .* | tools/* | target-specs/*) continue ;;
             esac
             if [[ -x "${p}" ]]; then
                 executables+="${p}"$'\n'
@@ -189,35 +188,35 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
             echo "======================================="
         fi
     fi
+elif [[ -e .rustfmt.toml ]]; then
+    error ".rustfmt.toml is unused"
 fi
 
 # C/C++ (if exists)
 if [[ -n "$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')" ]]; then
     info "checking C/C++ code style"
-    if [[ ! -e .clang-format ]]; then
-        warn "could not found .clang-format in the repository root"
-    fi
+    check_config .clang-format
     if type -P clang-format &>/dev/null; then
         echo "+ clang-format -i \$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')"
         clang-format -i $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
         check_diff $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
     else
-        warn "'clang-format' is not installed; skipped C/C++ code style check"
+        error "'clang-format' is not installed; skipped C/C++ code style check"
     fi
+elif [[ -e .clang-format ]]; then
+    error ".clang-format is unused"
 fi
 
 # YAML/JavaScript/JSON (if exists)
-if [[ -n "$(git ls-files '*.yml' '*.js' '*.json')" ]]; then
+if [[ -n "$(git ls-files '*.yml' '*.yaml' '*.js' '*.json')" ]]; then
     info "checking YAML/JavaScript/JSON code style"
-    if [[ ! -e .editorconfig ]]; then
-        warn "could not found .editorconfig in the repository root"
-    fi
+    check_config .editorconfig
     if type -P npm &>/dev/null; then
-        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml' '*.js' '*.json')"
-        npx -y prettier -l -w $(git ls-files '*.yml' '*.js' '*.json')
-        check_diff $(git ls-files '*.yml' '*.js' '*.json')
+        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml' '*.yaml' '*.js' '*.json')"
+        npx -y prettier -l -w $(git ls-files '*.yml' '*.yaml' '*.js' '*.json')
+        check_diff $(git ls-files '*.yml' '*.yaml' '*.js' '*.json')
     else
-        warn "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
+        error "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
     fi
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
@@ -266,45 +265,45 @@ if [[ -n "$(git ls-files '*.yml' '*.js' '*.json')" ]]; then
                     fi
                 done
             else
-                warn "'python3' is not installed; skipped GitHub workflow check"
+                error "'python3' is not installed; skipped GitHub workflow check"
             fi
         else
-            warn "'jq' is not installed; skipped GitHub workflow check"
+            error "'jq' is not installed; skipped GitHub workflow check"
         fi
     fi
 fi
-if [[ -n "$(git ls-files '*.yaml')" ]]; then
+if [[ -n "$(git ls-files '*.yaml' | (grep -v .markdownlint-cli2.yaml || true))" ]]; then
     error "please use '.yml' instead of '.yaml' for consistency"
-    git ls-files '*.yaml'
+    git ls-files '*.yaml' | (grep -v .markdownlint-cli2.yaml || true)
 fi
 
 # TOML (if exists)
-if [[ -n "$(git ls-files '*.toml')" ]]; then
+if [[ -n "$(git ls-files '*.toml' | (grep -v .taplo.toml || true))" ]]; then
     info "checking TOML style"
-    if [[ ! -e .taplo.toml ]]; then
-        warn "could not found .taplo.toml in the repository root"
-    fi
+    check_config .taplo.toml
     if type -P npm &>/dev/null; then
         echo "+ npx -y @taplo/cli fmt \$(git ls-files '*.toml')"
-        npx -y @taplo/cli fmt $(git ls-files '*.toml')
+        RUST_LOG=warn npx -y @taplo/cli fmt $(git ls-files '*.toml')
         check_diff $(git ls-files '*.toml')
     else
-        warn "'npm' is not installed; skipped TOML style check"
+        error "'npm' is not installed; skipped TOML style check"
     fi
+elif [[ -e .taplo.toml ]]; then
+    error ".taplo.toml is unused"
 fi
 
 # Markdown (if exists)
 if [[ -n "$(git ls-files '*.md')" ]]; then
     info "checking Markdown style"
-    if [[ ! -e .markdownlint.yml ]]; then
-        warn "could not found .markdownlint.yml in the repository root"
-    fi
+    check_config .markdownlint-cli2.yaml
     if type -P npm &>/dev/null; then
         echo "+ npx -y markdownlint-cli2 \$(git ls-files '*.md')"
         npx -y markdownlint-cli2 $(git ls-files '*.md')
     else
-        warn "'npm' is not installed; skipped Markdown style check"
+        error "'npm' is not installed; skipped Markdown style check"
     fi
+elif [[ -e .markdownlint-cli2.yaml ]]; then
+    error ".markdownlint-cli2.yaml is unused"
 fi
 if [[ -n "$(git ls-files '*.markdown')" ]]; then
     error "please use '.md' instead of '.markdown' for consistency"
@@ -314,19 +313,15 @@ fi
 # Shell scripts
 info "checking Shell scripts"
 if type -P shfmt &>/dev/null; then
-    if [[ ! -e .editorconfig ]]; then
-        warn "could not found .editorconfig in the repository root"
-    fi
+    check_config .editorconfig
     echo "+ shfmt -l -w \$(git ls-files '*.sh')"
     shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
 else
-    warn "'shfmt' is not installed; skipped Shell scripts style check"
+    error "'shfmt' is not installed; skipped Shell scripts style check"
 fi
 if type -P shellcheck &>/dev/null; then
-    if [[ ! -e .shellcheckrc ]]; then
-        warn "could not found .shellcheckrc in the repository root"
-    fi
+    check_config .shellcheckrc
     echo "+ shellcheck \$(git ls-files '*.sh')"
     if ! shellcheck $(git ls-files '*.sh'); then
         should_fail=1
@@ -339,7 +334,7 @@ if type -P shellcheck &>/dev/null; then
         fi
     fi
 else
-    warn "'shellcheck' is not installed; skipped Shell scripts style check"
+    error "'shellcheck' is not installed; skipped Shell scripts style check"
 fi
 
 # License check
@@ -424,7 +419,7 @@ EOF
         fi
         check_diff .github/.cspell/rust-dependencies.txt
         if ! grep -Eq "^\.github/\.cspell/rust-dependencies.txt linguist-generated" .gitattributes; then
-            echo "warning: you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
+            error "you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
         fi
 
         echo "+ npx -y cspell --no-progress --no-summary \$(git ls-files)"
@@ -460,7 +455,7 @@ EOF
             echo "======================================="
         fi
     else
-        warn "'npm' is not installed; skipped spell check"
+        error "'npm' is not installed; skipped spell check"
     fi
 fi
 

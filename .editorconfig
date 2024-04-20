@@ -11,10 +11,10 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{json,md,yml}]
+[*.{json,md,rb,yml,yaml}]
 indent_size = 2
 
-[*.{js,yml}]
+[*.{js,yml,yaml}]
 quote_type = single
 
 [*.sh]
