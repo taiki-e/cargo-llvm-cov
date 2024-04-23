@@ -599,9 +599,6 @@ cargo-llvm-cov --json | some-program
 ## Installation
 
 <!-- omit in toc -->
-### Prerequisites
-
-<!-- omit in toc -->
 ### From source
 
 ```sh
