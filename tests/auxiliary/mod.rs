@@ -34,7 +34,7 @@ pub(crate) fn cargo_llvm_cov(subcommand: &str) -> Command {
     if !subcommand.is_empty() {
         cmd.arg(subcommand);
     }
-    cmd.env("CARGO_LLVM_COV_DENY_WARNINGS", "true");
+    cmd.env("CARGO_LLVM_COV_DENY_WARNINGS", "1");
     cmd.env_remove("RUSTFLAGS")
         .env_remove("RUSTDOCFLAGS")
         .env_remove("CARGO_BUILD_RUSTFLAGS")

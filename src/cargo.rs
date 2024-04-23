@@ -56,7 +56,7 @@ impl Workspace {
         let rustc = ProcessBuilder::from(config.rustc().clone());
         let mut rustc_version = config.rustc_version()?;
         rustc_version.nightly =
-            rustc_version.nightly || std::env::var("RUSTC_BOOTSTRAP").ok().as_deref() == Some("1");
+            rustc_version.nightly || env::var_os("RUSTC_BOOTSTRAP").unwrap_or_default() == "1";
 
         if doctests && !rustc_version.nightly {
             bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")

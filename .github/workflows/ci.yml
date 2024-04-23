@@ -21,6 +21,7 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: -D warnings
   RUSTUP_MAX_RETRIES: 10
+  CARGO_LLVM_COV_DENY_WARNINGS: 1
 
 defaults:
   run:
