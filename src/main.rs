@@ -1013,6 +1013,7 @@ impl Format {
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     "-show-branches=count",
+                    "-show-mcdc",
                     &format!("-Xdemangler={}", cx.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
