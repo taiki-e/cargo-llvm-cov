@@ -1,3 +1,4 @@
+autocfg
 bindeps
 binstall
 compiletest

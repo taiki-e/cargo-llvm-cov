@@ -42,6 +42,7 @@ build.allow-build-scripts = [
     { name = "windows_x86_64_msvc" },
 ]
 build.bypass = [
+    { name = "autocfg", allow-globs = ["tests/wrap_ignored"] }, # via fs-err
     # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
     { name = "winapi-i686-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via shared_child via duct & via is_executable
     { name = "winapi-x86_64-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via shared_child via duct & via is_executable
