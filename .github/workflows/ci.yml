@@ -108,6 +108,7 @@ jobs:
       - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
         run: |
           set -eEuxo pipefail
+          unset RUSTFLAGS
 
           # Test nightly-specific options
           git clone https://github.com/taiki-e/easytime.git
