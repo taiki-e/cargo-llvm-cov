@@ -7,6 +7,5 @@ demangle
 lexopt
 rustversion
 ruzstd
-tempfile
 termcolor
 walkdir
