@@ -81,6 +81,7 @@ borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang
 declare_interior_mutable_const = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7665
 doc_markdown = { level = "allow", priority = 1 }
 float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
+lint_groups_priority = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/12270
 manual_assert = { level = "allow", priority = 1 }
 manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
 missing_errors_doc = { level = "allow", priority = 1 }
