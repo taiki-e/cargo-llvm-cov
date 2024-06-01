@@ -44,7 +44,7 @@
   "languageSettings": [
     {
       "languageId": ["*"],
-      "dictionaries": ["rust"]
+      "dictionaries": ["bash", "rust"]
     }
   ],
   "ignorePaths": ["**/fixtures/*.json", "tests/fixtures/coverage-reports/**"]
