@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.10] - 2024-06-01
+
 - Update `ruzstd` to 0.7.
 
   This increases the rustc version required to build cargo-llvm-cov. (rustc 1.70+ -> 1.73+)
@@ -635,7 +637,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.9...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.10...HEAD
+[0.6.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.6...v0.6.7
