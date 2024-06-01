@@ -59,10 +59,10 @@ jobs:
           - rust: beta
           - rust: nightly
           - rust: nightly
-            os: macos-11
+            os: macos-latest
           - rust: nightly
-            os: windows-2019
-    runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
+            os: windows-latest
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
       - uses: taiki-e/checkout-action@v1
@@ -72,8 +72,6 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-minimal-versions
       - uses: taiki-e/install-action@nextest
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
-        if: startsWith(matrix.os, 'windows')
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug
