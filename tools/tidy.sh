@@ -16,7 +16,7 @@ trap 's=$?; echo >&2 "$0: error on line "${LINENO}": ${BASH_COMMAND}"; exit ${s}
 # - shellcheck
 # - npm
 # - jq
-# - python
+# - python 3
 # - rustup (if Rust code exists)
 # - clang-format (if C/C++ code exists)
 #
@@ -40,6 +40,19 @@ check_config() {
         error "could not found $1 in the repository root"
     fi
 }
+check_install() {
+    for tool in "$@"; do
+        if ! type -P "${tool}" &>/dev/null; then
+            if [[ "${tool}" == "python3" ]]; then
+                if type -P python &>/dev/null; then
+                    continue
+                fi
+            fi
+            error "'${tool}' is required to run this check"
+            return 1
+        fi
+    done
+}
 info() {
     echo >&2 "info: $*"
 }
@@ -56,6 +69,27 @@ venv() {
     shift
     "${venv_bin}/${bin}${exe}" "$@"
 }
+venv_install_yq() {
+    local py_suffix=''
+    if type -P python3 &>/dev/null; then
+        py_suffix='3'
+    fi
+    exe=''
+    venv_bin='.venv/bin'
+    case "$(uname -s)" in
+        MINGW* | MSYS* | CYGWIN* | Windows_NT)
+            exe='.exe'
+            venv_bin='.venv/Scripts'
+            ;;
+    esac
+    if [[ ! -d .venv ]]; then
+        "python${py_suffix}" -m venv .venv
+    fi
+    if [[ ! -e "${venv_bin}/yq${exe}" ]]; then
+        info "installing yq to ./.venv using pip"
+        venv "pip${py_suffix}" install yq
+    fi
+}
 
 if [[ $# -gt 0 ]]; then
     cat <<EOF
@@ -68,24 +102,23 @@ fi
 # Rust (if exists)
 if [[ -n "$(git ls-files '*.rs')" ]]; then
     info "checking Rust code style"
+    check_install cargo jq python3
     check_config .rustfmt.toml
-    if type -P rustup &>/dev/null; then
+    if check_install rustup; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
         # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
         rustc_version=$(rustc -vV | grep '^release:' | cut -d' ' -f2)
         if [[ "${rustc_version}" == *"nightly"* ]] || [[ "${rustc_version}" == *"dev"* ]]; then
             rustup component add rustfmt &>/dev/null
-            echo "+ rustfmt \$(git ls-files '*.rs')"
+            info "running \`rustfmt \$(git ls-files '*.rs')\`"
             rustfmt $(git ls-files '*.rs')
         else
             rustup component add rustfmt --toolchain nightly &>/dev/null
-            echo "+ rustfmt +nightly \$(git ls-files '*.rs')"
+            info "running \`rustfmt +nightly \$(git ls-files '*.rs')\`"
             rustfmt +nightly $(git ls-files '*.rs')
         fi
         check_diff $(git ls-files '*.rs')
-    else
-        error "'rustup' is not installed; skipped Rust code style check"
     fi
     cast_without_turbofish=$(grep -n -E '\.cast\(\)' $(git ls-files '*.rs') || true)
     if [[ -n "${cast_without_turbofish}" ]]; then
@@ -122,11 +155,12 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
     binaries=''
     metadata=$(cargo metadata --format-version=1 --no-deps)
     has_public_crate=''
+    venv_install_yq
     for id in $(jq <<<"${metadata}" '.workspace_members[]'); do
         pkg=$(jq <<<"${metadata}" ".packages[] | select(.id == ${id})")
         publish=$(jq <<<"${pkg}" -r '.publish')
         manifest_path=$(jq <<<"${pkg}" -r '.manifest_path')
-        if ! grep -q '^\[lints\]' "${manifest_path}" && ! grep -q '^\[lints\.rust\]' "${manifest_path}"; then
+        if [[ "$(venv tomlq -c '.lints' "${manifest_path}")" == "null" ]]; then
             error "no [lints] table in ${manifest_path} please add '[lints]' with 'workspace = true'"
         fi
         # Publishing is unrestricted if null, and forbidden if an empty array.
@@ -144,13 +178,14 @@ if [[ -n "$(git ls-files '*.rs')" ]]; then
                 publish=$(jq <<<"${root_pkg}" -r '.publish')
                 # Publishing is unrestricted if null, and forbidden if an empty array.
                 if [[ "${publish}" != "[]" ]]; then
-                    if ! grep -Eq '^exclude = \[.*"/\.\*".*\]' Cargo.toml; then
+                    exclude=$(venv tomlq -r '.package.exclude[]' Cargo.toml)
+                    if ! grep <<<"${exclude}" -Eq '^/\.\*$'; then
                         error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/.*\""
                     fi
-                    if [[ -e tools ]] && ! grep -Eq '^exclude = \[.*"/tools".*\]' Cargo.toml; then
+                    if [[ -e tools ]] && ! grep <<<"${exclude}" -Eq '^/tools$'; then
                         error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/tools\" if it exists"
                     fi
-                    if [[ -e target-specs ]] && ! grep -Eq '^exclude = \[.*"/target-specs".*\]' Cargo.toml; then
+                    if [[ -e target-specs ]] && ! grep <<<"${exclude}" -Eq '^/target-specs$'; then
                         error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/target-specs\" if it exists"
                     fi
                 fi
@@ -196,12 +231,10 @@ fi
 if [[ -n "$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')" ]]; then
     info "checking C/C++ code style"
     check_config .clang-format
-    if type -P clang-format &>/dev/null; then
-        echo "+ clang-format -i \$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')"
+    if check_install clang-format; then
+        info "running \`clang-format -i \$(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')\`"
         clang-format -i $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
         check_diff $(git ls-files '*.c' '*.h' '*.cpp' '*.hpp')
-    else
-        error "'clang-format' is not installed; skipped C/C++ code style check"
     fi
 elif [[ -e .clang-format ]]; then
     error ".clang-format is unused"
@@ -211,64 +244,39 @@ fi
 if [[ -n "$(git ls-files '*.yml' '*.yaml' '*.js' '*.json')" ]]; then
     info "checking YAML/JavaScript/JSON code style"
     check_config .editorconfig
-    if type -P npm &>/dev/null; then
-        echo "+ npx -y prettier -l -w \$(git ls-files '*.yml' '*.yaml' '*.js' '*.json')"
+    if check_install npm; then
+        info "running \`npx -y prettier -l -w \$(git ls-files '*.yml' '*.yaml' '*.js' '*.json')\`"
         npx -y prettier -l -w $(git ls-files '*.yml' '*.yaml' '*.js' '*.json')
         check_diff $(git ls-files '*.yml' '*.yaml' '*.js' '*.json')
-    else
-        error "'npm' is not installed; skipped YAML/JavaScript/JSON code style check"
     fi
     # Check GitHub workflows.
     if [[ -d .github/workflows ]]; then
         info "checking GitHub workflows"
-        if type -P jq &>/dev/null; then
-            if type -P python3 &>/dev/null || type -P python &>/dev/null; then
-                py_suffix=''
-                if type -P python3 &>/dev/null; then
-                    py_suffix='3'
-                fi
-                exe=''
-                venv_bin='.venv/bin'
-                case "$(uname -s)" in
-                    MINGW* | MSYS* | CYGWIN* | Windows_NT)
-                        exe='.exe'
-                        venv_bin='.venv/Scripts'
-                        ;;
+        if check_install jq python3; then
+            venv_install_yq
+            for workflow in .github/workflows/*.yml; do
+                # The top-level permissions must be weak as they are referenced by all jobs.
+                permissions=$(venv yq -c '.permissions' "${workflow}")
+                case "${permissions}" in
+                    '{"contents":"read"}' | '{"contents":"none"}') ;;
+                    null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
+                    *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
                 esac
-                if [[ ! -d .venv ]]; then
-                    "python${py_suffix}" -m venv .venv
-                fi
-                if [[ ! -e "${venv_bin}/yq${exe}" ]]; then
-                    venv "pip${py_suffix}" install yq
-                fi
-                for workflow in .github/workflows/*.yml; do
-                    # The top-level permissions must be weak as they are referenced by all jobs.
-                    permissions=$(venv yq -c '.permissions' "${workflow}")
-                    case "${permissions}" in
-                        '{"contents":"read"}' | '{"contents":"none"}') ;;
-                        null) error "${workflow}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
-                        *) error "${workflow}: only 'contents: read' and weaker permissions are allowed at top level; if you want to use stronger permissions, please set job-level permissions" ;;
-                    esac
-                    # Make sure the 'needs' section is not out of date.
-                    if grep -q '# tidy:needs' "${workflow}" && ! grep -Eq '# *needs: \[' "${workflow}"; then
-                        # shellcheck disable=SC2207
-                        jobs_actual=($(venv yq '.jobs' "${workflow}" | jq -r 'keys_unsorted[]'))
-                        unset 'jobs_actual[${#jobs_actual[@]}-1]'
-                        # shellcheck disable=SC2207
-                        jobs_expected=($(venv yq -r '.jobs."ci-success".needs[]' "${workflow}"))
-                        if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
-                            printf -v jobs '%s, ' "${jobs_actual[@]}"
-                            sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" "${workflow}"
-                            check_diff "${workflow}"
-                            error "${workflow}: please update 'needs' section in 'ci-success' job"
-                        fi
+                # Make sure the 'needs' section is not out of date.
+                if grep -q '# tidy:needs' "${workflow}" && ! grep -Eq '# *needs: \[' "${workflow}"; then
+                    # shellcheck disable=SC2207
+                    jobs_actual=($(venv yq '.jobs' "${workflow}" | jq -r 'keys_unsorted[]'))
+                    unset 'jobs_actual[${#jobs_actual[@]}-1]'
+                    # shellcheck disable=SC2207
+                    jobs_expected=($(venv yq -r '.jobs."ci-success".needs[]' "${workflow}"))
+                    if [[ "${jobs_actual[*]}" != "${jobs_expected[*]+"${jobs_expected[*]}"}" ]]; then
+                        printf -v jobs '%s, ' "${jobs_actual[@]}"
+                        sed -i "s/needs: \[.*\] # tidy:needs/needs: [${jobs%, }] # tidy:needs/" "${workflow}"
+                        check_diff "${workflow}"
+                        error "${workflow}: please update 'needs' section in 'ci-success' job"
                     fi
-                done
-            else
-                error "'python3' is not installed; skipped GitHub workflow check"
-            fi
-        else
-            error "'jq' is not installed; skipped GitHub workflow check"
+                fi
+            done
         fi
     fi
 fi
@@ -281,12 +289,10 @@ fi
 if [[ -n "$(git ls-files '*.toml' | (grep -v .taplo.toml || true))" ]]; then
     info "checking TOML style"
     check_config .taplo.toml
-    if type -P npm &>/dev/null; then
-        echo "+ npx -y @taplo/cli fmt \$(git ls-files '*.toml')"
+    if check_install npm; then
+        info "running \`npx -y @taplo/cli fmt \$(git ls-files '*.toml')\`"
         RUST_LOG=warn npx -y @taplo/cli fmt $(git ls-files '*.toml')
         check_diff $(git ls-files '*.toml')
-    else
-        error "'npm' is not installed; skipped TOML style check"
     fi
 elif [[ -e .taplo.toml ]]; then
     error ".taplo.toml is unused"
@@ -296,11 +302,9 @@ fi
 if [[ -n "$(git ls-files '*.md')" ]]; then
     info "checking Markdown style"
     check_config .markdownlint-cli2.yaml
-    if type -P npm &>/dev/null; then
-        echo "+ npx -y markdownlint-cli2 \$(git ls-files '*.md')"
+    if check_install npm; then
+        info "running \`npx -y markdownlint-cli2 \$(git ls-files '*.md')\`"
         npx -y markdownlint-cli2 $(git ls-files '*.md')
-    else
-        error "'npm' is not installed; skipped Markdown style check"
     fi
 elif [[ -e .markdownlint-cli2.yaml ]]; then
     error ".markdownlint-cli2.yaml is unused"
@@ -312,29 +316,25 @@ fi
 
 # Shell scripts
 info "checking Shell scripts"
-if type -P shfmt &>/dev/null; then
+if check_install shfmt; then
     check_config .editorconfig
-    echo "+ shfmt -l -w \$(git ls-files '*.sh')"
+    info "running \`shfmt -l -w \$(git ls-files '*.sh')\`"
     shfmt -l -w $(git ls-files '*.sh')
     check_diff $(git ls-files '*.sh')
-else
-    error "'shfmt' is not installed; skipped Shell scripts style check"
 fi
-if type -P shellcheck &>/dev/null; then
+if check_install shellcheck; then
     check_config .shellcheckrc
-    echo "+ shellcheck \$(git ls-files '*.sh')"
+    info "running \`shellcheck \$(git ls-files '*.sh')\`"
     if ! shellcheck $(git ls-files '*.sh'); then
         should_fail=1
     fi
     if [[ -n "$(git ls-files '*Dockerfile')" ]]; then
         # SC2154 doesn't seem to work on dockerfile.
-        echo "+ shellcheck -e SC2148,SC2154,SC2250 \$(git ls-files '*Dockerfile')"
+        info "running \`shellcheck -e SC2148,SC2154,SC2250 \$(git ls-files '*Dockerfile')\`"
         if ! shellcheck -e SC2148,SC2154,SC2250 $(git ls-files '*Dockerfile'); then
             should_fail=1
         fi
     fi
-else
-    error "'shellcheck' is not installed; skipped Shell scripts style check"
 fi
 
 # License check
@@ -383,13 +383,14 @@ fi
 if [[ -f .cspell.json ]]; then
     info "spell checking"
     project_dictionary=.github/.cspell/project-dictionary.txt
-    if type -P npm &>/dev/null; then
+    if check_install npm jq python3; then
         has_rust=''
         if [[ -n "$(git ls-files '*Cargo.toml')" ]]; then
+            venv_install_yq
             has_rust='1'
             dependencies=''
             for manifest_path in $(git ls-files '*Cargo.toml'); do
-                if [[ "${manifest_path}" != "Cargo.toml" ]] && ! grep -Eq '\[workspace\]' "${manifest_path}"; then
+                if [[ "${manifest_path}" != "Cargo.toml" ]] && [[ "$(venv tomlq -c '.workspace' "${manifest_path}")" == "null" ]]; then
                     continue
                 fi
                 metadata=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}")
@@ -422,7 +423,7 @@ EOF
             error "you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
         fi
 
-        echo "+ npx -y cspell --no-progress --no-summary \$(git ls-files)"
+        info "running \`npx -y cspell --no-progress --no-summary \$(git ls-files)\`"
         if ! npx -y cspell --no-progress --no-summary $(git ls-files); then
             error "spellcheck failed: please fix uses of above words or add to ${project_dictionary} if correct"
         fi
@@ -454,8 +455,6 @@ EOF
             echo -n "${unused}"
             echo "======================================="
         fi
-    else
-        error "'npm' is not installed; skipped spell check"
     fi
 fi
 
