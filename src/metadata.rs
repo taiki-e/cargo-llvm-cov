@@ -37,7 +37,7 @@ pub(crate) struct Metadata {
 
 impl Metadata {
     pub(crate) fn new(manifest_path: &Path, cargo: &OsStr) -> Result<Self> {
-        let mut cmd = cmd!(
+        let cmd = cmd!(
             cargo,
             "metadata",
             "--format-version=1",

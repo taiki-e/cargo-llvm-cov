@@ -111,7 +111,7 @@ impl ProcessBuilder {
 
     /// Executes a process, waiting for completion, and mapping non-zero exit
     /// status to an error.
-    pub(crate) fn run(&mut self) -> Result<Output> {
+    pub(crate) fn run(&self) -> Result<Output> {
         let output = self.build().unchecked().run().with_context(|| {
             process_error(format!("could not execute process {self}"), None, None)
         })?;
@@ -128,7 +128,7 @@ impl ProcessBuilder {
 
     /// Executes a process, captures its stdio output, returning the captured
     /// output, or an error if non-zero exit status.
-    pub(crate) fn run_with_output(&mut self) -> Result<Output> {
+    pub(crate) fn run_with_output(&self) -> Result<Output> {
         let output =
             self.build().stdout_capture().stderr_capture().unchecked().run().with_context(
                 || process_error(format!("could not execute process {self}"), None, None),
@@ -146,7 +146,7 @@ impl ProcessBuilder {
 
     /// Executes a process, captures its stdio output, returning the captured
     /// standard output as a `String`.
-    pub(crate) fn read(&mut self) -> Result<String> {
+    pub(crate) fn read(&self) -> Result<String> {
         assert!(!self.stdout_to_stderr);
         let mut output = String::from_utf8(self.run_with_output()?.stdout)
             .with_context(|| format!("failed to parse output from {self}"))?;

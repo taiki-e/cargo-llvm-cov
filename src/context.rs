@@ -156,7 +156,7 @@ impl Context {
                         // override shorthand (+toolchain).
                         // Note: In some toolchain versions llvm-tools-preview can also be installed as llvm-tools,
                         // but it is an upstream bug. https://github.com/rust-lang/rust/issues/119164
-                        let mut cmd = cmd!(
+                        let cmd = cmd!(
                             "rustup",
                             "component",
                             "add",
@@ -180,7 +180,7 @@ impl Context {
                             }
                         };
                         ask_to_run(
-                            &mut cmd,
+                            &cmd,
                             ask,
                             "install the `llvm-tools-preview` component for the selected toolchain",
                         )?;
@@ -291,7 +291,7 @@ impl WorkspaceMembers {
 }
 
 // Adapted from https://github.com/rust-lang/miri/blob/dba35d2be72f4b78343d1a0f0b4737306f310672/cargo-miri/src/util.rs#L181-L204
-fn ask_to_run(cmd: &mut ProcessBuilder, ask: bool, text: &str) -> Result<()> {
+fn ask_to_run(cmd: &ProcessBuilder, ask: bool, text: &str) -> Result<()> {
     // Disable interactive prompts in CI (GitHub Actions, Travis, AppVeyor, etc).
     // Azure doesn't set `CI` though (nothing to see here, just Microsoft being Microsoft),
     // so we also check their `TF_BUILD`.
