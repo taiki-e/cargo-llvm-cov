@@ -72,6 +72,7 @@ unsafe_op_in_unsafe_fn = "warn"
 all = "warn" # Downgrade deny-by-default lints
 pedantic = "warn"
 as_ptr_cast_mut = "warn"
+as_underscore = "warn"
 default_union_representation = "warn"
 inline_asm_x86_att_syntax = "warn"
 trailing_empty_array = "warn"
