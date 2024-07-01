@@ -1,6 +1,7 @@
 # Clippy configuration
 # https://doc.rust-lang.org/nightly/clippy/lint_configuration.html
 
+allow-private-module-inception = true
 avoid-breaking-exported-api = false
 disallowed-names = []
 disallowed-macros = [

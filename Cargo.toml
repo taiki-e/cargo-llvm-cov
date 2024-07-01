@@ -85,12 +85,13 @@ declare_interior_mutable_const = { level = "allow", priority = 1 } # https://git
 doc_markdown = { level = "allow", priority = 1 }
 float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
 incompatible_msrv = { level = "allow", priority = 1 } # buggy: doesn't consider cfg, https://github.com/rust-lang/rust-clippy/issues/12280, https://github.com/rust-lang/rust-clippy/issues/12257#issuecomment-2093667187
-lint_groups_priority = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/12270
+lint_groups_priority = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/12920
 manual_assert = { level = "allow", priority = 1 }
 manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
 missing_errors_doc = { level = "allow", priority = 1 }
-module_name_repetitions = { level = "allow", priority = 1 }
+module_name_repetitions = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+module_name_repetitions
 nonminimal_bool = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+nonminimal_bool
+range_plus_one = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+range_plus_one
 similar_names = { level = "allow", priority = 1 }
 single_match = { level = "allow", priority = 1 }
 single_match_else = { level = "allow", priority = 1 }
