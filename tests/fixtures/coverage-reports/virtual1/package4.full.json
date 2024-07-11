@@ -1,0 +1,249 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "branches": [],
+          "expansions": [],
+          "filename": "member2/member3/src/lib.rs",
+          "segments": [
+            [
+              1,
+              1,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              2,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              3,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              3,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              4,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              4,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              5,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              5,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              6,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              6,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              8,
+              1,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              8,
+              2,
+              0,
+              false,
+              false,
+              false
+            ]
+          ],
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
+            },
+            "instantiations": {
+              "count": 1,
+              "covered": 0,
+              "percent": 0.0
+            },
+            "lines": {
+              "count": 7,
+              "covered": 0,
+              "percent": 0.0
+            },
+            "regions": {
+              "count": 6,
+              "covered": 0,
+              "notcovered": 6,
+              "percent": 0.0
+            }
+          }
+        }
+      ],
+      "functions": [
+        {
+          "branches": [],
+          "count": 0,
+          "filenames": [
+            "member2/member3/src/lib.rs"
+          ],
+          "name": "member3::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 1,
+          "covered": 0,
+          "percent": 0
+        },
+        "instantiations": {
+          "count": 1,
+          "covered": 0,
+          "percent": 0
+        },
+        "lines": {
+          "count": 7,
+          "covered": 0,
+          "percent": 0
+        },
+        "mcdc": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "regions": {
+          "count": 6,
+          "covered": 0,
+          "notcovered": 6,
+          "percent": 0
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}

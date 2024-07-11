@@ -1,0 +1,1225 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "branches": [],
+          "expansions": [],
+          "filename": "member2/member3/src/lib.rs",
+          "segments": [
+            [
+              1,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              2,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              3,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              3,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              4,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              4,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              5,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              5,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              6,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              6,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              8,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              8,
+              2,
+              0,
+              false,
+              false,
+              false
+            ]
+          ],
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 1,
+              "covered": 1,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 2,
+              "covered": 1,
+              "percent": 50.0
+            },
+            "lines": {
+              "count": 7,
+              "covered": 4,
+              "percent": 57.14285714285714
+            },
+            "regions": {
+              "count": 6,
+              "covered": 3,
+              "notcovered": 3,
+              "percent": 50.0
+            }
+          }
+        },
+        {
+          "branches": [],
+          "expansions": [],
+          "filename": "member2/src/lib.rs",
+          "segments": [
+            [
+              1,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              2,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              3,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              3,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              4,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              4,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              5,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              5,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              6,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              6,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              8,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              8,
+              2,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              10,
+              1,
+              2,
+              true,
+              true,
+              false
+            ],
+            [
+              11,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              12,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              12,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              13,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              13,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              14,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              14,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              15,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              15,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              17,
+              1,
+              2,
+              true,
+              true,
+              false
+            ],
+            [
+              17,
+              2,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              20,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              23,
+              2,
+              0,
+              false,
+              false,
+              false
+            ]
+          ],
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 3,
+              "covered": 3,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 5,
+              "covered": 3,
+              "percent": 60.0
+            },
+            "lines": {
+              "count": 18,
+              "covered": 13,
+              "percent": 72.22222222222221
+            },
+            "regions": {
+              "count": 13,
+              "covered": 8,
+              "notcovered": 5,
+              "percent": 61.53846153846154
+            }
+          }
+        },
+        {
+          "branches": [],
+          "expansions": [],
+          "filename": "member2/src/member4/src/lib.rs",
+          "segments": [
+            [
+              1,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              2,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              3,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              3,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              4,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              4,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              5,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              5,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              6,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              6,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              8,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              8,
+              2,
+              0,
+              false,
+              false,
+              false
+            ]
+          ],
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 1,
+              "covered": 1,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 2,
+              "covered": 1,
+              "percent": 50.0
+            },
+            "lines": {
+              "count": 7,
+              "covered": 4,
+              "percent": 57.14285714285714
+            },
+            "regions": {
+              "count": 6,
+              "covered": 3,
+              "notcovered": 3,
+              "percent": 50.0
+            }
+          }
+        }
+      ],
+      "functions": [
+        {
+          "branches": [],
+          "count": 2,
+          "filenames": [
+            "member1/src/lib.rs"
+          ],
+          "name": "member1::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              2,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "member1/src/lib.rs"
+          ],
+          "name": "member1::test",
+          "regions": [
+            [
+              11,
+              1,
+              17,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "member2/src/member4/src/lib.rs"
+          ],
+          "name": "member4::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "member2/member3/src/lib.rs"
+          ],
+          "name": "member3::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "member2/src/lib.rs"
+          ],
+          "name": "member2::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 0,
+          "filenames": [
+            "member2/src/lib.rs"
+          ],
+          "name": "member2::func2",
+          "regions": [
+            [
+              10,
+              1,
+              11,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              14,
+              12,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              13,
+              14,
+              13,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              14,
+              14,
+              14,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              15,
+              14,
+              15,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              17,
+              1,
+              17,
+              2,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 2,
+          "filenames": [
+            "member2/src/lib.rs"
+          ],
+          "name": "member2::func2",
+          "regions": [
+            [
+              10,
+              1,
+              11,
+              12,
+              2,
+              0,
+              0,
+              0
+            ],
+            [
+              12,
+              14,
+              12,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              13,
+              14,
+              13,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              14,
+              14,
+              14,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              15,
+              14,
+              15,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              17,
+              1,
+              17,
+              2,
+              2,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "member2/src/lib.rs"
+          ],
+          "name": "member2::test",
+          "regions": [
+            [
+              20,
+              1,
+              23,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 0,
+          "filenames": [
+            "member2/src/lib.rs"
+          ],
+          "name": "member2::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 0,
+          "filenames": [
+            "member2/member3/src/lib.rs"
+          ],
+          "name": "member3::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 0,
+          "filenames": [
+            "member2/src/member4/src/lib.rs"
+          ],
+          "name": "member4::func",
+          "regions": [
+            [
+              1,
+              1,
+              2,
+              12,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              3,
+              14,
+              3,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              4,
+              14,
+              4,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              1,
+              8,
+              2,
+              0,
+              0,
+              0,
+              0
+            ]
+          ]
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 5,
+          "covered": 5,
+          "percent": 100
+        },
+        "instantiations": {
+          "count": 9,
+          "covered": 5,
+          "percent": 55.55555555555556
+        },
+        "lines": {
+          "count": 32,
+          "covered": 21,
+          "percent": 65.625
+        },
+        "mcdc": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "regions": {
+          "count": 25,
+          "covered": 14,
+          "notcovered": 11,
+          "percent": 56.00000000000001
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}

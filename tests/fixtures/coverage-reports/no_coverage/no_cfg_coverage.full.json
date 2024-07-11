@@ -1,0 +1,593 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "branches": [],
+          "expansions": [],
+          "filename": "src/lib.rs",
+          "segments": [
+            [
+              3,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              4,
+              12,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              5,
+              14,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              5,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              6,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              6,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              7,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              7,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              8,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              8,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              9,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              9,
+              16,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              11,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              11,
+              2,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              15,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              18,
+              13,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              18,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              20,
+              6,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              20,
+              7,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              21,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              21,
+              2,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              26,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              27,
+              13,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              27,
+              14,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              30,
+              6,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              30,
+              7,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              31,
+              1,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              31,
+              2,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              39,
+              5,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              40,
+              17,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              40,
+              18,
+              0,
+              true,
+              true,
+              false
+            ],
+            [
+              42,
+              10,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              42,
+              11,
+              0,
+              false,
+              false,
+              false
+            ],
+            [
+              43,
+              5,
+              1,
+              true,
+              true,
+              false
+            ],
+            [
+              43,
+              6,
+              0,
+              false,
+              false,
+              false
+            ]
+          ],
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 4,
+              "covered": 4,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 4,
+              "covered": 4,
+              "percent": 100.0
+            },
+            "lines": {
+              "count": 26,
+              "covered": 18,
+              "percent": 69.23076923076923
+            },
+            "regions": {
+              "count": 19,
+              "covered": 12,
+              "notcovered": 7,
+              "percent": 63.1578947368421
+            }
+          }
+        }
+      ],
+      "functions": [
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "src/lib.rs"
+          ],
+          "name": "no_coverage::func",
+          "regions": [
+            [
+              3,
+              1,
+              4,
+              12,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              5,
+              14,
+              5,
+              16,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              6,
+              14,
+              6,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              7,
+              14,
+              7,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              8,
+              14,
+              8,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              9,
+              14,
+              9,
+              16,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              11,
+              1,
+              11,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "src/lib.rs"
+          ],
+          "name": "no_coverage::fn_level",
+          "regions": [
+            [
+              15,
+              1,
+              18,
+              13,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              18,
+              14,
+              20,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              20,
+              6,
+              20,
+              7,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              21,
+              1,
+              21,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "src/lib.rs"
+          ],
+          "name": "no_coverage::expr_level",
+          "regions": [
+            [
+              26,
+              1,
+              27,
+              13,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              27,
+              14,
+              30,
+              6,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              30,
+              6,
+              30,
+              7,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              31,
+              1,
+              31,
+              2,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        },
+        {
+          "branches": [],
+          "count": 1,
+          "filenames": [
+            "src/lib.rs"
+          ],
+          "name": "no_coverage::mod_level::mod_level",
+          "regions": [
+            [
+              39,
+              5,
+              40,
+              17,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              40,
+              18,
+              42,
+              10,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              42,
+              10,
+              42,
+              11,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              43,
+              5,
+              43,
+              6,
+              1,
+              0,
+              0,
+              0
+            ]
+          ]
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 4,
+          "covered": 4,
+          "percent": 100
+        },
+        "instantiations": {
+          "count": 4,
+          "covered": 4,
+          "percent": 100
+        },
+        "lines": {
+          "count": 26,
+          "covered": 18,
+          "percent": 69.23076923076923
+        },
+        "mcdc": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "regions": {
+          "count": 19,
+          "covered": 12,
+          "notcovered": 7,
+          "percent": 63.1578947368421
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "2.0.1"
+}
