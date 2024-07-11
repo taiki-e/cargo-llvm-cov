@@ -564,8 +564,8 @@ mod tests {
     fn test_get_coverage_percent(kind: CoverageKind) {
         let expected = match kind {
             CoverageKind::Functions => 100_f64,
-            CoverageKind::Lines => 63.157_894_736_842_1,
-            CoverageKind::Regions => 60.,
+            CoverageKind::Lines => 57.142_857_142_857_146,
+            CoverageKind::Regions => 54.545_454_545_454_55,
         };
 
         // There are 5 different percentages, make sure we pick the correct one.
@@ -601,7 +601,7 @@ mod tests {
 
         let cases = &[
             // (path, uncovered_functions, uncovered_lines, uncovered_regions)
-            ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 0, 7, 6),
+            ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 0, 6, 5),
             ("tests/fixtures/coverage-reports/no_test/no_test.json", 1, 7, 6),
         ];
 

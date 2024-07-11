@@ -21,10 +21,11 @@ fn fn_level() {
 }
 
 // #[coverage(off)] has no effect on expressions.
+// now error by rustc: error[E0788]: attribute should be applied to a function definition or closure
 #[test]
 fn expr_level() {
     if false {
-        #[cfg_attr(coverage, coverage(off))]
+        // #[cfg_attr(coverage, coverage(off))]
         func(2);
     }
 }
