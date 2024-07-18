@@ -12,7 +12,6 @@ use auxiliary::{
     test_project, test_report, CommandExt,
 };
 use fs_err as fs;
-use tempfile::tempdir;
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
 
@@ -180,7 +179,7 @@ fn merge() {
 
 #[test]
 fn merge_failure_mode_all() {
-    let tempdir = tempdir().unwrap();
+    let tempdir = tempfile::tempdir().unwrap();
     merge_with_failure_mode(tempdir.path(), true);
 }
 
