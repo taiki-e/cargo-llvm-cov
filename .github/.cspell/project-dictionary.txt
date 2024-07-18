@@ -10,6 +10,7 @@ fprofile
 instrprof
 libclang
 libhello
+mcdc
 microkernel
 MSYSTEM
 nextest
