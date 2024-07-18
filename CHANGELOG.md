@@ -10,6 +10,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add support for MC/DC coverage. ([#363](https://github.com/taiki-e/cargo-llvm-cov/pull/363), thanks @aytey)
+
+- Documentation improvements.
+
 ## [0.6.10] - 2024-06-01
 
 - Update `ruzstd` to 0.7.
