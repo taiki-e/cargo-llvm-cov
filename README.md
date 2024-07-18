@@ -505,7 +505,7 @@ Rust 1.80+ warns the above cfgs as `unexpected_cfgs`. The recommended way to add
 
 ```toml
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage,coverage_nightly)"] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
 ```
 
 If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
