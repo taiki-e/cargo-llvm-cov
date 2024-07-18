@@ -8,6 +8,7 @@ easytime
 fcoverage
 fprofile
 instrprof
+libclang
 libhello
 microkernel
 MSYSTEM

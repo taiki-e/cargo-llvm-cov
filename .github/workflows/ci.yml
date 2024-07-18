@@ -136,3 +136,84 @@ jobs:
         if: startsWith(matrix.rust, 'nightly')
       - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
       - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features
+
+  test-llvm:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # LLVM versions of official builds:
+          # LLVM 14 1.60-1.64
+          # LLVM 15 1.65-1.69
+          # LLVM 16 1.70-1.72
+          # LLVM 17 1.73-1.77
+          # LLVM 18 1.78-
+          # Rust 1.60's the minimum external LLVM version, but coverage doesn't work.
+          # https://github.com/rust-lang/rust/blob/1.60.0/src/bootstrap/native.rs#L403
+          # - llvm: '12'
+          # - llvm: '13'
+          - llvm: '14'
+          - llvm: '15'
+          - llvm: '16'
+          - llvm: '17'
+          # TODO: LLVM 18 Installation broken: https://github.com/llvm/llvm-project/issues/99453
+          # - llvm: '18'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: taiki-e/checkout-action@v1
+      - name: Install Rust
+        run: rustup update stable --no-self-update
+      - name: Install LLVM
+        run: |
+          if type -P clang-"${{ matrix.llvm }}" &>/dev/null; then
+            exit 0
+          fi
+          codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+          sudo mkdir -pm755 -- /etc/apt/keyrings
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | gpg --dearmor \
+            | sudo tee -- /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main" \
+            | sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null
+          sudo apt-get -o Acquire::Retries=10 -qq update
+          apt_packages=(
+            clang-"${{ matrix.llvm }}"
+            libc++-"${{ matrix.llvm }}"-dev
+            libc++abi-"${{ matrix.llvm }}"-dev
+            libclang-"${{ matrix.llvm }}"-dev
+            lld-"${{ matrix.llvm }}"
+            llvm-"${{ matrix.llvm }}"
+            llvm-"${{ matrix.llvm }}"-dev
+          )
+          if ! sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"; then
+            sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 upgrade -y
+            sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"
+          fi
+      - run: cargo install --path . --debug
+      - name: Test
+        run: |
+          export CC="clang-${{ matrix.llvm }}"
+          export CXX="clang++-${{ matrix.llvm }}"
+          export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
+          export LLVM_PROFDATA="llvm-profdata-${{ matrix.llvm }}"
+          rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
+          cargo clean
+          cargo +1.60 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          cargo clean
+          cargo +1.65 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          cargo clean
+          cargo +1.70 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          cargo clean
+          cargo +1.73 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          cargo clean
+          cargo +1.77 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          # TODO: LLVM 18 Installation broken: https://github.com/llvm/llvm-project/issues/99453
+          # rustup toolchain add 1.78 beta nightly --no-self-update
+          # cargo clean
+          # cargo +1.78 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          # cargo clean
+          # cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+          # cargo clean
+          # cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+        working-directory: tests/fixtures/crates/ffi

@@ -443,6 +443,13 @@ LLVM_PROFDATA=<llvm-profdata-path> \
   cargo llvm-cov --lcov --include-ffi
 ```
 
+Known compatible Rust (installed via rustup) and LLVM versions:
+
+|            | Rust 1.60-1.77 | Rust 1.78-1.80 |
+| ---------- | -------------- | -------------- |
+| LLVM 14-17 | o              | x              |
+| LLVM 18    | x              | o              |
+
 ### Get coverage of external tests
 
 `cargo test`, `cargo run`, and [`cargo nextest`][nextest] are available as builtin, but cargo-llvm-cov can also be used for arbitrary binaries built using cargo (including other cargo subcommands or external tests that use make, [xtask], etc.)

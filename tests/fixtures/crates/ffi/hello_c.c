@@ -1,5 +1,9 @@
 #include <stdio.h>
 
 void hello_c() {
-    printf("Hello C from Rust!\n");
+    if (1) {
+        printf("Hello C from Rust!\n");
+    } else {
+        printf("this line in C is not covered\n");
+    }
 }
