@@ -501,6 +501,13 @@ cfgs are set under the following conditions:
 - `cfg(coverage)` is always set when using cargo-llvm-cov (unless `--no-cfg-coverage` flag passed)
 - `cfg(coverage_nightly)` is set when using cargo-llvm-cov with nightly toolchain (unless `--no-cfg-coverage-nightly` flag passed)
 
+Rust 1.80+ warns the above cfgs as `unexpected_cfgs`. The recommended way to address this is to add a [`lints` table](https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html#check-cfg-in-lintsrust-table) to `Cargo.toml`.
+
+```toml
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage,coverage_nightly)"] }
+```
+
 If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
 
 cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of coverage-helper crate.
