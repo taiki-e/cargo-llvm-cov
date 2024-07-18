@@ -1013,7 +1013,16 @@ impl Format {
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     "-show-branches=count",
-                    "-show-mcdc",
+                ]);
+                if cmd!(&cx.llvm_cov, "show", "--help")
+                    .read()
+                    .unwrap_or_default()
+                    .contains("-show-mcdc")
+                {
+                    // -show-mcdc requires LLVM 18+
+                    cmd.arg("-show-mcdc");
+                }
+                cmd.args([
                     &format!("-Xdemangler={}", cx.current_exe.display()),
                     "-Xdemangler=llvm-cov",
                     "-Xdemangler=demangle",
