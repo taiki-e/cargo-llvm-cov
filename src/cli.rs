@@ -31,7 +31,7 @@ pub(crate) struct Args {
     /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
     pub(crate) doctests: bool,
 
-    // =========================================================================
+    // -------------------------------------------------------------------------
     // `cargo test` options
     // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
     // /// Generate coverage report without running tests
