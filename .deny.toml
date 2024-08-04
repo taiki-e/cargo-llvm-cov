@@ -1,10 +1,6 @@
 # https://embarkstudios.github.io/cargo-deny/checks/advisories/cfg.html
 [advisories]
-vulnerability = "deny"
-unmaintained = "deny"
-unsound = "deny"
 yanked = "deny"
-notice = "deny"
 git-fetch-with-cli = true
 ignore = [
 ]
@@ -28,9 +24,9 @@ build.allow-build-scripts = [
     { name = "rustix" }, # via tar
     { name = "serde_json" },
     { name = "serde" },
-    { name = "winapi-i686-pc-windows-gnu" }, # via shared_child via duct & via is_executable
-    { name = "winapi-x86_64-pc-windows-gnu" }, # via shared_child via duct & via is_executable
-    { name = "winapi" }, # via shared_child via duct & via is_executable
+    { name = "winapi-i686-pc-windows-gnu" }, # via is_executable
+    { name = "winapi-x86_64-pc-windows-gnu" }, # via is_executable
+    { name = "winapi" }, # via is_executable
     { name = "windows_aarch64_gnullvm" },
     { name = "windows_aarch64_msvc" },
     { name = "windows_i686_gnu" },
@@ -43,8 +39,8 @@ build.allow-build-scripts = [
 build.bypass = [
     { name = "autocfg", allow-globs = ["tests/wrap_ignored"] }, # via fs-err
     # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
-    { name = "winapi-i686-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via shared_child via duct & via is_executable
-    { name = "winapi-x86_64-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via shared_child via duct & via is_executable
+    { name = "winapi-i686-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via is_executable
+    { name = "winapi-x86_64-pc-windows-gnu", allow-globs = ["lib/*.a"] }, # via is_executable
     { name = "windows_aarch64_gnullvm", allow-globs = ["lib/*.a"] },
     { name = "windows_aarch64_msvc", allow-globs = ["lib/*.lib"] },
     { name = "windows_i686_gnu", allow-globs = ["lib/*.a"] },
@@ -57,7 +53,6 @@ build.bypass = [
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
 [licenses]
-version = 2
 unused-allowed-license = "deny"
 private.ignore = true
 allow = [
