@@ -16,17 +16,21 @@ use fs_err as fs;
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
 
 fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
-    vec![
+    let mut set: Vec<(&'static str, &'static [&'static str])> = vec![
         ("txt", &["--text", "--show-instantiations"]),
         ("hide-instantiations.txt", &["--text"]),
-        ("summary.txt", &[]),
         ("json", &["--json", "--summary-only"]),
         // TODO: full JSON output is unstable between platform.
         // ("full.json", &["--json"]),
         ("lcov.info", &["--lcov", "--summary-only"]),
         // TODO: test Cobertura output
         ("codecov.json", &["--codecov"]),
-    ]
+    ];
+    if rustversion::cfg!(since(1.82)) {
+        // nightly-2024-08-01 fixed bug in report generation, so the latest report is not the same as the old report.
+        set.push(("summary.txt", &[]));
+    }
+    set
 }
 
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
