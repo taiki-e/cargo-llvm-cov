@@ -115,9 +115,11 @@ jobs:
           pushd -- tests/fixtures/crates/cargo_config >/dev/null
           # TODO: --fail-under-branches?
           cargo llvm-cov test --branch --text --fail-under-lines 80
+          cargo llvm-cov test --mcdc --text --fail-under-lines 80
           popd >/dev/null
           pushd -- easytime >/dev/null
           cargo llvm-cov test --branch --doctests --text --fail-under-lines 30
+          cargo llvm-cov test --mcdc --doctests --text --fail-under-lines 30
           popd >/dev/null
 
           # Test minimum runnable Cargo version.

@@ -36,11 +36,13 @@ pub(crate) struct Workspace {
 }
 
 impl Workspace {
+    #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) fn new(
         options: &ManifestOptions,
         target: Option<&str>,
         doctests: bool,
         branch: bool,
+        mcdc: bool,
         show_env: bool,
     ) -> Result<Self> {
         // Metadata and config
@@ -63,6 +65,11 @@ impl Workspace {
         }
         if branch && !rustc_version.nightly {
             bail!("--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
+        }
+        if mcdc && !rustc_version.nightly {
+            bail!(
+                "--mcdc flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            )
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");

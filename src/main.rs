@@ -194,7 +194,11 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
-        if cx.args.cov.branch {
+        if cx.args.cov.mcdc {
+            // Tracking issue: https://github.com/rust-lang/rust/issues/124144
+            flags.push("-Z");
+            flags.push("coverage-options=mcdc");
+        } else if cx.args.cov.branch {
             // Tracking issue: https://github.com/rust-lang/rust/issues/79649
             flags.push("-Z");
             flags.push("coverage-options=branch");

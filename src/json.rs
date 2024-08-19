@@ -340,6 +340,11 @@ pub struct File {
     /// This is None if report is summary-only.
     #[serde(skip_serializing_if = "Option::is_none")]
     branches: Option<Vec<serde_json::Value>>,
+    /// List of MC/DC records contained in the file
+    ///
+    /// This is None if report is summary-only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mcdc_records: Option<Vec<serde_json::Value>>,
     /// List of expansion records
     ///
     /// This is None if report is summary-only.
@@ -406,6 +411,8 @@ impl fmt::Debug for Segment {
 #[cfg_attr(test, serde(deny_unknown_fields))]
 struct Function {
     branches: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mcdc_records: Option<Vec<serde_json::Value>>,
     count: u64,
     /// List of filenames that the function relates to
     filenames: Vec<String>,
@@ -500,6 +507,9 @@ impl RegionLocation {
 struct Summary {
     /// Object summarizing branch coverage
     branches: CoverageCounts,
+    /// Object summarizing mcdc coverage
+    #[serde(skip_serializing_if = "Option::is_none")]
+    mcdc: Option<CoverageCounts>,
     /// Object summarizing function coverage
     functions: CoverageCounts,
     instantiations: CoverageCounts,

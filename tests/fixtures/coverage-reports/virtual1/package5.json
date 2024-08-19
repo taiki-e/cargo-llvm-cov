@@ -11,6 +11,12 @@
               "notcovered": 0,
               "percent": 0.0
             },
+            "mcdc": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
             "functions": {
               "count": 1,
               "covered": 0,
