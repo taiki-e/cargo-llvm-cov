@@ -106,7 +106,7 @@ impl CodeCovJsonExport {
                 for line in loc.lines() {
                     let coverage = coverage.0.entry(line).or_default();
                     coverage.count += 1;
-                    coverage.covered += u64::from(covered);
+                    coverage.covered += covered as u64;
                 }
             }
         }

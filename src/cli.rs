@@ -410,7 +410,7 @@ pub(crate) fn merge_config_to_args(
         target.clone_from(&ws.target_for_cli);
     }
     if *verbose == 0 {
-        *verbose = u8::from(ws.config.term.verbose.unwrap_or(false));
+        *verbose = ws.config.term.verbose.unwrap_or(false) as u8;
     }
     if color.is_none() {
         *color = ws.config.term.color.map(Into::into);

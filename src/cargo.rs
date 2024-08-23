@@ -249,7 +249,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
 
     // If `-vv` is passed, propagate `-v` to cargo.
     if cx.args.verbose > 1 {
-        cmd.arg(format!("-{}", "v".repeat(usize::from(cx.args.verbose) - 1)));
+        cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
     }
 }
 

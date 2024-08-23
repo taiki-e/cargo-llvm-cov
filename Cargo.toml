@@ -81,6 +81,7 @@ undocumented_unsafe_blocks = "warn"
 # Suppress buggy or noisy clippy lints
 bool_assert_comparison = { level = "allow", priority = 1 }
 borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286
+cast_lossless = { level = "allow", priority = 1 } # https://godbolt.org/z/Pv6vbGG6E
 declare_interior_mutable_const = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7665
 doc_markdown = { level = "allow", priority = 1 }
 float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
@@ -90,6 +91,7 @@ manual_assert = { level = "allow", priority = 1 }
 manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
 missing_errors_doc = { level = "allow", priority = 1 }
 module_name_repetitions = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+module_name_repetitions
+naive_bytecount = { level = "allow", priority = 1 }
 nonminimal_bool = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+nonminimal_bool
 range_plus_one = { level = "allow", priority = 1 } # buggy: https://github.com/rust-lang/rust-clippy/issues?q=is%3Aissue+is%3Aopen+range_plus_one
 similar_names = { level = "allow", priority = 1 }
@@ -100,6 +102,7 @@ struct_field_names = { level = "allow", priority = 1 }
 too_many_arguments = { level = "allow", priority = 1 }
 too_many_lines = { level = "allow", priority = 1 }
 type_complexity = { level = "allow", priority = 1 }
+unreadable_literal = { level = "allow", priority = 1 }
 
 [profile.release]
 codegen-units = 1
