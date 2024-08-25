@@ -59,6 +59,7 @@ resolver = "2"
 # This table is shared by projects under github.com/taiki-e.
 # It is not intended for manual editing.
 [workspace.lints.rust]
+deprecated_safe = "warn"
 improper_ctypes = "warn"
 improper_ctypes_definitions = "warn"
 non_ascii_idents = "warn"
