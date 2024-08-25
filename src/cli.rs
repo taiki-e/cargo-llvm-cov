@@ -1328,16 +1328,15 @@ mod tests {
     use super::*;
 
     #[track_caller]
-    fn assert_diff(expected_path: impl AsRef<Path>, actual: impl AsRef<str>) {
+    fn assert_diff(expected_path: impl AsRef<Path>, actual: impl AsRef<[u8]>) {
         let actual = actual.as_ref();
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let manifest_dir =
-            manifest_dir.strip_prefix(env::current_dir().unwrap()).unwrap_or(manifest_dir);
         let expected_path = &manifest_dir.join(expected_path);
         if !expected_path.is_file() {
+            fs::create_dir_all(expected_path.parent().unwrap()).unwrap();
             fs::write(expected_path, "").unwrap();
         }
-        let expected = fs::read_to_string(expected_path).unwrap();
+        let expected = fs::read(expected_path).unwrap();
         if expected != actual {
             if env::var_os("CI").is_some() {
                 let mut child = Command::new("git")
@@ -1347,7 +1346,7 @@ mod tests {
                     .stdin(Stdio::piped())
                     .spawn()
                     .unwrap();
-                child.stdin.as_mut().unwrap().write_all(actual.as_bytes()).unwrap();
+                child.stdin.as_mut().unwrap().write_all(actual).unwrap();
                 assert!(!child.wait().unwrap().success());
                 // patch -p1 <<'EOF' ... EOF
                 panic!("assertion failed; please run test locally and commit resulting changes, or apply above diff as patch");
@@ -1357,11 +1356,12 @@ mod tests {
         }
     }
 
+    // TODO: get help message from actual --help output.
     #[test]
-    fn update_readme() -> Result<()> {
+    fn update_readme() {
         let new = CARGO_LLVM_COV_USAGE;
         let path = &Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
-        let base = fs::read_to_string(path)?;
+        let base = fs::read_to_string(path).unwrap();
         let mut out = String::with_capacity(base.capacity());
         let mut lines = base.lines();
         let mut start = false;
@@ -1392,6 +1392,5 @@ mod tests {
         } else {
             panic!("missing `<!-- readme-long-help:start -->` comment in README.md");
         }
-        Ok(())
     }
 }
