@@ -16,6 +16,7 @@ Cargo subcommand to easily use LLVM source-based code coverage (-C instrument-co
 targets = ["x86_64-unknown-linux-gnu"]
 
 [package.metadata.binstall]
+disabled-strategies = ["quick-install"]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.tar.gz"
 bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
