@@ -269,7 +269,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
 
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
-    let rustdocflags = &mut cx.ws.config.build.rustdocflags.clone();
+    let rustdocflags = &mut cx.ws.config.rustdocflags(&cx.ws.target_for_config)?;
     if cx.args.doctests {
         let rustdocflags = rustdocflags.get_or_insert_with(Flags::default);
         push_common_flags(cx, rustdocflags);

@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Respect `target.<triple>.rustdocflags` [that added in Cargo 1.78](https://github.com/rust-lang/cargo/pull/13197).
+
 ## [0.6.11] - 2024-07-18
 
 - Add support for MC/DC coverage. ([#363](https://github.com/taiki-e/cargo-llvm-cov/pull/363), thanks @aytey)

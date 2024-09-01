@@ -24,7 +24,7 @@ pkg-fmt = "tgz"
 [dependencies]
 anyhow = "1.0.47"
 camino = "1.0.5"
-cargo-config2 = "0.1.21"
+cargo-config2 = "0.1.29"
 duct = "0.13.1"
 fs-err = "2.5"
 glob = "0.3"
