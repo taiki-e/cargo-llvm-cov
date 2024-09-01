@@ -81,8 +81,8 @@ pub(crate) struct Args {
     pub(crate) exclude_from_report: Vec<String>,
 
     // /// Number of parallel jobs, defaults to # of CPUs
-    // // Max value is u32::MAX: https://github.com/rust-lang/cargo/blob/0.62.0/src/cargo/util/command_prelude.rs#L356
-    // pub(crate) jobs: Option<u32>,
+    // // i32 or string "default": https://github.com/rust-lang/cargo/blob/0.80.0/src/cargo/core/compiler/build_config.rs#L84-L97
+    // pub(crate) jobs: Option<i32>,
     /// Build artifacts in release mode, with optimizations
     pub(crate) release: bool,
     /// Build artifacts with the specified profile
