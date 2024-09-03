@@ -10,7 +10,11 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--profraw-only` option to `cargo llvm-cov clean` subcommand. ([#385](https://github.com/taiki-e/cargo-llvm-cov/pull/385), thanks @smoelius)
+
 - Respect `target.<triple>.rustdocflags` [that added in Cargo 1.78](https://github.com/rust-lang/cargo/pull/13197).
+
+- Disable quick-install fallback of cargo-binstall.
 
 ## [0.6.11] - 2024-07-18
 
