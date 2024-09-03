@@ -25,14 +25,14 @@ pub(crate) fn run(args: &mut Args) -> Result<()> {
     cli::merge_config_to_args(&ws, &mut None, &mut args.verbose, &mut args.color);
     term::set_coloring(&mut args.color);
 
-    if !args.workspace {
+    if !args.workspace && !args.profraw_only {
         for dir in &[&ws.target_dir, &ws.output_dir] {
             rm_rf(dir, args.verbose != 0)?;
         }
         return Ok(());
     }
 
-    clean_ws(&ws, &ws.metadata.workspace_members, &args.manifest, args.verbose)?;
+    clean_ws(&ws, &ws.metadata.workspace_members, &args.manifest, args.verbose, args.profraw_only)?;
 
     Ok(())
 }
@@ -50,7 +50,7 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.args.verbose > 1)?;
+    clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.args.verbose > 1, false)?;
 
     let package_args: Vec<_> = cx
         .workspace_members
@@ -73,8 +73,9 @@ fn clean_ws(
     pkg_ids: &[PackageId],
     manifest: &ManifestOptions,
     verbose: u8,
+    profraw_only: bool,
 ) -> Result<()> {
-    clean_ws_inner(ws, pkg_ids, verbose != 0)?;
+    clean_ws_inner(ws, pkg_ids, verbose != 0, profraw_only)?;
 
     let package_args: Vec<_> =
         pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata.packages[id].name]).collect();
@@ -104,11 +105,30 @@ fn clean_ws(
     Ok(())
 }
 
-fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Result<()> {
+fn clean_ws_inner(
+    ws: &Workspace,
+    pkg_ids: &[PackageId],
+    verbose: bool,
+    profraw_only: bool,
+) -> Result<()> {
+    clean_profraw_files(ws, verbose)?;
+
+    if profraw_only {
+        return Ok(());
+    }
+
     for format in &["html", "text"] {
         rm_rf(ws.output_dir.join(format), verbose)?;
     }
 
+    rm_rf(&ws.doctests_dir, verbose)?;
+    rm_rf(&ws.profdata_file, verbose)?;
+
+    clean_trybuild_artifacts(ws, pkg_ids, verbose)?;
+    Ok(())
+}
+
+fn clean_profraw_files(ws: &Workspace, verbose: bool) -> Result<()> {
     for path in glob::glob(
         Utf8Path::new(&glob::Pattern::escape(ws.target_dir.as_str())).join("*.profraw").as_str(),
     )?
@@ -116,11 +136,6 @@ fn clean_ws_inner(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool) -> Resul
     {
         rm_rf(path, verbose)?;
     }
-
-    rm_rf(&ws.doctests_dir, verbose)?;
-    rm_rf(&ws.profdata_file, verbose)?;
-
-    clean_trybuild_artifacts(ws, pkg_ids, verbose)?;
     Ok(())
 }
 

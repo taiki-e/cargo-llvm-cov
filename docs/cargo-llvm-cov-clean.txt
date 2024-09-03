@@ -5,6 +5,7 @@ USAGE:
     cargo llvm-cov clean [OPTIONS]
 
 OPTIONS:
+        --profraw-only            Remove only profraw files
         --workspace               Remove artifacts that may affect the coverage results of packages
                                   in the workspace
     -v, --verbose                 Use verbose output

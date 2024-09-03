@@ -135,6 +135,8 @@ pub(crate) struct Args {
     ///
     /// Note that this can cause false positives/false negatives due to old build artifacts.
     pub(crate) no_clean: bool,
+    /// Clean only profraw files
+    pub(crate) profraw_only: bool,
 
     pub(crate) manifest: ManifestOptions,
 
@@ -521,6 +523,9 @@ impl Args {
         let mut verbose: usize = 0;
         let mut no_clean = false;
 
+        // clean options
+        let mut profraw_only = false;
+
         // show-env options
         let mut export_prefix = false;
 
@@ -658,6 +663,9 @@ impl Args {
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
                 Long("no-clean") => parse_flag!(no_clean),
+
+                // clean options
+                Long("profraw-only") => parse_flag!(profraw_only),
 
                 // report options
                 Long("json") => parse_flag!(json),
@@ -1125,6 +1133,12 @@ impl Args {
             subcommand = Subcommand::Report { nextest_archive_file: false };
         }
 
+        if profraw_only && !matches!(subcommand, Subcommand::Clean) {
+            bail!(
+                "'--profraw-only' is clean-specific option and not supported for this subcommand"
+            );
+        }
+
         // nextest-related
         if subcommand.call_cargo_nextest() {
             if let Some(profile) = profile {
@@ -1218,6 +1232,7 @@ impl Args {
             remap_path_prefix,
             include_ffi,
             no_clean,
+            profraw_only,
             manifest: ManifestOptions { manifest_path, frozen, locked, offline },
             nextest_archive_file,
             cargo_args,

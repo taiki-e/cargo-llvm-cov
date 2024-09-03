@@ -275,6 +275,37 @@ fn clean_ws() {
     }
 }
 
+#[test]
+fn clean_profraw_only() {
+    let model = "real1";
+    let workspace_root = test_project(model).unwrap();
+
+    let find_profraw_file = || {
+        walkdir::WalkDir::new(&workspace_root)
+            .into_iter()
+            .map(Result::unwrap)
+            .find(|entry| entry.path().extension() == Some(std::ffi::OsStr::new("profraw")))
+    };
+
+    cargo_llvm_cov("")
+        .args(["--color", "never", "--no-report"])
+        .arg("--remap-path-prefix")
+        .current_dir(workspace_root.path())
+        .assert_success();
+
+    assert!(find_profraw_file().is_some());
+
+    cargo_llvm_cov("clean")
+        .args(["--color", "never", "--profraw-only"])
+        .current_dir(workspace_root.path())
+        .assert_success();
+
+    assert!(workspace_root.path().join("target/llvm-cov-target").exists());
+
+    let profraw_file = find_profraw_file();
+    assert!(profraw_file.is_none(), "found profraw file: {profraw_file:?}");
+}
+
 #[cfg_attr(windows, ignore)] // `echo` may not be available
 #[test]
 fn open_report() {
