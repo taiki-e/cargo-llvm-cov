@@ -149,8 +149,13 @@ jobs:
           # LLVM 17 1.73-1.77
           # LLVM 18 1.78-1.81
           # LLVM 19 1.82-
-          # Rust 1.60's the minimum external LLVM version, but coverage doesn't work.
-          # https://github.com/rust-lang/rust/blob/1.60.0/src/bootstrap/native.rs#L403
+          # Minimum external LLVM versions:
+          # LLVM 12 1.58-1.64
+          # LLVM 13 1.65-1.68
+          # LLVM 14 1.69-1.72
+          # LLVM 15 1.73-1.75
+          # LLVM 16 1.76-1.78
+          # LLVM 17 1.79-
           # - llvm: '12'
           # - llvm: '13'
           - llvm: '14'
@@ -215,16 +220,16 @@ jobs:
               cargo +1.77 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             18)
-              rustup toolchain add 1.78 beta nightly --no-self-update
+              rustup toolchain add 1.78 --no-self-update
               cargo clean
               cargo +1.78 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +stable llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
-              cargo clean
-              cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             *)
-              rustup toolchain add nightly --no-self-update
+              rustup toolchain add beta nightly --no-self-update
+              cargo clean
+              cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
