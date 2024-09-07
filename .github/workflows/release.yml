@@ -19,7 +19,7 @@ env:
 
 defaults:
   run:
-    shell: bash
+    shell: bash --noprofile --norc -CeEuxo pipefail {0}
 
 jobs:
   create-release:
@@ -59,14 +59,14 @@ jobs:
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
           target: ${{ matrix.target }}
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
+      - run: printf '%s\n' "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
         if: contains(matrix.target, '-windows-msvc')
-      - run: echo "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static -C link-self-contained=yes" >>"${GITHUB_ENV}"
+      - run: printf '%s\n' "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static -C link-self-contained=yes" >>"${GITHUB_ENV}"
         if: contains(matrix.target, '-linux-musl')
       # https://doc.rust-lang.org/rustc/platform-support.html
-      - run: echo "MACOSX_DEPLOYMENT_TARGET=10.12" >>"${GITHUB_ENV}"
+      - run: printf 'MACOSX_DEPLOYMENT_TARGET=10.12\n' >>"${GITHUB_ENV}"
         if: matrix.target == 'x86_64-apple-darwin'
-      - run: echo "MACOSX_DEPLOYMENT_TARGET=11.0" >>"${GITHUB_ENV}"
+      - run: printf 'MACOSX_DEPLOYMENT_TARGET=11.0\n' >>"${GITHUB_ENV}"
         if: matrix.target == 'aarch64-apple-darwin' || matrix.target == 'universal-apple-darwin'
       - uses: taiki-e/upload-rust-binary-action@v1
         with:

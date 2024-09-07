@@ -1,1 +1,1 @@
-git ls-files | grep -v '^tests/fixtures/'
+git ls-files | grep -Ev '^tests/fixtures/'

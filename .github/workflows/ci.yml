@@ -25,7 +25,7 @@ env:
 
 defaults:
   run:
-    shell: bash
+    shell: bash --noprofile --norc -CeEuxo pipefail {0}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -67,7 +67,7 @@ jobs:
     steps:
       - uses: taiki-e/checkout-action@v1
       - name: Install Rust
-        run: rustup toolchain add ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
+        run: rustup toolchain add "${{ matrix.rust }}" --no-self-update && rustup default "${{ matrix.rust }}"
       - run: rustup toolchain add nightly --no-self-update
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-minimal-versions
@@ -77,60 +77,58 @@ jobs:
       - run: cargo install --path . --debug
       - name: Test cargo llvm-cov nextest
         run: |
-          set -eEuxo pipefail
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
-          cd ../real1
+          cd -- ../real1
           cargo llvm-cov nextest-archive --archive-file a.tar.zst
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm a.tar.zst
+          rm -- a.tar.zst
           cargo clean
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --release
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm a.tar.zst
+          rm -- a.tar.zst
           cargo clean
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --cargo-profile custom
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm a.tar.zst
+          rm -- a.tar.zst
           cargo clean
-          host=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
+          host=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
         run: |
-          set -eEuxo pipefail
           unset RUSTFLAGS
 
           # Test nightly-specific options
           git clone https://github.com/taiki-e/easytime.git
-          pushd easytime >/dev/null
+          pushd -- easytime >/dev/null
           git checkout 7ecb6e6
           cargo llvm-cov test --doctests --text --fail-under-lines 30
           popd >/dev/null
-          pushd tests/fixtures/crates/cargo_config >/dev/null
+          pushd -- tests/fixtures/crates/cargo_config >/dev/null
           # TODO: --fail-under-branches?
           cargo llvm-cov test --branch --text --fail-under-lines 80
           popd >/dev/null
-          pushd easytime >/dev/null
+          pushd -- easytime >/dev/null
           cargo llvm-cov test --branch --doctests --text --fail-under-lines 30
           popd >/dev/null
 
           # Test minimum runnable Cargo version.
           rustup toolchain add 1.60 --no-self-update
-          pushd easytime >/dev/null
+          pushd -- easytime >/dev/null
           cargo +1.60 llvm-cov test --text --fail-under-lines 30
           popd >/dev/null
 
           # Test trybuild compatibility.
           git clone --depth 1 https://github.com/taiki-e/easy-ext.git
-          pushd easy-ext >/dev/null
+          pushd -- easy-ext >/dev/null
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
           popd >/dev/null
         if: startsWith(matrix.rust, 'nightly')
@@ -172,7 +170,6 @@ jobs:
         run: rustup update stable --no-self-update
       - name: Install LLVM
         run: |
-          set -eEuxo pipefail
           if type -P clang-"${{ matrix.llvm }}" &>/dev/null; then
             exit 0
           fi
@@ -181,8 +178,8 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
             | gpg --dearmor \
             | sudo tee -- /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
-          echo "deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main" \
-            | sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null
+          sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
+            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
           sudo apt-get -o Acquire::Retries=10 -qq update
           apt_packages=(
             clang-"${{ matrix.llvm }}"
@@ -200,7 +197,6 @@ jobs:
       - run: cargo install --path . --debug
       - name: Test
         run: |
-          set -eEuxo pipefail
           export CC="clang-${{ matrix.llvm }}"
           export CXX="clang++-${{ matrix.llvm }}"
           export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
@@ -220,11 +216,11 @@ jobs:
               cargo +1.77 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             18)
-              rustup toolchain add 1.78 --no-self-update
+              rustup toolchain add 1.78 1.81 --no-self-update
               cargo clean
               cargo +1.78 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
-              cargo +stable llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+              cargo +1.81 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             *)
               rustup toolchain add beta nightly --no-self-update
