@@ -184,9 +184,7 @@ ls_files() {
 if [[ -n "$(ls_files '*.rs')" ]]; then
     info "checking Rust code style"
     check_config .rustfmt.toml
-    if [[ "${ostype}" == "solaris" ]] && [[ -n "${CI:-}" ]] && ! type -P cargo >/dev/null; then
-        warn "this check is skipped on Solaris due to installing cargo from upstream package manager is broken"
-    elif check_install cargo jq python3; then
+    if check_install cargo jq python3; then
         # `cargo fmt` cannot recognize files not included in the current workspace and modules
         # defined inside macros, so run rustfmt directly.
         # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.

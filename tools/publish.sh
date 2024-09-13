@@ -58,7 +58,7 @@ fi
 if ! git branch | grep -Eq '\* main$'; then
     bail "current branch is not 'main'"
 fi
-if git remote -v | grep -F origin | grep -Eq 'github\.com[:/]taiki-e/'; then
+if ! git remote -v | grep -F origin | grep -Eq 'github\.com[:/]taiki-e/'; then
     bail "cannot publish a new release from fork repository"
 fi
 
