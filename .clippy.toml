@@ -13,6 +13,7 @@ disallowed-methods = [
     { path = "std::fs::copy", reason = "use `fs::copy` instead" },
     { path = "std::fs::create_dir_all", reason = "use `fs::create_dir_all` instead" },
     { path = "std::fs::create_dir", reason = "use `fs::create_dir` instead" },
+    { path = "std::fs::exists", reason = "use `fs::exists` instead" },
     { path = "std::fs::hard_link", reason = "use `fs::hard_link` instead" },
     { path = "std::fs::metadata", reason = "use `fs::metadata` instead" },
     { path = "std::fs::read_dir", reason = "use `fs::read_dir` instead" },
