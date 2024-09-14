@@ -228,14 +228,14 @@ fn process_error(mut msg: String, status: Option<ExitStatus>, output: Option<&Ou
 
     if let Some(out) = output {
         match str::from_utf8(&out.stdout) {
-            Ok(s) if !s.trim().is_empty() => {
+            Ok(s) if !s.trim_start().is_empty() => {
                 msg.push_str("\n--- stdout\n");
                 msg.push_str(s);
             }
             Ok(_) | Err(_) => {}
         }
         match str::from_utf8(&out.stderr) {
-            Ok(s) if !s.trim().is_empty() => {
+            Ok(s) if !s.trim_start().is_empty() => {
                 msg.push_str("\n--- stderr\n");
                 msg.push_str(s);
             }

@@ -675,7 +675,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         cmd.arg(format!("-failure-mode={mode}"));
     }
     if let Some(flags) = &cx.llvm_profdata_flags {
-        cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
+        cmd.args(flags.split(' ').filter(|s| !s.trim_start().is_empty()));
     }
     if term::verbose() {
         status!("Running", "{cmd}");
@@ -1044,7 +1044,7 @@ impl Format {
         }
 
         if let Some(flags) = &cx.llvm_cov_flags {
-            cmd.args(flags.split(' ').filter(|s| !s.trim().is_empty()));
+            cmd.args(flags.split(' ').filter(|s| !s.trim_start().is_empty()));
         }
 
         if cx.args.cov.cobertura {
