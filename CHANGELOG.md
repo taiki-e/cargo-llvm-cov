@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.13] - 2024-09-14
+
 - Distribute prebuilt binary for x86_64 FreeBSD.
 
 ## [0.6.12] - 2024-09-03
@@ -653,7 +655,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.12...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.13...HEAD
+[0.6.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.12...v0.6.13
 [0.6.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.11...v0.6.12
 [0.6.11]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.10...v0.6.11
 [0.6.10]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.9...v0.6.10
