@@ -871,7 +871,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
     }
 
-    // This sort is necessary to make the result of `llvm-cov show` match between macos and linux.
+    // This sort is necessary to make the result of `llvm-cov show` match between macOS and Linux.
     files.sort_unstable();
 
     if files.is_empty() {

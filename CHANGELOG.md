@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Distribute prebuilt binary for x86_64 FreeBSD.
+
 ## [0.6.12] - 2024-09-03
 
 - Add `--profraw-only` option to `cargo llvm-cov clean` subcommand. ([#385](https://github.com/taiki-e/cargo-llvm-cov/pull/385), thanks @smoelius)
@@ -366,7 +368,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 - Fix handling of `RUSTC_WRAPPER`, `RUSTC`, and similar environment variables and configs. ([#180](https://github.com/taiki-e/cargo-llvm-cov/pull/180))
 
-- Distribute prebuilt binaries for aarch64 macOS. ([#179](https://github.com/taiki-e/cargo-llvm-cov/pull/179))
+- Distribute prebuilt binaries for AArch64 macOS. ([#179](https://github.com/taiki-e/cargo-llvm-cov/pull/179))
 
 ## [0.4.4] - 2022-05-30
 
@@ -467,7 +469,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
   We will support this again in 0.1.x for compatibility, but will remove it in 0.2.x.
 
-- Distribute prebuilt binaries for aarch64 Linux (gnu and musl).
+- Distribute prebuilt binaries for AArch64 Linux (gnu and musl).
 
 ## [0.1.15] - 2022-01-06
 
