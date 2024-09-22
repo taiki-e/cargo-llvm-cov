@@ -53,6 +53,16 @@ check_install() {
         fi
     done
 }
+retry() {
+    for i in {1..10}; do
+        if "$@"; then
+            return 0
+        else
+            sleep "${i}"
+        fi
+    done
+    "$@"
+}
 error() {
     if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
         printf '::error::%s\n' "$*"
@@ -191,12 +201,14 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
         rustc_version=$(rustc -vV | grep -E '^release:' | cut -d' ' -f2)
         if [[ "${rustc_version}" =~ nightly|dev ]] || ! type -P rustup >/dev/null; then
             if type -P rustup >/dev/null; then
-                rustup component add rustfmt &>/dev/null
+                retry rustup component add rustfmt &>/dev/null
             fi
             info "running \`rustfmt \$(git ls-files '*.rs')\`"
             rustfmt $(ls_files '*.rs')
         else
-            rustup component add rustfmt --toolchain nightly &>/dev/null || true
+            if type -P rustup >/dev/null; then
+                retry rustup component add rustfmt --toolchain nightly &>/dev/null
+            fi
             info "running \`rustfmt +nightly \$(git ls-files '*.rs')\`"
             rustfmt +nightly $(ls_files '*.rs')
         fi
