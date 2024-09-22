@@ -237,7 +237,7 @@ pub(crate) struct AssertOutput {
 }
 
 fn line_separated(lines: &str) -> impl Iterator<Item = &'_ str> {
-    lines.split('\n').map(str::trim).filter(|line| !line.is_empty())
+    lines.lines().map(str::trim).filter(|line| !line.is_empty())
 }
 
 impl AssertOutput {
