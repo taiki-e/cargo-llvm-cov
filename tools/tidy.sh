@@ -445,7 +445,7 @@ if [[ -n "$(ls_files '*action.yml')" ]]; then
     for p in $(ls_files '*action.yml'); do
         if [[ "${p##*/}" == "action.yml" ]]; then
             actions+=("${p}")
-            if grep -Fq 'shell: bash' "${p}"; then
+            if ! grep -Fq 'shell: sh' "${p}"; then
                 bash_files+=("${p}")
             fi
         fi
