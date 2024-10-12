@@ -51,6 +51,7 @@ impl Context {
             args.target.as_deref(),
             args.doctests,
             args.cov.branch,
+            args.cov.mcdc,
             show_env,
         )?;
         cli::merge_config_to_args(&ws, &mut args.target, &mut args.verbose, &mut args.color);
@@ -73,6 +74,12 @@ impl Context {
             }
             if args.cov.branch {
                 warn!("--branch option is unstable");
+            }
+            if args.cov.mcdc {
+                warn!("--mcdc option is unstable");
+            }
+            if args.cov.mcdc && args.cov.branch {
+                warn!("the `--mcdc` option takes precedence over `--branch`");
             }
             if args.doc {
                 warn!("--doc option is unstable");

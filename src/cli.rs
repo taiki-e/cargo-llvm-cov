@@ -359,6 +359,8 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) skip_functions: bool,
     /// Enable branch coverage. (unstable)
     pub(crate) branch: bool,
+    /// Enable mcdc coverage. (unstable)
+    pub(crate) mcdc: bool,
 }
 
 impl LlvmCovOptions {
@@ -513,6 +515,7 @@ impl Args {
         let mut dep_coverage = None;
         let mut skip_functions = false;
         let mut branch = false;
+        let mut mcdc = false;
 
         // build options
         let mut release = false;
@@ -678,6 +681,7 @@ impl Args {
                 Long("summary-only") => parse_flag!(summary_only),
                 Long("skip-functions") => parse_flag!(skip_functions),
                 Long("branch") => parse_flag!(branch),
+                Long("mcdc") => parse_flag!(mcdc),
                 Long("output-path") => parse_opt!(output_path),
                 Long("output-dir") => parse_opt!(output_dir),
                 Long("failure-mode") => parse_opt!(failure_mode),
@@ -1204,6 +1208,7 @@ impl Args {
                 dep_coverage,
                 skip_functions,
                 branch,
+                mcdc,
             },
             show_env: ShowEnvOptions { export_prefix },
             doctests,

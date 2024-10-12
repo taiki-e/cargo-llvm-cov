@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub(crate) fn run(args: &mut Args) -> Result<()> {
-    let ws = Workspace::new(&args.manifest, None, false, false, false)?;
+    let ws = Workspace::new(&args.manifest, None, false, false, false, false)?;
     cli::merge_config_to_args(&ws, &mut None, &mut args.verbose, &mut args.color);
     term::set_coloring(&mut args.color);
 

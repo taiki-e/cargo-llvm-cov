@@ -184,6 +184,9 @@ OPTIONS:
         --branch
             Enable branch coverage. (unstable)
 
+        --mcdc
+            Enable mcdc coverage. (unstable)
+
         --doctests
             Including doc tests (unstable)
 

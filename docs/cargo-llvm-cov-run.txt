@@ -138,6 +138,9 @@ OPTIONS:
         --branch
             Enable branch coverage. (unstable)
 
+        --mcdc
+            Enable mcdc coverage. (unstable)
+
         --ignore-run-fail
             Run all tests regardless of failure and generate report
 
