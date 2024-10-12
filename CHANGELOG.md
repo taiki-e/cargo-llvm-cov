@@ -10,6 +10,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add unstable `--mcdc` flag to enable mcdc coverage. ([#383](https://github.com/taiki-e/cargo-llvm-cov/pull/383), thanks @Swatinem)
+
 ## [0.6.13] - 2024-09-14
 
 - Distribute prebuilt binary for x86_64 FreeBSD.
