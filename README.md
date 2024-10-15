@@ -21,6 +21,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Merge coverages generated under different test conditions](#merge-coverages-generated-under-different-test-conditions)
   - [Get coverage of C/C++ code linked to Rust library/binary](#get-coverage-of-cc-code-linked-to-rust-librarybinary)
   - [Get coverage of external tests](#get-coverage-of-external-tests)
+  - [Get coverage of AFL fuzzers](#get-coverage-of-afl-fuzzers)
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude function from coverage](#exclude-function-from-coverage)
   - [Continuous Integration](#continuous-integration)
@@ -476,6 +477,21 @@ cargo llvm-cov report --lcov # Generate report without tests.
 Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest` commands.
 
 Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
+
+### Get coverage of AFL fuzzers
+
+Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
+
+```sh
+# Set environment variables and clean workspace
+source <(cargo llvm-cov show-env --export-prefix)
+cargo llvm-cov clean --workspace
+# Build the fuzz target
+cargo afl build
+# Run the fuzzer, the AFL_FUZZER_LOOPCOUNT is needed, because otherwise .profraw files aren't emitted
+# To get coverage of current corpus, minimize it and set it as input, then run the fuzzer until it processes the corpus
+AFL_FUZZER_LOOPCOUNT=20 cargo afl fuzz -c - -i in -o out target/debug/fuzz-target 
+```
 
 ### Exclude file from coverage
 
