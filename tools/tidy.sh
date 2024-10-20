@@ -750,7 +750,9 @@ EOF
         if [[ -n "${dependencies_words}" ]]; then
             LC_ALL=C sort -f >>.github/.cspell/rust-dependencies.txt <<<"${dependencies_words}"$'\n'
         fi
-        check_diff .github/.cspell/rust-dependencies.txt
+        if [[ -z "${REMOVE_UNUSED_WORDS:-}" ]]; then
+            check_diff .github/.cspell/rust-dependencies.txt
+        fi
         if ! grep -Fq '.github/.cspell/rust-dependencies.txt linguist-generated' .gitattributes; then
             error "you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
         fi
