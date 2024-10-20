@@ -11,7 +11,7 @@ use std::{
     sync::OnceLock,
 };
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::Context as _;
 use easy_ext::ext;
 use fs_err as fs;
 
@@ -55,10 +55,11 @@ pub(crate) fn test_report(
     subcommand: Option<&str>,
     args: &[&str],
     envs: &[(&str, &str)],
-) -> Result<()> {
-    let workspace_root = test_project(model)?;
+) {
+    eprintln!("model={model}/name={name}");
+    let workspace_root = test_project(model);
     let output_dir = fixtures_path().join("coverage-reports").join(model);
-    fs::create_dir_all(&output_dir)?;
+    fs::create_dir_all(&output_dir).unwrap();
     let output_path = &output_dir.join(name).with_extension(extension);
     let expected = &fs::read_to_string(output_path).unwrap_or_default();
     let mut cmd = cargo_llvm_cov("");
@@ -75,70 +76,74 @@ pub(crate) fn test_report(
     }
     cmd.assert_success();
 
-    normalize_output(output_path, args)?;
-    assert_output(output_path, expected)
+    normalize_output(output_path, args);
+    assert_output(output_path, expected);
 }
 
-pub(crate) fn assert_output(output_path: &Path, expected: &str) -> Result<()> {
+#[track_caller]
+pub(crate) fn assert_output(output_path: &Path, expected: &str) {
     if env::var_os("CI").is_some() {
         let mut child = Command::new("git")
             .args(["--no-pager", "diff", "--no-index", "--"])
             .arg("-")
             .arg(output_path)
             .stdin(Stdio::piped())
-            .spawn()?;
+            .spawn()
+            .unwrap();
         child.stdin.as_mut().unwrap().write_all(expected.as_bytes()).unwrap();
         assert!(child.wait().unwrap().success());
     }
-    Ok(())
 }
 
-pub(crate) fn normalize_output(output_path: &Path, args: &[&str]) -> Result<()> {
+#[track_caller]
+pub(crate) fn normalize_output(output_path: &Path, args: &[&str]) {
     if args.contains(&"--json") {
-        let s = fs::read_to_string(output_path)?;
+        let s = fs::read_to_string(output_path).unwrap();
         let mut json = serde_json::from_str::<cargo_llvm_cov::json::LlvmCovJsonExport>(&s).unwrap();
         if !args.contains(&"--summary-only") {
             json.demangle();
         }
-        fs::write(output_path, serde_json::to_vec_pretty(&json)?)?;
+        fs::write(output_path, serde_json::to_vec_pretty(&json).unwrap()).unwrap();
     }
     if cfg!(windows) {
-        let s = fs::read_to_string(output_path)?;
+        let s = fs::read_to_string(output_path).unwrap();
         // In json \ is escaped ("\\\\"), in other it is not escaped ("\\").
-        fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/"))?;
+        fs::write(output_path, s.replace("\\\\", "/").replace('\\', "/")).unwrap();
     }
-    Ok(())
 }
 
-pub(crate) fn test_project(model: &str) -> Result<tempfile::TempDir> {
-    let tmpdir = tempfile::tempdir()?;
+#[track_caller]
+pub(crate) fn test_project(model: &str) -> tempfile::TempDir {
+    let tmpdir = tempfile::tempdir().unwrap();
     let workspace_root = tmpdir.path();
     let model_path = fixtures_path().join("crates").join(model);
 
-    for (file_name, from) in git_ls_files(&model_path, &[])? {
+    for (file_name, from) in git_ls_files(&model_path, &[]) {
         let to = &workspace_root.join(file_name);
         if !to.parent().unwrap().is_dir() {
-            fs::create_dir_all(to.parent().unwrap())?;
+            fs::create_dir_all(to.parent().unwrap()).unwrap();
         }
-        fs::copy(from, to)?;
+        fs::copy(from, to).unwrap();
     }
 
-    Ok(tmpdir)
+    tmpdir
 }
 
-fn git_ls_files(dir: &Path, filters: &[&str]) -> Result<Vec<(String, PathBuf)>> {
+#[track_caller]
+fn git_ls_files(dir: &Path, filters: &[&str]) -> Vec<(String, PathBuf)> {
     let mut cmd = Command::new("git");
     cmd.arg("ls-files").args(filters).current_dir(dir);
-    let output = cmd.output().with_context(|| format!("could not execute process `{cmd:?}`"))?;
-    if !output.status.success() {
-        bail!(
-            "process didn't exit successfully: `{cmd:?}`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-            "-".repeat(60),
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
-        );
-    }
-    Ok(str::from_utf8(&output.stdout)?
+    let output =
+        cmd.output().unwrap_or_else(|e| panic!("could not execute process `{cmd:?}`: {e}"));
+    assert!(
+        output.status.success(),
+        "process didn't exit successfully: `{cmd:?}`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
+        "-".repeat(60),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    str::from_utf8(&output.stdout)
+        .unwrap()
         .lines()
         .map(str::trim)
         .filter_map(|f| {
@@ -151,21 +156,23 @@ fn git_ls_files(dir: &Path, filters: &[&str]) -> Result<Vec<(String, PathBuf)>> 
             }
             Some((f.to_owned(), p))
         })
-        .collect())
+        .collect()
 }
 
-pub(crate) fn perturb_one_header(workspace_root: &Path) -> Result<Option<PathBuf>> {
+pub(crate) fn perturb_one_header(workspace_root: &Path) -> Option<PathBuf> {
     let target_dir = workspace_root.join("target").join("llvm-cov-target");
-    let path = fs::read_dir(target_dir)?.filter_map(Result::ok).find_map(|entry| {
-        let path = entry.path();
+    let path = fs::read_dir(target_dir).unwrap().find_map(|entry| {
+        let path = entry.ok().unwrap().path();
         if path.extension() == Some(OsStr::new("profraw")) {
             Some(path)
         } else {
             None
         }
     });
-    path.as_ref().map(perturb_header).transpose()?;
-    Ok(path)
+    if let Some(path) = &path {
+        perturb_header(path);
+    }
+    path
 }
 
 const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
@@ -177,18 +184,17 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
     | ('r' as u64) << 8
     | (129_u64);
 
-fn perturb_header(path: impl AsRef<Path>) -> Result<()> {
-    let mut file = fs::OpenOptions::new().read(true).write(true).open(path.as_ref())?;
+fn perturb_header(path: &Path) {
+    let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap();
     let mut magic = {
         let mut buf = vec![0_u8; mem::size_of::<u64>()];
-        file.read_exact(&mut buf)?;
+        file.read_exact(&mut buf).unwrap();
         u64::from_ne_bytes(buf.try_into().unwrap())
     };
     assert_eq!(magic, INSTR_PROF_RAW_MAGIC_64);
     magic += 1;
-    file.rewind()?;
-    file.write_all(&magic.to_ne_bytes())?;
-    Ok(())
+    file.rewind().unwrap();
+    file.write_all(&magic.to_ne_bytes()).unwrap();
 }
 
 #[ext(CommandExt)]

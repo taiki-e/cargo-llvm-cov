@@ -6,7 +6,6 @@ mod auxiliary;
 
 use std::path::Path;
 
-use anyhow::Context as _;
 use auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
     test_project, test_report, CommandExt,
@@ -34,11 +33,8 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
 }
 
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
-    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
-        test_report(model, name, extension, None, &[args, args2].concat(), envs)
-            .context(id.clone())
-            .unwrap();
+        test_report(model, name, extension, None, &[args, args2].concat(), envs);
     }
 }
 
@@ -103,11 +99,8 @@ fn bin_crate() {
 
     let model = "bin_crate";
     let name = "run";
-    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
-        test_report(model, name, extension, Some("run"), &[args2, &["--", "1"]].concat(), &[])
-            .context(id.clone())
-            .unwrap();
+        test_report(model, name, extension, Some("run"), &[args2, &["--", "1"]].concat(), &[]);
     }
 }
 
@@ -132,25 +125,21 @@ fn cargo_config() {
 #[test]
 fn no_coverage() {
     let model = "no_coverage";
-    let id = format!("{model}/{model}");
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, model, extension, None, args2, &[]).context(id.clone()).unwrap();
+        test_report(model, model, extension, None, args2, &[]);
     }
 
     let name = "no_cfg_coverage";
-    let id = format!("{model}/{name}");
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, name, extension, None, &[args2, &["--no-cfg-coverage"]].concat(), &[])
-            .context(id.clone())
-            .unwrap();
+        test_report(model, name, extension, None, &[args2, &["--no-cfg-coverage"]].concat(), &[]);
     }
 }
 
@@ -159,13 +148,12 @@ fn no_coverage() {
 #[test]
 fn coverage_helper() {
     let model = "coverage_helper";
-    let id = format!("{model}/{model}");
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
         if extension == "full.json" && cfg!(windows) {
             continue;
         }
-        test_report(model, model, extension, None, args2, &[]).context(id.clone()).unwrap();
+        test_report(model, model, extension, None, args2, &[]);
     }
 }
 
@@ -191,7 +179,7 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     let model = "merge";
     fs::create_dir_all(output_dir).unwrap();
     for (extension, args) in test_set() {
-        let workspace_root = test_project(model).unwrap();
+        let workspace_root = test_project(model);
         let output_path = &output_dir.join(model).with_extension(extension);
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov("")
@@ -213,14 +201,14 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
         cmd.assert_success();
 
         if failure_mode_all {
-            perturb_one_header(workspace_root.path()).unwrap().unwrap();
+            perturb_one_header(workspace_root.path()).unwrap();
             cmd.assert_failure()
                 .stderr_contains("unrecognized instrumentation profile encoding format");
             cmd.args(["--failure-mode", "all"]);
             cmd.assert_success();
         } else {
-            normalize_output(output_path, args).unwrap();
-            assert_output(output_path, expected).unwrap();
+            normalize_output(output_path, args);
+            assert_output(output_path, expected);
         }
     }
 }
@@ -234,7 +222,7 @@ fn clean_ws() {
     let output_dir = fixtures_path().join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
-        let workspace_root = test_project(model).unwrap();
+        let workspace_root = test_project(model);
         let output_path = &output_dir.join(name).with_extension(extension);
         let expected = &fs::read_to_string(output_path).unwrap_or_default();
         cargo_llvm_cov("")
@@ -250,8 +238,8 @@ fn clean_ws() {
             .current_dir(workspace_root.path())
             .assert_success();
 
-        normalize_output(output_path, args).unwrap();
-        assert_output(output_path, expected).unwrap();
+        normalize_output(output_path, args);
+        assert_output(output_path, expected);
 
         cargo_llvm_cov("")
             .args(["clean", "--color", "never", "--workspace"])
@@ -270,15 +258,15 @@ fn clean_ws() {
             .current_dir(workspace_root.path())
             .assert_success();
 
-        normalize_output(output_path, args).unwrap();
-        assert_output(output_path, expected).unwrap();
+        normalize_output(output_path, args);
+        assert_output(output_path, expected);
     }
 }
 
 #[test]
 fn clean_profraw_only() {
     let model = "real1";
-    let workspace_root = test_project(model).unwrap();
+    let workspace_root = test_project(model);
 
     let find_profraw_file = || {
         walkdir::WalkDir::new(&workspace_root)
@@ -306,11 +294,11 @@ fn clean_profraw_only() {
     assert!(profraw_file.is_none(), "found profraw file: {profraw_file:?}");
 }
 
-#[cfg_attr(windows, ignore)] // `echo` may not be available
 #[test]
+#[cfg_attr(windows, ignore)] // `echo` may not be available
 fn open_report() {
     let model = "real1";
-    let workspace_root = test_project(model).unwrap();
+    let workspace_root = test_project(model);
     cargo_llvm_cov("")
         .args(["--color", "never", "--open"])
         .current_dir(workspace_root.path())
