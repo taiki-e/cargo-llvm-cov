@@ -104,10 +104,20 @@ jobs:
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
         run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
           unset RUSTFLAGS
 
           # Test nightly-specific options
-          git clone https://github.com/taiki-e/easytime.git
+          retry git clone https://github.com/taiki-e/easytime.git
           pushd -- easytime >/dev/null
           git checkout 7ecb6e6
           cargo llvm-cov test --doctests --text --fail-under-lines 30
@@ -123,13 +133,13 @@ jobs:
           popd >/dev/null
 
           # Test minimum runnable Cargo version.
-          rustup toolchain add 1.60 --no-self-update
+          retry rustup toolchain add 1.60 --no-self-update
           pushd -- easytime >/dev/null
           cargo +1.60 llvm-cov test --text --fail-under-lines 30
           popd >/dev/null
 
           # Test trybuild compatibility.
-          git clone --depth 1 https://github.com/taiki-e/easy-ext.git
+          retry git clone --depth 1 https://github.com/taiki-e/easy-ext.git
           pushd -- easy-ext >/dev/null
           cargo llvm-cov --text --test compiletest --fail-under-lines 70
           popd >/dev/null
@@ -141,29 +151,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # LLVM versions of official builds:
-          # LLVM 14 1.60-1.64
-          # LLVM 15 1.65-1.69
-          # LLVM 16 1.70-1.72
-          # LLVM 17 1.73-1.77
-          # LLVM 18 1.78-1.81
-          # LLVM 19 1.82-
-          # Minimum external LLVM versions:
-          # LLVM 12 1.58-1.64
-          # LLVM 13 1.65-1.68
-          # LLVM 14 1.69-1.72
-          # LLVM 15 1.73-1.75
-          # LLVM 16 1.76-1.78
-          # LLVM 17 1.79-
-          # - llvm: '12'
-          # - llvm: '13'
-          - llvm: '14'
-          - llvm: '15'
-          - llvm: '16'
-          - llvm: '17'
-          - llvm: '18'
-          - llvm: '19'
+        # LLVM version table:
+        # - LLVM 14: 1.60-1.64
+        # - LLVM 15: 1.65-1.69
+        # - LLVM 16: 1.70-1.72
+        # - LLVM 17: 1.73-1.77
+        # - LLVM 18: 1.78-1.81
+        # - LLVM 19: 1.82-
+        # Minimum external LLVM version table:
+        # - LLVM 12 1.58-1.64
+        # - LLVM 13 1.65-1.68
+        # - LLVM 14 1.69-1.72
+        # - LLVM 15 1.73-1.75
+        # - LLVM 16 1.76-1.78
+        # - LLVM 17 1.79-1.82
+        # - LLVM 18 1.83-
+        llvm:
+          # - '12'
+          # - '13'
+          - '14'
+          - '15'
+          - '16'
+          - '17'
+          - '18'
+          - '19'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -171,17 +182,27 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@stable
       - name: Install LLVM
         run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
           if type -P clang-"${{ matrix.llvm }}" &>/dev/null; then
             exit 0
           fi
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
-          curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
             | gpg --dearmor \
             | sudo tee -- /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
           sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
             <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
-          sudo apt-get -o Acquire::Retries=10 -qq update
+          retry sudo apt-get -o Acquire::Retries=10 -qq update
           apt_packages=(
             clang-"${{ matrix.llvm }}"
             libc++-"${{ matrix.llvm }}"-dev
@@ -192,19 +213,29 @@ jobs:
             llvm-"${{ matrix.llvm }}"-dev
           )
           if ! sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"; then
-            sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 upgrade -y
-            sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"
+            retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 upgrade -y
+            retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"
           fi
       - run: cargo install --path . --debug
       - name: Test
         run: |
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
           export CC="clang-${{ matrix.llvm }}"
           export CXX="clang++-${{ matrix.llvm }}"
           export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
           export LLVM_PROFDATA="llvm-profdata-${{ matrix.llvm }}"
           case "${{ matrix.llvm }}" in
             1[0-7])
-              rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
+              retry rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
               cargo clean
               cargo +1.60 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
@@ -217,14 +248,16 @@ jobs:
               cargo +1.77 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             18)
-              rustup toolchain add 1.78 1.81 --no-self-update
+              retry rustup toolchain add 1.78 1.81 --no-self-update
               cargo clean
               cargo +1.78 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +1.81 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             *)
-              rustup toolchain add beta nightly --no-self-update
+              retry rustup toolchain add 1.82 beta nightly --no-self-update
+              cargo clean
+              cargo +1.82 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean

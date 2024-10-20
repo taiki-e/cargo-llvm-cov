@@ -448,11 +448,11 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 Known compatible Rust (installed via rustup) and LLVM versions:
 
-|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82 |
-| ---------- | -------------- | -------------- | --------- |
-| LLVM 14-17 | ok             |                |           |
-| LLVM 18    |                | ok             |           |
-| LLVM 19-rc |                |                | ok        |
+|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.84 |
+| ---------- | -------------- | -------------- | -------------- |
+| LLVM 14-17 | ok             |                |                |
+| LLVM 18    |                | ok             |                |
+| LLVM 19    |                |                | ok             |
 
 ### Get coverage of external tests
 
