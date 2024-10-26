@@ -427,6 +427,7 @@ impl Args {
 
         // rustc/cargo args must be valid Unicode
         // https://github.com/rust-lang/rust/blob/1.80.0/compiler/rustc_driver_impl/src/args.rs#L121
+        // TODO: https://github.com/rust-lang/cargo/pull/11118
         fn handle_args(
             args: impl IntoIterator<Item = impl Into<OsString>>,
         ) -> impl Iterator<Item = Result<String>> {
