@@ -699,7 +699,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                 let p = e.path();
                 if p.is_dir() {
                     if p.file_name()
-                        .map_or(false, |f| f == "incremental" || f == ".fingerprint" || f == "out")
+                        .is_some_and(|f| f == "incremental" || f == ".fingerprint" || f == "out")
                     {
                         // Ignore incremental compilation related files and output from build scripts.
                         return false;
@@ -1310,7 +1310,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         for _ in WalkDir::new(excluded).into_iter().filter_entry(|e| {
             let p = e.path();
             if !p.is_dir() {
-                if p.extension().map_or(false, |e| e == "rs") {
+                if p.extension().is_some_and(|e| e == "rs") {
                     let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
                     excluded_path.push(p.to_owned().try_into().unwrap());
                 }

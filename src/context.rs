@@ -155,7 +155,7 @@ impl Context {
                     let toolchain = sysroot.file_name().unwrap();
                     if cmd!("rustup", "toolchain", "list")
                         .read()
-                        .map_or(false, |t| t.contains(toolchain))
+                        .is_ok_and(|t| t.contains(toolchain))
                     {
                         // If toolchain is installed from rustup and llvm-tools-preview is not installed,
                         // suggest installing llvm-tools-preview via rustup.
