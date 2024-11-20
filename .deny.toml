@@ -58,7 +58,7 @@ private.ignore = true
 allow = [
     "Apache-2.0",
     "MIT",
-    "Unicode-DFS-2016", # unicode-ident
+    "Unicode-3.0", # unicode-ident
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
