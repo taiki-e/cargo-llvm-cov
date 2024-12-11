@@ -590,13 +590,18 @@ unit_tests:
     - cargo llvm-cov report --cobertura --output-path target/llvm-cov-target/cobertura.xml
 ```
 
-Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must similarly
-be available), with the following `.config/nextest.toml`:
+> [!CAUTION]
+> GitLab has certain [limits for Cobertura reports](https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization/cobertura.html#limits)
+> make sure you obey them.
 
-```toml
-[profile.default.junit]
-path = "junit.xml"
-```
+> [!NOTE]
+> Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must
+> similarly be available), with the following `.config/nextest.toml`:
+> 
+> ```toml
+> [profile.default.junit]
+> path = "junit.xml"
+> ```
 
 ### Display coverage in VS Code
 
