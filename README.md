@@ -573,8 +573,7 @@ Note that [the way Codecov shows region/branch coverage is not very good](https:
 
 First of all, when running the CI you need to make sure `cargo-llvm-cov` is available
 in the execution script. Whether you add it to a custom image, or run `cargo install` as part
-of your pipeline, it should be available and in `PATH`. Once done, it's simple.
-
+of your pipeline, it should be available and in `PATH`. Once done, it's simple:
 
 ```yaml
 unit_tests:
@@ -584,14 +583,15 @@ unit_tests:
       coverage_report:
         coverage_format: cobertura
         path: target/llvm-cov-target/cobertura.xml
+  # this uses region for coverage summary
   coverage: '/TOTAL\s+(\d+\s+)+(\d+\.\d+\%)/'
   script:
     - cargo llvm-cov nextest
     - cargo llvm-cov report --cobertura --output-path target/llvm-cov-target/cobertura.xml
 ```
 
-Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests,
-with the following `.config/nextest.toml`:
+Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must similarly
+be available), with the following `.config/nextest.toml`:
 
 ```toml
 [profile.default.junit]
