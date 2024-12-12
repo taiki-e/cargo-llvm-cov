@@ -597,7 +597,7 @@ unit_tests:
 > [!NOTE]
 > Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must
 > similarly be available), with the following `.config/nextest.toml`:
-> 
+>
 > ```toml
 > [profile.default.junit]
 > path = "junit.xml"
