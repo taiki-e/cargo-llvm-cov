@@ -1,24 +1,22 @@
-    1|       |#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+    1|       |use coverage_helper::test;
     2|       |
-    3|       |use coverage_helper::test;
-    4|       |
-    5|      2|fn func(x: i32) {
-    6|      2|    match x {
-    7|      1|        0 => {}
-    8|      0|        1 => {}
-    9|      1|        2 => {}
-   10|      0|        3 => {}
-   11|      0|        _ => {}
-   12|       |    }
-   13|      2|}
-   14|       |
-   15|       |#[test]
-   16|       |fn test() {
-   17|       |    func(0);
-   18|       |
-   19|       |    if false {
-   20|       |        func(1);
-   21|       |    } else {
-   22|       |        func(2);
-   23|       |    }
-   24|       |}
+    3|      2|fn func(x: i32) {
+    4|      2|    match x {
+    5|      1|        0 => {}
+    6|      0|        1 => {}
+    7|      1|        2 => {}
+    8|      0|        3 => {}
+    9|      0|        _ => {}
+   10|       |    }
+   11|      2|}
+   12|       |
+   13|       |#[test]
+   14|       |fn test() {
+   15|       |    func(0);
+   16|       |
+   17|       |    if false {
+   18|       |        func(1);
+   19|       |    } else {
+   20|       |        func(2);
+   21|       |    }
+   22|       |}

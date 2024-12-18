@@ -22,7 +22,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Get coverage of C/C++ code linked to Rust library/binary](#get-coverage-of-cc-code-linked-to-rust-librarybinary)
   - [Get coverage of external tests](#get-coverage-of-external-tests)
   - [Exclude file from coverage](#exclude-file-from-coverage)
-  - [Exclude function from coverage](#exclude-function-from-coverage)
+  - [Exclude code from coverage](#exclude-code-from-coverage)
   - [Continuous Integration](#continuous-integration)
   - [Display coverage in VS Code](#display-coverage-in-vs-code)
   - [Environment variables](#environment-variables)
@@ -485,17 +485,22 @@ To exclude specific file patterns from the report, use the `--ignore-filename-re
 cargo llvm-cov --open --ignore-filename-regex build
 ```
 
-### Exclude function from coverage
+### Exclude code from coverage
 
-To exclude the specific function from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
+To exclude the specific function or module from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
 
-Since `#[coverage(off)]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
+Since `#[coverage(off)]` attribute stabilized in Rust 1.85, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov for compatibility with old Rust.
 
 ```rust
-#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+// function
+#[cfg_attr(coverage, coverage(off))]
+fn exclude_fn_from_coverage() {
+    // ...
+}
 
-#[cfg_attr(coverage_nightly, coverage(off))]
-fn exclude_from_coverage() {
+// module
+#[cfg_attr(coverage, coverage(off))]
+mod exclude_mod_from_coverage {
     // ...
 }
 ```
@@ -512,11 +517,17 @@ Rust 1.80+ warns the above cfgs as `unexpected_cfgs`. The recommended way to add
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
 ```
 
-If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
+If you want to ignore all `#[test]`-related code, you can use module-level `#[coverage(off)]` attribute:
 
-cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of coverage-helper crate.
+```rust
+#[cfg(test)]
+#[cfg_attr(coverage, coverage(off))]
+mod tests {
+    // ...
+}
+```
 
-**Note:** `#[coverage(off)]` was previously named `#[no_coverage]`. When using `#[no_coverage]` in the old nightly, replace `feature(coverage_attribute)` with `feature(no_coverage)`, `coverage(off)` with `no_coverage`, and `coverage-helper` 0.2+ with `coverage-helper` 0.1.
+cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of `#[coverage(off)]` attribute.
 
 ### Continuous Integration
 
@@ -716,7 +727,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 
 ## Related Projects
 
-- [coverage-helper]: Helper for [#123].
 - [cargo-config2]: Library to load and resolve Cargo configuration. cargo-llvm-cov uses this library.
 - [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
 - [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
@@ -724,13 +734,11 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
-[#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
 [#219]: https://github.com/taiki-e/cargo-llvm-cov/issues/219
 [cargo-config2]: https://github.com/taiki-e/cargo-config2
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
-[coverage-helper]: https://github.com/taiki-e/coverage-helper
 [instrument-coverage]: https://doc.rust-lang.org/rustc/instrument-coverage.html
 [nextest]: https://nexte.st/book/test-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417
