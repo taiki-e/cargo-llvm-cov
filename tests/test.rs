@@ -144,20 +144,6 @@ fn no_coverage() {
     }
 }
 
-// coverage(off) requires Rust 1.85
-#[rustversion::attr(before(1.85), ignore)]
-#[test]
-fn coverage_helper() {
-    let model = "coverage_helper";
-    for (extension, args2) in test_set() {
-        // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
-        if extension == "full.json" && cfg!(windows) {
-            continue;
-        }
-        test_report(model, model, extension, None, args2, &[]);
-    }
-}
-
 // The order of the instantiations in the generated coverage report will be different depending on the version.
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
