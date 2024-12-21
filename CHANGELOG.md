@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.15] - 2024-12-21
+
 - Remove dependency on `home` to relax the MSRV on Windows.
 
 - Weaken errors related to rustc version to warnings. ([#407](https://github.com/taiki-e/cargo-llvm-cov/pull/407))
@@ -665,7 +667,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.14...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.15...HEAD
+[0.6.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.13...v0.6.14
 [0.6.13]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.12...v0.6.13
 [0.6.12]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.11...v0.6.12
