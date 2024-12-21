@@ -24,7 +24,7 @@ pkg-fmt = "tgz"
 [dependencies]
 anyhow = "1.0.47"
 camino = "1.0.5"
-cargo-config2 = "0.1.29"
+cargo-config2 = "0.1.31"
 duct = "0.13.1"
 fs-err = "3"
 glob = "0.3"
@@ -42,9 +42,6 @@ shell-escape = "0.1.5"
 tar = "0.4.40"
 termcolor = "1.1.2"
 walkdir = "2.2.3"
-
-[target.'cfg(windows)'.dependencies]
-home = "0.5"
 
 [dev-dependencies]
 easy-ext = "1"

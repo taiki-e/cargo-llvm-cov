@@ -40,6 +40,8 @@ jobs:
     uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
     with:
       event_name: ${{ github.event_name }}
+      # MSRV is 1.74 on Windows due to normpath.
+      target: x86_64-unknown-linux-gnu
   release-dry-run:
     uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
   tidy:
