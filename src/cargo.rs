@@ -61,20 +61,20 @@ impl Workspace {
             rustc_version.nightly || env::var_os("RUSTC_BOOTSTRAP").unwrap_or_default() == "1";
 
         if doctests && !rustc_version.nightly {
-            bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
+            warn!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`");
         }
         if branch && !rustc_version.nightly {
-            bail!("--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
+            warn!("--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`");
         }
         if mcdc && !rustc_version.nightly {
-            bail!(
+            warn!(
                 "--mcdc flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
-            )
+            );
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
         if !stable_coverage && !rustc_version.nightly {
-            bail!(
+            warn!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
                  or using nightly toolchain (`cargo +nightly llvm-cov`)"
             );
