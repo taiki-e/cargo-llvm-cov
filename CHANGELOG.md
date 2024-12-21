@@ -12,6 +12,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Remove dependency on `home` to relax the MSRV on Windows.
+
+- Weaken errors related to rustc version to warnings. ([#407](https://github.com/taiki-e/cargo-llvm-cov/pull/407))
+
 ## [0.6.14] - 2024-10-12
 
 - Add unstable `--mcdc` flag to enable mcdc coverage. ([#383](https://github.com/taiki-e/cargo-llvm-cov/pull/383), thanks @Swatinem)
