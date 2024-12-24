@@ -1,3 +1,5 @@
+#![cfg_attr(coverage, feature(coverage_attribute))]
+
 fn func(x: i32) {
     match x {
         0 => {}
@@ -8,7 +10,7 @@ fn func(x: i32) {
     }
 }
 
-#[coverage(off)]
+#[cfg_attr(coverage, coverage(off))]
 #[test]
 fn fn_level() {
     func(0);
@@ -23,12 +25,12 @@ fn fn_level() {
 #[test]
 fn expr_level() {
     if false {
-        // #[coverage(off)]
+        // #[cfg_attr(coverage, coverage(off))]
         func(2);
     }
 }
 
-#[coverage(off)]
+#[cfg_attr(coverage, coverage(off))]
 mod mod_level {
     use super::func;
 

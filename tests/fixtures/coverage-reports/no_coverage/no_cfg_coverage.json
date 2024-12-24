@@ -18,25 +18,25 @@
               "percent": 0.0
             },
             "functions": {
-              "count": 2,
-              "covered": 2,
+              "count": 4,
+              "covered": 4,
               "percent": 100.0
             },
             "instantiations": {
-              "count": 2,
-              "covered": 2,
+              "count": 4,
+              "covered": 4,
               "percent": 100.0
             },
             "lines": {
-              "count": 14,
-              "covered": 8,
-              "percent": 57.14285714285714
+              "count": 26,
+              "covered": 18,
+              "percent": 69.23076923076923
             },
             "regions": {
-              "count": 11,
-              "covered": 6,
-              "notcovered": 5,
-              "percent": 54.54545454545454
+              "count": 19,
+              "covered": 12,
+              "notcovered": 7,
+              "percent": 63.1578947368421
             }
           }
         }
@@ -49,19 +49,19 @@
           "percent": 0
         },
         "functions": {
-          "count": 2,
-          "covered": 2,
+          "count": 4,
+          "covered": 4,
           "percent": 100
         },
         "instantiations": {
-          "count": 2,
-          "covered": 2,
+          "count": 4,
+          "covered": 4,
           "percent": 100
         },
         "lines": {
-          "count": 14,
-          "covered": 8,
-          "percent": 57.14285714285714
+          "count": 26,
+          "covered": 18,
+          "percent": 69.23076923076923
         },
         "mcdc": {
           "count": 0,
@@ -70,10 +70,10 @@
           "percent": 0
         },
         "regions": {
-          "count": 11,
-          "covered": 6,
-          "notcovered": 5,
-          "percent": 54.54545454545454
+          "count": 19,
+          "covered": 12,
+          "notcovered": 7,
+          "percent": 63.1578947368421
         }
       }
     }

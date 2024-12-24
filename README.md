@@ -489,17 +489,19 @@ cargo llvm-cov --open --ignore-filename-regex build
 
 To exclude the specific function or module from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
 
-Since `#[coverage(off)]` attribute stabilized in Rust 1.85, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov for compatibility with old Rust.
+Since `#[coverage(off)]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+
 // function
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 fn exclude_fn_from_coverage() {
     // ...
 }
 
 // module
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod exclude_mod_from_coverage {
     // ...
 }
@@ -520,8 +522,10 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)
 If you want to ignore all `#[test]`-related code, you can use module-level `#[coverage(off)]` attribute:
 
 ```rust
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
+
 #[cfg(test)]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg_attr(coverage_nightly, coverage(off))]
 mod tests {
     // ...
 }

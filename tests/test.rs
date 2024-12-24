@@ -121,8 +121,8 @@ fn cargo_config() {
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
-// coverage(off) requires Rust 1.85
-#[rustversion::attr(before(1.85), ignore)]
+// feature(coverage_attribute) requires nightly
+#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
     let model = "no_coverage";
