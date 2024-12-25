@@ -12,6 +12,11 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update `ruzstd` to 0.8.
+
+  This increases the rustc version required to build cargo-llvm-cov. (rustc 1.73+ -> 1.81+)
+  The cargo/rustc version required to run cargo-llvm-cov remains unchanged.
+
 ## [0.6.15] - 2024-12-21
 
 - Remove dependency on `home` to relax the MSRV on Windows.
