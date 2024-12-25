@@ -42,8 +42,6 @@ fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
 // TODO:
 // - add tests for non-crates.io dependencies
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn real1() {
     run("real1", "workspace_root", &[], &[]);
@@ -53,8 +51,6 @@ fn real1() {
     run("real1", "exclude", &["--all", "--exclude", "crate1"], &[]);
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn virtual1() {
     run("virtual1", "workspace_root", &[], &[]);
@@ -82,8 +78,6 @@ fn virtual1() {
     run("virtual1", "exclude-from-test2", &["--workspace", "--exclude-from-test", "member2"], &[]);
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn no_test() {
     run("no_test", "no_test", &[], &[]);
@@ -92,8 +86,6 @@ fn no_test() {
     }
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn bin_crate() {
     run("bin_crate", "bin_crate", &[], &[]);
@@ -105,16 +97,12 @@ fn bin_crate() {
     }
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
     run("instantiations", "instantiations", &[], &[]);
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
@@ -200,8 +188,6 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     }
 }
 
-// nightly-2024-02-17 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.78), ignore)]
 #[test]
 fn clean_ws() {
     let model = "merge";

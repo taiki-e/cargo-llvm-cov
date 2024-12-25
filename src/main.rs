@@ -762,7 +762,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         target_dir.push("target");
         let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
-        let decoder = ruzstd::StreamingDecoder::new(fs::File::open(archive_file)?)?;
+        let decoder = ruzstd::decoding::StreamingDecoder::new(fs::File::open(archive_file)?)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
         for entry in archive.entries()? {

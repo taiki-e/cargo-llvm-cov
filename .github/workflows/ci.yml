@@ -40,8 +40,6 @@ jobs:
     uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
     with:
       event_name: ${{ github.event_name }}
-      # MSRV is 1.74 on Windows due to normpath.
-      target: x86_64-unknown-linux-gnu
   release-dry-run:
     uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
   tidy:
@@ -57,11 +55,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # TODO: nightly-2023-04-27 (https://github.com/rust-lang/rust/pull/97368)
-          # and nightly-2023-05-03 (https://github.com/rust-lang/rust/pull/111042)
-          # fixed bugs in report generation, so the latest report is not the
-          # same as the old report.
-          # - rust: '1.60'
+          - rust: '1.81'
           - rust: stable
           - rust: beta
           - rust: nightly
