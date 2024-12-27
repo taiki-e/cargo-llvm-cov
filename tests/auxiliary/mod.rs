@@ -175,14 +175,14 @@ pub(crate) fn perturb_one_header(workspace_root: &Path) -> Option<PathBuf> {
     path
 }
 
-const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64) << 56
-    | ('l' as u64) << 48
-    | ('p' as u64) << 40
-    | ('r' as u64) << 32
-    | ('o' as u64) << 24
-    | ('f' as u64) << 16
-    | ('r' as u64) << 8
-    | (129_u64);
+const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64 << 56)
+    | (('l' as u64) << 48)
+    | (('p' as u64) << 40)
+    | (('r' as u64) << 32)
+    | (('o' as u64) << 24)
+    | (('f' as u64) << 16)
+    | (('r' as u64) << 8)
+    | 129_u64;
 
 fn perturb_header(path: &Path) {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap();
