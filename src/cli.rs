@@ -370,9 +370,60 @@ impl LlvmCovOptions {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ShowEnvOptions {
+pub(crate) enum ShowEnvFormat {
+    /// Each line: key=<escaped value>, escaped using [`shell_escape::escape`].
+    EscapedKeyValuePair,
     /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
-    pub(crate) export_prefix: bool,
+    UnixExport,
+    /// Each value: "$env:{key}=@'\n{}\n", escaped using [`shell_escape::escape`].
+    PwshExport,
+}
+
+impl ShowEnvFormat {
+    pub(crate) fn new(export_prefix: bool, export_pwsh_prefix: bool) -> Result<Self> {
+        if export_prefix && export_pwsh_prefix {
+            conflicts("--export-prefix", "--export-pwsh-prefix")?;
+        }
+
+        Ok(if export_prefix {
+            ShowEnvFormat::UnixExport
+        } else if export_pwsh_prefix {
+            ShowEnvFormat::PwshExport
+        } else {
+            ShowEnvFormat::EscapedKeyValuePair
+        })
+    }
+
+    pub(crate) fn export_string(&self, key: &str, value: &str) -> String {
+        match self {
+            ShowEnvFormat::EscapedKeyValuePair => {
+                format!("{key}={}", shell_escape::escape(value.into()))
+            }
+            ShowEnvFormat::UnixExport => {
+                format!("export {key}={}", shell_escape::escape(value.into()))
+            }
+            ShowEnvFormat::PwshExport => {
+                // PowerShell 6+ expects encoded UTF-8 text. Some env vars like CARGO_ENCODED_RUSTFLAGS
+                // have non-printable binary characters. We can work around this and any other escape
+                // related considerations by just escaping all characters. Rust's Unicode escape is
+                // of form "\u{<code>}", but PowerShell expects "`u{<code>}". A replace call fixes
+                // this.
+                let value = value.escape_unicode().to_string().replace('\\', "`");
+                format!("$env:{key}=\"{value}\"")
+            }
+        }
+    }
+}
+
+impl Default for ShowEnvFormat {
+    fn default() -> Self {
+        Self::EscapedKeyValuePair
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ShowEnvOptions {
+    pub(crate) show_env_format: ShowEnvFormat,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
@@ -532,6 +583,7 @@ impl Args {
 
         // show-env options
         let mut export_prefix = false;
+        let mut export_pwsh_prefix = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -711,6 +763,7 @@ impl Args {
 
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
+                Long("export-pwsh-prefix") => parse_flag!(export_pwsh_prefix),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -814,14 +867,18 @@ impl Args {
         term::set_coloring(&mut color);
 
         // unexpected options
-        match subcommand {
-            Subcommand::ShowEnv => {}
+        let show_env_format = match subcommand {
+            Subcommand::ShowEnv => ShowEnvFormat::new(export_prefix, export_pwsh_prefix)?,
             _ => {
                 if export_prefix {
                     unexpected("--export-prefix", subcommand)?;
                 }
+                if export_pwsh_prefix {
+                    unexpected("--export-pwsh-prefix", subcommand)?;
+                }
+                ShowEnvFormat::default()
             }
-        }
+        };
         if doc || doctests {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
@@ -1211,7 +1268,7 @@ impl Args {
                 branch,
                 mcdc,
             },
-            show_env: ShowEnvOptions { export_prefix },
+            show_env: ShowEnvOptions { show_env_format },
             doctests,
             ignore_run_fail,
             lib,

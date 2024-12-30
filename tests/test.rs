@@ -6,6 +6,7 @@ mod auxiliary;
 
 use std::path::Path;
 
+use cargo_config2::Flags;
 use fs_err as fs;
 
 use self::auxiliary::{
@@ -286,6 +287,26 @@ fn open_report() {
 fn show_env() {
     cargo_llvm_cov("show-env").assert_success().stdout_not_contains("export");
     cargo_llvm_cov("show-env").arg("--export-prefix").assert_success().stdout_contains("export");
+
+    let mut flags = Flags::default();
+    flags.push("--deny warnings");
+    flags.push("--cfg=tests");
+    let flags = flags.encode().unwrap();
+
+    cargo_llvm_cov("show-env")
+        .env("CARGO_ENCODED_RUSTFLAGS", flags)
+        .arg("--export-pwsh-prefix")
+        .assert_success()
+        // Verify the 2 prefix related elements
+        .stdout_contains("$env:")
+        .stdout_contains("\"`u{")
+        // Verify binary character didn't lead to incompatible output for pwsh
+        .stdout_contains("`u{1f}");
+    cargo_llvm_cov("show-env")
+        .arg("--export-prefix")
+        .arg("--export-pwsh-prefix")
+        .assert_failure()
+        .stderr_contains("may not be used together with");
 }
 
 #[test]
@@ -298,6 +319,10 @@ fn invalid_arg() {
                 .arg("--export-prefix")
                 .assert_failure()
                 .stderr_contains("invalid option '--export-prefix'");
+            cargo_llvm_cov(subcommand)
+                .arg("--export-pwsh-prefix")
+                .assert_failure()
+                .stderr_contains("invalid option '--export-pwsh-prefix'");
         }
         if !matches!(subcommand, "" | "test") {
             if matches!(subcommand, "nextest" | "nextest-archive") {
