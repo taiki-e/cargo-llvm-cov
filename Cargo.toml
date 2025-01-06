@@ -46,7 +46,7 @@ walkdir = "2.2.3"
 [dev-dependencies]
 easy-ext = "1"
 rustversion = "1"
-tempfile = "3"
+tempfile = { version = "3", default-features = false }
 
 [lints]
 workspace = true
