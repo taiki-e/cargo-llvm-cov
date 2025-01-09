@@ -1,8 +1,8 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.6.14" #publish:version
+version = "0.6.15" #publish:version
 edition = "2021"
-rust-version = "1.73"
+rust-version = "1.81"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
@@ -24,7 +24,7 @@ pkg-fmt = "tgz"
 [dependencies]
 anyhow = "1.0.47"
 camino = "1.0.5"
-cargo-config2 = "0.1.29"
+cargo-config2 = "0.1.31"
 duct = "0.13.1"
 fs-err = "3"
 glob = "0.3"
@@ -34,22 +34,19 @@ lexopt = "0.3"
 opener = { version = "0.7", default-features = false }
 regex = { version = "1.3", default-features = false, features = ["perf", "std"] }
 rustc-demangle = { version = "0.1.23", features = ["std"] }
-ruzstd = { version = "0.7", default-features = false, features = ["std"] }
-serde = "1.0.103"
-serde_derive = "1.0.103"
+ruzstd = { version = "0.8", default-features = false, features = ["std"] }
+serde = "1.0.165"
+serde_derive = "1.0.165"
 serde_json = "1"
 shell-escape = "0.1.5"
 tar = "0.4.40"
-termcolor = "1.1.2"
+termcolor = "1"
 walkdir = "2.2.3"
-
-[target.'cfg(windows)'.dependencies]
-home = "0.5"
 
 [dev-dependencies]
 easy-ext = "1"
 rustversion = "1"
-tempfile = "3"
+tempfile = { version = "3", default-features = false }
 
 [lints]
 workspace = true
@@ -68,6 +65,7 @@ rust_2018_idioms = "warn"
 single_use_lifetimes = "warn"
 unexpected_cfgs = { level = "warn", check-cfg = [
 ] }
+unnameable_types = "warn"
 unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 [workspace.lints.clippy]

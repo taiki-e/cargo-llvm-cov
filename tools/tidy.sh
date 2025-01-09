@@ -182,12 +182,27 @@ esac
 check_install git
 exclude_from_ls_files=()
 while IFS=$'\n' read -r line; do exclude_from_ls_files+=("${line}"); done < <({
+    # Symlinks. `! ( -name <dir> -prune )` (.i.e., ignore <dir>) are manually listed from .gitignore.
     find . \! \( -name .git -prune \) \! \( -name target -prune \) \! \( -name .venv -prune \) \! \( -name tmp -prune \) -type l | cut -c3-
+    # Submodules. Use sed to remove the first character indicates status ( |+|-).
     git submodule status | sed 's/^.//' | cut -d' ' -f2
+    # Removed files.
+    git ls-files --deleted
+} | LC_ALL=C sort -u)
+exclude_from_ls_files_no_symlink=()
+while IFS=$'\n' read -r line; do exclude_from_ls_files_no_symlink+=("${line}"); done < <({
+    # Submodules. Use sed to remove the first character indicates status ( |+|-).
+    git submodule status | sed 's/^.//' | cut -d' ' -f2
+    # Removed files.
     git ls-files --deleted
 } | LC_ALL=C sort -u)
 ls_files() {
-    comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files[@]+"${exclude_from_ls_files[@]}"})
+    if [[ "${1:-}" == "--include-symlink" ]]; then
+        shift
+        comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files_no_symlink[@]+"${exclude_from_ls_files_no_symlink[@]}"})
+    else
+        comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files[@]+"${exclude_from_ls_files[@]}"})
+    fi
 }
 
 # Rust (if exists)
@@ -253,6 +268,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
         fi
         exclude=''
         has_public_crate=''
+        has_root_crate=''
         for pkg in $(jq -c '. as $metadata | .workspace_members[] as $id | $metadata.packages[] | select(.id == $id)' <<<"${metadata}"); do
             eval "$(jq -r '@sh "publish=\(.publish) manifest_path=\(.manifest_path)"' <<<"${pkg}")"
             if [[ "$(tomlq -c '.lints' "${manifest_path}")" == "null" ]]; then
@@ -264,6 +280,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
             fi
             has_public_crate=1
             if [[ "${manifest_path}" == "${root_manifest}" ]]; then
+                has_root_crate=1
                 exclude=$(tomlq -r '.package.exclude[]' "${manifest_path}")
                 if ! grep -Eq '^/\.\*$' <<<"${exclude}"; then
                     error "top-level Cargo.toml of non-virtual workspace should have 'exclude' field with \"/.*\""
@@ -278,7 +295,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
         done
         if [[ -n "${has_public_crate}" ]]; then
             info "checking public crates don't contain executables and binaries"
-            for p in $(ls_files); do
+            for p in $(ls_files --include-symlink); do
                 # Skip directories.
                 if [[ -d "${p}" ]]; then
                     continue
@@ -287,6 +304,13 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
                 # TODO: fully respect exclude field in Cargo.toml.
                 case "${p}" in
                     .* | tools/* | target-specs/*) continue ;;
+                    */*) ;;
+                    *)
+                        # If there is no crate at root, executables at the repository root directory if always okay.
+                        if [[ -z "${has_root_crate}" ]]; then
+                            continue
+                        fi
+                        ;;
                 esac
                 if [[ -x "${p}" ]]; then
                     executables+="${p}"$'\n'
@@ -392,7 +416,7 @@ if [[ -n "$(ls_files '*.md')" ]]; then
     elif check_install npm; then
         info "running \`npx -y markdownlint-cli2 \$(git ls-files '*.md')\`"
         if ! npx -y markdownlint-cli2 $(ls_files '*.md'); then
-            should_fail=1
+            error "check failed; please resolve the above markdownlint error(s)"
         fi
     fi
 elif [[ -e .markdownlint-cli2.yaml ]]; then
@@ -529,7 +553,7 @@ if check_install shfmt; then
     check_config .editorconfig
     info "running \`shfmt -l -w \$(git ls-files '*.sh')\`"
     if ! shfmt -l -w "${shell_files[@]}"; then
-        should_fail=1
+        error "check failed; please resolve the shfmt error(s)"
     fi
     check_diff "${shell_files[@]}"
 fi
@@ -539,14 +563,14 @@ elif check_install shellcheck; then
     check_config .shellcheckrc
     info "running \`shellcheck \$(git ls-files '*.sh')\`"
     if ! shellcheck "${shell_files[@]}"; then
-        should_fail=1
+        error "check failed; please resolve the above shellcheck error(s)"
     fi
     if [[ ${#docker_files[@]} -gt 0 ]]; then
         # SC2154 doesn't seem to work on dockerfile.
         # SC2250 may not correct on dockerfile because $v and ${v} is sometime different: https://github.com/moby/moby/issues/42863
         info "running \`shellcheck --shell bash --exclude SC2154,SC2250 \$(git ls-files '*Dockerfile*')\`"
         if ! shellcheck --shell bash --exclude SC2154,SC2250 "${docker_files[@]}"; then
-            should_fail=1
+            error "check failed; please resolve the above shellcheck error(s)"
         fi
     fi
     # Check scripts in other files.
@@ -588,7 +612,7 @@ EOF
                     color=always
                 fi
                 if ! shellcheck --color="${color}" --exclude SC2086,SC2096,SC2129 <(printf '%s\n' "${text}") | sed "s/\/dev\/fd\/[0-9][0-9]*/$(sed_rhs_escape "${display_path}")/g"; then
-                    should_fail=1
+                    error "check failed; please resolve the above shellcheck error(s)"
                 fi
             }
             for workflow_path in ${workflows[@]+"${workflows[@]}"}; do
@@ -728,7 +752,11 @@ if [[ -f .cspell.json ]]; then
                 if [[ "${manifest_path}" != "Cargo.toml" ]] && [[ "$(tomlq -c '.workspace' "${manifest_path}")" == "null" ]]; then
                     continue
                 fi
-                dependencies+="$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}" | jq -r '. as $metadata | .workspace_members[] as $id | $metadata.packages[] | select(.id == $id) | .dependencies[].name')"$'\n'
+                m=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}" || :)
+                if [[ -z "${m}" ]]; then
+                    continue # Ignore broken manifest
+                fi
+                dependencies+="$(jq -r '. as $metadata | .workspace_members[] as $id | $metadata.packages[] | select(.id == $id) | .dependencies[].name' <<<"${m}")"$'\n'
             done
             dependencies=$(LC_ALL=C sort -f -u <<<"${dependencies//[0-9_-]/$'\n'}")
         fi

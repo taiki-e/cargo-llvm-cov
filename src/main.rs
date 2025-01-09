@@ -762,7 +762,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         target_dir.push("target");
         let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
-        let decoder = ruzstd::StreamingDecoder::new(fs::File::open(archive_file)?)?;
+        let decoder = ruzstd::decoding::StreamingDecoder::new(fs::File::open(archive_file)?)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
         for entry in archive.entries()? {
@@ -1280,7 +1280,7 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         .iter()
         .map(|id| cx.ws.metadata.packages[id].manifest_path.parent().unwrap());
     let mut excluded_path = vec![];
-    let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::new();
+    let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::default();
     for included in included {
         for &excluded in excluded.iter().filter(|e| included.starts_with(e)) {
             if let Some(v) = contains.get_mut(&excluded) {

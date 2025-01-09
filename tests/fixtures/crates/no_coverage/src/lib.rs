@@ -30,7 +30,6 @@ fn expr_level() {
     }
 }
 
-// #[coverage(off)] has no effect on modules.
 #[cfg_attr(coverage, coverage(off))]
 mod mod_level {
     use super::func;
