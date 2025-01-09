@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},
     str,
-    sync::OnceLock,
+    sync::Once,
 };
 
 use anyhow::Context as _;
@@ -20,8 +20,8 @@ pub(crate) fn fixtures_path() -> &'static Path {
 }
 
 fn ensure_llvm_tools_installed() {
-    static TEST_VERSION: OnceLock<()> = OnceLock::new();
-    TEST_VERSION.get_or_init(|| {
+    static TEST_VERSION: Once = Once::new();
+    TEST_VERSION.call_once(|| {
         // Install component first to avoid component installation conflicts.
         let _ = Command::new("rustup").args(["component", "add", "llvm-tools-preview"]).output();
     });
