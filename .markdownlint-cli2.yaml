@@ -1,9 +1,10 @@
-# https://github.com/DavidAnson/markdownlint#rules--aliases
+# https://github.com/DavidAnson/markdownlint/blob/HEAD/doc/Rules.md
 config:
-  line-length: false
-  no-duplicate-heading: false
-  no-inline-html: false
-  no-emphasis-as-heading: false
+  line-length: false # MD013
+  no-duplicate-heading: false # MD024
+  no-blanks-blockquote: false # MD028
+  no-inline-html: false # MD033
+  no-emphasis-as-heading: false # MD036
 
 # https://github.com/DavidAnson/markdownlint-cli2#markdownlint-cli2jsonc
 noBanner: true
