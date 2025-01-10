@@ -8,9 +8,9 @@ OPTIONS:
         --export-prefix
             Prepend "export " to each line, so that the output is suitable to be sourced by bash
 
-        --export-pwsh-prefix
+        --with-pwsh-env-prefix
             Unicode escape and double quote values + prepend "$env:", so that the output is suitable
-            to be used with Invoke-Expression in pwsh.
+            to be used with Invoke-Expression in PowerShell 6+.
 
         --doctests
             Including doc tests (unstable)

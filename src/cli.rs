@@ -375,20 +375,20 @@ pub(crate) enum ShowEnvFormat {
     EscapedKeyValuePair,
     /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
     UnixExport,
-    /// Each value: "$env:{key}=@'\n{}\n", escaped using [`shell_escape::escape`].
-    PwshExport,
+    /// Each value: "$env:{key}={value}", where {value} is PowerShell Unicode escaped e.g. "`u{72}".
+    Pwsh,
 }
 
 impl ShowEnvFormat {
-    pub(crate) fn new(export_prefix: bool, export_pwsh_prefix: bool) -> Result<Self> {
-        if export_prefix && export_pwsh_prefix {
-            conflicts("--export-prefix", "--export-pwsh-prefix")?;
+    pub(crate) fn new(export_prefix: bool, with_pwsh_env_prefix: bool) -> Result<Self> {
+        if export_prefix && with_pwsh_env_prefix {
+            conflicts("--export-prefix", "--with-pwsh-env-prefix")?;
         }
 
         Ok(if export_prefix {
             ShowEnvFormat::UnixExport
-        } else if export_pwsh_prefix {
-            ShowEnvFormat::PwshExport
+        } else if with_pwsh_env_prefix {
+            ShowEnvFormat::Pwsh
         } else {
             ShowEnvFormat::EscapedKeyValuePair
         })
@@ -402,7 +402,7 @@ impl ShowEnvFormat {
             ShowEnvFormat::UnixExport => {
                 format!("export {key}={}", shell_escape::escape(value.into()))
             }
-            ShowEnvFormat::PwshExport => {
+            ShowEnvFormat::Pwsh => {
                 // PowerShell 6+ expects encoded UTF-8 text. Some env vars like CARGO_ENCODED_RUSTFLAGS
                 // have non-printable binary characters. We can work around this and any other escape
                 // related considerations by just escaping all characters. Rust's Unicode escape is
@@ -583,7 +583,7 @@ impl Args {
 
         // show-env options
         let mut export_prefix = false;
-        let mut export_pwsh_prefix = false;
+        let mut with_pwsh_env_prefix = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -763,7 +763,7 @@ impl Args {
 
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
-                Long("export-pwsh-prefix") => parse_flag!(export_pwsh_prefix),
+                Long("with-pwsh-env-prefix") => parse_flag!(with_pwsh_env_prefix),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -868,13 +868,13 @@ impl Args {
 
         // unexpected options
         let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(export_prefix, export_pwsh_prefix)?,
+            Subcommand::ShowEnv => ShowEnvFormat::new(export_prefix, with_pwsh_env_prefix)?,
             _ => {
                 if export_prefix {
                     unexpected("--export-prefix", subcommand)?;
                 }
-                if export_pwsh_prefix {
-                    unexpected("--export-pwsh-prefix", subcommand)?;
+                if with_pwsh_env_prefix {
+                    unexpected("--with-pwsh-env-prefix", subcommand)?;
                 }
                 ShowEnvFormat::default()
             }

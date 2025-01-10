@@ -15,8 +15,10 @@ microkernel
 MSYSTEM
 nextest
 notcovered
+PowerShell
 profdata
 profraw
+pwsh
 rmeta
 rustfilt
 rustix
