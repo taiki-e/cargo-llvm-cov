@@ -24,6 +24,8 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude code from coverage](#exclude-code-from-coverage)
   - [Continuous Integration](#continuous-integration)
+    - [GitHub Actions and Codecov](#github-actions-and-codecov)
+    - [GitLab CI](#gitlab-ci)
   - [Display coverage in VS Code](#display-coverage-in-vs-code)
   - [Environment variables](#environment-variables)
   - [Additional JSON information](#additional-json-information)
@@ -535,6 +537,8 @@ cargo-llvm-cov excludes code contained in the directory named `tests` from the r
 
 ### Continuous Integration
 
+#### GitHub Actions and Codecov
+
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
 
 ```yaml
@@ -579,6 +583,40 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
 ```
 
 Note that [the way Codecov shows region/branch coverage is not very good](https://github.com/taiki-e/cargo-llvm-cov/pull/255#issuecomment-1513318191).
+
+#### GitLab CI
+
+First of all, when running the CI you need to make sure `cargo-llvm-cov` is available
+in the execution script. Whether you add it to a custom image, or run `cargo install` as part
+of your pipeline, it should be available and in `PATH`. Once done, it's simple:
+
+```yaml
+unit_tests:
+  artifacts:
+    reports:
+      junit: target/nextest/default/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: target/llvm-cov-target/cobertura.xml
+  # this uses region for coverage summary
+  coverage: '/TOTAL\s+(\d+\s+)+(\d+\.\d+\%)/'
+  script:
+    - cargo llvm-cov nextest
+    - cargo llvm-cov report --cobertura --output-path target/llvm-cov-target/cobertura.xml
+```
+
+> [!CAUTION]
+> GitLab has certain [limits for Cobertura reports](https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization/cobertura.html#limits)
+> make sure you obey them.
+
+> [!NOTE]
+> Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must
+> similarly be available), with the following `.config/nextest.toml`:
+>
+> ```toml
+> [profile.default.junit]
+> path = "junit.xml"
+> ```
 
 ### Display coverage in VS Code
 
