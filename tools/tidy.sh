@@ -181,19 +181,17 @@ esac
 
 check_install git
 exclude_from_ls_files=()
+# - `find` lists symlinks. `! ( -name <dir> -prune )` (.i.e., ignore <dir>) are manually listed from .gitignore.
+# - `git submodule status` lists submodules. Use sed to remove the first character indicates status ( |+|-).
+# - `git ls-files --deleted` lists removed files.
 while IFS=$'\n' read -r line; do exclude_from_ls_files+=("${line}"); done < <({
-    # Symlinks. `! ( -name <dir> -prune )` (.i.e., ignore <dir>) are manually listed from .gitignore.
     find . \! \( -name .git -prune \) \! \( -name target -prune \) \! \( -name .venv -prune \) \! \( -name tmp -prune \) -type l | cut -c3-
-    # Submodules. Use sed to remove the first character indicates status ( |+|-).
     git submodule status | sed 's/^.//' | cut -d' ' -f2
-    # Removed files.
     git ls-files --deleted
 } | LC_ALL=C sort -u)
 exclude_from_ls_files_no_symlink=()
 while IFS=$'\n' read -r line; do exclude_from_ls_files_no_symlink+=("${line}"); done < <({
-    # Submodules. Use sed to remove the first character indicates status ( |+|-).
     git submodule status | sed 's/^.//' | cut -d' ' -f2
-    # Removed files.
     git ls-files --deleted
 } | LC_ALL=C sort -u)
 ls_files() {
@@ -315,7 +313,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
                 if [[ -x "${p}" ]]; then
                     executables+="${p}"$'\n'
                 fi
-                # Use diff instead of file because file treats an empty file as a binary
+                # Use `diff` instead of `file` because `file` treats an empty file as a binary.
                 # https://unix.stackexchange.com/questions/275516/is-there-a-convenient-way-to-classify-files-as-binary-or-text#answer-402870
                 if { diff .gitattributes "${p}" || true; } | grep -Eq '^Binary file'; then
                     binaries+="${p}"$'\n'
@@ -752,7 +750,7 @@ if [[ -f .cspell.json ]]; then
                 if [[ "${manifest_path}" != "Cargo.toml" ]] && [[ "$(tomlq -c '.workspace' "${manifest_path}")" == "null" ]]; then
                     continue
                 fi
-                m=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}" || :)
+                m=$(cargo metadata --format-version=1 --no-deps --manifest-path "${manifest_path}" || true)
                 if [[ -z "${m}" ]]; then
                     continue # Ignore broken manifest
                 fi
