@@ -479,6 +479,12 @@ Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work co
 
 Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
 
+> The same thing can be achieved in PowerShell 6+ by substituting the source command with:
+>
+> ```powershell
+> Invoke-Expression (cargo llvm-cov show-env --with-pwsh-env-prefix | Out-String)
+> ```
+
 ### Exclude file from coverage
 
 To exclude specific file patterns from the report, use the `--ignore-filename-regex` option.

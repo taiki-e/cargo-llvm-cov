@@ -160,8 +160,7 @@ struct ShowEnvWriter<W: io::Write> {
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
-        let prefix = if self.options.export_prefix { "export " } else { "" };
-        writeln!(self.writer, "{prefix}{key}={}", shell_escape::escape(value.into()))
+        writeln!(self.writer, "{}", self.options.show_env_format.export_string(key, value))
             .context("failed to write env to stdout")
     }
     fn unset(&mut self, key: &str) -> Result<()> {
