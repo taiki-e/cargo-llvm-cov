@@ -36,6 +36,8 @@ jobs:
     uses: taiki-e/github-actions/.github/workflows/deny.yml@main
   miri:
     uses: taiki-e/github-actions/.github/workflows/miri.yml@main
+    with:
+      event_name: ${{ github.event_name }}
   msrv:
     uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
     with:
