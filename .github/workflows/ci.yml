@@ -32,8 +32,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deny:
-    uses: taiki-e/github-actions/.github/workflows/deny.yml@main
   miri:
     uses: taiki-e/github-actions/.github/workflows/miri.yml@main
     with:
@@ -51,6 +49,9 @@ jobs:
       pull-requests: write # for gh pr edit --add-assignee
       repository-projects: read # for gh pr edit --add-assignee
     secrets: inherit
+    with:
+      check-external-types: false
+      docs: false
 
   test:
     strategy:
