@@ -78,6 +78,7 @@ inline_asm_x86_att_syntax = "warn"
 trailing_empty_array = "warn"
 transmute_undefined_repr = "warn"
 undocumented_unsafe_blocks = "warn"
+unused_trait_names = "warn"
 # Suppress buggy or noisy clippy lints
 bool_assert_comparison = { level = "allow", priority = 1 }
 borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286

@@ -10,7 +10,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
-    io::{self, BufRead, Read, Write},
+    io::{self, BufRead as _, Read as _, Write as _},
     path::Path,
     time::SystemTime,
 };

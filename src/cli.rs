@@ -6,7 +6,7 @@ use anyhow::{bail, format_err, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use lexopt::{
     Arg::{Long, Short, Value},
-    ValueExt,
+    ValueExt as _,
 };
 
 use crate::{
@@ -1396,7 +1396,7 @@ fn unexpected(arg: &str, subcommand: Subcommand) -> Result<()> {
 mod tests {
     use std::{
         env,
-        io::Write,
+        io::Write as _,
         path::Path,
         process::{Command, Stdio},
     };

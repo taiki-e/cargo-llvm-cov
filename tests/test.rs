@@ -11,7 +11,7 @@ use fs_err as fs;
 
 use self::auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
-    test_project, test_report, CommandExt,
+    test_project, test_report, CommandExt as _,
 };
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];

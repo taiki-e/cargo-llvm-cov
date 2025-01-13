@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::{
-    io::Write,
+    io::Write as _,
     str::FromStr,
     sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
 
 use anyhow::Error;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor as _};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
@@ -122,7 +122,7 @@ pub(crate) fn print_status(status: &str, color: Option<Color>, justified: bool) 
 
 macro_rules! error {
     ($($msg:expr),* $(,)?) => {{
-        use std::io::Write;
+        use std::io::Write as _;
         crate::term::error::set(true);
         let mut stream = crate::term::print_status("error", Some(termcolor::Color::Red), false);
         let _ = writeln!(stream, $($msg),*);
@@ -131,7 +131,7 @@ macro_rules! error {
 
 macro_rules! warn {
     ($($msg:expr),* $(,)?) => {{
-        use std::io::Write;
+        use std::io::Write as _;
         crate::term::warn::set(true);
         let mut stream = crate::term::print_status("warning", Some(termcolor::Color::Yellow), false);
         let _ = writeln!(stream, $($msg),*);
@@ -140,7 +140,7 @@ macro_rules! warn {
 
 macro_rules! info {
     ($($msg:expr),* $(,)?) => {{
-        use std::io::Write;
+        use std::io::Write as _;
         let mut stream = crate::term::print_status("info", None, false);
         let _ = writeln!(stream, $($msg),*);
     }};
@@ -148,7 +148,7 @@ macro_rules! info {
 
 macro_rules! status {
     ($status:expr, $($msg:expr),* $(,)?) => {{
-        use std::io::Write;
+        use std::io::Write as _;
         let mut stream = crate::term::print_status($status, Some(termcolor::Color::Cyan), true);
         let _ = writeln!(stream, $($msg),*);
     }};

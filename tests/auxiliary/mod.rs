@@ -3,7 +3,7 @@
 use std::{
     env,
     ffi::OsStr,
-    io::{Read, Seek, Write},
+    io::{Read as _, Seek as _, Write as _},
     mem,
     path::{Path, PathBuf},
     process::{Command, ExitStatus, Stdio},

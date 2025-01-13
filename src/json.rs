@@ -11,7 +11,7 @@ use std::{
 use anyhow::{Context as _, Result};
 use camino::Utf8PathBuf;
 use regex::Regex;
-use serde::ser::{Serialize, SerializeMap, Serializer};
+use serde::ser::{Serialize, SerializeMap as _, Serializer};
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
