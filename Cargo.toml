@@ -2,7 +2,7 @@
 name = "cargo-llvm-cov"
 version = "0.6.15" #publish:version
 edition = "2021"
-rust-version = "1.81"
+rust-version = "1.81" # For ruzstd
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/taiki-e/cargo-llvm-cov"
 keywords = ["cargo", "coverage", "subcommand", "testing"]
