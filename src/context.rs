@@ -142,7 +142,7 @@ impl Context {
                 // --print target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
                 // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
                 // https://github.com/rust-lang/rust/issues/85658
-                // https://github.com/rust-lang/rust/blob/1.80.0/src/bootstrap/src/core/build_steps/dist.rs#L2233
+                // https://github.com/rust-lang/rust/blob/1.84.0/src/bootstrap/src/core/build_steps/dist.rs#L454
                 let mut rustlib: PathBuf = ws.rustc_print("target-libdir")?.into();
                 rustlib.pop(); // lib
                 rustlib.push("bin");
