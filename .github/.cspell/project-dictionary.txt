@@ -10,6 +10,7 @@ fprofile
 instrprof
 libclang
 libhello
+LOOPCOUNT
 mcdc
 microkernel
 MSYSTEM
