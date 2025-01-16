@@ -37,10 +37,12 @@ jobs:
       matrix:
         include:
           - target: aarch64-unknown-linux-gnu
+            os: ubuntu-20.04
           - target: aarch64-unknown-linux-musl
           - target: aarch64-apple-darwin
             os: macos-13
           - target: x86_64-unknown-linux-gnu
+            os: ubuntu-20.04
           - target: x86_64-unknown-linux-musl
           - target: x86_64-apple-darwin
             os: macos-13
@@ -49,7 +51,7 @@ jobs:
           - target: x86_64-unknown-freebsd
           - target: universal-apple-darwin
             os: macos-13
-    runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
       contents: write

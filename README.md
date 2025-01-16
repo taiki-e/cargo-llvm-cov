@@ -23,8 +23,10 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Get coverage of external tests](#get-coverage-of-external-tests)
   - [Get coverage of AFL fuzzers](#get-coverage-of-afl-fuzzers)
   - [Exclude file from coverage](#exclude-file-from-coverage)
-  - [Exclude function from coverage](#exclude-function-from-coverage)
+  - [Exclude code from coverage](#exclude-code-from-coverage)
   - [Continuous Integration](#continuous-integration)
+    - [GitHub Actions and Codecov](#github-actions-and-codecov)
+    - [GitLab CI](#gitlab-ci)
   - [Display coverage in VS Code](#display-coverage-in-vs-code)
   - [Environment variables](#environment-variables)
   - [Additional JSON information](#additional-json-information)
@@ -449,11 +451,11 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 Known compatible Rust (installed via rustup) and LLVM versions:
 
-|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.84 |
+|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.86 |
 | ---------- | -------------- | -------------- | -------------- |
-| LLVM 14-17 | ok             |                |                |
-| LLVM 18    |                | ok             |                |
-| LLVM 19    |                |                | ok             |
+| LLVM 14-17 | **✓**          |                |                |
+| LLVM 18    |                | **✓**          |                |
+| LLVM 19    |                |                | **✓**          |
 
 ### Get coverage of external tests
 
@@ -478,6 +480,12 @@ Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work co
 
 Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
 
+> The same thing can be achieved in PowerShell 6+ by substituting the source command with:
+>
+> ```powershell
+> Invoke-Expression (cargo llvm-cov show-env --with-pwsh-env-prefix | Out-String)
+> ```
+              
 ### Get coverage of AFL fuzzers
 
 Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
@@ -501,17 +509,24 @@ To exclude specific file patterns from the report, use the `--ignore-filename-re
 cargo llvm-cov --open --ignore-filename-regex build
 ```
 
-### Exclude function from coverage
+### Exclude code from coverage
 
-To exclude the specific function from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
+To exclude the specific function or module from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
 
 Since `#[coverage(off)]` is unstable, it is recommended to use it together with `cfg(coverage)` or `cfg(coverage_nightly)` set by cargo-llvm-cov.
 
 ```rust
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
+// function
 #[cfg_attr(coverage_nightly, coverage(off))]
-fn exclude_from_coverage() {
+fn exclude_fn_from_coverage() {
+    // ...
+}
+
+// module
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod exclude_mod_from_coverage {
     // ...
 }
 ```
@@ -528,13 +543,23 @@ Rust 1.80+ warns the above cfgs as `unexpected_cfgs`. The recommended way to add
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
 ```
 
-If you want to ignore all `#[test]`-related code, consider using [coverage-helper] crate version 0.2+.
+If you want to ignore all `#[test]`-related code, you can use module-level `#[coverage(off)]` attribute:
 
-cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of coverage-helper crate.
+```rust
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 
-**Note:** `#[coverage(off)]` was previously named `#[no_coverage]`. When using `#[no_coverage]` in the old nightly, replace `feature(coverage_attribute)` with `feature(no_coverage)`, `coverage(off)` with `no_coverage`, and `coverage-helper` 0.2+ with `coverage-helper` 0.1.
+#[cfg(test)]
+#[cfg_attr(coverage_nightly, coverage(off))]
+mod tests {
+    // ...
+}
+```
+
+cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of `#[coverage(off)]` attribute.
 
 ### Continuous Integration
+
+#### GitHub Actions and Codecov
 
 Here is an example of GitHub Actions workflow that uploads coverage to [Codecov].
 
@@ -580,6 +605,40 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
 ```
 
 Note that [the way Codecov shows region/branch coverage is not very good](https://github.com/taiki-e/cargo-llvm-cov/pull/255#issuecomment-1513318191).
+
+#### GitLab CI
+
+First of all, when running the CI you need to make sure `cargo-llvm-cov` is available
+in the execution script. Whether you add it to a custom image, or run `cargo install` as part
+of your pipeline, it should be available and in `PATH`. Once done, it's simple:
+
+```yaml
+unit_tests:
+  artifacts:
+    reports:
+      junit: target/nextest/default/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: target/llvm-cov-target/cobertura.xml
+  # this uses region for coverage summary
+  coverage: '/TOTAL\s+(\d+\s+)+(\d+\.\d+\%)/'
+  script:
+    - cargo llvm-cov nextest
+    - cargo llvm-cov report --cobertura --output-path target/llvm-cov-target/cobertura.xml
+```
+
+> [!CAUTION]
+> GitLab has certain [limits for Cobertura reports](https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization/cobertura.html#limits)
+> make sure you obey them.
+
+> [!NOTE]
+> Note that this example uses [`cargo-nextest`](https://nexte.st/) to run the tests (which must
+> similarly be available), with the following `.config/nextest.toml`:
+>
+> ```toml
+> [profile.default.junit]
+> path = "junit.xml"
+> ```
 
 ### Display coverage in VS Code
 
@@ -639,7 +698,7 @@ cargo-llvm-cov --json | some-program
 cargo +stable install cargo-llvm-cov --locked
 ```
 
-Currently, installing cargo-llvm-cov requires rustc 1.73+.
+Currently, installing cargo-llvm-cov requires rustc 1.81+.
 
 cargo-llvm-cov is usually runnable with Cargo versions older than the Rust version
 required for installation (e.g., `cargo +1.60 llvm-cov`). Currently, to run
@@ -732,7 +791,6 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 
 ## Related Projects
 
-- [coverage-helper]: Helper for [#123].
 - [cargo-config2]: Library to load and resolve Cargo configuration. cargo-llvm-cov uses this library.
 - [cargo-hack]: Cargo subcommand to provide various options useful for testing and continuous integration.
 - [cargo-minimal-versions]: Cargo subcommand for proper use of `-Z minimal-versions`.
@@ -740,13 +798,11 @@ See also [the code-coverage-related issues reported in rust-lang/rust](https://g
 [#2]: https://github.com/taiki-e/cargo-llvm-cov/issues/2
 [#8]: https://github.com/taiki-e/cargo-llvm-cov/issues/8
 [#20]: https://github.com/taiki-e/cargo-llvm-cov/issues/20
-[#123]: https://github.com/taiki-e/cargo-llvm-cov/issues/123
 [#219]: https://github.com/taiki-e/cargo-llvm-cov/issues/219
 [cargo-config2]: https://github.com/taiki-e/cargo-config2
 [cargo-hack]: https://github.com/taiki-e/cargo-hack
 [cargo-minimal-versions]: https://github.com/taiki-e/cargo-minimal-versions
 [codecov]: https://codecov.io
-[coverage-helper]: https://github.com/taiki-e/coverage-helper
 [instrument-coverage]: https://doc.rust-lang.org/rustc/instrument-coverage.html
 [nextest]: https://nexte.st/book/test-coverage.html
 [rust-lang/rust#79417]: https://github.com/rust-lang/rust/issues/79417

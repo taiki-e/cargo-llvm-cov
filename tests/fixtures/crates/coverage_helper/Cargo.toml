@@ -1,9 +1,0 @@
-[package]
-name = "no_coverage_coverage_helper"
-version = "0.0.0"
-edition = "2021"
-
-[dependencies]
-coverage-helper = "0.2"
-
-[workspace]

@@ -30,15 +30,14 @@
    30|      1|    }
    31|      1|}
    32|       |
-   33|       |// #[coverage(off)] has no effect on modules.
-   34|       |#[cfg_attr(coverage, coverage(off))]
-   35|       |mod mod_level {
-   36|       |    use super::func;
-   37|       |
-   38|       |    #[test]
-   39|       |    fn mod_level() {
-   40|       |        if false {
-   41|       |            func(3);
-   42|       |        }
-   43|       |    }
-   44|       |}
+   33|       |#[cfg_attr(coverage, coverage(off))]
+   34|       |mod mod_level {
+   35|       |    use super::func;
+   36|       |
+   37|       |    #[test]
+   38|       |    fn mod_level() {
+   39|       |        if false {
+   40|       |            func(3);
+   41|       |        }
+   42|       |    }
+   43|       |}

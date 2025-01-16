@@ -6,7 +6,7 @@ use anyhow::{bail, format_err, Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use lexopt::{
     Arg::{Long, Short, Value},
-    ValueExt,
+    ValueExt as _,
 };
 
 use crate::{
@@ -370,9 +370,60 @@ impl LlvmCovOptions {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ShowEnvOptions {
+pub(crate) enum ShowEnvFormat {
+    /// Each line: key=<escaped value>, escaped using [`shell_escape::escape`].
+    EscapedKeyValuePair,
     /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
-    pub(crate) export_prefix: bool,
+    UnixExport,
+    /// Each value: "$env:{key}={value}", where {value} is PowerShell Unicode escaped e.g. "`u{72}".
+    Pwsh,
+}
+
+impl ShowEnvFormat {
+    pub(crate) fn new(export_prefix: bool, with_pwsh_env_prefix: bool) -> Result<Self> {
+        if export_prefix && with_pwsh_env_prefix {
+            conflicts("--export-prefix", "--with-pwsh-env-prefix")?;
+        }
+
+        Ok(if export_prefix {
+            ShowEnvFormat::UnixExport
+        } else if with_pwsh_env_prefix {
+            ShowEnvFormat::Pwsh
+        } else {
+            ShowEnvFormat::EscapedKeyValuePair
+        })
+    }
+
+    pub(crate) fn export_string(&self, key: &str, value: &str) -> String {
+        match self {
+            ShowEnvFormat::EscapedKeyValuePair => {
+                format!("{key}={}", shell_escape::escape(value.into()))
+            }
+            ShowEnvFormat::UnixExport => {
+                format!("export {key}={}", shell_escape::escape(value.into()))
+            }
+            ShowEnvFormat::Pwsh => {
+                // PowerShell 6+ expects encoded UTF-8 text. Some env vars like CARGO_ENCODED_RUSTFLAGS
+                // have non-printable binary characters. We can work around this and any other escape
+                // related considerations by just escaping all characters. Rust's Unicode escape is
+                // of form "\u{<code>}", but PowerShell expects "`u{<code>}". A replace call fixes
+                // this.
+                let value = value.escape_unicode().to_string().replace('\\', "`");
+                format!("$env:{key}=\"{value}\"")
+            }
+        }
+    }
+}
+
+impl Default for ShowEnvFormat {
+    fn default() -> Self {
+        Self::EscapedKeyValuePair
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ShowEnvOptions {
+    pub(crate) show_env_format: ShowEnvFormat,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
@@ -426,7 +477,7 @@ impl Args {
         const SUBCMD: &str = "llvm-cov";
 
         // rustc/cargo args must be valid Unicode
-        // https://github.com/rust-lang/rust/blob/1.80.0/compiler/rustc_driver_impl/src/args.rs#L121
+        // https://github.com/rust-lang/rust/blob/1.84.0/compiler/rustc_driver_impl/src/args.rs#L121
         // TODO: https://github.com/rust-lang/cargo/pull/11118
         fn handle_args(
             args: impl IntoIterator<Item = impl Into<OsString>>,
@@ -532,6 +583,7 @@ impl Args {
 
         // show-env options
         let mut export_prefix = false;
+        let mut with_pwsh_env_prefix = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -711,6 +763,7 @@ impl Args {
 
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
+                Long("with-pwsh-env-prefix") => parse_flag!(with_pwsh_env_prefix),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -814,14 +867,18 @@ impl Args {
         term::set_coloring(&mut color);
 
         // unexpected options
-        match subcommand {
-            Subcommand::ShowEnv => {}
+        let show_env_format = match subcommand {
+            Subcommand::ShowEnv => ShowEnvFormat::new(export_prefix, with_pwsh_env_prefix)?,
             _ => {
                 if export_prefix {
                     unexpected("--export-prefix", subcommand)?;
                 }
+                if with_pwsh_env_prefix {
+                    unexpected("--with-pwsh-env-prefix", subcommand)?;
+                }
+                ShowEnvFormat::default()
             }
-        }
+        };
         if doc || doctests {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
@@ -1211,7 +1268,7 @@ impl Args {
                 branch,
                 mcdc,
             },
-            show_env: ShowEnvOptions { export_prefix },
+            show_env: ShowEnvOptions { show_env_format },
             doctests,
             ignore_run_fail,
             lib,
@@ -1339,7 +1396,7 @@ fn unexpected(arg: &str, subcommand: Subcommand) -> Result<()> {
 mod tests {
     use std::{
         env,
-        io::Write,
+        io::Write as _,
         path::Path,
         process::{Command, Stdio},
     };
