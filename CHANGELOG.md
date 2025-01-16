@@ -12,6 +12,12 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--with-pwsh-env-prefix` to `cargo llvm-cov show-env` subcommand. ([#411](https://github.com/taiki-e/cargo-llvm-cov/pull/411), thanks @LittleBoxOfSunshine)
+
+- Document usage with GitLab CI. ([#405](https://github.com/taiki-e/cargo-llvm-cov/pull/405), thanks @jaskij)
+
+- Document usage with afl.rs. ([#369](https://github.com/taiki-e/cargo-llvm-cov/pull/369), thanks @njelich)
+
 - Update `ruzstd` to 0.8.
 
   This increases the rustc version required to build cargo-llvm-cov. (rustc 1.73+ -> 1.81+)
