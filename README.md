@@ -498,7 +498,10 @@ cargo llvm-cov clean --workspace
 cargo afl build
 # Run the fuzzer, the AFL_FUZZER_LOOPCOUNT is needed, because otherwise .profraw files aren't emitted
 # To get coverage of current corpus, minimize it and set it as input, then run the fuzzer until it processes the corpus
-AFL_FUZZER_LOOPCOUNT=20 cargo afl fuzz -c - -i in -o out target/debug/fuzz-target 
+AFL_FUZZER_LOOPCOUNT=20 cargo afl fuzz -c - -i in -o out target/debug/fuzz-target
+# Generate report
+# If you pass `--release` to `cargo afl build`, you also need to pass `--release` to `cargo llvm-cov report`
+cargo llvm-cov report --lcov
 ```
 
 ### Exclude file from coverage
