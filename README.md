@@ -485,6 +485,7 @@ Note: To include coverage for doctests you also need to pass `--doctests` to bot
 > ```powershell
 > Invoke-Expression (cargo llvm-cov show-env --with-pwsh-env-prefix | Out-String)
 > ```
+
 ### Get coverage of AFL fuzzers
 
 Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
