@@ -155,31 +155,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # LLVM version table:
-        # - LLVM 14: 1.60-1.64
-        # - LLVM 15: 1.65-1.69
-        # - LLVM 16: 1.70-1.72
-        # - LLVM 17: 1.73-1.77
-        # - LLVM 18: 1.78-1.81
-        # - LLVM 19: 1.82-
-        # Minimum external LLVM version table:
-        # - LLVM 12 1.58-1.64
-        # - LLVM 13 1.65-1.68
-        # - LLVM 14 1.69-1.72
-        # - LLVM 15 1.73-1.75
-        # - LLVM 16 1.76-1.78
-        # - LLVM 17 1.79-1.82
-        # - LLVM 18 1.83-
-        llvm:
-          # - '12'
-          # - '13'
-          - '14'
-          - '15'
-          - '16'
-          - '17'
-          - '18'
-          - '19'
-    runs-on: ubuntu-latest
+        # See also LLVM version table in https://github.com/taiki-e/portable-atomic/blob/HEAD/.github/workflows/ci.yml.
+        include:
+          - llvm: '14'
+            os: ubuntu-22.04
+          - llvm: '15'
+            os: ubuntu-22.04
+          - llvm: '16'
+          - llvm: '17'
+          - llvm: '18'
+          - llvm: '19'
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
       - uses: taiki-e/checkout-action@v1
