@@ -47,5 +47,5 @@
       "dictionaries": ["bash", "rust"]
     }
   ],
-  "ignorePaths": ["**/fixtures/*.json", "tests/fixtures/coverage-reports/**"]
+  "ignorePaths": ["tests/fixtures/*.json", "tests/fixtures/coverage-reports/**"]
 }
