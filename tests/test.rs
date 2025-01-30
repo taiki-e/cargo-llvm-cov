@@ -8,12 +8,9 @@ use std::path::Path;
 
 use cargo_config2::Flags;
 use fs_err as fs;
-use test_helper::cli::CommandExt as _;
+use test_helper::{cli::CommandExt as _, git::assert_diff};
 
-use self::auxiliary::{
-    assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
-    test_project, test_report,
-};
+use self::auxiliary::*;
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
 
@@ -142,7 +139,7 @@ fn merge() {
     if !cfg!(all(target_arch = "x86_64", target_os = "linux")) {
         return;
     }
-    let output_dir = fixtures_path().join("coverage-reports").join("merge");
+    let output_dir = fixtures_dir().join("coverage-reports").join("merge");
     merge_with_failure_mode(&output_dir, false);
 }
 
@@ -194,7 +191,7 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
 fn clean_ws() {
     let model = "merge";
     let name = "clean_ws";
-    let output_dir = fixtures_path().join("coverage-reports").join(model);
+    let output_dir = fixtures_dir().join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     for (extension, args) in test_set() {
         let workspace_root = test_project(model);
@@ -430,25 +427,66 @@ fn invalid_arg_no_passthrough() {
 #[test]
 fn help() {
     for &subcommand in SUBCOMMANDS {
-        cargo_llvm_cov(subcommand)
-            .arg("--help")
-            .assert_success()
-            .stdout_contains(format!("cargo llvm-cov {subcommand}"));
+        let short = cargo_llvm_cov(subcommand).arg("-h").assert_success();
+        let long = cargo_llvm_cov(subcommand).arg("--help").assert_success();
+        let expected_pat = &format!("cargo llvm-cov {subcommand}");
+        short.stdout_contains(expected_pat);
+        long.stdout_contains(expected_pat);
+        assert_eq!(short.stdout, long.stdout);
     }
 }
 
 #[test]
 fn version() {
+    let expected = &format!("cargo-llvm-cov {}", env!("CARGO_PKG_VERSION"));
     for &subcommand in SUBCOMMANDS {
         if subcommand.is_empty() {
-            cargo_llvm_cov(subcommand)
-                .arg("--version")
-                .assert_success()
-                .stdout_contains(env!("CARGO_PKG_VERSION"));
+            cargo_llvm_cov(subcommand).arg("-V").assert_success().stdout_eq(expected);
+            cargo_llvm_cov(subcommand).arg("--version").assert_success().stdout_eq(expected);
         } else {
+            cargo_llvm_cov(subcommand).arg("-V").assert_failure().stderr_contains(format!(
+                "invalid option '--version' for subcommand '{subcommand}'"
+            ));
             cargo_llvm_cov(subcommand).arg("--version").assert_failure().stderr_contains(format!(
                 "invalid option '--version' for subcommand '{subcommand}'"
             ));
         }
+    }
+}
+
+#[test]
+fn update_readme() {
+    let new = &*cargo_llvm_cov("").arg("--help").assert_success().stdout;
+    let path = &Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
+    let base = fs::read_to_string(path).unwrap();
+    let mut out = String::with_capacity(base.capacity());
+    let mut lines = base.lines();
+    let mut start = false;
+    let mut end = false;
+    while let Some(line) = lines.next() {
+        out.push_str(line);
+        out.push('\n');
+        if line == "<!-- readme-long-help:start -->" {
+            start = true;
+            out.push_str("```console\n");
+            out.push_str("$ cargo llvm-cov --help\n");
+            out.push_str(new);
+            for line in &mut lines {
+                if line == "<!-- readme-long-help:end -->" {
+                    out.push_str("```\n");
+                    out.push_str(line);
+                    out.push('\n');
+                    end = true;
+                    break;
+                }
+            }
+        }
+    }
+    if start && end {
+        assert_diff(path, out);
+    } else if start {
+        panic!("missing `<!-- readme-long-help:end -->` comment in README.md");
+    } else {
+        panic!("missing `<!-- readme-long-help:start -->` comment in README.md");
     }
 }

@@ -14,7 +14,7 @@ use std::{
 use fs_err as fs;
 use test_helper::cli::CommandExt as _;
 
-pub(crate) fn fixtures_path() -> &'static Path {
+pub(crate) fn fixtures_dir() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
 }
 
@@ -57,7 +57,7 @@ pub(crate) fn test_report(
 ) {
     eprintln!("model={model}/name={name}");
     let workspace_root = test_project(model);
-    let output_dir = fixtures_path().join("coverage-reports").join(model);
+    let output_dir = fixtures_dir().join("coverage-reports").join(model);
     fs::create_dir_all(&output_dir).unwrap();
     let output_path = &output_dir.join(name).with_extension(extension);
     let expected = &fs::read_to_string(output_path).unwrap_or_default();
@@ -115,9 +115,9 @@ pub(crate) fn normalize_output(output_path: &Path, args: &[&str]) {
 pub(crate) fn test_project(model: &str) -> tempfile::TempDir {
     let tmpdir = tempfile::tempdir().unwrap();
     let workspace_root = tmpdir.path();
-    let model_path = fixtures_path().join("crates").join(model);
+    let model_path = fixtures_dir().join("crates").join(model);
 
-    for (file_name, from) in git_ls_files(&model_path, &[]) {
+    for (file_name, from) in test_helper::git::ls_files(model_path, &[]) {
         let to = &workspace_root.join(file_name);
         if !to.parent().unwrap().is_dir() {
             fs::create_dir_all(to.parent().unwrap()).unwrap();
@@ -126,36 +126,6 @@ pub(crate) fn test_project(model: &str) -> tempfile::TempDir {
     }
 
     tmpdir
-}
-
-#[track_caller]
-fn git_ls_files(dir: &Path, filters: &[&str]) -> Vec<(String, PathBuf)> {
-    let mut cmd = Command::new("git");
-    cmd.arg("ls-files").args(filters).current_dir(dir);
-    let output =
-        cmd.output().unwrap_or_else(|e| panic!("could not execute process `{cmd:?}`: {e}"));
-    assert!(
-        output.status.success(),
-        "process didn't exit successfully: `{cmd:?}`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-        "-".repeat(60),
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
-    );
-    str::from_utf8(&output.stdout)
-        .unwrap()
-        .lines()
-        .map(str::trim)
-        .filter_map(|f| {
-            if f.is_empty() {
-                return None;
-            }
-            let p = dir.join(f);
-            if !p.exists() {
-                return None;
-            }
-            Some((f.to_owned(), p))
-        })
-        .collect()
 }
 
 pub(crate) fn perturb_one_header(workspace_root: &Path) -> Option<PathBuf> {
