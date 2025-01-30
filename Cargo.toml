@@ -44,9 +44,9 @@ termcolor = "1"
 walkdir = "2.2.3"
 
 [dev-dependencies]
-easy-ext = "1"
 rustversion = "1"
 tempfile = { version = "3", default-features = false }
+test-helper = { features = ["cli"], git = "https://github.com/taiki-e/test-helper.git", branch = "main" }
 
 [lints]
 workspace = true

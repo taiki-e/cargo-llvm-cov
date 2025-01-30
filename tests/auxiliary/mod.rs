@@ -6,14 +6,13 @@ use std::{
     io::{Read as _, Seek as _, Write as _},
     mem,
     path::{Path, PathBuf},
-    process::{Command, ExitStatus, Stdio},
+    process::{Command, Stdio},
     str,
     sync::Once,
 };
 
-use anyhow::Context as _;
-use easy_ext::ext;
 use fs_err as fs;
+use test_helper::cli::CommandExt as _;
 
 pub(crate) fn fixtures_path() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures"))
@@ -195,97 +194,4 @@ fn perturb_header(path: &Path) {
     magic += 1;
     file.rewind().unwrap();
     file.write_all(&magic.to_ne_bytes()).unwrap();
-}
-
-#[ext(CommandExt)]
-impl Command {
-    #[track_caller]
-    pub(crate) fn assert_output(&mut self) -> AssertOutput {
-        let output = self.output().context("could not execute process").unwrap();
-        AssertOutput {
-            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-            status: output.status,
-        }
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_success(&mut self) -> AssertOutput {
-        let output = self.assert_output();
-        assert!(
-            output.status.success(),
-            "assertion failed: `self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-            "-".repeat(60),
-            output.stdout,
-            output.stderr,
-        );
-        output
-    }
-
-    #[track_caller]
-    pub(crate) fn assert_failure(&mut self) -> AssertOutput {
-        let output = self.assert_output();
-        assert!(
-            !output.status.success(),
-            "assertion failed: `!self.status.success()`:\n\nSTDOUT:\n{0}\n{1}\n{0}\n\nSTDERR:\n{0}\n{2}\n{0}\n",
-            "-".repeat(60),
-            output.stdout,
-            output.stderr,
-        );
-        output
-    }
-}
-
-pub(crate) struct AssertOutput {
-    stdout: String,
-    stderr: String,
-    status: ExitStatus,
-}
-
-fn line_separated(lines: &str) -> impl Iterator<Item = &'_ str> {
-    lines.lines().map(str::trim).filter(|line| !line.is_empty())
-}
-
-impl AssertOutput {
-    /// Receives a line(`\n`)-separated list of patterns and asserts whether stderr contains each pattern.
-    #[track_caller]
-    pub(crate) fn stderr_contains(&self, pats: impl AsRef<str>) -> &Self {
-        for pat in line_separated(pats.as_ref()) {
-            assert!(
-                self.stderr.contains(pat),
-                "assertion failed: `self.stderr.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
-                "-".repeat(60),
-                self.stderr
-            );
-        }
-        self
-    }
-
-    /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
-    #[track_caller]
-    pub(crate) fn stdout_contains(&self, pats: impl AsRef<str>) -> &Self {
-        for pat in line_separated(pats.as_ref()) {
-            assert!(
-                self.stdout.contains(pat),
-                "assertion failed: `self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
-                "-".repeat(60),
-                self.stdout
-            );
-        }
-        self
-    }
-
-    /// Receives a line(`\n`)-separated list of patterns and asserts whether stdout contains each pattern.
-    #[track_caller]
-    pub(crate) fn stdout_not_contains(&self, pats: impl AsRef<str>) -> &Self {
-        for pat in line_separated(pats.as_ref()) {
-            assert!(
-                !self.stdout.contains(pat),
-                "assertion failed: `!self.stdout.contains(..)`:\n\nEXPECTED:\n{0}\n{pat}\n{0}\n\nACTUAL:\n{0}\n{1}\n{0}\n",
-                "-".repeat(60),
-                self.stdout
-            );
-        }
-        self
-    }
 }

@@ -8,10 +8,11 @@ use std::path::Path;
 
 use cargo_config2::Flags;
 use fs_err as fs;
+use test_helper::cli::CommandExt as _;
 
 use self::auxiliary::{
     assert_output, cargo_llvm_cov, fixtures_path, normalize_output, perturb_one_header,
-    test_project, test_report, CommandExt as _,
+    test_project, test_report,
 };
 
 const SUBCOMMANDS: &[&str] = &["", "run", "report", "clean", "show-env", "nextest"];
