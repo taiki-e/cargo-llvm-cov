@@ -12,6 +12,7 @@ use std::{
     ffi::{OsStr, OsString},
     io::{self, BufRead as _, Read as _, Write as _},
     path::Path,
+    process::ExitCode,
     time::SystemTime,
 };
 
@@ -49,18 +50,20 @@ mod fs;
 mod metadata;
 mod regex_vec;
 
-fn main() {
+fn main() -> ExitCode {
     term::init_coloring();
     if let Err(e) = try_main() {
         error!("{e:#}");
     }
     if term::error() || term::warn() && env::var_os("CARGO_LLVM_COV_DENY_WARNINGS").is_some() {
-        std::process::exit(1)
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
     }
 }
 
 fn try_main() -> Result<()> {
-    let mut args = Args::parse()?;
+    let Some(mut args) = Args::parse()? else { return Ok(()) };
     term::verbose::set(args.verbose != 0);
 
     match args.subcommand {

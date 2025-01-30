@@ -473,7 +473,7 @@ pub(crate) fn merge_config_to_args(
 }
 
 impl Args {
-    pub(crate) fn parse() -> Result<Self> {
+    pub(crate) fn parse() -> Result<Option<Self>> {
         const SUBCMD: &str = "llvm-cov";
 
         // rustc/cargo args must be valid Unicode
@@ -775,15 +775,14 @@ impl Args {
                 }
                 Short('h') | Long("help") => {
                     print!("{}", Subcommand::help_text(subcommand));
-                    std::process::exit(0);
+                    return Ok(None);
                 }
                 Short('V') | Long("version") => {
                     if subcommand == Subcommand::None {
                         println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-                        std::process::exit(0);
-                    } else {
-                        unexpected("--version", subcommand)?;
+                        return Ok(None);
                     }
+                    unexpected("--version", subcommand)?;
                 }
 
                 // TODO: Currently, we are using a subdirectory of the target directory as
@@ -1235,7 +1234,7 @@ impl Args {
             }
         }
 
-        Ok(Self {
+        Ok(Some(Self {
             subcommand,
             cov: LlvmCovOptions {
                 json,
@@ -1300,7 +1299,7 @@ impl Args {
             nextest_archive_file,
             cargo_args,
             rest,
-        })
+        }))
     }
 }
 
