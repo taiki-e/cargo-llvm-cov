@@ -313,7 +313,7 @@ fn ask_to_run(cmd: &ProcessBuilder, ask: bool, text: &str) -> Result<()> {
             "" | "y" | "yes" => {}
             "n" | "no" => bail!("aborting as per your request"),
             a => bail!("invalid answer `{}`", a),
-        };
+        }
     } else {
         info!("running {} to {}", cmd, text);
     }

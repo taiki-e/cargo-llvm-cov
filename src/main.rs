@@ -1077,7 +1077,7 @@ impl Format {
                 println!("{out}");
             }
             return Ok(());
-        };
+        }
 
         if cx.args.cov.codecov {
             if term::verbose() {
@@ -1097,7 +1097,7 @@ impl Format {
                 println!("{out}");
             }
             return Ok(());
-        };
+        }
 
         if let Some(output_path) = &cx.args.cov.output_path {
             if term::verbose() {
