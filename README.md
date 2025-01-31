@@ -435,7 +435,8 @@ cargo llvm-cov --no-report --features b
 cargo llvm-cov report --lcov # generate report without tests
 ```
 
-Note: To include coverage for doctests you also need to pass `--doctests` to `cargo llvm-cov report`.
+> [!TIP]
+> To include coverage for doctests you also need to pass `--doctests` to `cargo llvm-cov report`.
 
 ### Get coverage of C/C++ code linked to Rust library/binary
 
@@ -476,10 +477,13 @@ cargo build # Build rust binaries.
 cargo llvm-cov report --lcov # Generate report without tests.
 ```
 
-Note: cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest` commands.
+> [!CAUTION]
+> cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest`/etc. commands.
 
-Note: To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
+> [!TIP]
+> To include coverage for doctests you also need to pass `--doctests` to both `cargo llvm-cov show-env` and `cargo llvm-cov report`.
 
+> [!TIP]
 > The same thing can be achieved in PowerShell 6+ by substituting the source command with:
 >
 > ```powershell
