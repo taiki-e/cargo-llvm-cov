@@ -34,12 +34,8 @@ concurrency:
 jobs:
   miri:
     uses: taiki-e/github-actions/.github/workflows/miri.yml@main
-    with:
-      event_name: ${{ github.event_name }}
   msrv:
     uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
-    with:
-      event_name: ${{ github.event_name }}
   release-dry-run:
     uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
   tidy:
