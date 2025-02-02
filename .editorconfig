@@ -11,14 +11,16 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.{json,md,rb,sh,yml,yaml}]
+[*.{css,html,json,md,rb,sh,yml,yaml}]
 indent_size = 2
 
 [*.{js,yml,yaml}]
 quote_type = single
 
 [*.sh]
+# https://google.github.io/styleguide/shellguide.html#s5.3-pipelines
 binary_next_line = true
+# https://google.github.io/styleguide/shellguide.html#s5.5-case-statement
 switch_case_indent = true
 
 [**/coverage-reports/**]

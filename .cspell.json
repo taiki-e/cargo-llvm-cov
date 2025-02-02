@@ -27,24 +27,25 @@
   "ignoreRegExpList": [
     // Copyright notice
     "Copyright .*",
+    "SPDX-(File|Snippet)CopyrightText: .*",
     // GHA actions/workflows
-    "uses: .+@",
+    "uses: .+@[\\w_.-]+",
     // GHA context (repo name, owner name, etc.)
-    "github.\\w+ (=|!)= '.+'",
+    "github.[\\w_.-]+ (=|!)= '[^']+'",
     // GH username
     "( |\\[)@[\\w_-]+",
     // Git config username
-    "git config user.name .*",
-    // Username in todo comment
+    "git config( --[^ ]+)? user.name .*",
+    // Username in TODO|FIXME comment
     "(TODO|FIXME)\\([\\w_., -]+\\)",
     // Cargo.toml authors
-    "authors *= *\\[.*\\]",
-    "\".* <[\\w_.+-]+@[\\w.-]+>\""
+    "authors *= *\\[[^\\]]*\\]",
+    "\"[^\"]* <[\\w_.+-]+@[\\w.-]+>\""
   ],
   "languageSettings": [
     {
       "languageId": ["*"],
-      "dictionaries": ["bash", "rust"]
+      "dictionaries": ["bash", "cpp-refined", "rust"]
     }
   ],
   "ignorePaths": ["tests/fixtures/*.json", "tests/fixtures/coverage-reports/**"]
