@@ -21,9 +21,10 @@ cd -- "$(dirname -- "$0")"/..
 # - clang-format (if C/C++/Protobuf code exists)
 # - parse-dockerfile <https://github.com/taiki-e/parse-dockerfile> (if Dockerfile exists)
 #
-# This script is shared with other repositories, so there may also be
-# checks for files not included in this repository, but they will be
-# skipped if the corresponding files do not exist.
+# This script is shared by projects under github.com/taiki-e, so there may also
+# be checks for files not included in this repository, but they will be skipped
+# if the corresponding files do not exist.
+# It is not intended for manual editing.
 
 retry() {
   for i in {1..10}; do

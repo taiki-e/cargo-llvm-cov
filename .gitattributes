@@ -1,2 +1,3 @@
 * text=auto eol=lf
+tools/tidy.sh linguist-detectable=false
 .github/.cspell/rust-dependencies.txt linguist-generated
