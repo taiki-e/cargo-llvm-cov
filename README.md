@@ -40,7 +40,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 ### Basic usage
 
 <details>
-<summary>Click to show a complete list of options</summary>
+<summary>Complete list of options (click to show)</summary>
 
 (See [docs](docs) directory for options of subcommands)
 
@@ -718,13 +718,14 @@ You can download prebuilt binaries from the [Release page](https://github.com/ta
 Prebuilt binaries are available for macOS, Linux (gnu and musl), Windows (static executable), and FreeBSD.
 
 <details>
-<summary>Example of script to download cargo-llvm-cov</summary>
+<summary>Example of script to install from the Release page (click to show)</summary>
 
 ```sh
 # Get host target
 host=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
 # Download binary and install to $HOME/.cargo/bin
-curl --proto '=https' --tlsv1.2 -fsSL https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz | tar xzf - -C "$HOME/.cargo/bin"
+curl --proto '=https' --tlsv1.2 -fsSL "https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz" \
+  | tar xzf - -C "$HOME/.cargo/bin"
 ```
 
 </details>
@@ -749,16 +750,16 @@ When used with [nextest]:
 <!-- omit in toc -->
 ### Via Homebrew
 
-You can install cargo-llvm-cov from the [Homebrew tap maintained by us](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb) (x86_64/AArch64 macOS, x86_64/AArch64 Linux):
-
-```sh
-brew install taiki-e/tap/cargo-llvm-cov
-```
-
-Alternatively, you can install cargo-llvm-cov from [homebrew-core](https://formulae.brew.sh/formula/cargo-llvm-cov) (x86_64/AArch64 macOS, x86_64 Linux):
+You can install cargo-llvm-cov from [homebrew-core](https://formulae.brew.sh/formula/cargo-llvm-cov) (x86_64/AArch64 macOS, x86_64 Linux):
 
 ```sh
 brew install cargo-llvm-cov
+```
+
+Alternatively, you can also install from the [Homebrew tap maintained by us](https://github.com/taiki-e/homebrew-tap/blob/HEAD/Formula/cargo-llvm-cov.rb) (x86_64/AArch64 macOS, x86_64/AArch64 Linux):
+
+```sh
+brew install taiki-e/tap/cargo-llvm-cov
 ```
 
 <!-- omit in toc -->
