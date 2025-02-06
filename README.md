@@ -789,6 +789,11 @@ You can install cargo-llvm-cov from the [extra repository](https://archlinux.org
 pacman -S cargo-llvm-cov
 ```
 
+<!-- omit in toc -->
+### Via other package managers
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/cargo-llvm-cov.svg?columns=4)](https://repology.org/project/cargo-llvm-cov/versions)
+
 ## Known limitations
 
 - Support for branch coverage is unstable. See [#8] and [rust-lang/rust#79649] for more.
