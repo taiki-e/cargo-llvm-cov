@@ -10,6 +10,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
+    fmt::Write as _,
     io::{self, BufRead as _, Read as _, Write as _},
     path::Path,
     process::ExitCode,
@@ -246,13 +247,14 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 // - Even if the number of threads specified by the user is greater than
                 //   available cores, it is expected that the number of threads that can
                 //   write simultaneously will not exceed the number of available cores.
-                llvm_profile_file_name.push_str(&format!(
+                let _ = write!(
+                    llvm_profile_file_name,
                     "-%{}m",
                     // TODO: clamp to 1..=9?
                     // https://doc.rust-lang.org/rustc/instrument-coverage.html#running-the-instrumented-binary-to-generate-raw-coverage-profiling-data
                     // > N must be between 1 and 9
                     std::thread::available_parallelism().map_or(1, usize::from)
-                ));
+                );
             } else {
                 llvm_profile_file_name.push_str("-%m");
             }
