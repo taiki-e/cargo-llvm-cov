@@ -55,7 +55,7 @@ workspace = true
 resolver = "2"
 
 # This table is shared by projects under github.com/taiki-e.
-# It is not intended for manual editing.
+# Expect for unexpected_cfgs.check-cfg, it is not intended for manual editing.
 [workspace.lints.rust]
 deprecated_safe = "warn"
 improper_ctypes = "warn"

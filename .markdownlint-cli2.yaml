@@ -2,7 +2,7 @@
 config:
   line-length: false # MD013
   no-duplicate-heading: false # MD024
-  no-blanks-blockquote: false # MD028
+  no-blanks-blockquote: false # MD028 (this warns valid GFM alerts usage)
   no-inline-html: false # MD033
   no-emphasis-as-heading: false # MD036
 
