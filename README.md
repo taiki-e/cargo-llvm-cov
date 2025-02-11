@@ -791,6 +791,15 @@ pacman -S cargo-llvm-cov
 ```
 
 <!-- omit in toc -->
+### Via ports (FreeBSD)
+
+You can install cargo-llvm-cov from the [official ports](https://www.freshports.org/devel/cargo-llvm-cov):
+
+```sh
+pkg install cargo-llvm-cov
+```
+
+<!-- omit in toc -->
 ### Via other package managers
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/cargo-llvm-cov.svg?columns=4)](https://repology.org/project/cargo-llvm-cov/versions)
