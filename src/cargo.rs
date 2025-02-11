@@ -65,15 +65,21 @@ impl Workspace {
         };
         let nightly = rustc_version(&rustc)?;
 
+        let suggest_nightly_cargo = if cfg!(windows) {
+            // Do not suggest `cargo +nightly` due to a rustup bug: https://github.com/rust-lang/rustup/issues/3036
+            "rustup run nightly cargo"
+        } else {
+            "cargo +nightly"
+        };
         if doctests && !nightly {
-            bail!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`")
+            bail!("--doctests flag requires nightly toolchain; consider using `{suggest_nightly_cargo} llvm-cov`")
         }
         let stable_coverage =
             rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
         if !stable_coverage && !nightly {
             bail!(
                 "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
-                 or using nightly toolchain (`cargo +nightly llvm-cov`)"
+                 or using nightly toolchain (`{suggest_nightly_cargo} llvm-cov`)"
             );
         }
 
