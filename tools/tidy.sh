@@ -11,7 +11,7 @@ cd -- "$(dirname -- "$0")"/..
 #    ./tools/tidy.sh
 #
 # Note: This script requires the following tools:
-# - git
+# - git 1.8+
 # - jq 1.6+
 # - npm (node 18+)
 # - python 3.6+
@@ -60,7 +60,11 @@ print_fenced() {
   printf '=======================================\n\n'
 }
 check_diff() {
-  if [[ -n "${CI:-}" ]]; then
+  if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    if ! git -c color.ui=always --no-pager diff --exit-code "$@"; then
+      should_fail=1
+    fi
+  elif [[ -n "${CI:-}" ]]; then
     if ! git --no-pager diff --exit-code "$@"; then
       should_fail=1
     fi
@@ -489,9 +493,7 @@ prettier_ext=('*.css' '*.html' '*.js' '*.json' '*.yml' '*.yaml')
 if [[ -n "$(ls_files "${prettier_ext[@]}")" ]]; then
   info "checking YAML/HTML/CSS/JavaScript/JSON code style"
   check_config .editorconfig
-  if [[ "${ostype}" == 'solaris' ]] && [[ -n "${CI:-}" ]] && ! type -P npm >/dev/null; then
-    warn "this check is skipped on Solaris due to no node 18+ in upstream package manager"
-  elif check_install npm; then
+  if check_install npm; then
     IFS=' '
     info "running \`npx -y prettier -l -w \$(git ls-files ${prettier_ext[*]})\`"
     IFS=$'\n\t'
@@ -510,9 +512,7 @@ check_alt '.yml extension' '.yaml extension' "$(ls_files '*.yaml' | { grep -Fv '
 if [[ -n "$(ls_files '*.toml' | { grep -Fv '.taplo.toml' || true; })" ]]; then
   info "checking TOML style"
   check_config .taplo.toml
-  if [[ "${ostype}" == 'solaris' ]] && [[ -n "${CI:-}" ]] && ! type -P npm >/dev/null; then
-    warn "this check is skipped on Solaris due to no node 18+ in upstream package manager"
-  elif check_install npm; then
+  if check_install npm; then
     info "running \`npx -y @taplo/cli fmt \$(git ls-files '*.toml')\`"
     RUST_LOG=warn npx -y @taplo/cli fmt $(ls_files '*.toml')
     check_diff $(ls_files '*.toml')
@@ -527,9 +527,7 @@ check_hidden taplo.toml
 if [[ -n "$(ls_files '*.md')" ]]; then
   info "checking markdown style"
   check_config .markdownlint-cli2.yaml
-  if [[ "${ostype}" == 'solaris' ]] && [[ -n "${CI:-}" ]] && ! type -P npm >/dev/null; then
-    warn "this check is skipped on Solaris due to no node 18+ in upstream package manager"
-  elif check_install npm; then
+  if check_install npm; then
     info "running \`npx -y markdownlint-cli2 \$(git ls-files '*.md')\`"
     if ! npx -y markdownlint-cli2 $(ls_files '*.md'); then
       error "check failed; please resolve the above markdownlint error(s)"
@@ -669,12 +667,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2096
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in \$(git ls-files '*Dockerfile*')\`"
-    if [[ "${ostype}" == 'windows' ]]; then
-      # No such file or directory: '/proc/N/fd/N'
-      warn "this check is skipped on Windows due to upstream bug (failed to found fd created by <())"
-    elif [[ "${ostype}" == 'dragonfly' ]]; then
-      warn "this check is skipped on DragonFly BSD due to upstream bug (hang)"
-    elif check_install jq python3 parse-dockerfile; then
+    if check_install jq python3 parse-dockerfile; then
       shellcheck_for_dockerfile() {
         local text=$1
         local shell=$2
@@ -684,15 +677,23 @@ elif check_install shellcheck; then
         fi
         text="#!${shell}"$'\n'"${text}"
         case "${ostype}" in
-          windows) text=${text//\r/} ;;
+          windows) text=${text//$'\r'/} ;; # Parse error on git bash/msys2 bash.
         esac
         local color=auto
         if [[ -t 1 ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
           color=always
         fi
-        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" <(printf '%s\n' "${text}") | sed "s/\/dev\/fd\/[0-9][0-9]*/$(sed_rhs_escape "${display_path}")/g"; then
+        # We don't use <(printf '%s\n' "${text}") here because:
+        # Windows: failed to found fd created by <() ("/proc/*/fd/* (git bash/msys2 bash) /dev/fd/* (cygwin bash): openBinaryFile: does not exist (No such file or directory)" error)
+        # DragonFly BSD: hang
+        # Others: false negative
+        trap -- 'rm -- ./tools/.tidy-tmp; printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
+        printf '%s\n' "${text}" >|./tools/.tidy-tmp
+        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
           error "check failed; please resolve the above shellcheck error(s)"
         fi
+        rm -- ./tools/.tidy-tmp
+        trap -- 'printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
       }
       for dockerfile_path in ${docker_files[@]+"${docker_files[@]}"}; do
         dockerfile=$(parse-dockerfile "${dockerfile_path}")
@@ -799,12 +800,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2086,SC2096,SC2129
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in .github/workflows/*.yml and **/action.yml"
-    if [[ "${ostype}" == 'windows' ]]; then
-      # No such file or directory: '/proc/N/fd/N'
-      warn "this check is skipped on Windows due to upstream bug (failed to found fd created by <())"
-    elif [[ "${ostype}" == 'dragonfly' ]]; then
-      warn "this check is skipped on DragonFly BSD due to upstream bug (hang)"
-    elif check_install jq python3; then
+    if check_install jq python3; then
       shellcheck_for_gha() {
         local text=$1
         local shell=$2
@@ -816,27 +812,33 @@ elif check_install shellcheck; then
           bash* | sh*) ;;
           *) return ;;
         esac
+        text="#!/usr/bin/env ${shell%' {0}'}"$'\n'"${text}"
         # Use python because sed doesn't support .*?.
         text=$(
-          "python${py_suffix}" - <(printf '%s\n%s' "#!/usr/bin/env ${shell%' {0}'}" "${text}") <<EOF
+          "python${py_suffix}" - <<EOF
 import re
-import sys
-with open(sys.argv[1], 'r') as f:
-    text = f.read()
-text = re.sub(r"\\\${{.*?}}", "\${__GHA_SYNTAX__}", text)
+text = re.sub(r"\\\${{.*?}}", "\${__GHA_SYNTAX__}", r'''${text}''')
 print(text)
 EOF
         )
         case "${ostype}" in
-          windows) text=${text//\r/} ;;
+          windows) text=${text//$'\r'/} ;; # Python print emits \r\n.
         esac
         local color=auto
         if [[ -t 1 ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
           color=always
         fi
-        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" <(printf '%s\n' "${text}") | sed "s/\/dev\/fd\/[0-9][0-9]*/$(sed_rhs_escape "${display_path}")/g"; then
+        # We don't use <(printf '%s\n' "${text}") here because:
+        # Windows: failed to found fd created by <() ("/proc/*/fd/* (git bash/msys2 bash) /dev/fd/* (cygwin bash): openBinaryFile: does not exist (No such file or directory)" error)
+        # DragonFly BSD: hang
+        # Others: false negative
+        trap -- 'rm -- ./tools/.tidy-tmp; printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
+        printf '%s\n' "${text}" >|./tools/.tidy-tmp
+        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
           error "check failed; please resolve the above shellcheck error(s)"
         fi
+        rm -- ./tools/.tidy-tmp
+        trap -- 'printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
       }
       for workflow_path in ${workflows[@]+"${workflows[@]}"}; do
         workflow=$(yq -c '.' "${workflow_path}")
@@ -966,11 +968,7 @@ fi
 if [[ -f .cspell.json ]]; then
   info "spell checking"
   project_dictionary=.github/.cspell/project-dictionary.txt
-  if [[ "${ostype}" == 'solaris' ]] && [[ -n "${CI:-}" ]] && ! type -P npm >/dev/null; then
-    warn "this check is skipped on Solaris due to no node 18+ in upstream package manager"
-  elif [[ "${ostype}" == 'illumos' ]]; then
-    warn "this check is skipped on illumos due to upstream bug (dictionaries are not loaded correctly)"
-  elif check_install npm jq python3; then
+  if check_install npm jq python3; then
     has_rust=''
     if [[ -n "$(ls_files '*Cargo.toml')" ]]; then
       has_rust=1
