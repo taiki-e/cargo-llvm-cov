@@ -82,8 +82,15 @@ pub(crate) fn test_report(
 #[track_caller]
 pub(crate) fn assert_output(output_path: &Path, expected: &str) {
     if env::var_os("CI").is_some() {
+        let color = if env::var_os("GITHUB_ACTIONS").is_some() {
+            &["-c", "color.ui=always"][..]
+        } else {
+            &[]
+        };
         let mut child = Command::new("git")
-            .args(["--no-pager", "diff", "--no-index", "--"])
+            .arg("--no-pager")
+            .args(color)
+            .args(["diff", "--no-index", "--"])
             .arg("-")
             .arg(output_path)
             .stdin(Stdio::piped())
