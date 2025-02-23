@@ -3,7 +3,7 @@
 pub(crate) use std::fs::Metadata;
 use std::{ffi::OsStr, io, path::Path};
 
-pub(crate) use fs_err::{File, create_dir_all, read_dir, symlink_metadata, write};
+pub(crate) use fs_err::{File, create_dir_all, read_dir, write};
 
 /// Removes a file from the filesystem **if exists**. (Similar to `rm -f`)
 pub(crate) fn remove_file(path: impl AsRef<Path>) -> io::Result<()> {

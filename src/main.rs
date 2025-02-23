@@ -11,7 +11,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
     fmt::Write as _,
-    io::{self, BufRead as _, Read as _, Write as _},
+    io::{self, BufRead as _, BufWriter, Read as _, Write as _},
     path::Path,
     process::ExitCode,
     time::SystemTime,
@@ -69,16 +69,20 @@ fn try_main() -> Result<()> {
 
     match args.subcommand {
         Subcommand::Demangle => {
-            rustc_demangle::demangle_stream(&mut io::stdin().lock(), &mut io::stdout(), false)?;
+            let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written many times.
+            rustc_demangle::demangle_stream(&mut io::stdin().lock(), &mut stdout, false)?;
+            stdout.flush()?;
         }
         Subcommand::Clean => clean::run(&mut args)?,
         Subcommand::ShowEnv => {
             let cx = &Context::new(args)?;
-            let stdout = io::stdout();
-            let writer =
-                &mut ShowEnvWriter { writer: stdout.lock(), options: cx.args.show_env.clone() };
+            let writer = &mut ShowEnvWriter {
+                writer: BufWriter::new(io::stdout().lock()), // Buffered because it is written with newline many times.
+                options: cx.args.show_env.clone(),
+            };
             set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
+            writer.writer.flush()?;
         }
         Subcommand::Report { .. } => {
             let cx = &Context::new(args)?;
@@ -613,8 +617,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             // Handle --show-missing-lines.
             let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             if !uncovered_files.is_empty() {
-                let stdout = io::stdout();
-                let mut stdout = stdout.lock();
+                let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
                 writeln!(stdout, "Uncovered Lines:")?;
                 for (file, lines) in &uncovered_files {
                     let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
@@ -800,7 +803,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         target_dir.push("target");
         let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
-        let decoder = ruzstd::decoding::StreamingDecoder::new(fs::File::open(archive_file)?)?;
+        let file = fs::File::open(archive_file)?; // TODO: Buffering?
+        let decoder = ruzstd::decoding::StreamingDecoder::new(file)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
         for entry in archive.entries()? {
@@ -1174,8 +1178,9 @@ impl Format {
             let mut cov = serde_json::from_str::<LlvmCovJsonExport>(&out)?;
             cov.inject(cx.ws.current_manifest.clone());
 
-            let stdout = std::io::stdout().lock();
-            serde_json::to_writer(stdout, &cov)?;
+            let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written many times.
+            serde_json::to_writer(&mut stdout, &cov)?;
+            stdout.flush()?;
         } else {
             cmd.run()?;
         }

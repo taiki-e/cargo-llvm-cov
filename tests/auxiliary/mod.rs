@@ -157,7 +157,7 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64 << 56)
     | 129_u64;
 
 fn perturb_header(path: &Path) {
-    let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap();
+    let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap(); // Not buffered because it is read and written only once each.
     let mut magic = {
         let mut buf = [0_u8; mem::size_of::<u64>()];
         file.read_exact(&mut buf).unwrap();
