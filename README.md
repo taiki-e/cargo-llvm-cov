@@ -516,6 +516,18 @@ To exclude specific file patterns from the report, use the `--ignore-filename-re
 cargo llvm-cov --open --ignore-filename-regex build
 ```
 
+By default, the following patterns and crates specified by `--exclude` or `--exclude-from-report` are excluded.
+
+```text
+{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}
+^{WORKSPACE_ROOT}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}
+^{TARGET_DIR}($|{SEPARATOR})
+^{CARGO_HOME}{SEPARATOR}(registry|git){SEPARATOR}
+^{RUSTUP_HOME}{SEPARATOR}toolchains($|{SEPARATOR})
+```
+
+You can use `--disable-default-ignore-filename-regex` to disable default exclude setting.
+
 ### Exclude code from coverage
 
 To exclude the specific function or module from coverage, use the [`#[coverage(off)]` attribute][rust-lang/rust#84605].
