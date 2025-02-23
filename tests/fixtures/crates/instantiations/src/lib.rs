@@ -1,11 +1,7 @@
 // https://github.com/taiki-e/cargo-llvm-cov/issues/43
 
 fn func<T: Default + PartialOrd>(t: T) -> bool {
-    if t < T::default() {
-        true
-    } else {
-        false
-    }
+    if t < T::default() { true } else { false }
 }
 
 #[test]

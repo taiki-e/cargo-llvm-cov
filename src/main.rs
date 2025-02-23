@@ -17,7 +17,7 @@ use std::{
     time::SystemTime,
 };
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Flags;
 use cargo_llvm_cov::json::{CodeCovJsonExport, CoverageKind, LlvmCovJsonExport};
@@ -786,19 +786,27 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     if binaries_metadata.rust_build_meta.base_output_directories.len() == 1 =>
                 {
                     if cx.args.target.is_some() {
-                        info!("--target flag is no longer needed because detection from nextest archive is now supported");
+                        info!(
+                            "--target flag is no longer needed because detection from nextest archive is now supported"
+                        );
                     }
                     if cx.args.release {
-                        info!("--release flag is no longer needed because detection from nextest archive is now supported");
+                        info!(
+                            "--release flag is no longer needed because detection from nextest archive is now supported"
+                        );
                     }
                     if cx.args.cargo_profile.is_some() {
-                        info!("--cargo-profile flag is no longer needed because detection from nextest archive is now supported");
+                        info!(
+                            "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
+                        );
                     }
                     target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
                     auto_detect_profile = true;
                 }
                 res => {
-                    warn!("found binaries-metadata.json in nextest archive {archive_file:?}, but has unsupported or incompatible format: {res:?}");
+                    warn!(
+                        "found binaries-metadata.json in nextest archive {archive_file:?}, but has unsupported or incompatible format: {res:?}"
+                    );
                 }
             }
         }
@@ -1212,8 +1220,12 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         if let Some(dep) = &cx.args.cov.dep_coverage {
             let format = Format::Json;
             let json = format.get_json(cx, object_files, None).context("failed to get json")?;
-            let crates_io_re = Regex::new(&format!("{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"))?;
-            let dep_re = Regex::new(&format!("{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}{dep}-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"))?;
+            let crates_io_re = Regex::new(&format!(
+                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
+            ))?;
+            let dep_re = Regex::new(&format!(
+                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}{dep}-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
+            ))?;
             let mut set = BTreeSet::new();
             for data in &json.data {
                 for file in &data.files {
@@ -1264,11 +1276,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         }
     }
 
-    if out.0.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(out.0))
-    }
+    if out.0.is_empty() { Ok(None) } else { Ok(Some(out.0)) }
 }
 
 fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {

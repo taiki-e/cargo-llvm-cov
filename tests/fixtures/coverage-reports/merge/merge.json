@@ -28,9 +28,9 @@
               "percent": 100.0
             },
             "lines": {
-              "count": 11,
-              "covered": 10,
-              "percent": 90.9090909090909
+              "count": 9,
+              "covered": 9,
+              "percent": 100.0
             },
             "regions": {
               "count": 6,
@@ -59,9 +59,9 @@
           "percent": 100
         },
         "lines": {
-          "count": 11,
-          "covered": 10,
-          "percent": 90.9090909090909
+          "count": 9,
+          "covered": 9,
+          "percent": 100
         },
         "mcdc": {
           "count": 0,

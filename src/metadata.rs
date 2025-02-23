@@ -4,7 +4,7 @@
 
 use std::{collections::HashMap, ffi::OsStr, path::Path};
 
-use anyhow::{format_err, Context as _, Result};
+use anyhow::{Context as _, Result, format_err};
 use camino::Utf8PathBuf;
 use serde_json::{Map, Value};
 
@@ -118,18 +118,10 @@ impl Target {
 // }
 
 fn into_string<S: From<String>>(value: Value) -> Option<S> {
-    if let Value::String(string) = value {
-        Some(string.into())
-    } else {
-        None
-    }
+    if let Value::String(string) = value { Some(string.into()) } else { None }
 }
 fn into_array(value: Value) -> Option<Vec<Value>> {
-    if let Value::Array(array) = value {
-        Some(array)
-    } else {
-        None
-    }
+    if let Value::Array(array) = value { Some(array) } else { None }
 }
 // fn into_object(value: Value) -> Option<Object> {
 //     if let Value::Object(object) = value {

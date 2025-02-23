@@ -139,11 +139,7 @@ pub(crate) fn perturb_one_header(workspace_root: &Path) -> Option<PathBuf> {
     let target_dir = workspace_root.join("target").join("llvm-cov-target");
     let path = fs::read_dir(target_dir).unwrap().find_map(|entry| {
         let path = entry.ok().unwrap().path();
-        if path.extension() == Some(OsStr::new("profraw")) {
-            Some(path)
-        } else {
-            None
-        }
+        if path.extension() == Some(OsStr::new("profraw")) { Some(path) } else { None }
     });
     if let Some(path) = &path {
         perturb_header(path);

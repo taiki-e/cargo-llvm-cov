@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use camino::Utf8PathBuf;
 
 use crate::{
@@ -135,9 +135,13 @@ impl Context {
             (Some(llvm_cov), Some(llvm_profdata)) => (llvm_cov, llvm_profdata),
             (llvm_cov_env, llvm_profdata_env) => {
                 if llvm_cov_env.is_some() {
-                    warn!("setting only LLVM_COV environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
+                    warn!(
+                        "setting only LLVM_COV environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables"
+                    );
                 } else if llvm_profdata_env.is_some() {
-                    warn!("setting only LLVM_PROFDATA environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables");
+                    warn!(
+                        "setting only LLVM_PROFDATA environment variable may not work properly; consider setting both LLVM_COV and LLVM_PROFDATA environment variables"
+                    );
                 }
                 // --print target-libdir (without --target flag) returns $sysroot/lib/rustlib/$host_triple/lib
                 // llvm-tools exists in $sysroot/lib/rustlib/$host_triple/bin
@@ -220,7 +224,9 @@ impl Context {
         if llvm_profdata_flags.is_none() {
             llvm_profdata_flags = env::var("CARGO_LLVM_PROFDATA_FLAGS")?;
             if llvm_profdata_flags.is_some() {
-                warn!("CARGO_LLVM_PROFDATA_FLAGS is deprecated; consider using LLVM_PROFDATA_FLAGS instead");
+                warn!(
+                    "CARGO_LLVM_PROFDATA_FLAGS is deprecated; consider using LLVM_PROFDATA_FLAGS instead"
+                );
             }
         }
 
@@ -234,7 +240,9 @@ impl Context {
                 Ok(exe) => exe,
                 Err(e) => {
                     let exe = format!("cargo-llvm-cov{}", env::consts::EXE_SUFFIX);
-                    warn!("failed to get current executable, assuming {exe} in PATH as current executable: {e}");
+                    warn!(
+                        "failed to get current executable, assuming {exe} in PATH as current executable: {e}"
+                    );
                     exe.into()
                 }
             },

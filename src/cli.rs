@@ -2,7 +2,7 @@
 
 use std::{ffi::OsString, mem, str::FromStr};
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{Error, Result, bail, format_err};
 use camino::{Utf8Path, Utf8PathBuf};
 use lexopt::{
     Arg::{Long, Short, Value},
@@ -1208,7 +1208,9 @@ impl Args {
                 cargo_args.push(profile);
             }
             if nextest_archive_file.is_some() {
-                bail!("'--nextest-archive-file' is report-specific option; did you mean '--archive-file'?");
+                bail!(
+                    "'--nextest-archive-file' is report-specific option; did you mean '--archive-file'?"
+                );
             }
             nextest_archive_file = archive_file;
             if let Subcommand::Nextest { archive_file: f } = &mut subcommand {
@@ -1221,15 +1223,21 @@ impl Args {
             cargo_profile = profile;
             if let Subcommand::Report { nextest_archive_file: f } = &mut subcommand {
                 if archive_file.is_some() {
-                    bail!("'--archive-file' is nextest-specific option; did you mean '--nextest-archive-file'?");
+                    bail!(
+                        "'--archive-file' is nextest-specific option; did you mean '--nextest-archive-file'?"
+                    );
                 }
                 *f = nextest_archive_file.is_some();
             } else {
                 if archive_file.is_some() {
-                    bail!("'--archive-file' is nextest-specific option and not supported for this subcommand");
+                    bail!(
+                        "'--archive-file' is nextest-specific option and not supported for this subcommand"
+                    );
                 }
                 if nextest_archive_file.is_some() {
-                    bail!("'--nextest-archive-file' is report-specific option and not supported for this subcommand");
+                    bail!(
+                        "'--nextest-archive-file' is report-specific option and not supported for this subcommand"
+                    );
                 }
             }
         }

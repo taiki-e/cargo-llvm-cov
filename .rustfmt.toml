@@ -8,7 +8,6 @@ error_on_line_overflow = true
 # Override the default formatting style.
 # See https://internals.rust-lang.org/t/running-rustfmt-on-rust-lang-rust-and-other-rust-lang-repositories/8732/81.
 use_small_heuristics = "Max"
-# This is the default of 2024 edition https://github.com/rust-lang/rust/pull/114764.
 # This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/3370)
 overflow_delimited_expr = true
 # This is unstable (tracking issue: https://github.com/rust-lang/rustfmt/issues/4991).
@@ -27,6 +26,7 @@ use_try_shorthand = true
 # Set the default settings again to always apply the proper formatting without
 # being affected by the editor settings.
 edition = "2021"
+style_edition = "2024"
 hard_tabs = false
 newline_style = "Unix"
 tab_spaces = 4

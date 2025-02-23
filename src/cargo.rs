@@ -2,7 +2,7 @@
 
 use std::ffi::OsStr;
 
-use anyhow::{bail, Context as _, Result};
+use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Config;
 
@@ -51,7 +51,9 @@ impl Workspace {
         let metadata = Metadata::new(current_manifest.as_std_path(), config.cargo())?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
-            bail!("cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}");
+            bail!(
+                "cargo-llvm-cov doesn't currently supports multi-target builds: {target_for_config:?}"
+            );
         }
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
@@ -61,10 +63,14 @@ impl Workspace {
             rustc_version.nightly || env::var_os("RUSTC_BOOTSTRAP").unwrap_or_default() == "1";
 
         if doctests && !rustc_version.nightly {
-            warn!("--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`");
+            warn!(
+                "--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            );
         }
         if branch && !rustc_version.nightly {
-            warn!("--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`");
+            warn!(
+                "--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            );
         }
         if mcdc && !rustc_version.nightly {
             warn!(

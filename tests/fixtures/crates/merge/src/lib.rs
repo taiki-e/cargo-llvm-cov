@@ -1,9 +1,5 @@
 fn func(x: i32) -> bool {
-    if x < 0 {
-        true
-    } else {
-        false
-    }
+    if x < 0 { true } else { false }
 }
 
 #[test]
