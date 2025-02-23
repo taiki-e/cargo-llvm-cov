@@ -24,7 +24,6 @@ rustfilt
 rustix
 TESTNAME
 trybuild
-winapi
 xargo
 Xdemangler
 xtask

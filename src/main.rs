@@ -701,19 +701,34 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             .into_iter()
             .filter_entry(move |e| {
                 let p = e.path();
+                // Refs: https://github.com/rust-lang/cargo/blob/0.85.0/src/cargo/core/compiler/layout.rs.
                 if p.is_dir() {
-                    if p.file_name()
-                        .is_some_and(|f| f == "incremental" || f == ".fingerprint" || f == "out")
-                    {
+                    if p.file_name().is_some_and(|f| {
+                        f == "incremental"
+                            || f == ".fingerprint"
+                            || if cx.args.cov.include_build_script {
+                                f == "out"
+                            } else {
+                                f == "build"
+                            }
+                    }) {
                         // Ignore incremental compilation related files and output from build scripts.
                         return false;
                     }
-                } else if let Some(stem) = p.file_stem() {
-                    let stem = stem.to_string_lossy();
-                    if stem == "build-script-build" || stem.starts_with("build_script_build-") {
-                        let p = p.parent().unwrap();
-                        if p.parent().unwrap().file_name().unwrap() == "build" {
-                            if cx.args.cov.include_build_script {
+                } else if cx.args.cov.include_build_script {
+                    if let (Some(stem), Some(p)) = (p.file_stem(), p.parent()) {
+                        fn in_build_dir(p: &Path) -> bool {
+                            let Some(p) = p.parent() else { return false };
+                            let Some(f) = p.file_name() else { return false };
+                            f == "build"
+                        }
+                        if in_build_dir(p) {
+                            if stem == "build-script-build"
+                                || stem
+                                    .to_str()
+                                    .unwrap_or_default()
+                                    .starts_with("build_script_build-")
+                            {
                                 let dir = p.file_name().unwrap().to_string_lossy();
                                 if !cx.build_script_re.is_match(&dir) {
                                     return false;
@@ -730,18 +745,31 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
     fn is_object(cx: &Context, f: &Path) -> bool {
         let ext = f.extension().unwrap_or_default();
-        // is_executable::is_executable doesn't work well on WSL.
-        // https://github.com/taiki-e/cargo-llvm-cov/issues/316
-        // https://github.com/taiki-e/cargo-llvm-cov/issues/342
-        if ext == "d" || ext == "rmeta" {
+        // We check extension instead of using is_executable crate because it always return true on WSL:
+        // - https://github.com/taiki-e/cargo-llvm-cov/issues/316
+        // - https://github.com/taiki-e/cargo-llvm-cov/issues/342
+        if ext == "d" || ext == "rlib" || ext == "rmeta" || f.ends_with(".cargo-lock") {
             return false;
         }
-        if cx.ws.target_for_config.triple().contains("-windows")
-            && (ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll"))
-        {
-            return true;
+        #[allow(clippy::disallowed_methods)] // std::fs is okay here since we ignore error contents
+        let Ok(metadata) = std::fs::metadata(f) else {
+            return false;
+        };
+        if !metadata.is_file() {
+            return false;
         }
-        is_executable::is_executable(f)
+        if cx.ws.target_for_config.triple().contains("-windows") {
+            ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll")
+        } else {
+            #[cfg(unix)]
+            {
+                // This is useless on WSL, but check for others just in case.
+                use std::os::unix::fs::PermissionsExt as _;
+                metadata.permissions().mode() & 0o111 != 0
+            }
+            #[cfg(not(unix))]
+            true
+        }
     }
 
     let re = pkg_hash_re(&cx.ws)?;
