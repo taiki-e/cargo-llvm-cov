@@ -751,6 +751,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if ext == "d" || ext == "rlib" || ext == "rmeta" || f.ends_with(".cargo-lock") {
             return false;
         }
+        let target_is_windows = cx.ws.target_for_config.triple().contains("-windows");
+        if target_is_windows
+            && !(ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll"))
+        {
+            return false;
+        }
         #[allow(clippy::disallowed_methods)] // std::fs is okay here since we ignore error contents
         let Ok(metadata) = std::fs::metadata(f) else {
             return false;
@@ -758,8 +764,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !metadata.is_file() {
             return false;
         }
-        if cx.ws.target_for_config.triple().contains("-windows") {
-            ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll")
+        if target_is_windows {
+            true
         } else {
             #[cfg(unix)]
             {
