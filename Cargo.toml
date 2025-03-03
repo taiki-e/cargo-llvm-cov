@@ -45,7 +45,7 @@ walkdir = "2.2.3"
 [dev-dependencies]
 rustversion = "1"
 tempfile = { version = "3", default-features = false }
-test-helper = { features = ["cli", "doc", "git"], git = "https://github.com/taiki-e/test-helper.git", rev = "d2272e8" }
+test-helper = { features = ["cli", "doc", "git"], git = "https://github.com/taiki-e/test-helper.git", rev = "f38a7f5" }
 
 [lints]
 workspace = true

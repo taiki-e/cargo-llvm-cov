@@ -121,17 +121,7 @@ pub(crate) fn normalize_output(output_path: &Path, args: &[&str]) {
 #[track_caller]
 pub(crate) fn test_project(model: &str) -> tempfile::TempDir {
     let tmpdir = tempfile::tempdir().unwrap();
-    let workspace_root = tmpdir.path();
-    let model_path = fixtures_dir().join("crates").join(model);
-
-    for (file_name, from) in test_helper::git::ls_files(model_path, &[]) {
-        let to = &workspace_root.join(file_name);
-        if !to.parent().unwrap().is_dir() {
-            fs::create_dir_all(to.parent().unwrap()).unwrap();
-        }
-        fs::copy(from, to).unwrap();
-    }
-
+    test_helper::git::copy_tracked_files(fixtures_dir().join("crates").join(model), tmpdir.path());
     tmpdir
 }
 
