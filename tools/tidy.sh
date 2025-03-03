@@ -14,7 +14,7 @@ cd -- "$(dirname -- "$0")"/..
 # - git 1.8+
 # - jq 1.6+
 # - npm (node 18+)
-# - python 3.6+
+# - python 3.5.3+
 # - shfmt
 # - shellcheck
 # - cargo, rustfmt (if Rust code exists)
@@ -666,7 +666,7 @@ elif check_install shellcheck; then
   if [[ ${#docker_files[@]} -gt 0 ]]; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2096
-    info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in \$(git ls-files '*Dockerfile*')\`"
+    info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in \`\$(git ls-files '*Dockerfile*')\`"
     if check_install jq python3 parse-dockerfile; then
       shellcheck_for_dockerfile() {
         local text=$1

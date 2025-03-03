@@ -193,5 +193,5 @@ fi
 set -x
 
 git tag "${tag}"
-retry git push origin main
-retry git push origin --tags
+retry git push origin refs/heads/main
+retry git push origin refs/tags/"${tag}"
