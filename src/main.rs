@@ -669,9 +669,9 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     }
     let mut input_files = String::new();
     for path in profraw_files {
-        input_files.push_str(
-            path.to_str().with_context(|| format!("{path:?} contains invalid utf-8 data"))?,
-        );
+        input_files.push_str(path.to_str().with_context(|| {
+            format!("{} ({:?}) contains invalid utf-8 data", path.display(), path.as_os_str())
+        })?);
         input_files.push('\n');
     }
     let input_files_path = &cx.ws.target_dir.join(format!("{}-profraw-list", cx.ws.name));
