@@ -69,7 +69,7 @@ unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 [workspace.lints.clippy]
 all = "warn" # Downgrade deny-by-default lints
-# pedantic = "warn" # TODO: ICE https://github.com/rust-lang/rust/issues/137640
+pedantic = "warn"
 as_ptr_cast_mut = "warn"
 as_underscore = "warn"
 default_union_representation = "warn"
