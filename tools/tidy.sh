@@ -14,7 +14,7 @@ cd -- "$(dirname -- "$0")"/..
 # - git 1.8+
 # - jq 1.6+
 # - npm (node 18+)
-# - python 3.5.3+
+# - python 3.6+ and pipx
 # - shfmt
 # - shellcheck
 # - cargo, rustfmt (if Rust code exists)
@@ -69,7 +69,11 @@ check_diff() {
       should_fail=1
     fi
   else
-    if ! git --no-pager diff --exit-code "$@" &>/dev/null; then
+    local res
+    res=$(git --no-pager diff --exit-code --name-only "$@" || true)
+    if [[ -n "${res}" ]]; then
+      warn "please commit changes made by formatter/generator if exists on the following files"
+      print_fenced "${res}"$'\n'
       should_fail=1
     fi
   fi
@@ -119,15 +123,6 @@ check_hidden() {
 sed_rhs_escape() {
   sed 's/\\/\\\\/g; s/\&/\\\&/g; s/\//\\\//g' <<<"$1"
 }
-venv_install_yq() {
-  if [[ ! -e "${venv_bin}/yq${exe}" ]]; then
-    if [[ ! -d .venv ]]; then
-      "python${py_suffix}" -m venv .venv >&2
-    fi
-    info "installing yq to .venv using pip${py_suffix}"
-    "${venv_bin}/pip${py_suffix}${exe}" install yq >&2
-  fi
-}
 
 if [[ $# -gt 0 ]]; then
   cat <<EOF
@@ -137,19 +132,15 @@ EOF
   exit 1
 fi
 
-exe=''
 py_suffix=''
 if type -P python3 >/dev/null; then
   py_suffix=3
 fi
-venv_bin=.venv/bin
 yq() {
-  venv_install_yq
-  "${venv_bin}/yq${exe}" "$@"
+  pipx run yq "$@"
 }
 tomlq() {
-  venv_install_yq
-  "${venv_bin}/tomlq${exe}" "$@"
+  pipx run --spec yq tomlq "$@"
 }
 case "$(uname -s)" in
   Linux)
@@ -187,8 +178,6 @@ case "$(uname -s)" in
     ;;
   MINGW* | MSYS* | CYGWIN* | Windows_NT)
     ostype=windows
-    exe=.exe
-    venv_bin=.venv/Scripts
     if type -P jq >/dev/null; then
       # https://github.com/jqlang/jq/issues/1854
       _tmp=$(jq -r .a <<<'{}')
@@ -200,12 +189,10 @@ case "$(uname -s)" in
           jq() { command jq "$@" | tr -d '\r'; }
         fi
         yq() {
-          venv_install_yq
-          "${venv_bin}/yq${exe}" "$@" | tr -d '\r'
+          pipx run yq "$@" | tr -d '\r'
         }
         tomlq() {
-          venv_install_yq
-          "${venv_bin}/tomlq${exe}" "$@" | tr -d '\r'
+          pipx run --spec yq tomlq "$@" | tr -d '\r'
         }
       fi
     fi
@@ -219,7 +206,7 @@ exclude_from_ls_files=()
 # - `git submodule status` lists submodules. Use sed to remove the first character indicates status ( |+|-).
 # - `git ls-files --deleted` lists removed files.
 while IFS=$'\n' read -r line; do exclude_from_ls_files+=("${line}"); done < <({
-  find . \! \( -name .git -prune \) \! \( -name target -prune \) \! \( -name .venv -prune \) \! \( -name tmp -prune \) -type l | cut -c3-
+  find . \! \( -name .git -prune \) \! \( -name target -prune \) \! \( -name tmp -prune \) -type l | cut -c3-
   git submodule status | sed 's/^.//' | cut -d' ' -f2
   git ls-files --deleted
 } | LC_ALL=C sort -u)
@@ -242,7 +229,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
   info "checking Rust code style"
   check_config .rustfmt.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.rustfmt.toml"
   check_config .clippy.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.clippy.toml"
-  if check_install cargo jq python3; then
+  if check_install cargo jq python3 pipx; then
     # `cargo fmt` cannot recognize files not included in the current workspace and modules
     # defined inside macros, so run rustfmt directly.
     # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
@@ -597,7 +584,7 @@ if [[ -n "${res}" ]]; then
   print_fenced "${res}"$'\n'
 fi
 # TODO: chmod|chown
-res=$({ grep -En '(^|[^0-9A-Za-z\."'\''-])(basename|cat|cd|cp|dirname|ln|ls|mkdir|mv|pushd|rm|rmdir|tee|touch)( +-[0-9A-Za-z]+)* +[^<>\|-]' "${bash_files[@]}" || true; } | { grep -Ev '^[^ ]+: *(#|//)' || true; } | LC_ALL=C sort)
+res=$({ grep -En '(^|[^0-9A-Za-z\."'\''-])(basename|cat|cd|cp|dirname|ln|ls|mkdir|mv|pushd|rm|rmdir|tee|touch|kill|trap)( +-[0-9A-Za-z]+)* +[^<>\|-]' "${bash_files[@]}" || true; } | { grep -Ev '^[^ ]+: *(#|//)' || true; } | LC_ALL=C sort)
 if [[ -n "${res}" ]]; then
   error "use \`--\` before path(s): see https://github.com/koalaman/shellcheck/issues/2707 / https://github.com/koalaman/shellcheck/issues/2612 / https://github.com/koalaman/shellcheck/issues/2305 / https://github.com/koalaman/shellcheck/issues/2157 / https://github.com/koalaman/shellcheck/issues/2121 / https://github.com/koalaman/shellcheck/issues/314 for more"
   print_fenced "${res}"$'\n'
@@ -800,7 +787,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2086,SC2096,SC2129
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in .github/workflows/*.yml and **/action.yml"
-    if check_install jq python3; then
+    if check_install jq python3 pipx; then
       shellcheck_for_gha() {
         local text=$1
         local shell=$2
@@ -968,7 +955,7 @@ fi
 if [[ -f .cspell.json ]]; then
   info "spell checking"
   project_dictionary=.github/.cspell/project-dictionary.txt
-  if check_install npm jq python3; then
+  if check_install npm jq python3 pipx; then
     has_rust=''
     if [[ -n "$(ls_files '*Cargo.toml')" ]]; then
       has_rust=1
