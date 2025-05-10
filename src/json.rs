@@ -575,7 +575,7 @@ mod tests {
         let expected = match kind {
             CoverageKind::Functions => 100_f64,
             CoverageKind::Lines => 57.142_857_142_857_146,
-            CoverageKind::Regions => 54.545_454_545_454_55,
+            CoverageKind::Regions => 61.538_461_538_461_54,
         };
 
         // There are 5 different percentages, make sure we pick the correct one.
@@ -612,16 +612,16 @@ mod tests {
         let cases = &[
             // (path, uncovered_functions, uncovered_lines, uncovered_regions)
             ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 0, 6, 5),
-            ("tests/fixtures/coverage-reports/no_test/no_test.json", 1, 7, 6),
+            ("tests/fixtures/coverage-reports/no_test/no_test.json", 1, 7, 7),
         ];
 
         for &(file, uncovered_functions, uncovered_lines, uncovered_regions) in cases {
-            let file = manifest_dir.join(file);
+            let file = &manifest_dir.join(file);
             let s = fs::read_to_string(file).unwrap();
             let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
-            assert_eq!(json.count_uncovered_functions().unwrap(), uncovered_functions);
-            assert_eq!(json.count_uncovered_lines().unwrap(), uncovered_lines);
-            assert_eq!(json.count_uncovered_regions().unwrap(), uncovered_regions);
+            assert_eq!(json.count_uncovered_functions().unwrap(), uncovered_functions, "{file:?}");
+            assert_eq!(json.count_uncovered_lines().unwrap(), uncovered_lines, "{file:?}");
+            assert_eq!(json.count_uncovered_regions().unwrap(), uncovered_regions, "{file:?}");
         }
     }
 
