@@ -169,13 +169,16 @@ pub(crate) enum Subcommand {
     /// Output the environment set by cargo-llvm-cov to build Rust projects.
     ShowEnv,
 
-    /// Run tests with cargo nextest
+    /// Run tests with cargo nextest.
     Nextest {
         archive_file: bool,
     },
 
-    /// Build and archive tests with cargo nextest
+    /// Build and archive tests with cargo nextest.
     NextestArchive,
+
+    /// Generate a coverage report of a fuzz target with cargo fuzz coverage.
+    FuzzCoverage,
 
     // internal (unstable)
     Demangle,
@@ -190,10 +193,21 @@ static CARGO_LLVM_COV_SHOW_ENV_USAGE: &str = include_str!("../docs/cargo-llvm-co
 static CARGO_LLVM_COV_NEXTEST_USAGE: &str = include_str!("../docs/cargo-llvm-cov-nextest.txt");
 static CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE: &str =
     include_str!("../docs/cargo-llvm-cov-nextest-archive.txt");
+static CARGO_LLVM_COV_NEXTEST_FUZZ_COVERAGE_USAGE: &str =
+    include_str!("../docs/cargo-llvm-cov-fuzz-coverage.txt");
 
 impl Subcommand {
+    /// Whether command line flags can be forwarded to this subcommand
     fn can_passthrough(subcommand: Self) -> bool {
-        matches!(subcommand, Self::Test | Self::Run | Self::Nextest { .. } | Self::NextestArchive)
+        // These are the subcommands that themselves call other cargo subcommands.
+        matches!(
+            subcommand,
+            Self::Test
+                | Self::Run
+                | Self::Nextest { .. }
+                | Self::NextestArchive
+                | Self::FuzzCoverage
+        )
     }
 
     fn help_text(subcommand: Self) -> &'static str {
@@ -206,6 +220,7 @@ impl Subcommand {
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
             Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
+            Self::FuzzCoverage => CARGO_LLVM_COV_NEXTEST_FUZZ_COVERAGE_USAGE,
             Self::Demangle => "", // internal API
         }
     }
@@ -220,6 +235,7 @@ impl Subcommand {
             Self::ShowEnv => "show-env",
             Self::Nextest { .. } => "nextest",
             Self::NextestArchive => "nextest-archive",
+            Self::FuzzCoverage => "fuzz-coverage",
             Self::Demangle => "demangle",
         }
     }
@@ -247,6 +263,7 @@ impl FromStr for Subcommand {
             "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest { archive_file: false }),
             "nextest-archive" => Ok(Self::NextestArchive),
+            "fuzz-coverage" => Ok(Self::FuzzCoverage),
             "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
         }
