@@ -329,6 +329,9 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
     pub(crate) disable_default_ignore_filename_regex: bool,
+    // For debugging (unstable)
+    /// Disable skipping of files from vendored sources.
+    pub(crate) disable_default_ignore_vendor: bool,
     /// Show instantiations in report
     pub(crate) show_instantiations: bool,
     /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
@@ -552,6 +555,7 @@ impl Args {
         let mut failure_mode = None;
         let mut ignore_filename_regex = None;
         let mut disable_default_ignore_filename_regex = false;
+        let mut disable_default_ignore_vendor = false;
         let mut show_instantiations = false;
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
@@ -741,6 +745,9 @@ impl Args {
                 Long("ignore-filename-regex") => parse_opt!(ignore_filename_regex),
                 Long("disable-default-ignore-filename-regex") => {
                     parse_flag!(disable_default_ignore_filename_regex);
+                }
+                Long("disable-default-ignore-vendor") => {
+                    parse_flag!(disable_default_ignore_vendor);
                 }
                 Long("show-instantiations") => parse_flag!(show_instantiations),
                 Long("hide-instantiations") => {
@@ -1258,6 +1265,7 @@ impl Args {
                 failure_mode,
                 ignore_filename_regex,
                 disable_default_ignore_filename_regex,
+                disable_default_ignore_vendor,
                 show_instantiations,
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,
