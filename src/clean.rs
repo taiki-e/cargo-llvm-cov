@@ -164,7 +164,8 @@ fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool
 
 fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
     let path = path.as_ref();
-    #[allow(clippy::disallowed_methods)] // std::fs is okay here since we ignore error contents
+    // Using std::fs instead of fs-err is okay here since we ignore error contents
+    #[allow(clippy::disallowed_methods)]
     let m = std::fs::symlink_metadata(path);
     if m.as_ref().map(fs::Metadata::is_dir).unwrap_or(false) {
         if verbose {

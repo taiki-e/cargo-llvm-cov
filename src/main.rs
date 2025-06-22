@@ -760,7 +760,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         {
             return false;
         }
-        #[allow(clippy::disallowed_methods)] // std::fs is okay here since we ignore error contents
+        // Using std::fs instead of fs-err is okay here since we ignore error contents
+        #[allow(clippy::disallowed_methods)]
         let Ok(metadata) = std::fs::metadata(f) else {
             return false;
         };
