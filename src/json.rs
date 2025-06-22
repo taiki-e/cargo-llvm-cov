@@ -420,7 +420,7 @@ struct Function {
     regions: Vec<Region>,
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
 struct Region(
     /* LineStart */ u64,
@@ -476,7 +476,7 @@ impl fmt::Debug for Region {
 }
 
 /// The location of a region
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 struct RegionLocation {
     start_line: u64,
     end_line: u64,
