@@ -286,7 +286,7 @@ pub(crate) struct LlvmCovOptions {
     /// See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
     pub(crate) codecov: bool,
 
-    /// Generate coverage report in “text” format
+    /// Generate coverage report in "text" format
     ///
     /// If --output-path or --output-dir is not specified, the report will be printed to stdout.
     ///
@@ -858,8 +858,9 @@ impl Args {
                             let _guard = term::warn::ignore();
                             warn!(
                                 "note that `{val}` is treated as test filter instead of subcommand \
-                                 because `cargo llvm-cov nextest` internally calls `cargo nextest \
-                                 run`; if you want to use `nextest archive`, please use `cargo llvm-cov nextest-archive`"
+                                 because `cargo llvm-cov nextest` internally calls \
+                                 `cargo nextest run`; if you want to use `nextest archive`, \
+                                 please use `cargo llvm-cov nextest-archive`"
                             );
                         }
                         cargo_args.push(val);

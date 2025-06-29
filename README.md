@@ -91,7 +91,7 @@ OPTIONS:
             See <https://llvm.org/docs/CommandGuide/llvm-cov.html#llvm-cov-export> for more.
 
         --text
-            Generate coverage report in “text” format
+            Generate coverage report in "text" format
 
             If --output-path or --output-dir is not specified, the report will be printed to stdout.
 
