@@ -516,7 +516,7 @@ To exclude specific file patterns from the report, use the `--ignore-filename-re
 cargo llvm-cov --open --ignore-filename-regex build
 ```
 
-By default, the following patterns and crates specified by `--exclude` or `--exclude-from-report` are excluded.
+By default, [vendored sources](https://doc.rust-lang.org/cargo/commands/cargo-vendor.html) will not be included in the report. Also, the following patterns and crates specified by `--exclude` or `--exclude-from-report` are excluded:
 
 ```text
 {SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}
