@@ -1257,6 +1257,13 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         out.push(ignore_filename);
     }
     if !cx.args.cov.disable_default_ignore_filename_regex {
+        cx.ws
+            .config
+            .source
+            .iter()
+            .filter_map(|(_, source)| source.directory.as_deref())
+            .for_each(|directory| out.push_abs_path(directory));
+
         if let Some(dep) = &cx.args.cov.dep_coverage {
             let format = Format::Json;
             let json = format.get_json(cx, object_files, None).context("failed to get json")?;
@@ -1314,14 +1321,6 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 out.push_abs_path(path);
             }
         }
-    }
-    if !cx.args.cov.disable_default_ignore_vendor {
-        cx.ws
-            .config
-            .source
-            .iter()
-            .filter_map(|(_, source)| source.directory.as_deref())
-            .for_each(|directory| out.push_abs_path(directory));
     }
 
     if out.0.is_empty() { Ok(None) } else { Ok(Some(out.0)) }
