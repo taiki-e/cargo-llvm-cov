@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.17] - 2025-07-06
+
 - Exclude local vendored sources by default. ([#438](https://github.com/taiki-e/cargo-llvm-cov/pull/438), thanks @Altair-Bueno)
 
 - Remove dependency on `is_executable`. ([#422](https://github.com/taiki-e/cargo-llvm-cov/pull/422))
@@ -690,7 +692,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.16...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.17...HEAD
+[0.6.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.15...v0.6.16
 [0.6.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.13...v0.6.14
