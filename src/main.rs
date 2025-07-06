@@ -113,6 +113,15 @@ fn try_main() -> Result<()> {
             create_dirs(cx)?;
             archive_nextest(cx)?;
         }
+        Subcommand::FuzzCoverage => {
+            let cx = &Context::new(args)?;
+            clean::clean_partial(cx)?;
+            create_dirs(cx)?;
+            run_fuzz_coverage(cx)?;
+            if !cx.args.cov.no_report {
+                generate_report(cx)?;
+            }
+        }
         Subcommand::None | Subcommand::Test => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
@@ -439,6 +448,41 @@ fn archive_nextest(cx: &Context) -> Result<()> {
     Ok(())
 }
 
+fn run_fuzz_coverage(cx: &Context) -> Result<()> {
+    let mut cargo = cx.cargo();
+
+    set_env(cx, &mut cargo, IsNextest(false))?;
+
+    cargo.arg("fuzz").arg("coverage");
+
+    if let Some(target) = &cx.args.target {
+        cargo.arg("--target");
+        cargo.arg(target);
+    }
+    if cx.args.release {
+        cargo.arg("--release");
+    }
+
+    cargo.arg("--target-dir");
+    cargo.arg(cx.ws.target_dir.as_str());
+
+    for cargo_arg in &cx.args.cargo_args {
+        cargo.arg(cargo_arg);
+    }
+
+    if !cx.args.rest.is_empty() {
+        cargo.args(&cx.args.rest);
+    }
+
+    if term::verbose() {
+        status!("Running", "{cargo}");
+    }
+    stdout_to_stderr(cx, &mut cargo);
+    cargo.run()?;
+
+    Ok(())
+}
+
 fn run_nextest(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
@@ -533,7 +577,15 @@ fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
-    merge_profraw(cx).context("failed to merge profile data")?;
+    let profraw_path = match cx.args.subcommand {
+        Subcommand::FuzzCoverage => {
+            let fuzz_target = cx.args.rest.iter().find(|s| !s.starts_with("--")).unwrap();
+            let path = std::env::current_dir()?.join(format!("coverage/{fuzz_target}/raw"));
+            Utf8PathBuf::from(path.to_string_lossy().as_ref())
+        }
+        _ => cx.ws.target_dir.clone(),
+    };
+    merge_profraw(cx, &profraw_path).context("failed to merge profile data")?;
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx, &object_files)?;
@@ -650,10 +702,10 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-fn merge_profraw(cx: &Context) -> Result<()> {
+fn merge_profraw(cx: &Context, profraw_path: &Utf8Path) -> Result<()> {
     // Convert raw profile data.
     let profraw_files = glob::glob(
-        Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str())).join("*.profraw").as_str(),
+        Utf8Path::new(&glob::Pattern::escape(profraw_path.as_str())).join("*.profraw").as_str(),
     )?
     .filter_map(Result::ok)
     .collect::<Vec<_>>();
@@ -664,7 +716,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         warn!(
             "not found *.profraw files in {}; this may occur if target directory is accidentally \
              cleared, or running report subcommand without running any tests or binaries",
-            cx.ws.target_dir
+            profraw_path
         );
     }
     let mut input_files = String::new();
