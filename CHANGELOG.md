@@ -12,6 +12,16 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Exclude local vendored sources by default. ([#438](https://github.com/taiki-e/cargo-llvm-cov/pull/438), thanks @Altair-Bueno)
+
+- Remove dependency on `is_executable`. ([#422](https://github.com/taiki-e/cargo-llvm-cov/pull/422))
+
+- Update `opener` to 0.8.
+
+- Update `duct` to 1.
+
+- Documentation improvements.
+
 ## [0.6.16] - 2025-01-16
 
 - Add `--with-pwsh-env-prefix` to `cargo llvm-cov show-env` subcommand. ([#411](https://github.com/taiki-e/cargo-llvm-cov/pull/411), thanks @LittleBoxOfSunshine)
