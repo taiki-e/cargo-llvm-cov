@@ -12,7 +12,7 @@ use std::{
     ffi::{OsStr, OsString},
     fmt::Write as _,
     io::{self, BufRead as _, BufWriter, Read as _, Write as _},
-    path::{Path, PathBuf},
+    path::Path,
     process::ExitCode,
     time::SystemTime,
 };
@@ -1267,8 +1267,8 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         // reserved characters for file paths, meaning a naive string replacement can safely correct
         // the paths.
         #[cfg(windows)]
-        let vendor_dirs =
-            vendor_dirs.map(|dir| PathBuf::from(dir.to_string_lossy().replace("/", "\\")));
+        let vendor_dirs = vendor_dirs
+            .map(|dir| std::path::PathBuf::from(dir.to_string_lossy().replace("/", "\\")));
 
         vendor_dirs.for_each(|directory| out.push_abs_path(directory));
 
