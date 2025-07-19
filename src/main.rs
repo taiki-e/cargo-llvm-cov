@@ -1257,12 +1257,20 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         out.push(ignore_filename);
     }
     if !cx.args.cov.disable_default_ignore_filename_regex {
-        cx.ws
-            .config
-            .source
-            .iter()
-            .filter_map(|(_, source)| source.directory.as_deref())
-            .for_each(|directory| out.push_abs_path(directory));
+        let vendor_dirs =
+            cx.ws.config.source.iter().filter_map(|(_, source)| source.directory.as_deref());
+
+        // On Windows, file paths in cargo config.toml's can use `/` or `\` (when escaped as `\\`).
+        // This value is going to be passed through into a regex, not through a path resolution step
+        // that is agnostic to slash direction. llvm-cov uses paths with backslashes, which will
+        // fail to match against a vendor directory like: `vendor/rust`. Both slash types are
+        // reserved characters for file paths, meaning a naive string replacement can safely correct
+        // the paths.
+        #[cfg(windows)]
+        let vendor_dirs = vendor_dirs
+            .map(|dir| std::path::PathBuf::from(dir.to_string_lossy().replace("/", "\\")));
+
+        vendor_dirs.for_each(|directory| out.push_abs_path(directory));
 
         if let Some(dep) = &cx.args.cov.dep_coverage {
             let format = Format::Json;
