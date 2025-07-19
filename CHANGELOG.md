@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.18] - 2025-07-19
+
 - Fix bug in exclude of local vendored sources on Windows. ([#442](https://github.com/taiki-e/cargo-llvm-cov/pull/442), thanks @LittleBoxOfSunshine)
 
 ## [0.6.17] - 2025-07-06
@@ -694,7 +696,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.17...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.18...HEAD
+[0.6.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.15...v0.6.16
 [0.6.15]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.14...v0.6.15
