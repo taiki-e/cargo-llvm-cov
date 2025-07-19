@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix bug in exclude of local vendored sources on Windows. ([#442](https://github.com/taiki-e/cargo-llvm-cov/pull/442), thanks @LittleBoxOfSunshine)
+
 ## [0.6.17] - 2025-07-06
 
 - Exclude local vendored sources by default. ([#438](https://github.com/taiki-e/cargo-llvm-cov/pull/438), thanks @Altair-Bueno)
