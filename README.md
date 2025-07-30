@@ -470,7 +470,7 @@ source <(cargo llvm-cov show-env --export-prefix)
 cargo llvm-cov clean --workspace
 # Above two commands should be called before build binaries.
 
-cargo build # Build rust binaries with intrumentation
+cargo build # Build rust binaries with instrumentation.
 # Commands using binaries in target/debug/*, including `cargo test` and other cargo subcommands.
 # ...
 
