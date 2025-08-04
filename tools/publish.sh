@@ -118,7 +118,7 @@ done
 changed_paths=("${changelog}" "${docs[@]}")
 # Publishing is unrestricted if null, and forbidden if an empty array.
 for pkg in $(jq -c '. as $metadata | .workspace_members[] as $id | $metadata.packages[] | select(.id == $id and .publish != [])' <<<"${metadata}"); do
-  eval "$(jq -r '@sh "NAME=\(.name) ACTUAL_VERSION=\(.version) manifest_path=\(.manifest_path)"' <<<"${pkg}")"
+  eval "$(jq -r '@sh "NAME=\(.name) ACTUAL_VERSION=\(.version) MANIFEST_PATH=\(.manifest_path)"' <<<"${pkg}")"
   if [[ -z "${prev_version}" ]]; then
     prev_version="${ACTUAL_VERSION}"
   fi
@@ -127,12 +127,12 @@ for pkg in $(jq -c '. as $metadata | .workspace_members[] as $id | $metadata.pac
     bail "publishable workspace members must be version '${prev_version}', but package '${NAME}' is version '${ACTUAL_VERSION}'"
   fi
 
-  changed_paths+=("${manifest_path}")
+  changed_paths+=("${MANIFEST_PATH}")
   # Update version in Cargo.toml.
-  if ! grep -Eq "^version = \"${prev_version}\" #publish:version" "${manifest_path}"; then
-    bail "not found '#publish:version' in version in ${manifest_path}"
+  if ! grep -Eq "^version = \"${prev_version}\" #publish:version" "${MANIFEST_PATH}"; then
+    bail "not found '#publish:version' in version in ${MANIFEST_PATH}"
   fi
-  sed -E "${in_place[@]}" "s/^version = \"${prev_version}\" #publish:version/version = \"${version}\" #publish:version/g" "${manifest_path}"
+  sed -E "${in_place[@]}" "s/^version = \"${prev_version}\" #publish:version/version = \"${version}\" #publish:version/g" "${MANIFEST_PATH}"
   # Update '=' requirement in Cargo.toml.
   for manifest in $(git ls-files '*Cargo.toml'); do
     if grep -Eq "^${NAME} = \\{ version = \"=${prev_version}\"" "${manifest}"; then
