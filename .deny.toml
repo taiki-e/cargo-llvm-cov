@@ -24,7 +24,6 @@ build.allow-build-scripts = [
     { name = "rustix" }, # via tar
     { name = "serde_json" },
     { name = "serde" },
-    { name = "signal-hook" }, # via duct, will be removed once the next version of duct is released
     { name = "windows_aarch64_gnullvm" },
     { name = "windows_aarch64_msvc" },
     { name = "windows_i686_gnu" },
@@ -36,7 +35,6 @@ build.allow-build-scripts = [
 ]
 build.bypass = [
     { name = "autocfg", allow-globs = ["tests/wrap_ignored"] }, # via fs-err
-    { name = "signal-hook", allow-globs = ["ci-check.sh"] }, # via duct, will be removed once the next version of duct is released
     # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
     { name = "windows_aarch64_gnullvm", allow-globs = ["lib/*.a"] },
     { name = "windows_aarch64_msvc", allow-globs = ["lib/*.lib"] },
