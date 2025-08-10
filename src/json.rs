@@ -565,7 +565,7 @@ mod tests {
             let s = fs::read_to_string(file).unwrap();
             let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
             assert_eq!(json.type_, "llvm.coverage.json.export");
-            assert!(json.version.starts_with("2.0."));
+            assert!(json.version.starts_with("3.0."));
             assert_eq!(json.cargo_llvm_cov, None);
             serde_json::to_string(&json).unwrap();
         }

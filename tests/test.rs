@@ -18,9 +18,6 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     let mut set: Vec<(&'static str, &'static [&'static str])> = vec![
         ("txt", &["--text", "--show-instantiations"]),
         ("hide-instantiations.txt", &["--text"]),
-        ("json", &["--json", "--summary-only"]),
-        // TODO: full JSON output is unstable between platform.
-        // ("full.json", &["--json"]),
         ("lcov.info", &["--lcov", "--summary-only"]),
         // TODO: test Cobertura output
         ("codecov.json", &["--codecov"]),
@@ -28,6 +25,12 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     if rustversion::cfg!(since(1.82)) {
         // nightly-2024-08-01 fixed bug in report generation, so the latest report is not the same as the old report.
         set.push(("summary.txt", &[]));
+    }
+    if rustversion::cfg!(since(1.91)) {
+        // LLVM 21 (1.91) bumped llvm.coverage.json.export version.
+        set.push(("json", &["--json", "--summary-only"]));
+        // TODO: full JSON output is unstable between platform.
+        // ("full.json", &["--json"]),
     }
     set
 }
