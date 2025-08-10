@@ -203,6 +203,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
         if cx.args.cov.mcdc {
             // Tracking issue: https://github.com/rust-lang/rust/issues/124144
+            // TODO: Unstable MC/DC support has been removed in https://github.com/rust-lang/rust/pull/144999
             flags.push("-Z");
             flags.push("coverage-options=mcdc");
         } else if cx.args.cov.branch {
