@@ -164,6 +164,7 @@ jobs:
           - llvm: '18'
           - llvm: '19'
           - llvm: '20'
+          - llvm: '21'
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
@@ -223,7 +224,7 @@ jobs:
           export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
           export LLVM_PROFDATA="llvm-profdata-${{ matrix.llvm }}"
           case "${{ matrix.llvm }}" in
-            1[0-7])
+            1[4-7])
               retry rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
               cargo clean
               cargo +1.60 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv

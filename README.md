@@ -456,7 +456,7 @@ Known compatible Rust (installed via rustup) and LLVM versions:
 | ---------- | -------------- | -------------- | -------------- |
 | LLVM 14-17 | **✓**          |                |                |
 | LLVM 18    |                | **✓**          |                |
-| LLVM 19-20 |                |                | **✓**          |
+| LLVM 19-21 |                |                | **✓**          |
 
 ### Get coverage of external tests
 
