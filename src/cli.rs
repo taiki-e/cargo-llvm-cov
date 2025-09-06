@@ -369,9 +369,10 @@ impl LlvmCovOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) enum ShowEnvFormat {
     /// Each line: key=<escaped value>, escaped using [`shell_escape::escape`].
+    #[default]
     EscapedKeyValuePair,
     /// Prepend "export " to each line, so that the output is suitable to be sourced by bash.
     UnixExport,
@@ -412,12 +413,6 @@ impl ShowEnvFormat {
                 format!("$env:{key}=\"{value}\"")
             }
         }
-    }
-}
-
-impl Default for ShowEnvFormat {
-    fn default() -> Self {
-        Self::EscapedKeyValuePair
     }
 }
 
