@@ -35,8 +35,6 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
     set
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
     for (extension, args2) in test_set() {
         test_report(model, name, extension, None, &[args, args2].concat(), envs);
@@ -47,7 +45,7 @@ fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
 // - add tests for non-crates.io dependencies
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn real1() {
     run("real1", "workspace_root", &[], &[]);
@@ -58,7 +56,7 @@ fn real1() {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn virtual1() {
     run("virtual1", "workspace_root", &[], &[]);
@@ -87,7 +85,7 @@ fn virtual1() {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn no_test() {
     run("no_test", "no_test", &[], &[]);
@@ -97,7 +95,7 @@ fn no_test() {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn bin_crate() {
     run("bin_crate", "bin_crate", &[], &[]);
@@ -110,7 +108,7 @@ fn bin_crate() {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn instantiations() {
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
@@ -118,7 +116,7 @@ fn instantiations() {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
@@ -208,7 +206,7 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
 }
 
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::since(1.88)]
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn clean_ws() {
     let model = "merge";
