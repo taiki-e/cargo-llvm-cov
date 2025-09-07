@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.19] - 2025-09-07
+
 - Distribute prebuilt binaries for powerpc64le/riscv64gc/s390x Linux.
 
 ## [0.6.18] - 2025-07-19
@@ -698,7 +700,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.18...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.19...HEAD
+[0.6.19]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.15...v0.6.16
