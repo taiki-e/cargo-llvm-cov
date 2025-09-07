@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Distribute prebuilt binaries for powerpc64le/riscv64gc/s390x Linux.
+
 ## [0.6.18] - 2025-07-19
 
 - Fix bug in exclude of local vendored sources on Windows. ([#442](https://github.com/taiki-e/cargo-llvm-cov/pull/442), thanks @LittleBoxOfSunshine)

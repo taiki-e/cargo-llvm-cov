@@ -52,6 +52,15 @@ jobs:
           - target: x86_64-unknown-freebsd
           - target: universal-apple-darwin
             os: macos-13
+          - target: powerpc64le-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: powerpc64le-unknown-linux-musl
+          - target: riscv64gc-unknown-linux-gnu
+            os: ubuntu-22.04
+          - target: riscv64gc-unknown-linux-musl
+          - target: s390x-unknown-linux-gnu
+            os: ubuntu-22.04
+          # - target: s390x-unknown-linux-musl # tier 3
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     permissions:
