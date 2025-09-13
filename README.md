@@ -604,6 +604,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # required for private repos or protected branches
+          files: lcov.info
           fail_ci_if_error: true
 ```
 
@@ -618,6 +619,7 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
   uses: codecov/codecov-action@v5
   with:
     token: ${{ secrets.CODECOV_TOKEN }} # required for private repos or protected branches
+    files: codecov.json
     fail_ci_if_error: true
 ```
 
