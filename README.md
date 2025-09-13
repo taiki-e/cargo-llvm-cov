@@ -593,7 +593,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install Rust
         run: rustup update stable
       - name: Install cargo-llvm-cov
@@ -601,9 +601,9 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          token: ${{ secrets.CODECOV_TOKEN }} # required for private repos or protected branches
           files: lcov.info
           fail_ci_if_error: true
 ```
@@ -616,9 +616,9 @@ By using `--codecov` flag instead of `--lcov` flag, you can use region coverage 
 - name: Generate code coverage
   run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
 - name: Upload coverage to Codecov
-  uses: codecov/codecov-action@v3
+  uses: codecov/codecov-action@v5
   with:
-    token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+    token: ${{ secrets.CODECOV_TOKEN }} # required for private repos or protected branches
     files: codecov.json
     fail_ci_if_error: true
 ```
