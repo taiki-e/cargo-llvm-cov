@@ -1300,18 +1300,12 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 out.push(f);
             }
         } else {
-            // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
-            //       We may have a directory like tests/support, so maybe we need both?
-            if cx.args.remap_path_prefix {
-                out.push(format!(
-                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
-                ));
-            } else {
-                out.push(format!(
-                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
-                    regex::escape(cx.ws.metadata.workspace_root.as_str())
-                ));
-            }
+            // TODO: should skip directory for `tests|examples|benches`?
+            //  all *.rs in the work pakcage should output coverage info?
+
+            // skip std library; don't need '.*' around
+            out.push(format!("({SEPARATOR}library{SEPARATOR}std{SEPARATOR})"));
+
             out.push_abs_path(&cx.ws.target_dir);
             if cx.args.remap_path_prefix {
                 if let Some(path) = env::home_dir() {
