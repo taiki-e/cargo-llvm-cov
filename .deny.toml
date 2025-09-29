@@ -21,6 +21,7 @@ build.allow-build-scripts = [
     { name = "fs-err" },
     { name = "libc" },
     { name = "proc-macro2" }, # via serde_derive
+    { name = "quote" }, # via serde_derive
     { name = "rustix" }, # via tar
     { name = "serde_json" },
     { name = "serde_core" },
