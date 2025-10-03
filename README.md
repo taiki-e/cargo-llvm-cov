@@ -452,7 +452,7 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 Known compatible Rust (installed via rustup) and LLVM versions:
 
-|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.91 |
+|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.92 |
 | ---------- | -------------- | -------------- | -------------- |
 | LLVM 14-17 | **✓**          |                |                |
 | LLVM 18    |                | **✓**          |                |
@@ -762,7 +762,7 @@ When used with [nextest]:
 <!-- omit in toc -->
 ### Via Homebrew
 
-You can install cargo-llvm-cov from [homebrew-core](https://formulae.brew.sh/formula/cargo-llvm-cov) (x86_64/AArch64 macOS, x86_64 Linux):
+You can install cargo-llvm-cov from [homebrew-core](https://formulae.brew.sh/formula/cargo-llvm-cov) (x86_64/AArch64 macOS, x86_64/AArch64 Linux):
 
 ```sh
 brew install cargo-llvm-cov
