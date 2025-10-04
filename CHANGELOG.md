@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update minimal version of `cargo-config2` to 0.1.38 to improve support for target names that contain ".". ([#446](https://github.com/taiki-e/cargo-llvm-cov/pull/446))
+
 ## [0.6.19] - 2025-09-07
 
 - Distribute prebuilt binaries for powerpc64le/riscv64gc/s390x Linux.
