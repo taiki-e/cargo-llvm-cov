@@ -29,6 +29,9 @@ pub(crate) fn run(args: &mut Args) -> Result<()> {
         for dir in &[&ws.target_dir, &ws.output_dir] {
             rm_rf(dir, args.verbose != 0)?;
         }
+        if let Some(dir) = &ws.build_dir {
+            rm_rf(dir, args.verbose != 0)?;
+        }
         return Ok(());
     }
 
@@ -92,6 +95,9 @@ fn clean_ws(
     for args in args_set {
         let mut cmd = ws.cargo(verbose);
         cmd.args(["clean", "--target-dir", ws.target_dir.as_str()]).args(&package_args);
+        if let Some(build_dir) = &ws.build_dir {
+            cmd.env("CARGO_BUILD_BUILD_DIR", build_dir.as_str());
+        }
         cmd.args(args);
         if verbose > 0 {
             cmd.arg(format!("-{}", "v".repeat(verbose as usize)));

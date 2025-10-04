@@ -7,7 +7,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Config;
 
 use crate::{
-    cli::{Args, ManifestOptions, Subcommand},
+    cli::{ManifestOptions, Subcommand},
     context::Context,
     env,
     metadata::Metadata,
@@ -21,6 +21,7 @@ pub(crate) struct Workspace {
     pub(crate) current_manifest: Utf8PathBuf,
 
     pub(crate) target_dir: Utf8PathBuf,
+    pub(crate) build_dir: Option<Utf8PathBuf>,
     pub(crate) output_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
     pub(crate) profdata_file: Utf8PathBuf,
@@ -92,18 +93,32 @@ impl Workspace {
                 .is_ok_and(|s| s.contains("doctest-in-workspace"));
         }
 
-        let target_dir =
-            if let Some(path) = env::var("CARGO_LLVM_COV_TARGET_DIR")?.map(Utf8PathBuf::from) {
-                let mut base: Utf8PathBuf = env::current_dir()?.try_into()?;
-                base.push(path);
+        let (target_dir, build_dir) = if let Some(mut target_dir) =
+            env::var("CARGO_LLVM_COV_TARGET_DIR")?.map(Utf8PathBuf::from)
+        {
+            let mut base: Utf8PathBuf = env::current_dir()?.try_into()?;
+            target_dir = base.join(target_dir);
+            let build_dir = if let Some(build_dir) =
+                env::var("CARGO_LLVM_COV_BUILD_DIR")?.map(Utf8PathBuf::from)
+            {
+                base.push(build_dir);
                 base
-            } else if show_env {
-                metadata.target_directory.clone()
             } else {
-                // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
-                // use a subdirectory of the target directory as the actual target directory.
-                metadata.target_directory.join("llvm-cov-target")
+                target_dir.clone()
             };
+            (target_dir, build_dir)
+        } else if show_env {
+            (metadata.target_directory.clone(), metadata.build_directory().to_owned())
+        } else {
+            // If we change RUSTFLAGS, all dependencies will be recompiled. Therefore,
+            // use a subdirectory of the target directory as the actual target directory.
+            (
+                metadata.target_directory.join("llvm-cov-target"),
+                metadata.build_directory().join("llvm-cov-target"),
+            )
+        };
+        // The scope of --target-dir's effect depends on whether build-dir is specified in the config.
+        let build_dir = config.build.build_dir.as_ref().and(Some(build_dir));
         let output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 
@@ -116,6 +131,7 @@ impl Workspace {
             metadata,
             current_manifest,
             target_dir,
+            build_dir,
             output_dir,
             doctests_dir,
             profdata_file,
@@ -222,7 +238,16 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
     cmd.arg("--manifest-path");
     cmd.arg(&cx.ws.current_manifest);
 
-    add_target_dir(&cx.args, cmd, &cx.ws.target_dir);
+    // https://github.com/taiki-e/cargo-llvm-cov/issues/265
+    if matches!(cx.args.subcommand, Subcommand::Nextest { archive_file: true }) {
+        cmd.arg("--extract-to");
+    } else {
+        cmd.arg("--target-dir");
+    }
+    cmd.arg(cx.ws.target_dir.as_str());
+    if let Some(build_dir) = &cx.ws.build_dir {
+        cmd.env("CARGO_BUILD_BUILD_DIR", build_dir.as_str());
+    }
 
     for cargo_arg in &cx.args.cargo_args {
         cmd.arg(cargo_arg);
@@ -257,6 +282,9 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
 
     cmd.arg("--target-dir");
     cmd.arg(cx.ws.target_dir.as_str());
+    if let Some(build_dir) = &cx.ws.build_dir {
+        cmd.env("CARGO_BUILD_BUILD_DIR", build_dir.as_str());
+    }
 
     cx.args.manifest.cargo_args(cmd);
 
@@ -264,14 +292,4 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
     if cx.args.verbose > 1 {
         cmd.arg(format!("-{}", "v".repeat(cx.args.verbose as usize - 1)));
     }
-}
-
-// https://github.com/taiki-e/cargo-llvm-cov/issues/265
-fn add_target_dir(args: &Args, cmd: &mut ProcessBuilder, target_dir: &Utf8Path) {
-    if matches!(args.subcommand, Subcommand::Nextest { archive_file: true }) {
-        cmd.arg("--extract-to");
-    } else {
-        cmd.arg("--target-dir");
-    }
-    cmd.arg(target_dir.as_str());
 }

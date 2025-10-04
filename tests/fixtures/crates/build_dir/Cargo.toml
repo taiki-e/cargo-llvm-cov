@@ -1,0 +1,5 @@
+[package]
+name = "build_dir"
+version = "0.0.0"
+
+[workspace]

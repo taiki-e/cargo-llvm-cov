@@ -82,6 +82,7 @@ fn try_main() -> Result<()> {
             };
             set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
+            writer.set("CARGO_LLVM_COV_BUILD_DIR", cx.ws.metadata.build_directory().as_str())?;
             writer.writer.flush()?;
         }
         Subcommand::Report { .. } => {
@@ -791,8 +792,10 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
+    let mut build_dir = cx.ws.build_dir.clone();
     let mut auto_detect_profile = false;
     if cx.args.subcommand.read_nextest_archive() {
+        // TODO: build-dir
         #[derive(Debug, Deserialize)]
         #[serde(rename_all = "kebab-case")]
         struct BinariesMetadata {
@@ -852,9 +855,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
     }
     if !auto_detect_profile {
-        // https://doc.rust-lang.org/nightly/cargo/guide/build-cache.html
+        // https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html
         if let Some(target) = &cx.args.target {
             target_dir.push(target);
+            if let Some(build_dir) = &mut build_dir {
+                build_dir.push(target);
+            }
         }
         // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
         let profile = match cx.args.cargo_profile.as_deref() {
@@ -864,6 +870,9 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             Some(p) => p,
         };
         target_dir.push(profile);
+        if let Some(build_dir) = &mut build_dir {
+            build_dir.push(profile);
+        }
     }
     for f in walk_target_dir(cx, &target_dir) {
         let f = f.path();
@@ -876,6 +885,22 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
     }
     searched_dir.push_str(target_dir.as_str());
+    if let Some(build_dir) = &build_dir {
+        if target_dir != *build_dir {
+            for f in walk_target_dir(cx, build_dir) {
+                let f = f.path();
+                if is_object(cx, f) {
+                    if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
+                        if re.is_match(file_stem) {
+                            files.push(make_relative(cx, f).to_owned().into_os_string());
+                        }
+                    }
+                }
+            }
+            searched_dir.push(',');
+            searched_dir.push_str(build_dir.as_str());
+        }
+    }
     if cx.args.doctests {
         for f in glob::glob(
             Utf8Path::new(&glob::Pattern::escape(cx.ws.doctests_dir.as_str()))
@@ -931,10 +956,10 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     files.sort_unstable();
 
     if files.is_empty() {
-        warn!(
+        bail!(
             "not found object files (searched directories: {searched_dir}); this may occur if \
              show-env subcommand is used incorrectly (see docs or other warnings), or unsupported \
-             commands are used",
+             commands or configs are used",
         );
     }
     Ok(files)
@@ -1313,6 +1338,11 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 ));
             }
             out.push_abs_path(&cx.ws.target_dir);
+            if let Some(build_dir) = &cx.ws.build_dir {
+                if *build_dir != cx.ws.target_dir {
+                    out.push_abs_path(build_dir);
+                }
+            }
             if cx.args.remap_path_prefix {
                 if let Some(path) = env::home_dir() {
                     out.push_abs_path(path);

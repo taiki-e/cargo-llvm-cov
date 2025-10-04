@@ -676,6 +676,7 @@ You may need to click the "Watch" label in the bottom bar of VS Code to display 
 You can override these environment variables to change cargo-llvm-cov's behavior on your system:
 
 - `CARGO_LLVM_COV_TARGET_DIR` -- Location of where to place all generated artifacts, relative to the current working directory. Default to `<cargo_target_dir>/llvm-cov-target`.
+- `CARGO_LLVM_COV_BUILD_DIR` -- Location of where intermediate build artifacts will be stored, relative to the current working directory. Default to `<cargo_target_dir>/llvm-cov-target`.
 - `CARGO_LLVM_COV_SETUP` -- Control behavior if `llvm-tools-preview` component is not installed. See [#219] for more.
 - `LLVM_COV` -- Override the path to `llvm-cov`. You may need to specify both this and `LLVM_PROFDATA` environment variables if you are using [`--include-ffi` flag](#get-coverage-of-cc-code-linked-to-rust-librarybinary) or if you are using a toolchain installed without via rustup. `llvm-cov` version must be compatible with the LLVM version used in rustc.
 - `LLVM_PROFDATA` -- Override the path to `llvm-profdata`. See `LLVM_COV` environment variable for more.

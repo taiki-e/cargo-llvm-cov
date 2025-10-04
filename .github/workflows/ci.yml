@@ -77,30 +77,40 @@ jobs:
       - run: cargo install --path . --debug
       - name: Test cargo llvm-cov nextest
         run: |
+          unset RUSTFLAGS
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci --cargo-profile dev
+          cargo clean
           cd -- ../real1
           cargo llvm-cov nextest-archive --archive-file a.tar.zst
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm -- a.tar.zst
           cargo clean
+          rm -- a.tar.zst
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --release
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm -- a.tar.zst
           cargo clean
+          rm -- a.tar.zst
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --cargo-profile custom
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
-          rm -- a.tar.zst
           cargo clean
+          rm -- a.tar.zst
           host=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${host}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
+          cargo clean
+          rm -- a.tar.zst
+          cd -- ../build_dir
+          cargo llvm-cov nextest --text --fail-under-lines 100
+          cargo llvm-cov nextest --text --fail-under-lines 100 --profile default --cargo-profile dev
+          cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci
+          cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci --cargo-profile dev
+          cargo clean
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
         run: |
