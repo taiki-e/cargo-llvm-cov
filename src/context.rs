@@ -127,6 +127,14 @@ impl Context {
                 if args.subcommand.call_cargo_nextest() { "cargo-nextest" } else { "cargo" }
             );
         }
+        if ws.config.build.build_dir.is_some()
+            && matches!(
+                args.subcommand,
+                Subcommand::Nextest { archive_file: true } | Subcommand::NextestArchive
+            )
+        {
+            warn!("nextest archive may not work with Cargo build-dir");
+        }
 
         let (llvm_cov, llvm_profdata): (PathBuf, PathBuf) = match (
             env::var_os("LLVM_COV").map(PathBuf::from),

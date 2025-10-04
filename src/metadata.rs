@@ -5,7 +5,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path};
 
 use anyhow::{Context as _, Result, format_err};
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use serde_json::{Map, Value};
 
 type Object = Map<String, Value>;
@@ -33,6 +33,8 @@ pub(crate) struct Metadata {
     /// The absolute path to the root of the workspace.
     pub(crate) workspace_root: Utf8PathBuf,
     pub(crate) target_directory: Utf8PathBuf,
+    /// This is always `None` if running with a version of Cargo older than 1.91.
+    build_directory: Option<Utf8PathBuf>,
 }
 
 impl Metadata {
@@ -67,7 +69,17 @@ impl Metadata {
             workspace_members,
             workspace_root: map.remove_string("workspace_root")?,
             target_directory: map.remove_string("target_directory")?,
+            // This field was added in Rust 1.91.
+            build_directory: if map.contains_key("build_directory") {
+                Some(map.remove_string("build_directory")?)
+            } else {
+                None
+            },
         })
+    }
+
+    pub(crate) fn build_directory(&self) -> &Utf8Path {
+        self.build_directory.as_deref().unwrap_or(&self.target_directory)
     }
 }
 
@@ -110,11 +122,7 @@ impl Target {
 
 // #[allow(clippy::option_option)]
 // fn allow_null<T>(value: Value, f: impl FnOnce(Value) -> Option<T>) -> Option<Option<T>> {
-//     if value.is_null() {
-//         Some(None)
-//     } else {
-//         f(value).map(Some)
-//     }
+//     if value.is_null() { Some(None) } else { f(value).map(Some) }
 // }
 
 fn into_string<S: From<String>>(value: Value) -> Option<S> {

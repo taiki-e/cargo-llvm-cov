@@ -123,6 +123,13 @@ fn cargo_config() {
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
+// build-dir requires Cargo 1.91.
+#[rustversion::attr(before(1.91), ignore)]
+#[test]
+fn build_dir() {
+    run("build_dir", "build_dir", &[], &[]);
+}
+
 // feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
