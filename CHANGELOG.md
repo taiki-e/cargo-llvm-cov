@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.6.20] - 2025-10-04
+
 - Support Cargo `build-dir` that added in Cargo 1.91. ([#452](https://github.com/taiki-e/cargo-llvm-cov/pull/452))
 
 - Update minimal version of `cargo-config2` to 0.1.38 to improve support for target names that contain ".". ([#446](https://github.com/taiki-e/cargo-llvm-cov/issues/446))
@@ -704,7 +706,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.19...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.20...HEAD
+[0.6.20]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.19...v0.6.20
 [0.6.19]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.16...v0.6.17
