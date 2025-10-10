@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update minimal version of `cargo-config2` to 0.1.39 to fix regression causing "invalid type: .., expected struct TargetConfig" error when a custom field used in `target.<triple>` config. ([#454](https://github.com/taiki-e/cargo-llvm-cov/issues/454))
+
 ## [0.6.20] - 2025-10-04
 
 - Support Cargo `build-dir` that added in Cargo 1.91. ([#452](https://github.com/taiki-e/cargo-llvm-cov/pull/452))
