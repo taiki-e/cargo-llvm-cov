@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use std::{
-    io::Write as _,
+    io::{self, IsTerminal as _, Write as _},
     str::FromStr,
     sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
@@ -52,7 +52,7 @@ impl From<cargo_config2::Color> for Coloring {
 static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
 // Errors during argument parsing are returned before set_coloring, so check is_terminal first.
 pub(crate) fn init_coloring() {
-    if !std::io::IsTerminal::is_terminal(&std::io::stderr()) {
+    if !io::stderr().is_terminal() {
         COLORING.store(Coloring::NEVER, Ordering::Relaxed);
     }
 }
