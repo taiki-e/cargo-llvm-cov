@@ -1,0 +1,24 @@
+name: Publish
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to be published
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -CeEuxo pipefail {0}
+
+jobs:
+  publish:
+    if: github.repository_owner == 'taiki-e'
+    uses: taiki-e/github-actions/.github/workflows/publish-rust.yml@main
+    with:
+      version: ${{ inputs.version }}
+    secrets: inherit
