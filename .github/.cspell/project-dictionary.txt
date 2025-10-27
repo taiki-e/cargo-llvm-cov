@@ -18,7 +18,6 @@ nextest
 notcovered
 profdata
 profraw
-pwsh
 rmeta
 rustfilt
 rustix
