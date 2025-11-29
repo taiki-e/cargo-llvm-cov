@@ -478,9 +478,12 @@ impl Args {
             args: impl IntoIterator<Item = impl Into<OsString>>,
         ) -> impl Iterator<Item = Result<String>> {
             args.into_iter().enumerate().map(|(i, arg)| {
-                arg.into()
-                    .into_string()
-                    .map_err(|arg| format_err!("argument {} is not valid Unicode: {arg:?}", i + 1))
+                arg.into().into_string().map_err(|arg| {
+                    #[allow(clippy::unnecessary_debug_formatting)]
+                    {
+                        format_err!("argument {} is not valid Unicode: {arg:?}", i + 1)
+                    }
+                })
             })
         }
 
