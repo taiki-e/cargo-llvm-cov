@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - rust: '1.81'
+          - rust: '1.87'
           - rust: stable
           - rust: beta
           - rust: nightly
