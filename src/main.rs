@@ -8,7 +8,7 @@
 // - https://llvm.org/docs/CommandGuide/llvm-cov.html
 
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     ffi::{OsStr, OsString},
     fmt::Write as _,
     io::{self, BufRead as _, BufWriter, Read as _, Write as _},
@@ -534,10 +534,119 @@ fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
     }
 }
 
-fn generate_report(cx: &Context) -> Result<()> {
-    merge_profraw(cx).context("failed to merge profile data")?;
+fn is_wasm32_unknown_unknown_target(cx: &Context) -> bool {
+    let target = cx.ws.target_for_config.triple();
+    target == "wasm32-unknown-unknown" || target == "wasm32v1-none"
+}
 
+/// Since ".wasm" cannot currently be processed as an llvm-cov object,
+/// the IR needs to be converted into a .o file here.
+///
+/// 1. Confirm the LLVM version corresponding to rustc, and use the clang version that matches it,
+///    like "clang-21".
+///
+/// 2. Otherwise, attempt to use "clang" and check its version.
+fn compile_ll(cx: &Context, files: &[OsString]) -> Result<Vec<OsString>> {
+    fn clang_version(clang: &str) -> Result<String> {
+        ProcessBuilder::new(clang).arg("--version").read()
+    }
+
+    fn clang(major: &str) -> Result<String> {
+        let clang = format!("clang-{major}");
+        if clang_version(&clang).is_ok() {
+            return Ok(clang);
+        }
+        warn!("{clang} not found, fallback to `clang`");
+
+        let output = clang_version("clang").context("clang also not found, do you install?")?;
+        let clang_version = output
+            .lines()
+            .find_map(|s| s.strip_prefix("clang version "))
+            .context("not found clang version")?;
+
+        if !clang_version.starts_with(major) {
+            warn!("expect clang {major}, found clang {clang_version}");
+        }
+
+        Ok("clang".into())
+    }
+
+    // `clean` not clean .ll files
+    //
+    // let's filter with .wasm file
+    let hashes = files
+        .iter()
+        .filter_map(|s| s.to_str())
+        // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3.wasm
+        // =>
+        // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3
+        .filter_map(|s| s.strip_suffix(".wasm"))
+        .collect::<HashSet<_>>();
+
+    let version = cx.ws.rustc().arg("-Vv").read()?;
+    let llvm_version = version
+        .lines()
+        .find_map(|s| s.strip_prefix("LLVM version: "))
+        .context("not found llvm version using rustc -Vv")?;
+
+    let major = llvm_version.split_once('.').context("invalid llvm version")?.0;
+
+    let mut input_files = vec![];
+    let mut output_files = vec![];
+
+    // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3.ll
+    // =>
+    // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3
+    for file in files.iter().filter_map(|s| s.to_str()).filter_map(|s| s.strip_suffix(".ll")) {
+        if !hashes.contains(file) {
+            continue;
+        }
+
+        // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3
+        // =>
+        // /home/xxx/target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3.ll
+        let path = Utf8Path::new(&format!("{file}.ll")).canonicalize_utf8()?;
+        input_files.push(path);
+
+        // target/llvm-cov-target/wasm32-unknown-unknown/debug/deps/playground-0701359ab18f74c3
+        // =>
+        // target/llvm-cov-target/playground-0701359ab18f74c3.o
+        let file = cx.ws.target_dir.join(Utf8Path::new(&format!(
+            "{}.o",
+            Utf8Path::new(file).file_name().context("failed to get filename")?
+        )));
+        output_files.push(OsString::from(file));
+    }
+
+    if !ProcessBuilder::new(clang(major)?)
+        .arg("-c")
+        .args(input_files)
+        .arg("-Wno-override-module")
+        .dir(&cx.ws.target_dir)
+        .run()?
+        .status
+        .success()
+    {
+        bail!("failed to run clang -c");
+    }
+
+    Ok(output_files)
+}
+
+fn generate_report(cx: &Context) -> Result<()> {
     let object_files = object_files(cx).context("failed to collect object files")?;
+
+    // To avoid llvm-cov prompting "profile data may be out of date - object is newer",
+    // the object file is handled here before merging the profraw files.
+    let object_files = if is_wasm32_unknown_unknown_target(cx) {
+        let object_files = compile_ll(cx, &object_files).context("faild to compile *.ll")?;
+        merge_profraw(cx).context("failed to merge profile data")?;
+        object_files
+    } else {
+        merge_profraw(cx).context("failed to merge profile data")?;
+        object_files
+    };
+
     let ignore_filename_regex = ignore_filename_regex(cx, &object_files)?;
     let format = Format::from_args(cx);
     format
@@ -773,7 +882,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !metadata.is_file() {
             return false;
         }
-        if target_is_windows {
+
+        if target_is_windows || is_wasm32_unknown_unknown_target(cx) {
             true
         } else {
             #[cfg(unix)]
