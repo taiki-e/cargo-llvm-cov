@@ -137,6 +137,7 @@ pub(crate) fn perturb_one_header(workspace_root: &Path) -> Option<PathBuf> {
     path
 }
 
+#[allow(clippy::decimal_bitwise_operands)]
 const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64 << 56)
     | (('l' as u64) << 48)
     | (('p' as u64) << 40)
