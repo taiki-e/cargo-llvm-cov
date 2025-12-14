@@ -5,6 +5,9 @@
 # https://github.com/koalaman/shellcheck/wiki/Optional
 # https://google.github.io/styleguide/shellguide.html
 
+# https://github.com/koalaman/shellcheck/wiki/Directive#external-sources
+external-sources=true
+
 # https://github.com/koalaman/shellcheck/wiki/SC2249
 # enable=add-default-case
 

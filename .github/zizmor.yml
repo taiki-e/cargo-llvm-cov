@@ -1,0 +1,12 @@
+# zizmor configuration
+# https://docs.zizmor.sh/configuration/
+
+rules:
+  dependabot-cooldown: { disable: true } # Useless unless hash-pin is forced by unpinned-uses.
+  ref-confusion: { disable: true } # TODO: Old GHA didn't work without this pattern in some cases, but does it seem to be fixed?
+  secrets-inherit: { disable: true }
+  unpinned-uses:
+    config:
+      policies:
+        taiki-e/*: any
+        '*': ref-pin

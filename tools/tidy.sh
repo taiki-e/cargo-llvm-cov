@@ -8,7 +8,7 @@ trap -- 'printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
 cd -- "$(dirname -- "$0")"/..
 
 # USAGE:
-#    ./tools/tidy.sh
+#    GH_TOKEN=$(gh auth token) ./tools/tidy.sh
 #
 # Note: This script requires the following tools:
 # - git 1.8+
@@ -17,6 +17,7 @@ cd -- "$(dirname -- "$0")"/..
 # - python 3.6+ and pipx
 # - shfmt
 # - shellcheck
+# - zizmor
 # - cargo, rustfmt (if Rust code exists)
 # - clang-format (if C/C++/Protobuf code exists)
 # - parse-dockerfile <https://github.com/taiki-e/parse-dockerfile> (if Dockerfile exists)
@@ -117,11 +118,11 @@ check_alt() {
 check_hidden() {
   local res
   for file in "$@"; do
-    check_alt ".${file}" "${file}" "$(comm -23 <(ls_files "*${file}") <(ls_files "*.${file}"))"
+    check_alt ".${file}" "${file}" "$(LC_ALL=C comm -23 <(ls_files "*${file}") <(ls_files "*.${file}"))"
   done
 }
 sed_rhs_escape() {
-  sed 's/\\/\\\\/g; s/\&/\\\&/g; s/\//\\\//g' <<<"$1"
+  sed -E 's/\\/\\\\/g; s/\&/\\\&/g; s/\//\\\//g' <<<"$1"
 }
 
 if [[ $# -gt 0 ]]; then
@@ -136,12 +137,8 @@ py_suffix=''
 if type -P python3 >/dev/null; then
   py_suffix=3
 fi
-yq() {
-  pipx run yq "$@"
-}
-tomlq() {
-  pipx run --spec yq tomlq "$@"
-}
+yq() { pipx run yq "$@"; }
+tomlq() { pipx run --spec yq tomlq "$@"; }
 case "$(uname -s)" in
   Linux)
     if [[ "$(uname -o)" == 'Android' ]]; then
@@ -166,10 +163,11 @@ case "$(uname -s)" in
       if [[ "${PATH}" != *'/usr/xpg4/bin'* ]]; then
         export PATH="/usr/xpg4/bin:${PATH}"
       fi
-      # GNU/BSD grep/sed is required to run some checks, but most checks are okay with other POSIX grep/sed.
+      # GNU/BSD sed is required.
+      # GNU/BSD grep is required by some checks, but most checks are okay with other POSIX grep.
       # Solaris /usr/xpg4/bin/grep has -q, -E, -F, but no -o (non-POSIX).
       # Solaris /usr/xpg4/bin/sed has no -E (POSIX.1-2024) yet.
-      for tool in sed grep; do
+      for tool in 'grep' 'sed'; do
         if type -P "g${tool}" >/dev/null; then
           eval "${tool}() { g${tool} \"\$@\"; }"
         fi
@@ -188,12 +186,8 @@ case "$(uname -s)" in
         else
           jq() { command jq "$@" | tr -d '\r'; }
         fi
-        yq() {
-          pipx run yq "$@" | tr -d '\r'
-        }
-        tomlq() {
-          pipx run --spec yq tomlq "$@" | tr -d '\r'
-        }
+        yq() { pipx run yq "$@" | tr -d '\r'; }
+        tomlq() { pipx run --spec yq tomlq "$@" | tr -d '\r'; }
       fi
     fi
     ;;
@@ -202,25 +196,34 @@ esac
 
 check_install git
 exclude_from_ls_files=()
-# - `find` lists symlinks. `! ( -name <dir> -prune )` (.i.e., ignore <dir>) are manually listed from .gitignore.
-# - `git submodule status` lists submodules. Use sed to remove the first character indicates status ( |+|-).
+# - `find` lists symlinks. `! ( -name <dir> -prune )` means recursively ignore <dir>. `cut` removes the leading `./`.
+#   This can be replaced with `fd -H -t l`.
+# - `git submodule status` lists submodules. The first `cut` removes the first character indicates status ( |+|-).
 # - `git ls-files --deleted` lists removed files.
-while IFS=$'\n' read -r line; do exclude_from_ls_files+=("${line}"); done < <({
-  find . \! \( -name .git -prune \) \! \( -name target -prune \) \! \( -name tmp -prune \) -type l | cut -c3-
-  git submodule status | sed 's/^.//' | cut -d' ' -f2
+find_prune=(\! \( -name .git -prune \))
+while IFS= read -r; do
+  find_prune+=(\! \( -name "${REPLY}" -prune \))
+done < <(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' .gitignore)
+while IFS=$'\n' read -r; do
+  exclude_from_ls_files+=("${REPLY}")
+done < <({
+  find . "${find_prune[@]}" -type l | cut -c3-
+  git submodule status | cut -c2- | cut -d' ' -f2
   git ls-files --deleted
 } | LC_ALL=C sort -u)
 exclude_from_ls_files_no_symlink=()
-while IFS=$'\n' read -r line; do exclude_from_ls_files_no_symlink+=("${line}"); done < <({
-  git submodule status | sed 's/^.//' | cut -d' ' -f2
+while IFS=$'\n' read -r; do
+  exclude_from_ls_files_no_symlink+=("${REPLY}")
+done < <({
+  git submodule status | cut -c2- | cut -d' ' -f2
   git ls-files --deleted
 } | LC_ALL=C sort -u)
 ls_files() {
   if [[ "${1:-}" == '--include-symlink' ]]; then
     shift
-    comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files_no_symlink[@]+"${exclude_from_ls_files_no_symlink[@]}"})
+    LC_ALL=C comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files_no_symlink[@]+"${exclude_from_ls_files_no_symlink[@]}"})
   else
-    comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files[@]+"${exclude_from_ls_files[@]}"})
+    LC_ALL=C comm -23 <(git ls-files "$@" | LC_ALL=C sort) <(printf '%s\n' ${exclude_from_ls_files[@]+"${exclude_from_ls_files[@]}"})
   fi
 }
 
@@ -444,7 +447,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
       new+="${line}"$'\a'
     done < <(tr '\n' '\a' <"${markdown}" | grep -Eo '<!-- tidy:sync-markdown-to-rustdoc:start[^ ]* -->.*<!-- tidy:sync-markdown-to-rustdoc:end -->')
     new+='<!-- tidy:sync-markdown-to-rustdoc:end -->'
-    new=$(tr '\n' '\a' <"${lib}" | sed "s/<!-- tidy:sync-markdown-to-rustdoc:start[^ ]* -->.*<!-- tidy:sync-markdown-to-rustdoc:end -->/$(sed_rhs_escape "${new}")/" | tr '\a' '\n')
+    new=$(tr '\n' '\a' <"${lib}" | sed -E "s/<!-- tidy:sync-markdown-to-rustdoc:start[^ ]* -->.*<!-- tidy:sync-markdown-to-rustdoc:end -->/$(sed_rhs_escape "${new}")/" | tr '\a' '\n')
     printf '%s\n' "${new}" >|"${lib}"
     check_diff "${lib}"
   done
@@ -676,7 +679,7 @@ elif check_install shellcheck; then
         # Others: false negative
         trap -- 'rm -- ./tools/.tidy-tmp; printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
         printf '%s\n' "${text}" >|./tools/.tidy-tmp
-        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
+        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed -E "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
           error "check failed; please resolve the above shellcheck error(s)"
         fi
         rm -- ./tools/.tidy-tmp
@@ -821,7 +824,7 @@ EOF
         # Others: false negative
         trap -- 'rm -- ./tools/.tidy-tmp; printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
         printf '%s\n' "${text}" >|./tools/.tidy-tmp
-        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
+        if ! shellcheck --color="${color}" --exclude "${shellcheck_exclude}" ./tools/.tidy-tmp | sed -E "s/\.\/tools\/\.tidy-tmp/$(sed_rhs_escape "${display_path}")/g"; then
           error "check failed; please resolve the above shellcheck error(s)"
         fi
         rm -- ./tools/.tidy-tmp
@@ -832,7 +835,8 @@ EOF
         # The top-level permissions must be weak as they are referenced by all jobs.
         permissions=$(jq -c '.permissions' <<<"${workflow}")
         case "${permissions}" in
-          '{"contents":"read"}' | '{"contents":"none"}') ;;
+          # `permissions: {}` means "all none": https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#defining-access-for-the-github_token-scopes
+          '{"contents":"read"}' | '{}') ;;
           null) error "${workflow_path}: top level permissions not found; it must be 'contents: read' or weaker permissions" ;;
           *) error "${workflow_path}: only 'contents: read' and weaker permissions are allowed at top level, but found '${permissions}'; if you want to use stronger permissions, please set job-level permissions" ;;
         esac
@@ -905,6 +909,20 @@ EOF
     fi
   fi
 fi
+zizmor_targets=(${workflows[@]+"${workflows[@]}"} ${actions[@]+"${actions[@]}"})
+if [[ -e .github/dependabot.yml ]]; then
+  zizmor_targets+=(.github/dependabot.yml)
+fi
+if [[ ${#zizmor_targets[@]} -gt 0 ]]; then
+  if [[ "${ostype}" =~ ^(netbsd|openbsd|dragonfly|illumos|solaris)$ ]] && [[ -n "${CI:-}" ]] && ! type -P zizmor >/dev/null; then
+    warn "this check is skipped on NetBSD/OpenBSD/Dragonfly/illumos/Solaris due to installing zizmor is hard on these platform"
+  elif check_install zizmor; then
+    IFS=' '
+    info "running \`zizmor -q ${zizmor_targets[*]}\`"
+    IFS=$'\n\t'
+    zizmor -q "${zizmor_targets[@]}"
+  fi
+fi
 printf '\n'
 check_alt '.sh extension' '*.bash extension' "$(ls_files '*.bash')"
 
@@ -913,7 +931,7 @@ check_alt '.sh extension' '*.bash extension' "$(ls_files '*.bash')"
 if [[ -f tools/.tidy-check-license-headers ]]; then
   info "checking license headers (experimental)"
   failed_files=''
-  for p in $(comm -12 <(eval $(<tools/.tidy-check-license-headers) | LC_ALL=C sort) <(ls_files | LC_ALL=C sort)); do
+  for p in $(LC_ALL=C comm -12 <(eval $(<tools/.tidy-check-license-headers) | LC_ALL=C sort) <(ls_files | LC_ALL=C sort)); do
     case "${p##*/}" in
       *.stderr | *.expanded.rs) continue ;; # generated files
       *.json) continue ;;                   # no comment support
@@ -981,11 +999,12 @@ if [[ -f .cspell.json ]]; then
       dependencies_words=$(npx -y cspell stdin --no-progress --no-summary --words-only --unique <<<"${dependencies}" || true)
     fi
     all_words=$(ls_files | { grep -Fv "${project_dictionary}" || true; } | npx -y cspell --file-list stdin --no-progress --no-summary --words-only --unique || true)
+    all_words+=$'\n'$(ls_files | npx -y cspell stdin --no-progress --no-summary --words-only --unique || true)
     printf '%s\n' "${config_old}" >|.cspell.json
     trap -- 'printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
     cat >|.github/.cspell/rust-dependencies.txt <<EOF
-// This file is @generated by ${0##*/}.
-// It is not intended for manual editing.
+# This file is @generated by ${0##*/}.
+# It is not intended for manual editing.
 EOF
     if [[ -n "${dependencies_words}" ]]; then
       LC_ALL=C sort -f >>.github/.cspell/rust-dependencies.txt <<<"${dependencies_words}"$'\n'
@@ -1000,11 +1019,20 @@ EOF
       error "you may want to mark .github/.cspell/rust-dependencies.txt linguist-generated"
     fi
 
+    # Check file names.
+    info "running \`git ls-files | npx -y cspell stdin --no-progress --no-summary --show-context\`"
+    if ! ls_files | npx -y cspell stdin --no-progress --no-summary --show-context; then
+      error "spellcheck failed: please fix uses of below words in file names or add to ${project_dictionary} if correct"
+      printf '=======================================\n'
+      { ls_files | npx -y cspell stdin --no-progress --no-summary --words-only || true; } | sed -E "s/'s$//g" | LC_ALL=C sort -f -u
+      printf '=======================================\n\n'
+    fi
+    # Check file contains.
     info "running \`git ls-files | npx -y cspell --file-list stdin --no-progress --no-summary\`"
     if ! ls_files | npx -y cspell --file-list stdin --no-progress --no-summary; then
       error "spellcheck failed: please fix uses of below words or add to ${project_dictionary} if correct"
       printf '=======================================\n'
-      { ls_files | npx -y cspell --file-list stdin --no-progress --no-summary --words-only || true; } | sed "s/'s$//g" | LC_ALL=C sort -f -u
+      { ls_files | npx -y cspell --file-list stdin --no-progress --no-summary --words-only || true; } | sed -E "s/'s$//g" | LC_ALL=C sort -f -u
       printf '=======================================\n\n'
     fi
 
@@ -1015,8 +1043,8 @@ EOF
       fi
       case "${ostype}" in
         # NetBSD uniq doesn't support -i flag.
-        netbsd) dup=$(sed '/^$/d; /^\/\//d' "${project_dictionary}" "${dictionary}" | LC_ALL=C sort -f | tr '[:upper:]' '[:lower:]' | LC_ALL=C uniq -d) ;;
-        *) dup=$(sed '/^$/d; /^\/\//d' "${project_dictionary}" "${dictionary}" | LC_ALL=C sort -f | LC_ALL=C uniq -d -i) ;;
+        netbsd) dup=$(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' "${project_dictionary}" "${dictionary}" | LC_ALL=C sort -f | tr '[:upper:]' '[:lower:]' | LC_ALL=C uniq -d) ;;
+        *) dup=$(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' "${project_dictionary}" "${dictionary}" | LC_ALL=C sort -f | LC_ALL=C uniq -d -i) ;;
       esac
       if [[ -n "${dup}" ]]; then
         error "duplicated words in dictionaries; please remove the following words from ${project_dictionary}"
@@ -1027,13 +1055,14 @@ EOF
     # Make sure the project-specific dictionary does not contain unused words.
     if [[ -n "${REMOVE_UNUSED_WORDS:-}" ]]; then
       grep_args=()
-      for word in $(grep -Ev '^//' "${project_dictionary}" || true); do
+      while IFS= read -r word; do
         if ! grep -Eqi "^${word}$" <<<"${all_words}"; then
-          grep_args+=(-e "^${word}$")
+          grep_args+=(-e "^[ \t]*${word}[ \t]*(#.*|$)")
         fi
-      done
+      done < <(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' "${project_dictionary}")
       if [[ ${#grep_args[@]} -gt 0 ]]; then
         info "removing unused words from ${project_dictionary}"
+        info "please commit changes made by the removal above"
         res=$(grep -Ev "${grep_args[@]}" "${project_dictionary}" || true)
         if [[ -n "${res}" ]]; then
           printf '%s\n' "${res}" >|"${project_dictionary}"
@@ -1043,11 +1072,11 @@ EOF
       fi
     else
       unused=''
-      for word in $(grep -Ev '^//' "${project_dictionary}" || true); do
+      while IFS= read -r word; do
         if ! grep -Eqi "^${word}$" <<<"${all_words}"; then
           unused+="${word}"$'\n'
         fi
-      done
+      done < <(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' "${project_dictionary}")
       if [[ -n "${unused}" ]]; then
         error "unused words in dictionaries; please remove the following words from ${project_dictionary} or run ${0##*/} locally"
         print_fenced "${unused}"
