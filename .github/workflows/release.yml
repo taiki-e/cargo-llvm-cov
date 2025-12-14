@@ -4,9 +4,16 @@ permissions:
   contents: read
 
 on:
-  push:
-    tags:
-      - v[0-9]+.*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to be increased
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 env:
   CARGO_INCREMENTAL: 0
@@ -22,18 +29,20 @@ defaults:
     shell: bash --noprofile --norc -CeEuxo pipefail {0}
 
 jobs:
-  create-release:
+  release:
     if: github.repository_owner == 'taiki-e'
-    uses: taiki-e/github-actions/.github/workflows/create-release.yml@main
+    uses: taiki-e/github-actions/.github/workflows/rust-release.yml@main
     permissions:
       contents: write # for taiki-e/create-gh-release-action
       id-token: write # for rust-lang/crates-io-auth-action
     secrets: inherit
+    with:
+      version: ${{ inputs.version }}
 
   upload-assets:
     name: ${{ matrix.target }}
     if: github.repository_owner == 'taiki-e'
-    needs: create-release
+    needs: release
     strategy:
       matrix:
         include:
@@ -42,6 +51,8 @@ jobs:
           - target: aarch64-unknown-linux-musl
           - target: aarch64-apple-darwin
             os: macos-14
+          # - target: aarch64-pc-windows-msvc # https://github.com/taiki-e/cargo-llvm-cov/issues/436
+          #   os: windows-2022
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
@@ -50,6 +61,7 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-2022
           - target: x86_64-unknown-freebsd
+          # - target: x86_64-unknown-illumos # error[E0463]: can't find crate for `profiler_builtins`
           - target: universal-apple-darwin
             os: macos-14
           - target: powerpc64le-unknown-linux-gnu
@@ -67,6 +79,24 @@ jobs:
       contents: write
     steps:
       - uses: taiki-e/checkout-action@v1
+      # TODO: Use checkout-action's option once https://github.com/taiki-e/checkout-action/issues/3 implemented.
+      - run: |
+          IFS=$'\n\t'
+          trap -- 's=$?; printf >&2 "%s\n" "${0##*/}:${LINENO}: \`${BASH_COMMAND}\` exit with ${s}"; exit ${s}' ERR
+          bail() {
+            printf '::error::%s\n' "$*"
+            exit 1
+          }
+          git fetch origin --tags &>/dev/null
+          git checkout "${REF}"
+          # Make sure the current revision is same as release step.
+          rev=$(git rev-parse HEAD)
+          if [[ "${rev}" != "${RELEASE_REV}" ]]; then
+            bail "revision difference between release step"
+          fi
+        env:
+          REF: ${{ needs.release.outputs.ref }}
+          RELEASE_REV: ${{ needs.release.outputs.rev }}
       - uses: taiki-e/github-actions/install-rust@stable
       - uses: taiki-e/setup-cross-toolchain-action@v1
         with:
@@ -88,3 +118,4 @@ jobs:
           tar: all
           zip: windows
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ needs.release.outputs.ref }}
