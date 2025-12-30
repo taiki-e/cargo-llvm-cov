@@ -64,6 +64,12 @@ jobs:
             os: windows-latest
           - rust: nightly-i686-pc-windows-msvc
             os: windows-latest
+          - rust: nightly
+            os: windows-latest
+            target: x86_64-pc-windows-gnullvm
+          - rust: nightly
+            os: windows-11-arm
+            target: aarch64-pc-windows-gnullvm
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
@@ -74,6 +80,10 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: taiki-e/install-action@cargo-minimal-versions
       - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/setup-cross-toolchain-action@main
+        with:
+          target: ${{ matrix.target }}
+        if: matrix.target != ''
       - run: cargo test --workspace --all-features
       # TODO: move this test to tests/test.rs
       - run: cargo install --path . --debug

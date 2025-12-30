@@ -229,6 +229,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         if cx.ws.rustc_version.nightly && !cx.args.cov.no_cfg_coverage_nightly {
             flags.push("--cfg=coverage_nightly");
         }
+        if cx.ws.target_for_cli.as_ref().is_some_and(|target| target.ends_with("windows-gnullvm")) {
+            flags.push("-C");
+            flags.push("link-arg=-Wl,--no-gc-sections");
+        };
     }
 
     let llvm_profile_file_name =
