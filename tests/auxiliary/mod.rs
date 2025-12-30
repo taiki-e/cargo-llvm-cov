@@ -146,6 +146,7 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64 << 56)
     | (('f' as u64) << 16)
     | (('r' as u64) << 8)
     | 129_u64;
+const INSTR_PROF_RAW_MAGIC_32: u64 = 18405209413953933953;
 
 fn perturb_header(path: &Path) {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap(); // Not buffered because it is read and written only once each.
@@ -154,7 +155,11 @@ fn perturb_header(path: &Path) {
         file.read_exact(&mut buf).unwrap();
         u64::from_ne_bytes(buf)
     };
-    assert_eq!(magic, INSTR_PROF_RAW_MAGIC_64);
+    if cfg!(target_pointer_width = "64") {
+        assert_eq!(magic, INSTR_PROF_RAW_MAGIC_64);
+    } else {
+        assert_eq!(magic, INSTR_PROF_RAW_MAGIC_32);
+    }
     magic += 1;
     file.rewind().unwrap();
     file.write_all(&magic.to_ne_bytes()).unwrap();
