@@ -521,6 +521,7 @@ By default, [vendored sources](https://doc.rust-lang.org/cargo/commands/cargo-ve
 ```text
 {SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}
 ^{WORKSPACE_ROOT}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}
+^{WORKSPACE_ROOT}({SEPARATOR}.*)?{SEPARATOR}(tests.rs|[0-9a-zA-Z_-]+[_-]tests.rs)$
 ^{TARGET_DIR}($|{SEPARATOR})
 ^{CARGO_HOME}{SEPARATOR}(registry|git){SEPARATOR}
 ^{RUSTUP_HOME}{SEPARATOR}toolchains($|{SEPARATOR})
@@ -574,7 +575,7 @@ mod tests {
 }
 ```
 
-cargo-llvm-cov excludes code contained in the directory named `tests` from the report by default, so you can also use it instead of `#[coverage(off)]` attribute.
+cargo-llvm-cov excludes code contained in the directory named `tests` and file named `tests.rs`/`*_tests.rs`/`*-tests.rs` from the report by default, so you can also use it instead of `#[coverage(off)]` attribute.
 
 ### Continuous Integration
 

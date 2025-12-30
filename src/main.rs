@@ -1332,12 +1332,12 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
             //       We may have a directory like tests/support, so maybe we need both?
             if cx.args.remap_path_prefix {
                 out.push(format!(
-                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
+                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}|{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$"
                 ));
             } else {
                 out.push(format!(
-                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
-                    regex::escape(cx.ws.metadata.workspace_root.as_str())
+                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$",
+                    workspace_root = regex::escape(cx.ws.metadata.workspace_root.as_str())
                 ));
             }
             out.push_abs_path(&cx.ws.target_dir);
