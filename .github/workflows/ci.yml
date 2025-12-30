@@ -127,9 +127,8 @@ jobs:
           unset RUSTFLAGS
 
           # Test nightly-specific options
-          retry git clone https://github.com/taiki-e/easytime.git
+          retry git clone --depth 1 https://github.com/taiki-e/easytime.git
           pushd -- easytime >/dev/null
-          git checkout 7ecb6e6
           cargo llvm-cov test --doctests --text --fail-under-lines 30
           popd >/dev/null
           pushd -- tests/fixtures/crates/cargo_config >/dev/null
