@@ -24,6 +24,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
   - [Get coverage of AFL fuzzers](#get-coverage-of-afl-fuzzers)
   - [Exclude file from coverage](#exclude-file-from-coverage)
   - [Exclude code from coverage](#exclude-code-from-coverage)
+  - [WASM Support](#wasm-support)
   - [Continuous Integration](#continuous-integration)
     - [GitHub Actions and Codecov](#github-actions-and-codecov)
     - [GitLab CI](#gitlab-ci)
@@ -576,6 +577,10 @@ mod tests {
 ```
 
 cargo-llvm-cov excludes code contained in the directory named `tests` and file named `tests.rs`/`*_tests.rs`/`*-tests.rs` from the report by default, so you can also use it instead of `#[coverage(off)]` attribute.
+
+### WASM Support
+
+See the [`wasm-bindgen` guide](https://wasm-bindgen.github.io/wasm-bindgen/wasm-bindgen-test/coverage.html) for the way to get coverage for `wasm32-unknown-unknown` target.
 
 ### Continuous Integration
 

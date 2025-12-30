@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Update documentation to mention the way to get coverage for `wasm32-unknown-unknown` target.
+
 - Exclude files named `tests.rs`/`*_tests.rs`/`*-tests.rs` from the report by default.
 
 ## [0.6.21] - 2025-10-10
