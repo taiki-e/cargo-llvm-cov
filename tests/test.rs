@@ -4,7 +4,7 @@
 
 mod auxiliary;
 
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use cargo_config2::Flags;
 use fs_err as fs;
@@ -264,20 +264,22 @@ fn clean_profraw_only() {
     let model = "real1";
     let workspace_root = test_project(model);
 
-    let find_profraw_file = || {
-        walkdir::WalkDir::new(&workspace_root)
-            .into_iter()
-            .map(Result::unwrap)
-            .find(|entry| entry.path().extension() == Some(std::ffi::OsStr::new("profraw")))
-    };
-
     cargo_llvm_cov("")
         .args(["--color", "never", "--no-report"])
         .arg("--remap-path-prefix")
         .current_dir(workspace_root.path())
         .assert_success();
 
-    assert!(find_profraw_file().is_some());
+    let entries_before =
+        walkdir::WalkDir::new(&workspace_root).into_iter().map(Result::unwrap).collect::<Vec<_>>();
+
+    let paths_before = entries_before.iter().map(walkdir::DirEntry::path).collect::<HashSet<_>>();
+
+    assert!(
+        paths_before
+            .iter()
+            .any(|path| path.extension().is_some_and(|extension| extension == "profraw"))
+    );
 
     cargo_llvm_cov("clean")
         .args(["--color", "never", "--profraw-only"])
@@ -286,8 +288,22 @@ fn clean_profraw_only() {
 
     assert!(workspace_root.path().join("target/llvm-cov-target").exists());
 
-    let profraw_file = find_profraw_file();
-    assert!(profraw_file.is_none(), "found profraw file: {profraw_file:?}");
+    let entries_after =
+        walkdir::WalkDir::new(&workspace_root).into_iter().map(Result::unwrap).collect::<Vec<_>>();
+
+    let paths_after = entries_after.iter().map(walkdir::DirEntry::path).collect::<HashSet<_>>();
+
+    for path in &paths_before {
+        if path.extension().is_some_and(|extension| extension == "profraw") {
+            continue;
+        }
+        assert!(paths_after.contains(path), "{} was deleted by clean", path.display());
+    }
+
+    for path in paths_after {
+        assert!(path.extension().is_none_or(|extension| extension != "profraw"));
+        assert!(paths_before.contains(path), "{} was created by clean", path.display());
+    }
 }
 
 #[test]
