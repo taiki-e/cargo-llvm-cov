@@ -1,0 +1,10 @@
+cargo-llvm-cov-fuzz-coverage
+Generate a coverage report of a fuzz target with cargo fuzz coverage.
+This internally calls `cargo fuzz coverage`.
+
+USAGE:
+    cargo llvm-cov fuzz-coverage [OPTIONS] [FUZZCOV_OPTIONS]
+
+ARGS:
+    [OPTIONS]           Options for cargo-llvm-cov; For more information try `cargo llvm-cov --help`
+    [FUZZCOV_OPTIONS]   Options for cargo fuzz coverage; For more information try `cargo fuzz coverage --help`
