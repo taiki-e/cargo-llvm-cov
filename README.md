@@ -584,7 +584,7 @@ cargo-llvm-cov excludes code contained in the directory named `tests` and file n
 
 #### Windows
 
-`{x86_64,i686}-pc-windows-msvc` are confirmed to work.
+`{x86_64,i686}-pc-windows-msvc` and `{x86_64,aarch64}-pc-windows-gnullvm` are confirmed to work.
 
 As of 2025-12-30,  `x86_64-pc-windows-gnu` ([rust-lang/rust#111098](https://github.com/rust-lang/rust/issues/111098)) and `aarch64-pc-windows-msvc` ([rust-lang/rust#150123](https://github.com/rust-lang/rust/issues/150123)) are known to not work with default setup.
 
