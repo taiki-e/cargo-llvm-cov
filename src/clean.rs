@@ -80,6 +80,10 @@ fn clean_ws(
 ) -> Result<()> {
     clean_ws_inner(ws, pkg_ids, verbose != 0, profraw_only)?;
 
+    if profraw_only {
+        return Ok(());
+    }
+
     let package_args: Vec<_> =
         pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata.packages[id].name]).collect();
     let mut args_set = vec![vec![]];
