@@ -12,6 +12,13 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support `*-windows-gnullvm` targets. ([#470](https://github.com/taiki-e/cargo-llvm-cov/pull/470), thanks @mati865)
+
+- Fix a bug causing `--profraw-only` to remove too many files. ([#469](https://github.com/taiki-e/cargo-llvm-cov/pull/469), thanks @smoelius)
+
+- Distribute prebuilt binary for AArch64 Windows.
+  `-C instrument-coverage` doesn't support `aarch64-pc-windows-msvc` yet ([rust-lang/rust#150123](https://github.com/rust-lang/rust/issues/150123)), but cross-compile to `aarch64-pc-windows-gnullvm` works.
+
 ## [0.6.23] - 2026-01-06
 
 - Enable [release immutability](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases).
