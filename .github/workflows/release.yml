@@ -52,8 +52,10 @@ jobs:
           - target: aarch64-unknown-linux-musl
           - target: aarch64-apple-darwin
             os: macos-14
-          # - target: aarch64-pc-windows-msvc # https://github.com/taiki-e/cargo-llvm-cov/issues/436
-          #   os: windows-2022
+          # -C instrument-coverage doesn't support aarch64-pc-windows-msvc yet (https://github.com/rust-lang/rust/issues/150123),
+          # but cross-compile to aarch64-pc-windows-gnullvm works.
+          - target: aarch64-pc-windows-msvc
+            os: windows-2022
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
           - target: x86_64-unknown-linux-musl
