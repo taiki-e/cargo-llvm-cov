@@ -29,6 +29,7 @@ pub(crate) struct Workspace {
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_for_cli: Option<String>,
+    pub(crate) target_is_windows: bool,
     pub(crate) rustc_version: cargo_config2::RustcVersion,
     /// Whether `-C instrument-coverage` is available.
     pub(crate) stable_coverage: bool,
@@ -58,6 +59,7 @@ impl Workspace {
         }
         let target_for_config = target_for_config.pop().unwrap();
         let target_for_cli = config.build_target_for_cli(target)?.pop();
+        let target_is_windows = target_for_config.triple().contains("-windows");
         let rustc = ProcessBuilder::from(config.rustc().clone());
         let mut rustc_version = config.rustc_version()?;
         rustc_version.nightly =
@@ -138,6 +140,7 @@ impl Workspace {
             rustc,
             target_for_config,
             target_for_cli,
+            target_is_windows,
             rustc_version,
             stable_coverage,
             need_doctest_in_workspace,

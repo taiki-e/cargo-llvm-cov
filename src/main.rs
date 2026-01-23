@@ -189,7 +189,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         } else {
             flags.push("-Z");
             flags.push("instrument-coverage");
-            if cx.ws.target_for_config.triple().contains("-windows") {
+            if cx.ws.target_is_windows {
                 // `-C codegen-units=1` is needed to work around link error on windows
                 // https://github.com/rust-lang/rust/issues/85461
                 // https://github.com/microsoft/windows-rs/issues/1006#issuecomment-887789950
@@ -761,8 +761,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if ext == "d" || ext == "rlib" || ext == "rmeta" || f.ends_with(".cargo-lock") {
             return false;
         }
-        let target_is_windows = cx.ws.target_for_config.triple().contains("-windows");
-        if target_is_windows
+        if cx.ws.target_is_windows
             && !(ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("dll"))
         {
             return false;
@@ -775,7 +774,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if !metadata.is_file() {
             return false;
         }
-        if target_is_windows {
+        if cx.ws.target_is_windows {
             true
         } else {
             #[cfg(unix)]
