@@ -289,15 +289,20 @@ jobs:
         if: startsWith(matrix.os, 'windows')
       - name: Install other shells (Ubuntu)
         run: |
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.fury.io/nushell/gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
+          printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
+            | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
           sudo apt-get -o Acquire::Retries=10 -qq update
-          sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends fish zsh
+          sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends fish nushell zsh
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Install other shells (macOS)
         run: |
-          brew install fish
+          brew install fish nushell
         if: startsWith(matrix.os, 'macos')
       - name: Install other shells (Windows)
         run: |
+          winget install nushell
           C:/msys64/usr/bin/pacman -S --noconfirm fish zsh
           printf '%s\n' 'C:\msys64\usr\bin' >>"${GITHUB_PATH}"
         # TODO: C:/msys64/usr/bin/pacman: No such file or directory
@@ -334,6 +339,33 @@ jobs:
         shell: fish {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
+      # TODO: error that cannot be reproduced locally
+      # Error: nu::parser::sourced_file_not_found
+      #   x File not found
+      #    ,-[/home/runner/work/_temp/bf605b2b-b9f8-469e-b15f-c39361f0d59d:3:8]
+      #  2 | cat /tmp/env.nu
+      #  3 | source /tmp/env.nu
+      #    :        ^^^^^|^^^^^
+      #    :             `-- File not found: /tmp/env.nu
+      #  4 | echo $env
+      #    `----
+      #   help: sourced files need to be available before your script is run
+      # - name: Test show-env --nu
+      #   run: |
+      #     cargo llvm-cov show-env --nu | save -f /tmp/env.nu
+      #     cat -- /tmp/env.nu
+      #     source /tmp/env.nu
+      #     echo $env
+      #     cargo llvm-cov clean --workspace
+      #     cargo build
+      #     cargo run -- 1
+      #     cargo llvm-cov report --fail-under-lines 50
+      #     cargo llvm-cov clean --workspace
+      #     cargo build
+      #     cargo run -- 2
+      #     cargo llvm-cov report --fail-under-lines 50
+      #   shell: nu {0}
+      #   working-directory: tests/fixtures/crates/bin_crate
 
   test-llvm:
     strategy:

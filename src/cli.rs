@@ -381,6 +381,8 @@ pub(crate) enum ShowEnvFormat {
     Cmd,
     /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Fish,
+    /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Nu,
 }
 
 impl ShowEnvFormat {
@@ -396,6 +398,9 @@ impl ShowEnvFormat {
             if fish {
                 conflicts("--sh", "--fish")?;
             }
+            if nu {
+                conflicts("--sh", "--nu")?;
+            }
             ShowEnvFormat::Sh
         } else if pwsh {
             if cmd {
@@ -404,14 +409,25 @@ impl ShowEnvFormat {
             if fish {
                 conflicts("--pwsh", "--fish")?;
             }
+            if nu {
+                conflicts("--pwsh", "--nu")?;
+            }
             ShowEnvFormat::Pwsh
         } else if cmd {
             if fish {
                 conflicts("--cmd", "--fish")?;
             }
+            if nu {
+                conflicts("--cmd", "--nu")?;
+            }
             ShowEnvFormat::Cmd
         } else if fish {
+            if nu {
+                conflicts("--fish", "--nu")?;
+            }
             ShowEnvFormat::Fish
+        } else if nu {
+            ShowEnvFormat::Nu
         } else {
             ShowEnvFormat::EscapedKeyValuePair
         })
@@ -435,6 +451,18 @@ impl ShowEnvFormat {
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
                 format!("set -gx {key}={}", escape::sh(value.into()))
+            }
+            ShowEnvFormat::Nu => {
+                // TODO: https://www.nushell.sh/lang-guide/chapters/strings_and_text.html#string-quoting
+                let value = escape::sh(value.into());
+                format!(
+                    "$env.{key} = {}",
+                    if value.starts_with('"') || value.starts_with('\'') {
+                        value
+                    } else {
+                        format!("'{value}'").into()
+                    }
+                )
             }
         }
     }
@@ -621,6 +649,7 @@ impl Args {
         let mut pwsh = false;
         let mut cmd = false;
         let mut fish = false;
+        let mut nu = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -817,6 +846,7 @@ impl Args {
                 Long("pwsh" | "with-pwsh-env-prefix") => parse_flag!(pwsh),
                 Long("cmd") => parse_flag!(cmd),
                 Long("fish") => parse_flag!(fish),
+                Long("nu") => parse_flag!(nu),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -916,7 +946,7 @@ impl Args {
         // Handle options specific to certain subcommands.
         // show-env specific
         let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, fish)?,
+            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, fish, nu)?,
             _ => {
                 if sh {
                     unexpected("--sh", subcommand)?;
@@ -929,6 +959,9 @@ impl Args {
                 }
                 if fish {
                     unexpected("--fish", subcommand)?;
+                }
+                if nu {
+                    unexpected("--nu", subcommand)?;
                 }
                 ShowEnvFormat::default()
             }

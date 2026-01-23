@@ -370,6 +370,10 @@ fn invalid_arg() {
                 .arg("--fish")
                 .assert_failure()
                 .stderr_contains("invalid option '--fish'");
+            cargo_llvm_cov(subcommand)
+                .arg("--nu")
+                .assert_failure()
+                .stderr_contains("invalid option '--nu'");
         }
         if !matches!(subcommand, "" | "test") {
             if matches!(subcommand, "nextest" | "nextest-archive") {
