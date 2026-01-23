@@ -476,7 +476,7 @@ Known compatible Rust (installed via rustup) and LLVM versions:
 
 ```sh
 # Set the environment variables needed to get coverage.
-source <(cargo llvm-cov show-env --export-prefix)
+source <(cargo llvm-cov show-env --sh)
 # Remove artifacts that may affect the coverage results.
 # This command should be called after show-env.
 cargo llvm-cov clean --workspace
@@ -499,8 +499,11 @@ cargo llvm-cov report --lcov # Generate report without tests.
 > The same thing can be achieved in PowerShell 6+ by substituting the source command with:
 >
 > ```powershell
-> Invoke-Expression (cargo llvm-cov show-env --with-pwsh-env-prefix | Out-String)
+> Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
 > ```
+>
+> See "Test show-env ... on ..." in [our CI config](https://github.com/taiki-e/cargo-llvm-cov/blob/HEAD/.github/workflows/ci.yml)
+> for usage with other shells.
 
 ### Get coverage of AFL fuzzers
 
@@ -508,7 +511,7 @@ Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) si
 
 ```sh
 # Set environment variables and clean workspace
-source <(cargo llvm-cov show-env --export-prefix)
+source <(cargo llvm-cov show-env --sh)
 cargo llvm-cov clean --workspace
 # Build the fuzz target
 cargo afl build
