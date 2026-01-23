@@ -103,6 +103,15 @@ OPTIONS:
         --no-clean
             Build without cleaning any old build artifacts
 
+        --no-rustc-wrapper
+            Build without setting RUSTC_WRAPPER
+
+            By default, cargo-llvm-cov sets RUSTC_WRAPPER. This is usually optimal
+            for compilation time, execution time, and disk usage.
+
+            When both this flag and --target option are used, coverage for proc-macro and
+            build script will not be displayed because cargo does not pass RUSTFLAGS to them.
+
         --fail-under-functions <MIN>
             Exit with a status of 1 if the total function coverage is less than MIN percent
 
@@ -128,7 +137,8 @@ OPTIONS:
             Include build script in coverage report
 
         --dep-coverage <NAME>
-            Show coverage of the specified dependency instead of the crates in the current workspace. (unstable)
+            Show coverage of the specified dependencies (space or comma separated list)
+            instead of the crates in the current workspace.
 
         --skip-functions
             Skip exporting per-function coverage data.
@@ -182,15 +192,14 @@ OPTIONS:
         --target <TRIPLE>
             Build for the target triple
 
-            When this option is used, coverage for proc-macro and build script will not be displayed
-            because cargo does not pass RUSTFLAGS to them.
-
         --coverage-target-only
             Activate coverage reporting only for the target triple
 
             Activate coverage reporting only for the target triple specified via `--target`. This is
             important, if the project uses multiple targets via the cargo bindeps feature, and not
             all targets can use `instrument-coverage`, e.g. a microkernel, or an embedded binary.
+
+            When this flag is used, coverage for proc-macro and build script will not be displayed.
 
     -v, --verbose
             Use verbose output

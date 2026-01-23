@@ -51,10 +51,17 @@ mod env;
 mod fs;
 mod metadata;
 mod regex_vec;
+mod wrapper;
 
 fn main() -> ExitCode {
     term::init_coloring();
-    let res = if demangler::is_enabled() { demangler::try_main() } else { try_main() };
+    let res = if demangler::is_enabled() {
+        demangler::try_main()
+    } else if wrapper::is_enabled() {
+        wrapper::try_main()
+    } else {
+        try_main()
+    };
     if let Err(e) = res {
         error!("{e:#}");
     }
@@ -77,7 +84,7 @@ fn try_main() -> Result<()> {
                 writer: BufWriter::new(io::stdout().lock()), // Buffered because it is written with newline many times.
                 options: cx.args.show_env.clone(),
             };
-            set_env(cx, writer, IsNextest(true))?; // Include envs for nextest.
+            set_env(cx, writer, IsNextest(true))?; // Include env vars for nextest.
             writer.set("CARGO_LLVM_COV_TARGET_DIR", cx.ws.metadata.target_directory.as_str())?;
             writer.set("CARGO_LLVM_COV_BUILD_DIR", cx.ws.metadata.build_directory().as_str())?;
             writer.writer.flush()?;
@@ -144,12 +151,15 @@ fn create_dirs(cx: &Context) -> Result<()> {
 }
 
 trait EnvTarget {
-    fn set(&mut self, key: &str, value: &str) -> Result<()>;
+    fn set(&mut self, key: &str, value: &str) -> Result<()> {
+        self.set_os(key, OsStr::new(value))
+    }
+    fn set_os(&mut self, key: &str, value: &OsStr) -> Result<()>;
     fn unset(&mut self, key: &str) -> Result<()>;
 }
 
 impl EnvTarget for ProcessBuilder {
-    fn set(&mut self, key: &str, value: &str) -> Result<()> {
+    fn set_os(&mut self, key: &str, value: &OsStr) -> Result<()> {
         self.env(key, value);
         Ok(())
     }
@@ -168,6 +178,9 @@ impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
         writeln!(self.writer, "{}", self.options.show_env_format.export_string(key, value))
             .context("failed to write env to stdout")
+    }
+    fn set_os(&mut self, key: &str, value: &OsStr) -> Result<()> {
+        self.set(key, os_str_to_str(value)?)
     }
     fn unset(&mut self, key: &str) -> Result<()> {
         if env::var_os(key).is_some() {
@@ -233,89 +246,105 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         }
     }
 
-    let llvm_profile_file_name =
-        if let Some(llvm_profile_file_name) = env::var("LLVM_PROFILE_FILE_NAME")? {
-            if !llvm_profile_file_name.ends_with(".profraw") {
-                bail!("extension of LLVM_PROFILE_FILE_NAME must be 'profraw'");
-            }
-            llvm_profile_file_name
-        } else {
-            // TODO: remove %p (for nextest?) by default? https://github.com/taiki-e/cargo-llvm-cov/issues/335#issuecomment-1890349373
-            let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
-            if is_nextest {
-                // https://github.com/taiki-e/cargo-llvm-cov/issues/258
-                // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
-                // Select the number of threads that is the same as the one nextest uses by default here.
-                // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
-                // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
-                // TODO: should we respect custom test-threads?
-                // - If the number of threads specified by the user is negative or
-                //   less or equal to available cores, it should not really be a problem
-                //   because it does not exceed the number of available cores.
-                // - Even if the number of threads specified by the user is greater than
-                //   available cores, it is expected that the number of threads that can
-                //   write simultaneously will not exceed the number of available cores.
-                let _ = write!(
-                    llvm_profile_file_name,
-                    "-%{}m",
-                    // TODO: clamp to 1..=9?
-                    // https://doc.rust-lang.org/rustc/instrument-coverage.html#running-the-instrumented-binary-to-generate-raw-coverage-profiling-data
-                    // > N must be between 1 and 9
-                    std::thread::available_parallelism().map_or(1, usize::from)
-                );
+    // Set LLVM_PROFILE_FILE.
+    {
+        let llvm_profile_file_name =
+            if let Some(llvm_profile_file_name) = env::var("LLVM_PROFILE_FILE_NAME")? {
+                if !llvm_profile_file_name.ends_with(".profraw") {
+                    bail!("extension of LLVM_PROFILE_FILE_NAME must be 'profraw'");
+                }
+                llvm_profile_file_name
             } else {
-                llvm_profile_file_name.push_str("-%m");
+                // TODO: remove %p (for nextest?) by default? https://github.com/taiki-e/cargo-llvm-cov/issues/335#issuecomment-1890349373
+                let mut llvm_profile_file_name = format!("{}-%p", cx.ws.name);
+                if is_nextest {
+                    // https://github.com/taiki-e/cargo-llvm-cov/issues/258
+                    // https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+                    // Select the number of threads that is the same as the one nextest uses by default here.
+                    // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/test_threads.rs
+                    // https://github.com/nextest-rs/nextest/blob/c54694dfe7be016993983b5dedbcf2b50d4b1a6e/nextest-runner/src/config/config_impl.rs#L30
+                    // TODO: should we respect custom test-threads?
+                    // - If the number of threads specified by the user is negative or
+                    //   less or equal to available cores, it should not really be a problem
+                    //   because it does not exceed the number of available cores.
+                    // - Even if the number of threads specified by the user is greater than
+                    //   available cores, it is expected that the number of threads that can
+                    //   write simultaneously will not exceed the number of available cores.
+                    let _ = write!(
+                        llvm_profile_file_name,
+                        "-%{}m",
+                        // TODO: clamp to 1..=9?
+                        // https://doc.rust-lang.org/rustc/instrument-coverage.html#running-the-instrumented-binary-to-generate-raw-coverage-profiling-data
+                        // > N must be between 1 and 9
+                        std::thread::available_parallelism().map_or(1, usize::from)
+                    );
+                } else {
+                    llvm_profile_file_name.push_str("-%m");
+                }
+                llvm_profile_file_name.push_str(".profraw");
+                llvm_profile_file_name
+            };
+        let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
+        env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
+    }
+
+    // Set rustflags and related env vars.
+    {
+        let mut rustflags = Flags::default();
+        push_common_flags(cx, &mut rustflags);
+        if cx.args.remap_path_prefix {
+            rustflags.push("--remap-path-prefix");
+            rustflags.push(format!("{}/=", cx.ws.metadata.workspace_root));
+        }
+        wrapper::set_env(cx, env, &rustflags)?;
+        if !wrapper::use_wrapper(cx) {
+            if cx.args.target.is_none() {
+                // cfg needed for trybuild support.
+                // https://github.com/dtolnay/trybuild/pull/121
+                // https://github.com/dtolnay/trybuild/issues/122
+                // https://github.com/dtolnay/trybuild/pull/123
+                rustflags.push("--cfg=trybuild_no_target");
             }
-            llvm_profile_file_name.push_str(".profraw");
-            llvm_profile_file_name
-        };
-    let llvm_profile_file = cx.ws.target_dir.join(llvm_profile_file_name);
-
-    let rustflags = &mut cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
-    push_common_flags(cx, rustflags);
-    if cx.args.remap_path_prefix {
-        rustflags.push("--remap-path-prefix");
-        rustflags.push(format!("{}/=", cx.ws.metadata.workspace_root));
+            let mut additional_flags = rustflags.flags;
+            let mut rustflags =
+                cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
+            rustflags.flags.append(&mut additional_flags);
+            match (cx.args.coverage_target_only, &cx.args.target) {
+                (true, Some(coverage_target)) => {
+                    env.set(
+                        &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
+                        &rustflags.encode_space_separated()?,
+                    )?;
+                    env.unset("RUSTFLAGS")?;
+                    env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+                }
+                _ => {
+                    // First, try with RUSTFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
+                    if let Ok(v) = rustflags.encode_space_separated() {
+                        env.set("RUSTFLAGS", &v)?;
+                        env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+                    } else {
+                        env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
+                    }
+                }
+            }
+        }
     }
-    if cx.args.target.is_none() {
-        // https://github.com/dtolnay/trybuild/pull/121
-        // https://github.com/dtolnay/trybuild/issues/122
-        // https://github.com/dtolnay/trybuild/pull/123
-        rustflags.push("--cfg=trybuild_no_target");
-    }
 
-    // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
-    let rustdocflags = &mut cx.ws.config.rustdocflags(&cx.ws.target_for_config)?;
+    // Set rustdocflags.
+    // Note that rustdoc ignores rustc-wrapper: https://github.com/rust-lang/rust/issues/56232
     if cx.args.doctests {
-        let rustdocflags = rustdocflags.get_or_insert_with(Flags::default);
-        push_common_flags(cx, rustdocflags);
-        rustdocflags.push("-Z");
-        rustdocflags.push("unstable-options");
-        rustdocflags.push("--persist-doctests");
-        rustdocflags.push(cx.ws.doctests_dir.as_str());
-    }
-
-    match (cx.args.coverage_target_only, &cx.args.target) {
-        (true, Some(coverage_target)) => {
-            env.set(
-                &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
-                &rustflags.encode_space_separated()?,
-            )?;
-            env.unset("RUSTFLAGS")?;
-            env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+        let mut rustdocflags =
+            cx.ws.config.rustdocflags(&cx.ws.target_for_config)?.unwrap_or_default();
+        {
+            push_common_flags(cx, &mut rustdocflags);
+            // flags needed for doctest coverage.
+            // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
+            rustdocflags.push("-Z");
+            rustdocflags.push("unstable-options");
+            rustdocflags.push("--persist-doctests");
+            rustdocflags.push(cx.ws.doctests_dir.as_str());
         }
-        _ => {
-            // First, try with RUSTFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
-            if let Ok(v) = rustflags.encode_space_separated() {
-                env.set("RUSTFLAGS", &v)?;
-                env.unset("CARGO_ENCODED_RUSTFLAGS")?;
-            } else {
-                env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
-            }
-        }
-    }
-
-    if let Some(rustdocflags) = rustdocflags {
         // First, try with RUSTDOCFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
         if let Ok(v) = rustdocflags.encode_space_separated() {
             env.set("RUSTDOCFLAGS", &v)?;
@@ -324,6 +353,8 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             env.set("CARGO_ENCODED_RUSTDOCFLAGS", &rustdocflags.encode()?)?;
         }
     }
+
+    // Set env vars for FFI coverage.
     if cx.args.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
@@ -352,7 +383,8 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
         env.set(cflags_key, &cflags)?;
         env.set(cxxflags_key, &cxxflags)?;
     }
-    env.set("LLVM_PROFILE_FILE", llvm_profile_file.as_str())?;
+
+    // Set other env vars.
     env.set("CARGO_LLVM_COV", "1")?;
     if cx.args.subcommand == Subcommand::ShowEnv {
         env.set("CARGO_LLVM_COV_SHOW_ENV", "1")?;
@@ -792,7 +824,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     // This is not the ideal way, but the way unstable book says it is cannot support them.
     // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#tips-for-listing-the-binaries-automatically
     let mut target_dir = cx.ws.target_dir.clone();
-    let mut build_dir = cx.ws.build_dir.clone();
+    let build_dir = cx.ws.build_dir.clone();
     let mut auto_detect_profile = false;
     if cx.args.subcommand.read_nextest_archive() {
         // TODO: build-dir
@@ -854,40 +886,23 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
     }
-    if !auto_detect_profile {
-        // https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html
-        if let Some(target) = &cx.args.target {
-            target_dir.push(target);
-            if let Some(build_dir) = &mut build_dir {
-                build_dir.push(target);
-            }
-        }
-        // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-        let profile = match cx.args.cargo_profile.as_deref() {
-            None if cx.args.release => "release",
-            Some("release" | "bench") => "release",
-            None | Some("dev" | "test") => "debug",
-            Some(p) => p,
-        };
-        target_dir.push(profile);
-        if let Some(build_dir) = &mut build_dir {
-            build_dir.push(profile);
-        }
-    }
-    for f in walk_target_dir(cx, &target_dir) {
-        let f = f.path();
-        if is_object(cx, f) {
-            if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
-                if re.is_match(file_stem) {
-                    files.push(make_relative(cx, f).to_owned().into_os_string());
+
+    let mut collect_target_dir =
+        |mut target_dir: Utf8PathBuf, mut build_dir: Option<Utf8PathBuf>| -> Result<()> {
+            if !auto_detect_profile {
+                // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
+                let profile = match cx.args.cargo_profile.as_deref() {
+                    None if cx.args.release => "release",
+                    Some("release" | "bench") => "release",
+                    None | Some("dev" | "test") => "debug",
+                    Some(p) => p,
+                };
+                target_dir.push(profile);
+                if let Some(build_dir) = &mut build_dir {
+                    build_dir.push(profile);
                 }
             }
-        }
-    }
-    searched_dir.push_str(target_dir.as_str());
-    if let Some(build_dir) = &build_dir {
-        if target_dir != *build_dir {
-            for f in walk_target_dir(cx, build_dir) {
+            for f in walk_target_dir(cx, &target_dir) {
                 let f = f.path();
                 if is_object(cx, f) {
                     if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
@@ -897,10 +912,38 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     }
                 }
             }
-            searched_dir.push(',');
-            searched_dir.push_str(build_dir.as_str());
+            searched_dir.push_str(target_dir.as_str());
+            if let Some(build_dir) = &build_dir {
+                if target_dir != *build_dir {
+                    for f in walk_target_dir(cx, build_dir) {
+                        let f = f.path();
+                        if is_object(cx, f) {
+                            if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
+                                if re.is_match(file_stem) {
+                                    files.push(make_relative(cx, f).to_owned().into_os_string());
+                                }
+                            }
+                        }
+                    }
+                    searched_dir.push(',');
+                    searched_dir.push_str(build_dir.as_str());
+                }
+            }
+            Ok(())
+        };
+    // Check both host and target because proc-macro and build script are built for host.
+    // https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html
+    if let Some(target) = &cx.args.target {
+        let mut target_dir = target_dir.clone();
+        let mut build_dir = build_dir.clone();
+        target_dir.push(target);
+        if let Some(build_dir) = &mut build_dir {
+            build_dir.push(target);
         }
+        collect_target_dir(target_dir, build_dir)?;
     }
+    collect_target_dir(target_dir, build_dir)?;
+
     if cx.args.doctests {
         for f in glob::glob(
             Utf8Path::new(&glob::Pattern::escape(cx.ws.doctests_dir.as_str()))
@@ -918,39 +961,46 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     // trybuild
-    let mut trybuild_target_dir = cx.ws.trybuild_target_dir();
-    if let Some(target) = &cx.args.target {
-        trybuild_target_dir.push(target);
-    }
-    // Currently, trybuild always use debug build.
-    trybuild_target_dir.push("debug");
-    if trybuild_target_dir.is_dir() {
-        let mut trybuild_targets = vec![];
-        for metadata in trybuild_metadata(&cx.ws, &cx.ws.metadata.target_directory)? {
-            for package in metadata.packages.into_values() {
-                for target in package.targets {
-                    trybuild_targets.push(target.name);
-                }
-            }
-        }
-        if !trybuild_targets.is_empty() {
-            let re =
-                Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|"))).unwrap();
-            for entry in walk_target_dir(cx, &trybuild_target_dir) {
-                let path = make_relative(cx, entry.path());
-                if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
-                    if re.is_match(file_stem) {
-                        continue;
+    let trybuild_target_dir = cx.ws.trybuild_target_dir();
+    let mut collect_trybuild_target_dir = |mut trybuild_target_dir: Utf8PathBuf| -> Result<()> {
+        // Currently, trybuild always use debug build.
+        trybuild_target_dir.push("debug");
+        if trybuild_target_dir.is_dir() {
+            let mut trybuild_targets = vec![];
+            for metadata in trybuild_metadata(&cx.ws, &cx.ws.metadata.target_directory)? {
+                for package in metadata.packages.into_values() {
+                    for target in package.targets {
+                        trybuild_targets.push(target.name);
                     }
                 }
-                if is_object(cx, path) {
-                    files.push(path.to_owned().into_os_string());
-                }
             }
-            searched_dir.push(',');
-            searched_dir.push_str(trybuild_target_dir.as_str());
+            if !trybuild_targets.is_empty() {
+                let re = Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|")))
+                    .unwrap();
+                for entry in walk_target_dir(cx, &trybuild_target_dir) {
+                    let path = make_relative(cx, entry.path());
+                    if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
+                        if re.is_match(file_stem) {
+                            continue;
+                        }
+                    }
+                    if is_object(cx, path) {
+                        files.push(path.to_owned().into_os_string());
+                    }
+                }
+                searched_dir.push(',');
+                searched_dir.push_str(trybuild_target_dir.as_str());
+            }
         }
+        Ok(())
+    };
+    // Check both host and target because proc-macro and build script are built for host.
+    if let Some(target) = &cx.args.target {
+        let mut trybuild_target_dir = trybuild_target_dir.clone();
+        trybuild_target_dir.push(target);
+        collect_trybuild_target_dir(trybuild_target_dir)?;
     }
+    collect_trybuild_target_dir(trybuild_target_dir)?;
 
     // This sort is necessary to make the result of `llvm-cov show` match between macOS and Linux.
     files.sort_unstable();
@@ -1299,33 +1349,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
 
         vendor_dirs.for_each(|directory| out.push_abs_path(directory));
 
-        if let Some(dep) = &cx.args.cov.dep_coverage {
-            let format = Format::Json;
-            let json = format.get_json(cx, object_files, None).context("failed to get json")?;
-            let crates_io_re = Regex::new(&format!(
-                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
-            ))?;
-            let dep_re = Regex::new(&format!(
-                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}{dep}-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
-            ))?;
-            let mut set = BTreeSet::new();
-            for data in &json.data {
-                for file in &data.files {
-                    // TODO: non-crates-io
-                    if let Some(crates_io) = crates_io_re.find(&file.filename) {
-                        if !dep_re.is_match(crates_io.as_str()) {
-                            set.insert(crates_io.as_str());
-                        }
-                    } else {
-                        // TODO: dedup
-                        set.insert(&file.filename);
-                    }
-                }
-            }
-            for f in set {
-                out.push(f);
-            }
-        } else {
+        if cx.args.cov.dep_coverage.is_empty() {
             // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
             //       We may have a directory like tests/support, so maybe we need both?
             if cx.args.remap_path_prefix {
@@ -1360,6 +1384,33 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
             }
             for path in resolve_excluded_paths(cx) {
                 out.push_abs_path(path);
+            }
+        } else {
+            let format = Format::Json;
+            let json = format.get_json(cx, object_files, None).context("failed to get json")?;
+            let crates_io_re = Regex::new(&format!(
+                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
+            ))?;
+            let dep_re = Regex::new(&format!(
+                "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}({})-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}",
+                cx.args.cov.dep_coverage.join("|")
+            ))?;
+            let mut set = BTreeSet::new();
+            for data in &json.data {
+                for file in &data.files {
+                    // TODO: non-crates-io
+                    if let Some(crates_io) = crates_io_re.find(&file.filename) {
+                        if !dep_re.is_match(crates_io.as_str()) {
+                            set.insert(regex::escape(crates_io.as_str()));
+                        }
+                    } else {
+                        // TODO: dedup
+                        set.insert(regex::escape(&file.filename));
+                    }
+                }
+            }
+            for f in set {
+                out.push(f);
             }
         }
     }

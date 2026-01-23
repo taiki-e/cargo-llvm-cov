@@ -69,9 +69,6 @@ impl Context {
             if args.cov.disable_default_ignore_filename_regex {
                 warn!("--disable-default-ignore-filename-regex option is unstable");
             }
-            if args.cov.dep_coverage.is_some() {
-                warn!("--dep-coverage option is unstable");
-            }
             if args.cov.branch {
                 warn!("--branch option is unstable");
             }
@@ -87,10 +84,15 @@ impl Context {
                 warn!("--doctests option is unstable");
             }
         }
-        if args.target.is_some() {
+        if args.coverage_target_only {
             info!(
-                "when --target option is used, coverage for proc-macro and build script will \
-                 not be displayed because cargo does not pass RUSTFLAGS to them"
+                "when --coverage-target-only flag is used, coverage for proc-macro and build script will \
+                 not be displayed"
+            );
+        } else if args.no_rustc_wrapper && args.target.is_some() {
+            info!(
+                "When both --no-rustc-wrapper flag and --target option are used, coverage for proc-macro and \
+                 build script will not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)

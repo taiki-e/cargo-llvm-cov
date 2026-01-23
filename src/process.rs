@@ -87,6 +87,10 @@ impl ProcessBuilder {
         self
     }
 
+    pub(crate) fn reserve_exact_args(&mut self, additional: usize) {
+        self.args.reserve_exact(additional);
+    }
+
     /// Set a variable in the process's environment.
     pub(crate) fn env(&mut self, key: impl Into<String>, val: impl Into<OsString>) -> &mut Self {
         self.env.insert(key.into(), Some(val.into()));

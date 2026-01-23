@@ -55,12 +55,17 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
 
     clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.args.verbose > 1, false)?;
 
-    let package_args: Vec<_> = cx
-        .workspace_members
-        .included
-        .iter()
-        .flat_map(|id| ["--package", &cx.ws.metadata.packages[id].name])
-        .collect();
+    let mut package_args = Vec::with_capacity(
+        (cx.workspace_members.included.len() + cx.args.cov.dep_coverage.len()) * 2,
+    );
+    for id in &cx.workspace_members.included {
+        package_args.push("--package");
+        package_args.push(&cx.ws.metadata.packages[id].name);
+    }
+    for dep in &cx.args.cov.dep_coverage {
+        package_args.push("--package");
+        package_args.push(dep);
+    }
     let mut cmd = cx.cargo();
     cmd.arg("clean").args(package_args);
     cargo::clean_args(cx, &mut cmd);
