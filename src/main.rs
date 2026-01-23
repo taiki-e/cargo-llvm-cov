@@ -673,12 +673,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
     }
     let mut input_files = String::new();
     for path in profraw_files {
-        input_files.push_str(path.to_str().with_context(|| {
-            #[allow(clippy::unnecessary_debug_formatting)]
-            {
-                format!("{} ({:?}) contains invalid utf-8 data", path.display(), path.as_os_str())
-            }
-        })?);
+        input_files.push_str(os_str_to_str(path.as_os_str())?);
         input_files.push('\n');
     }
     let input_files_path = &cx.ws.target_dir.join(format!("{}-profraw-list", cx.ws.name));
@@ -739,6 +734,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                                     .unwrap_or_default()
                                     .starts_with("build_script_build-")
                             {
+                                // TODO: use os_str_to_str?
                                 let dir = p.file_name().unwrap().to_string_lossy();
                                 if !cx.build_script_re.is_match(&dir) {
                                     return false;
@@ -1274,6 +1270,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         }
 
         fn push_abs_path(&mut self, path: impl AsRef<Path>) {
+            // TODO: use os_str_to_str?
             let path = regex::escape(&path.as_ref().to_string_lossy());
             let path = format!("^{path}($|{SEPARATOR})");
             self.push(path);
@@ -1295,6 +1292,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         // fail to match against a vendor directory like: `vendor/rust`. Both slash types are
         // reserved characters for file paths, meaning a naive string replacement can safely correct
         // the paths.
+        // TODO: use os_str_to_str?
         #[cfg(windows)]
         let vendor_dirs = vendor_dirs
             .map(|dir| std::path::PathBuf::from(dir.to_string_lossy().replace("/", "\\")));
@@ -1352,6 +1350,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 }
             }
             if let Some(path) = env::cargo_home_with_cwd(&cx.current_dir) {
+                // TODO: use os_str_to_str?
                 let path = regex::escape(&path.as_os_str().to_string_lossy());
                 let path = format!("^{path}{SEPARATOR}(registry|git){SEPARATOR}");
                 out.push(path);
@@ -1452,4 +1451,13 @@ fn target_u_upper(target: &str) -> String {
 /// the original path
 fn make_relative<'a>(cx: &Context, p: &'a Path) -> &'a Path {
     p.strip_prefix(&cx.current_dir).unwrap_or(p)
+}
+
+fn os_str_to_str(s: &OsStr) -> Result<&str> {
+    s.to_str().with_context(|| {
+        #[allow(clippy::unnecessary_debug_formatting)]
+        {
+            format!("{} ({s:?}) contains invalid utf-8 data", s.display())
+        }
+    })
 }
