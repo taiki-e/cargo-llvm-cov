@@ -6,8 +6,9 @@ use std::{
     ffi::OsString,
     fmt,
     path::PathBuf,
-    process::{ExitStatus, Output},
+    process::{ExitCode, ExitStatus, Output},
     str,
+    sync::atomic::{AtomicU8, Ordering},
 };
 
 use anyhow::{Context as _, Error, Result};
@@ -21,6 +22,13 @@ macro_rules! cmd {
         )*
         _cmd
     }};
+}
+
+// Use AtomicU8 because ExitCode::from only accepts u8.
+static LAST_FAILURE_EXIT_CODE: AtomicU8 = AtomicU8::new(0);
+pub(crate) fn last_failure_exit_code() -> Option<ExitCode> {
+    let last_failure_exit_code = ExitCode::from(LAST_FAILURE_EXIT_CODE.load(Ordering::Relaxed));
+    if last_failure_exit_code == ExitCode::SUCCESS { None } else { Some(last_failure_exit_code) }
 }
 
 // A builder for an external process, inspired by https://github.com/rust-lang/cargo/blob/0.47.0/src/cargo/util/process_builder.rs
@@ -118,6 +126,9 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
+            if let Some(code) = output.status.code().and_then(|code| u8::try_from(code).ok()) {
+                LAST_FAILURE_EXIT_CODE.store(code, Ordering::Relaxed);
+            }
             Err(process_error(
                 format!("process didn't exit successfully: {self}"),
                 Some(output.status),
@@ -136,6 +147,9 @@ impl ProcessBuilder {
         if output.status.success() {
             Ok(output)
         } else {
+            if let Some(code) = output.status.code().and_then(|code| u8::try_from(code).ok()) {
+                LAST_FAILURE_EXIT_CODE.store(code, Ordering::Relaxed);
+            }
             Err(process_error(
                 format!("process didn't exit successfully: {self}"),
                 Some(output.status),

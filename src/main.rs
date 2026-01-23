@@ -59,7 +59,7 @@ fn main() -> ExitCode {
         error!("{e:#}");
     }
     if term::error() || term::warn() && env::var_os("CARGO_LLVM_COV_DENY_WARNINGS").is_some() {
-        ExitCode::FAILURE
+        process::last_failure_exit_code().unwrap_or(ExitCode::FAILURE)
     } else {
         ExitCode::SUCCESS
     }
