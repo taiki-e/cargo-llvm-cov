@@ -22,7 +22,11 @@ pub(crate) struct Args {
     pub(crate) subcommand: Subcommand,
 
     pub(crate) cov: LlvmCovOptions,
+    // show-env-specific options
     pub(crate) show_env: ShowEnvOptions,
+    // clean-specific options
+    /// Clean only profraw files
+    pub(crate) profraw_only: bool,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
@@ -97,9 +101,6 @@ pub(crate) struct Args {
     // /// Do not activate the `default` feature
     // pub(crate) no_default_features: bool,
     /// Build for the target triple
-    ///
-    /// When this option is used, coverage for proc-macro and build script will
-    /// not be displayed because cargo does not pass RUSTFLAGS to them.
     pub(crate) target: Option<String>,
     /// Activate coverage reporting only for the target triple
     ///
@@ -107,6 +108,8 @@ pub(crate) struct Args {
     /// This is important, if the project uses multiple targets via the cargo
     /// bindeps feature, and not all targets can use `instrument-coverage`,
     /// e.g. a microkernel, or an embedded binary.
+    ///
+    /// When this flag is used, coverage for proc-macro and build script will not be displayed.
     pub(crate) coverage_target_only: bool,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
@@ -135,8 +138,14 @@ pub(crate) struct Args {
     ///
     /// Note that this can cause false positives/false negatives due to old build artifacts.
     pub(crate) no_clean: bool,
-    /// Clean only profraw files
-    pub(crate) profraw_only: bool,
+    /// Build without setting RUSTC_WRAPPER
+    ///
+    /// By default, cargo-llvm-cov sets RUSTC_WRAPPER. This is usually optimal
+    /// for compilation time, execution time, and disk usage.
+    ///
+    /// When both this flag and --target option are used, coverage for proc-macro and
+    /// build script will not be displayed because cargo does not pass RUSTFLAGS to them.
+    pub(crate) no_rustc_wrapper: bool,
 
     pub(crate) manifest: ManifestOptions,
 
@@ -344,7 +353,7 @@ pub(crate) struct LlvmCovOptions {
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
     /// Show coverage of the specified dependency instead of the crates in the current workspace. (unstable)
-    pub(crate) dep_coverage: Option<String>,
+    pub(crate) dep_coverage: Vec<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
     /// Enable branch coverage. (unstable)
@@ -457,10 +466,10 @@ pub(crate) fn merge_config_to_args(
     }
 }
 
+pub(crate) const FIRST_SUBCMD: &str = "llvm-cov";
+
 impl Args {
     pub(crate) fn parse() -> Result<Option<Self>> {
-        const SUBCMD: &str = "llvm-cov";
-
         // rustc/cargo args must be valid Unicode
         // https://github.com/rust-lang/rust/blob/1.84.0/compiler/rustc_driver_impl/src/args.rs#L121
         // TODO: https://github.com/rust-lang/cargo/pull/11118
@@ -480,9 +489,9 @@ impl Args {
         let mut raw_args = handle_args(env::args_os());
         raw_args.next(); // cargo
         match raw_args.next().transpose()? {
-            Some(arg) if arg == SUBCMD => {}
-            Some(arg) => bail!("expected subcommand '{SUBCMD}', found argument '{arg}'"),
-            None => bail!("expected subcommand '{SUBCMD}'"),
+            Some(arg) if arg == FIRST_SUBCMD => {}
+            Some(arg) => bail!("expected subcommand '{FIRST_SUBCMD}', found argument '{arg}'"),
+            None => bail!("expected subcommand '{FIRST_SUBCMD}'"),
         }
         let mut args = vec![];
         for arg in &mut raw_args {
@@ -552,7 +561,7 @@ impl Args {
         let mut fail_uncovered_functions = None;
         let mut show_missing_lines = false;
         let mut include_build_script = false;
-        let mut dep_coverage = None;
+        let mut dep_coverage = vec![];
         let mut skip_functions = false;
         let mut branch = false;
         let mut mcdc = false;
@@ -565,6 +574,7 @@ impl Args {
         let mut include_ffi = false;
         let mut verbose: usize = 0;
         let mut no_clean = false;
+        let mut no_rustc_wrapper = false;
 
         // clean options
         let mut profraw_only = false;
@@ -624,6 +634,19 @@ impl Args {
                         Value(_) => unreachable!(),
                     }
                     after_subcommand = false;
+                }};
+            }
+            macro_rules! parse_multi_opt {
+                ($v:ident $(,)?) => {{
+                    let val = parser.value()?;
+                    let mut val = val.to_str().unwrap();
+                    if val.starts_with('\'') && val.ends_with('\'')
+                        || val.starts_with('"') && val.ends_with('"')
+                    {
+                        val = &val[1..val.len() - 1];
+                    }
+                    let sep = if val.contains(',') { ',' } else { ' ' };
+                    $v.extend(val.split(sep).filter(|s| !s.is_empty()).map(str::to_owned));
                 }};
             }
             macro_rules! parse_flag {
@@ -707,6 +730,7 @@ impl Args {
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
                 Long("no-clean") => parse_flag!(no_clean),
+                Long("no-rustc-wrapper") => parse_flag!(no_rustc_wrapper),
 
                 // clean options
                 Long("profraw-only") => parse_flag!(profraw_only),
@@ -747,7 +771,7 @@ impl Args {
                 Long("fail-uncovered-functions") => parse_opt!(fail_uncovered_functions),
                 Long("show-missing-lines") => parse_flag!(show_missing_lines),
                 Long("include-build-script") => parse_flag!(include_build_script),
-                Long("dep-coverage") => parse_opt!(dep_coverage),
+                Long("dep-coverage") => parse_multi_opt!(dep_coverage),
 
                 // show-env options
                 Long("export-prefix") => parse_flag!(export_prefix),
@@ -848,7 +872,8 @@ impl Args {
 
         term::set_coloring(&mut color);
 
-        // unexpected options
+        // Handle options specific to certain subcommands.
+        // show-env specific
         let show_env_format = match subcommand {
             Subcommand::ShowEnv => ShowEnvFormat::new(export_prefix, with_pwsh_env_prefix)?,
             _ => {
@@ -861,6 +886,13 @@ impl Args {
                 ShowEnvFormat::default()
             }
         };
+        // clean specific
+        if profraw_only && !matches!(subcommand, Subcommand::Clean) {
+            bail!(
+                "'--profraw-only' is clean-specific option and not supported for this subcommand"
+            );
+        }
+        // test or show-env or report specific
         if doc || doctests {
             let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
@@ -872,6 +904,7 @@ impl Args {
                 _ => unexpected(flag, subcommand)?,
             }
         }
+        // test or nextest specific
         match subcommand {
             Subcommand::None | Subcommand::Nextest { .. } | Subcommand::NextestArchive => {}
             Subcommand::Test => {
@@ -918,6 +951,7 @@ impl Args {
                 }
             }
         }
+        // test or nextest or run specific
         match subcommand {
             Subcommand::None
             | Subcommand::Test
@@ -945,6 +979,7 @@ impl Args {
                 }
             }
         }
+        // test or nextest or run or show-env specific
         match subcommand {
             Subcommand::None
             | Subcommand::Test
@@ -959,8 +994,12 @@ impl Args {
                 if no_cfg_coverage_nightly {
                     unexpected("--no-cfg-coverage-nightly", subcommand)?;
                 }
+                if no_cfg_coverage {
+                    unexpected("--no-cfg-coverage", subcommand)?;
+                }
             }
         }
+        // test or nextest or clean specific
         match subcommand {
             Subcommand::None
             | Subcommand::Test
@@ -1177,12 +1216,6 @@ impl Args {
             subcommand = Subcommand::Report { nextest_archive_file: false };
         }
 
-        if profraw_only && !matches!(subcommand, Subcommand::Clean) {
-            bail!(
-                "'--profraw-only' is clean-specific option and not supported for this subcommand"
-            );
-        }
-
         // nextest-related
         if subcommand.call_cargo_nextest() {
             if let Some(profile) = profile {
@@ -1259,6 +1292,7 @@ impl Args {
                 mcdc,
             },
             show_env: ShowEnvOptions { show_env_format },
+            profraw_only,
             doctests,
             ignore_run_fail,
             lib,
@@ -1285,7 +1319,7 @@ impl Args {
             remap_path_prefix,
             include_ffi,
             no_clean,
-            profraw_only,
+            no_rustc_wrapper,
             manifest: ManifestOptions { manifest_path, frozen, locked, offline },
             nextest_archive_file,
             cargo_args,

@@ -3,7 +3,7 @@
 pub(crate) use std::env::*;
 use std::ffi::OsString;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 pub(crate) use cargo_config2::{cargo_home_with_cwd, home_dir, rustup_home_with_cwd};
 
 pub(crate) fn var(key: &str) -> Result<Option<String>> {
@@ -17,4 +17,12 @@ pub(crate) fn var(key: &str) -> Result<Option<String>> {
 
 pub(crate) fn var_os(key: &str) -> Option<OsString> {
     std::env::var_os(key).filter(|v| !v.is_empty())
+}
+
+pub(crate) fn var_required(key: &str) -> Result<String> {
+    var(key).with_context(|| format!("invalid {key}"))?.with_context(|| format!("{key} not set"))
+}
+
+pub(crate) fn var_os_required(key: &str) -> Result<OsString> {
+    var_os(key).with_context(|| format!("{key} not set"))
 }

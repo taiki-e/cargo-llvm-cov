@@ -90,6 +90,10 @@ jobs:
       - name: Test cargo llvm-cov nextest
         run: |
           unset RUSTFLAGS
+          target="${{ matrix.target }}"
+          if [[ -z "${target}" ]]; then
+            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          fi
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile ci
@@ -111,10 +115,6 @@ jobs:
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           cargo clean
           rm -- a.tar.zst
-          target="${{ matrix.target }}"
-          if [[ -z "${target}" ]]; then
-            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
-          fi
           cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${target}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
@@ -140,6 +140,15 @@ jobs:
             "$@"
           }
           unset RUSTFLAGS
+          if { sed --help 2>&1 || true; } | grep -Eq -e '-i extension'; then
+            in_place=(-i '')
+          else
+            in_place=(-i)
+          fi
+          target="${{ matrix.target }}"
+          if [[ -z "${target}" ]]; then
+            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          fi
 
           # Test nightly-specific options
           retry git clone --depth 1 https://github.com/taiki-e/easytime.git
@@ -164,22 +173,36 @@ jobs:
             *)
               retry rustup toolchain add 1.60 --no-self-update
               pushd -- easytime >/dev/null
-              cargo +1.60 llvm-cov test --text --fail-under-lines 30
+              cargo +1.60 llvm-cov test --fail-under-lines 30
               popd >/dev/null
               ;;
           esac
 
           # Test trybuild compatibility.
           case "${{ matrix.target }}" in
-            *-windows-gnullvm) ;; # proc-macro coverage is not supported yet for cross-compile.
+            aarch64-pc-windows-gnullvm) ;; # coverage is not supported yet on host (aarch64-pc-windows-msvc).
             *)
               retry git clone --depth 1 https://github.com/taiki-e/easy-ext.git
               pushd -- easy-ext >/dev/null
-              cargo llvm-cov --text --test compiletest --fail-under-lines 70
+              cargo llvm-cov --test compiletest --fail-under-lines 70
+              cargo clean
+              cargo llvm-cov --test compiletest --fail-under-lines 70 --target "${target}"
+              cargo clean
+              sed -E "${in_place[@]}" 's/trybuild = .*/trybuild = "1"/g' Cargo.toml # easy-ext uses patched trybuild
+              cargo llvm-cov --test compiletest --fail-under-lines 70
+              cargo clean
+              cargo llvm-cov --test compiletest --fail-under-lines 70 --target "${target}"
+              cargo clean
               popd >/dev/null
-              ;;
+            ;;
           esac
         if: startsWith(matrix.rust, 'nightly')
+      - name: Test --dep-coverage
+        run: |
+          cargo llvm-cov --bins --dep-coverage=regex --fail-under-lines 2 -- regex_vec
+          cargo llvm-cov --bins --dep-coverage=regex-syntax --fail-under-lines 20 -- regex_vec
+          cargo llvm-cov --bins --dep-coverage=regex --fail-under-lines 2 -- regex_vec
+          cargo llvm-cov --bins --dep-coverage=regex,regex-syntax --fail-under-lines 20 -- regex_vec
       - run: cargo hack build --workspace --no-private --feature-powerset --no-dev-deps
       - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features
         # TODO(windows-gnullvm): winapi 0.3.5 (dep of old version of termcolor)
