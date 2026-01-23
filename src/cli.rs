@@ -159,9 +159,7 @@ pub(crate) enum Subcommand {
     Run,
 
     /// Generate coverage report.
-    Report {
-        nextest_archive_file: bool,
-    },
+    Report { nextest_archive_file: bool },
 
     /// Remove artifacts that cargo-llvm-cov has generated in the past
     Clean,
@@ -170,15 +168,10 @@ pub(crate) enum Subcommand {
     ShowEnv,
 
     /// Run tests with cargo nextest
-    Nextest {
-        archive_file: bool,
-    },
+    Nextest { archive_file: bool },
 
     /// Build and archive tests with cargo nextest
     NextestArchive,
-
-    // internal (unstable)
-    Demangle,
 }
 
 static CARGO_LLVM_COV_USAGE: &str = include_str!("../docs/cargo-llvm-cov.txt");
@@ -206,7 +199,6 @@ impl Subcommand {
             Self::ShowEnv => CARGO_LLVM_COV_SHOW_ENV_USAGE,
             Self::Nextest { .. } => CARGO_LLVM_COV_NEXTEST_USAGE,
             Self::NextestArchive => CARGO_LLVM_COV_NEXTEST_ARCHIVE_USAGE,
-            Self::Demangle => "", // internal API
         }
     }
 
@@ -220,7 +212,6 @@ impl Subcommand {
             Self::ShowEnv => "show-env",
             Self::Nextest { .. } => "nextest",
             Self::NextestArchive => "nextest-archive",
-            Self::Demangle => "demangle",
         }
     }
 
@@ -247,7 +238,6 @@ impl FromStr for Subcommand {
             "show-env" => Ok(Self::ShowEnv),
             "nextest" => Ok(Self::Nextest { archive_file: false }),
             "nextest-archive" => Ok(Self::NextestArchive),
-            "demangle" => Ok(Self::Demangle),
             _ => bail!("unrecognized subcommand {s}"),
         }
     }
@@ -829,12 +819,6 @@ impl Args {
                     let val = val.into_string().unwrap();
                     if subcommand == Subcommand::None {
                         subcommand = val.parse::<Subcommand>()?;
-                        if subcommand == Subcommand::Demangle && args.len() != 1 {
-                            unexpected(
-                                args.iter().find(|&arg| arg != "demangle").unwrap(),
-                                subcommand,
-                            )?;
-                        }
                         after_subcommand = true;
                     } else {
                         if after_subcommand

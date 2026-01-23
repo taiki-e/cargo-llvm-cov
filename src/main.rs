@@ -46,6 +46,7 @@ mod cargo;
 mod clean;
 mod cli;
 mod context;
+mod demangler;
 mod env;
 mod fs;
 mod metadata;
@@ -53,7 +54,8 @@ mod regex_vec;
 
 fn main() -> ExitCode {
     term::init_coloring();
-    if let Err(e) = try_main() {
+    let res = if demangler::is_enabled() { demangler::try_main() } else { try_main() };
+    if let Err(e) = res {
         error!("{e:#}");
     }
     if term::error() || term::warn() && env::var_os("CARGO_LLVM_COV_DENY_WARNINGS").is_some() {
@@ -68,11 +70,6 @@ fn try_main() -> Result<()> {
     term::verbose::set(args.verbose != 0);
 
     match args.subcommand {
-        Subcommand::Demangle => {
-            let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written many times.
-            rustc_demangle::demangle_stream(&mut io::stdin().lock(), &mut stdout, false)?;
-            stdout.flush()?;
-        }
         Subcommand::Clean => clean::run(&mut args)?,
         Subcommand::ShowEnv => {
             let cx = &Context::new(args)?;
@@ -1108,11 +1105,10 @@ impl Format {
                     // -show-mcdc requires LLVM 18+
                     cmd.arg("-show-mcdc");
                 }
-                cmd.args([
-                    &format!("-Xdemangler={}", cx.current_exe.display()),
-                    "-Xdemangler=llvm-cov",
-                    "-Xdemangler=demangle",
-                ]);
+                let mut demangler = OsString::from("-Xdemangler=");
+                demangler.push(&cx.current_exe);
+                cmd.arg(demangler);
+                demangler::set_env(&mut cmd);
                 if let Some(output_dir) = &cx.args.cov.output_dir {
                     if self == Self::Html {
                         cmd.arg(format!("-output-dir={}", output_dir.join("html")));
