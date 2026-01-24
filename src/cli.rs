@@ -1129,6 +1129,9 @@ impl Args {
             // we reject it because the situation where both flags are specified is odd.
             conflicts("--package", "--workspace")?;
         }
+        if branch && mcdc {
+            conflicts("--branch", "--mcdc")?;
+        }
         // TODO: handle these mutual exclusions elegantly.
         if lcov {
             let flag = "--lcov";

@@ -75,9 +75,6 @@ impl Context {
             if args.cov.mcdc {
                 warn!("--mcdc option is unstable");
             }
-            if args.cov.mcdc && args.cov.branch {
-                warn!("the `--mcdc` option takes precedence over `--branch`");
-            }
             if args.doc {
                 warn!("--doc option is unstable");
             } else if args.doctests {
@@ -122,12 +119,16 @@ impl Context {
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
             && env::var_os("CARGO_LLVM_COV_SHOW_ENV").is_some()
         {
-            warn!(
-                "cargo-llvm-cov subcommands other than report and clean may not work correctly \
-                 in context where environment variables are set by show-env; consider using \
-                 normal {} commands",
-                if args.subcommand.call_cargo_nextest() { "cargo-nextest" } else { "cargo" }
-            );
+            if args.subcommand == Subcommand::ShowEnv {
+                warn!("nested show-env may not work correctly");
+            } else {
+                bail!(
+                    "cargo-llvm-cov subcommands other than report and clean may not work correctly \
+                     in context where environment variables are set by show-env; consider using \
+                     normal {} commands",
+                    if args.subcommand.call_cargo_nextest() { "cargo-nextest" } else { "cargo" }
+                );
+            }
         }
         if ws.config.build.build_dir.is_some()
             && matches!(
@@ -190,7 +191,7 @@ impl Context {
                             Some(ref v) if v == "yes" => false,
                             Some(v) => {
                                 if v != "no" {
-                                    warn!(
+                                    bail!(
                                         "CARGO_LLVM_COV_SETUP must be yes or no, but found `{v:?}`"
                                     );
                                 }

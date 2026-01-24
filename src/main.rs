@@ -697,7 +697,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         if cx.ws.profdata_file.exists() {
             return Ok(());
         }
-        warn!(
+        bail!(
             "not found *.profraw files in {}; this may occur if target directory is accidentally \
              cleared, or running report subcommand without running any tests or binaries",
             cx.ws.target_dir
@@ -853,36 +853,35 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             }
         }
         if binaries_metadata.is_empty() {
-            warn!("not found binaries-metadata.json in nextest archive {archive_file:?}");
-        } else {
-            match serde_json::from_slice::<BinariesMetadata>(&binaries_metadata) {
-                // TODO: what multiple base_output_directories means?
-                Ok(binaries_metadata)
-                    if binaries_metadata.rust_build_meta.base_output_directories.len() == 1 =>
-                {
-                    if cx.args.target.is_some() {
-                        info!(
-                            "--target flag is no longer needed because detection from nextest archive is now supported"
-                        );
-                    }
-                    if cx.args.release {
-                        info!(
-                            "--release flag is no longer needed because detection from nextest archive is now supported"
-                        );
-                    }
-                    if cx.args.cargo_profile.is_some() {
-                        info!(
-                            "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
-                        );
-                    }
-                    target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
-                    auto_detect_profile = true;
-                }
-                res => {
-                    warn!(
-                        "found binaries-metadata.json in nextest archive {archive_file:?}, but has unsupported or incompatible format: {res:?}"
+            bail!("not found binaries-metadata.json in nextest archive {archive_file:?}");
+        }
+        match serde_json::from_slice::<BinariesMetadata>(&binaries_metadata) {
+            // TODO: what multiple base_output_directories means?
+            Ok(binaries_metadata)
+                if binaries_metadata.rust_build_meta.base_output_directories.len() == 1 =>
+            {
+                if cx.args.target.is_some() {
+                    info!(
+                        "--target flag is no longer needed because detection from nextest archive is now supported"
                     );
                 }
+                if cx.args.release {
+                    info!(
+                        "--release flag is no longer needed because detection from nextest archive is now supported"
+                    );
+                }
+                if cx.args.cargo_profile.is_some() {
+                    info!(
+                        "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
+                    );
+                }
+                target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
+                auto_detect_profile = true;
+            }
+            res => {
+                bail!(
+                    "found binaries-metadata.json in nextest archive {archive_file:?}, but has unsupported or incompatible format: {res:?}"
+                );
             }
         }
     }
