@@ -10,3 +10,7 @@ rules:
       policies:
         taiki-e/*: any
         '*': ref-pin
+  misfeature:
+    ignore:
+      # We use `shell: cmd` to test compatibility.
+      - ci.yml
