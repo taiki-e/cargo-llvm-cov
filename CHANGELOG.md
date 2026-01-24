@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-01-24
+
 - Fix regression introduced in 0.7.0 where causing coverage test failure in nextest's CI. ([6e30e6f](https://github.com/taiki-e/cargo-llvm-cov/commit/6e30e6f691e44a718fcb8dad7edb8bef3ab24307))
 
 ## [0.7.0] - 2026-01-24
@@ -763,7 +765,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.24...v0.7.0
 [0.6.24]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.23...v0.6.24
 [0.6.23]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.22...v0.6.23
