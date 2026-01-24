@@ -1,0 +1,121 @@
+{
+  "data": [
+    {
+      "files": [
+        {
+          "filename": "crate-a/src/lib.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "mcdc": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 1,
+              "covered": 1,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 1,
+              "covered": 1,
+              "percent": 100.0
+            },
+            "lines": {
+              "count": 3,
+              "covered": 3,
+              "percent": 100.0
+            },
+            "regions": {
+              "count": 3,
+              "covered": 3,
+              "notcovered": 0,
+              "percent": 100.0
+            }
+          }
+        },
+        {
+          "filename": "crate-b/src/lib.rs",
+          "summary": {
+            "branches": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "mcdc": {
+              "count": 0,
+              "covered": 0,
+              "notcovered": 0,
+              "percent": 0.0
+            },
+            "functions": {
+              "count": 2,
+              "covered": 2,
+              "percent": 100.0
+            },
+            "instantiations": {
+              "count": 2,
+              "covered": 2,
+              "percent": 100.0
+            },
+            "lines": {
+              "count": 7,
+              "covered": 7,
+              "percent": 100.0
+            },
+            "regions": {
+              "count": 7,
+              "covered": 7,
+              "notcovered": 0,
+              "percent": 100.0
+            }
+          }
+        }
+      ],
+      "totals": {
+        "branches": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "functions": {
+          "count": 3,
+          "covered": 3,
+          "percent": 100
+        },
+        "instantiations": {
+          "count": 3,
+          "covered": 3,
+          "percent": 100
+        },
+        "lines": {
+          "count": 10,
+          "covered": 10,
+          "percent": 100
+        },
+        "mcdc": {
+          "count": 0,
+          "covered": 0,
+          "notcovered": 0,
+          "percent": 0
+        },
+        "regions": {
+          "count": 10,
+          "covered": 10,
+          "notcovered": 0,
+          "percent": 100
+        }
+      }
+    }
+  ],
+  "type": "llvm.coverage.json.export",
+  "version": "3.0.1"
+}

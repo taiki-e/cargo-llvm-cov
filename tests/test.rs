@@ -135,6 +135,12 @@ fn issue303() {
     run("issue303", "issue303", &["--manifest-path", "one/Cargo.toml", "--workspace"], &[]);
 }
 
+// https://github.com/taiki-e/cargo-llvm-cov/issues/361
+#[test]
+fn issue361() {
+    run("issue361", "issue361", &["--package", "crate-b"], &[]);
+}
+
 // feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
