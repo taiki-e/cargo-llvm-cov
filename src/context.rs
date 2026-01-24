@@ -89,6 +89,9 @@ impl Context {
                  build script will not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
+        if args.no_rustc_wrapper && !args.cov.dep_coverage.is_empty() {
+            warn!("--dep-coverage may not work together with --no-rustc-wrapper");
+        }
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
             && (!args.cov.no_cfg_coverage
                 || ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly)
