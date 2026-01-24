@@ -127,6 +127,14 @@ fn build_dir() {
     run("build_dir", "build_dir", &[], &[]);
 }
 
+// https://github.com/taiki-e/cargo-llvm-cov/issues/303
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
+#[test]
+fn issue303() {
+    run("issue303", "issue303", &["--manifest-path", "one/Cargo.toml", "--workspace"], &[]);
+}
+
 // feature(coverage_attribute) requires nightly
 #[rustversion::attr(not(nightly), ignore)]
 #[test]
