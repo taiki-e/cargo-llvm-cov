@@ -207,6 +207,140 @@ jobs:
       - run: cargo minimal-versions build --workspace --no-private --detach-path-deps=skip-exact --all-features
         # TODO(windows-gnullvm): winapi 0.3.5 (dep of old version of termcolor)
         if: matrix.target != 'aarch64-pc-windows-gnullvm'
+      - name: Test show-env --sh on bash
+        run: |
+          bash --version
+          if [[ "${{ matrix.os }}" == "macos"* ]]; then
+            # macOS's /bin/bash is too old.
+            cargo llvm-cov show-env --sh > env.sh
+            # shellcheck disable=SC1091
+            . ./env.sh
+          else
+            # shellcheck disable=SC1090
+            source <(cargo llvm-cov show-env --sh)
+          fi
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        working-directory: tests/fixtures/crates/bin_crate
+      - name: Test show-env --sh on sh
+        run: |
+          set -eux
+          cargo llvm-cov show-env --sh > env.sh
+          # shellcheck disable=SC1091
+          . ./env.sh
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: sh
+        working-directory: tests/fixtures/crates/bin_crate
+        if: startsWith(matrix.os, 'ubuntu') || matrix.os == '' || startsWith(matrix.os, 'macos')
+      - name: Test show-env --pwsh on pwsh
+        run: |
+          pwsh --version
+          Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+          env
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: pwsh
+        working-directory: tests/fixtures/crates/bin_crate
+      # TODO: --pwsh currently supports PowerShell 6+
+      # - name: Test show-env --pwsh on powershell
+      #   run: |
+      #     $PSVersionTable.PSVersion
+      #     $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+      #     Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+      #     env
+      #     cargo llvm-cov clean --workspace
+      #     cargo build
+      #     cargo run -- 1
+      #     cargo llvm-cov report --fail-under-lines 50
+      #     cargo llvm-cov clean --workspace
+      #     cargo build
+      #     cargo run -- 2
+      #     cargo llvm-cov report --fail-under-lines 50
+      #   shell: powershell
+      #   working-directory: tests/fixtures/crates/bin_crate
+      #   if: startsWith(matrix.os, 'windows')
+      - name: Test show-env --cmd
+        run: |
+          cargo llvm-cov show-env --cmd > env.bat
+          call env.bat
+          env
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: cmd
+        working-directory: tests/fixtures/crates/bin_crate
+        if: startsWith(matrix.os, 'windows')
+      - name: Install other shells (Ubuntu)
+        run: |
+          sudo apt-get -o Acquire::Retries=10 -qq update
+          sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends fish zsh
+        if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
+      - name: Install other shells (macOS)
+        run: |
+          brew install fish
+        if: startsWith(matrix.os, 'macos')
+      - name: Install other shells (Windows)
+        run: |
+          C:/msys64/usr/bin/pacman -S --noconfirm fish zsh
+          printf '%s\n' 'C:\msys64\usr\bin' >>"${GITHUB_PATH}"
+        # TODO: C:/msys64/usr/bin/pacman: No such file or directory
+        if: startsWith(matrix.os, 'windows') && matrix.os != 'windows-11-arm'
+      - name: Test show-env --sh on zsh
+        run: |
+          set -eux
+          zsh --version
+          source <(cargo llvm-cov show-env --sh)
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: zsh {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: matrix.os != 'windows-11-arm'
+      - name: Test show-env --fish
+        run: |
+          cargo llvm-cov show-env --sh > env.fish
+          cat -- env.fish
+          source env.fish
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: fish {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: matrix.os != 'windows-11-arm'
 
   test-llvm:
     strategy:
@@ -247,8 +381,7 @@ jobs:
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
           retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
-            | gpg --dearmor \
-            | sudo tee -- /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
+            | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
           sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
             <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
           retry sudo apt-get -o Acquire::Retries=10 -qq update

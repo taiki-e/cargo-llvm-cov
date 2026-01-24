@@ -323,8 +323,26 @@ fn open_report() {
 
 #[test]
 fn show_env() {
-    cargo_llvm_cov("show-env").assert_success().stdout_not_contains("export");
-    cargo_llvm_cov("show-env").arg("--export-prefix").assert_success().stdout_contains("export");
+    cargo_llvm_cov("show-env")
+        .assert_success()
+        .stdout_not_contains("export")
+        .stdout_not_contains("set");
+    cargo_llvm_cov("show-env")
+        .arg("--sh")
+        .assert_success()
+        .stdout_contains("export")
+        .stdout_not_contains("set");
+    cargo_llvm_cov("show-env")
+        .arg("--cmd")
+        .assert_success()
+        .stdout_contains("set")
+        .stdout_not_contains("set -gx")
+        .stdout_not_contains("export");
+    cargo_llvm_cov("show-env")
+        .arg("--fish")
+        .assert_success()
+        .stdout_contains("set -gx")
+        .stdout_not_contains("export");
 
     let mut flags = Flags::default();
     flags.push("--deny warnings");
@@ -333,7 +351,7 @@ fn show_env() {
 
     cargo_llvm_cov("show-env")
         .env("CARGO_ENCODED_RUSTFLAGS", flags)
-        .arg("--with-pwsh-env-prefix")
+        .arg("--pwsh")
         .assert_success()
         .stdout_not_contains("$env:CARGO_ENCODED_RUSTFLAGS=")
         .stdout_not_contains("$env:RUSTFLAGS=")
@@ -342,8 +360,8 @@ fn show_env() {
         // Verify binary character didn't lead to incompatible output for pwsh
         .stdout_contains("`u{1f}");
     cargo_llvm_cov("show-env")
-        .arg("--export-prefix")
-        .arg("--with-pwsh-env-prefix")
+        .arg("--sh")
+        .arg("--pwsh")
         .assert_failure()
         .stderr_contains("may not be used together with");
 }
@@ -355,13 +373,21 @@ fn invalid_arg() {
     {
         if subcommand != "show-env" {
             cargo_llvm_cov(subcommand)
-                .arg("--export-prefix")
+                .arg("--sh")
                 .assert_failure()
-                .stderr_contains("invalid option '--export-prefix'");
+                .stderr_contains("invalid option '--sh'");
             cargo_llvm_cov(subcommand)
-                .arg("--with-pwsh-env-prefix")
+                .arg("--pwsh")
                 .assert_failure()
-                .stderr_contains("invalid option '--with-pwsh-env-prefix'");
+                .stderr_contains("invalid option '--pwsh'");
+            cargo_llvm_cov(subcommand)
+                .arg("--cmd")
+                .assert_failure()
+                .stderr_contains("invalid option '--cmd'");
+            cargo_llvm_cov(subcommand)
+                .arg("--fish")
+                .assert_failure()
+                .stderr_contains("invalid option '--fish'");
         }
         if !matches!(subcommand, "" | "test") {
             if matches!(subcommand, "nextest" | "nextest-archive") {
