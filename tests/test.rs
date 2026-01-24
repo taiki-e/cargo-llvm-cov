@@ -372,7 +372,7 @@ fn show_env() {
         .stdout_not_contains("$env:CARGO_ENCODED_RUSTFLAGS=")
         .stdout_not_contains("$env:RUSTFLAGS=")
         // Verify the prefix related content + the encoding of "-"
-        .stdout_contains("$env:CARGO_LLVM_COV_RUSTC_WRAPPER_RUSTFLAGS=\"`u{2d}")
+        .stdout_contains("$env:__CARGO_LLVM_COV_RUSTC_WRAPPER_RUSTFLAGS=\"`u{2d}")
         // Verify binary character didn't lead to incompatible output for pwsh
         .stdout_contains("`u{1f}");
     cargo_llvm_cov("show-env")

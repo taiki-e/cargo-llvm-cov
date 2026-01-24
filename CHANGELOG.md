@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix regression introduced in 0.7.0 where causing coverage test failure in nextest's CI.
+
 ## [0.7.0] - 2026-01-24
 
 - Improve compilation time, execution time, and disk usage by applying the flags required for code coverage instrumentation only to the crates that actually need them. ([#471](https://github.com/taiki-e/cargo-llvm-cov/pull/471))

@@ -9,7 +9,7 @@ use anyhow::{Result, bail};
 
 use crate::{env, process::ProcessBuilder};
 
-const ENV_ENABLED: &str = "CARGO_LLVM_COV_DEMANGLER";
+const ENV_ENABLED: &str = "__CARGO_LLVM_COV_DEMANGLER";
 
 // -----------------------------------------------------------------------------
 // For caller
@@ -26,7 +26,6 @@ pub(crate) fn is_enabled() -> bool {
 }
 
 pub(crate) fn try_main() -> Result<()> {
-    // Fetch context from env vars.
     debug_assert!(is_enabled());
 
     // Parse arguments.

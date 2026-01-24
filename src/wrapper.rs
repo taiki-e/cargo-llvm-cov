@@ -3,18 +3,20 @@
 // RUSTC_WRAPPER mode for internal use.
 // Do NOT use this directly since this is an unstable interface.
 
+use std::ffi::OsString;
+
 use anyhow::{Context as _, Result};
 use cargo_config2::Flags;
 use lexopt::Arg::{Long, Short, Value};
 
 use crate::{EnvTarget, cli, context::Context, env, process::ProcessBuilder};
 
-const ENV_ENABLED: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER";
-const ENV_RUSTFLAGS: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER_RUSTFLAGS";
-const ENV_COVERAGE_TARGET: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER_COVERAGE_TARGET";
-const ENV_HOST: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER_HOST";
-const ENV_CRATE_NAMES: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER_CRATE_NAMES";
-const ENV_PRE_EXISTING: &str = "CARGO_LLVM_COV_RUSTC_WRAPPER_PRE_EXISTING";
+const ENV_ENABLED: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER";
+const ENV_RUSTFLAGS: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_RUSTFLAGS";
+const ENV_COVERAGE_TARGET: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_COVERAGE_TARGET";
+const ENV_HOST: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_HOST";
+const ENV_CRATE_NAMES: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_CRATE_NAMES";
+const ENV_PRE_EXISTING: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_PRE_EXISTING";
 
 // -----------------------------------------------------------------------------
 // For caller
@@ -104,19 +106,12 @@ pub(crate) fn is_enabled() -> bool {
 }
 
 pub(crate) fn try_main() -> Result<()> {
-    // Fetch context from env vars.
     debug_assert!(is_enabled());
-    let wrapper_rustflags = Flags::from_encoded(&env::var_required(ENV_RUSTFLAGS)?).flags;
-    let coverage_target = env::var_os(ENV_COVERAGE_TARGET);
-    let host = if coverage_target.is_some() { Some(env::var_os_required(ENV_HOST)?) } else { None };
-    let crate_names = env::var_required(ENV_CRATE_NAMES)?;
-    let crate_names = crate_names.split(',').collect::<Vec<_>>();
-    let pre_existing_wrapper = env::var_os(ENV_PRE_EXISTING);
 
     // Parse arguments.
     let mut raw_args = env::args_os();
     raw_args.next(); // cargo-llvm-cov
-    let rustc_or_wrapper = if let Some(pre_existing_wrapper) = pre_existing_wrapper {
+    let rustc_or_wrapper = if let Some(pre_existing_wrapper) = env::var_os(ENV_PRE_EXISTING) {
         // pre-existing rustc-wrapper
         pre_existing_wrapper
     } else {
@@ -138,20 +133,38 @@ pub(crate) fn try_main() -> Result<()> {
         }
     }
 
-    // Run rustc or wrapper.
-    let mut cmd = ProcessBuilder::new(rustc_or_wrapper);
     // Skip cases where no crate name specified, e.g., --version, --print.
-    let apply_wrapper_rustflags = crate_name
-        .is_some_and(|crate_name| crate_names.iter().any(|&name| name == crate_name))
+    let Some(crate_name) = crate_name.filter(|name| name != "___") else {
+        return run_rustc_wrapper(rustc_or_wrapper, args, vec![]);
+    };
+
+    // Fetch context from env vars.
+    let crate_names = env::var_required(ENV_CRATE_NAMES)?;
+    let crate_names = crate_names.split(',').collect::<Vec<_>>();
+    let wrapper_rustflags = Flags::from_encoded(&env::var_required(ENV_RUSTFLAGS)?).flags;
+    let coverage_target = env::var_os(ENV_COVERAGE_TARGET);
+    let host = if coverage_target.is_some() { Some(env::var_os_required(ENV_HOST)?) } else { None };
+
+    let apply_wrapper_rustflags = crate_names.iter().any(|&name| name == crate_name)
         && coverage_target
             .is_none_or(|coverage_target| coverage_target == target.unwrap_or(host.unwrap()));
-    cmd.reserve_exact_args(
-        args.len() + if apply_wrapper_rustflags { wrapper_rustflags.len() } else { 0 },
-    );
+
+    run_rustc_wrapper(
+        rustc_or_wrapper,
+        args,
+        if apply_wrapper_rustflags { wrapper_rustflags } else { vec![] },
+    )
+}
+
+fn run_rustc_wrapper(
+    rustc_or_wrapper: OsString,
+    args: Vec<OsString>,
+    wrapper_rustflags: Vec<String>,
+) -> Result<()> {
+    let mut cmd = ProcessBuilder::new(rustc_or_wrapper);
+    cmd.reserve_exact_args(args.len() + wrapper_rustflags.len());
     cmd.args(args);
-    if apply_wrapper_rustflags {
-        cmd.args(wrapper_rustflags);
-    }
+    cmd.args(wrapper_rustflags);
     cmd.run()?;
     Ok(())
 }
