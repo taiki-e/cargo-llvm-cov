@@ -53,8 +53,8 @@ pub(crate) fn set_env(cx: &Context, env: &mut dyn EnvTarget, rustflags: &Flags) 
         }
     }
     let mut crates = String::new();
-    for id in &cx.ws.metadata.workspace_members {
-        let pkg = &cx.ws.metadata.packages[id];
+    for &id in &cx.ws.metadata.workspace_members {
+        let pkg = &cx.ws.metadata[id];
         let name = &pkg.name.replace('-', "_");
         crates.push_str(name);
         crates.push(',');

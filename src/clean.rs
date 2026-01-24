@@ -64,9 +64,9 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
     let mut package_args = Vec::with_capacity(
         (cx.workspace_members.included.len() + cx.args.cov.dep_coverage.len()) * 2,
     );
-    for id in &cx.workspace_members.included {
+    for &id in &cx.workspace_members.included {
         package_args.push("--package");
-        package_args.push(&cx.ws.metadata.packages[id].name);
+        package_args.push(&cx.ws.metadata[id].name);
     }
     for dep in &cx.args.cov.dep_coverage {
         package_args.push("--package");
@@ -96,9 +96,9 @@ fn clean_ws(
     }
 
     let mut package_args = Vec::with_capacity(pkg_ids.len() * 2);
-    for id in pkg_ids {
+    for &id in pkg_ids {
         package_args.push("--package");
-        package_args.push(&ws.metadata.packages[id].name);
+        package_args.push(&ws.metadata[id].name);
     }
     let mut args_set = vec![vec![]];
     if ws.target_dir.join("release").exists() {
@@ -165,8 +165,8 @@ fn clean_profraw_files(ws: &Workspace, verbose: bool) -> Result<()> {
 
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]{7,})?$");
-    for id in pkg_ids {
-        re.or(&ws.metadata.packages[id].name.replace('-', "(-|_)"));
+    for &id in pkg_ids {
+        re.or(&ws.metadata[id].name.replace('-', "(-|_)"));
     }
     re.build().unwrap()
 }

@@ -285,8 +285,8 @@ impl Context {
 
 fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
-    for id in pkg_ids {
-        re.or(&ws.metadata.packages[id].name);
+    for &id in pkg_ids {
+        re.or(&ws.metadata[id].name);
     }
     re.build().unwrap()
 }
@@ -306,20 +306,20 @@ impl WorkspaceMembers {
         let mut excluded = vec![];
         let mut included = vec![];
         let has_exclude = !exclude.is_empty() || !exclude_from_report.is_empty();
-        for id in &metadata.workspace_members {
-            let pkg = &metadata.packages[id];
+        for &id in &metadata.workspace_members {
+            let pkg = &metadata[id];
             // --exclude flag doesn't handle `name:version` format
             if has_exclude
                 && (exclude.contains(&pkg.name) || exclude_from_report.contains(&pkg.name))
             {
-                excluded.push(id.clone());
+                excluded.push(id);
             } else if package.is_empty()
                 || package.contains(&pkg.name)
                 || package.contains(&format!("{}:{}", &pkg.name, &pkg.version))
             {
-                included.push(id.clone());
+                included.push(id);
             } else {
-                excluded.push(id.clone());
+                excluded.push(id);
             }
         }
 

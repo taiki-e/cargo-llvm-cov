@@ -972,7 +972,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         if trybuild_target_dir.is_dir() {
             let mut trybuild_targets = vec![];
             for metadata in trybuild_metadata(&cx.ws, &cx.ws.metadata.target_directory)? {
-                for package in metadata.packages.into_values() {
+                for package in metadata.packages {
                     for target in package.targets {
                         trybuild_targets.push(target.name);
                     }
@@ -1022,8 +1022,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
 fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
     let mut targets = BTreeSet::new();
     // Do not refer cx.workspace_members.include because it mixes --exclude and --exclude-from-report.
-    for id in &cx.ws.metadata.workspace_members {
-        let pkg = &cx.ws.metadata.packages[id];
+    for &id in &cx.ws.metadata.workspace_members {
+        let pkg = &cx.ws.metadata[id];
         targets.insert(&pkg.name);
         for t in &pkg.targets {
             targets.insert(&t.name);
@@ -1433,13 +1433,13 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         .workspace_members
         .excluded
         .iter()
-        .map(|id| cx.ws.metadata.packages[id].manifest_path.parent().unwrap())
+        .map(|&id| cx.ws.metadata[id].manifest_path.parent().unwrap())
         .collect();
     let included = cx
         .workspace_members
         .included
         .iter()
-        .map(|id| cx.ws.metadata.packages[id].manifest_path.parent().unwrap());
+        .map(|&id| cx.ws.metadata[id].manifest_path.parent().unwrap());
     let mut excluded_path = vec![];
     let mut contains: HashMap<&Utf8Path, Vec<_>> = HashMap::default();
     for included in included {
