@@ -153,6 +153,9 @@ OPTIONS:
         --branch
             Enable branch coverage. (unstable)
 
+            This flag is unstable. See <https://github.com/taiki-e/cargo-llvm-cov/issues/8> for
+            more.
+
         --mcdc
             Enable mcdc coverage. (unstable)
 
