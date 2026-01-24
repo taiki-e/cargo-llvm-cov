@@ -21,12 +21,13 @@ use crate::{
 pub(crate) struct Args {
     pub(crate) subcommand: Subcommand,
 
-    pub(crate) cov: LlvmCovOptions,
-    // show-env-specific options
+    // Subcommand-specific options
+    /// `show-env`-specific options
     pub(crate) show_env: ShowEnvOptions,
-    // clean-specific options
-    /// Clean only profraw files
-    pub(crate) profraw_only: bool,
+    /// `clean`-specific options
+    pub(crate) clean: CleanOptions,
+
+    pub(crate) cov: LlvmCovOptions,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
@@ -452,9 +453,17 @@ pub(crate) mod escape {
     }
 }
 
+/// `show-env`-specific options
 #[derive(Debug, Clone)]
 pub(crate) struct ShowEnvOptions {
     pub(crate) show_env_format: ShowEnvFormat,
+}
+
+/// `clean`-specific options
+#[derive(Debug, Clone)]
+pub(crate) struct CleanOptions {
+    /// Clean only profraw files
+    pub(crate) profraw_only: bool,
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
@@ -832,7 +841,7 @@ impl Args {
                              future breaking release"
                         );
                     }
-                    parse_flag!(sh)
+                    parse_flag!(sh);
                 }
                 Long(flag @ ("pwsh" | "with-pwsh-env-prefix")) => {
                     if flag == "with-pwsh-env-prefix" {
@@ -842,7 +851,7 @@ impl Args {
                              future breaking release"
                         );
                     }
-                    parse_flag!(pwsh)
+                    parse_flag!(pwsh);
                 }
                 Long("cmd") => parse_flag!(cmd),
                 Long("fish") => parse_flag!(fish),
@@ -947,83 +956,89 @@ impl Args {
         let show_env_format = match subcommand {
             Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, fish)?,
             _ => {
-                if sh {
-                    unexpected("--sh", subcommand)?;
-                }
-                if pwsh {
-                    unexpected("--pwsh", subcommand)?;
-                }
-                if cmd {
-                    unexpected("--cmd", subcommand)?;
-                }
-                if fish {
-                    unexpected("--fish", subcommand)?;
+                for (passed, flag) in
+                    [(sh, "--sh"), (pwsh, "--pwsh"), (cmd, "--cmd"), (fish, "--fish")]
+                {
+                    if passed {
+                        specific_flag(flag, subcommand, &["show-env"])?;
+                    }
                 }
                 ShowEnvFormat::default()
             }
         };
         // clean specific
         if profraw_only && !matches!(subcommand, Subcommand::Clean) {
-            bail!(
-                "'--profraw-only' is clean-specific option and not supported for this subcommand"
-            );
+            specific_flag("--profraw-only", subcommand, &["clean"])?;
         }
         // test or show-env or report specific
         if doc || doctests {
-            let flag = if doc { "--doc" } else { "--doctests" };
             match subcommand {
                 Subcommand::None | Subcommand::Test => {}
-                Subcommand::ShowEnv | Subcommand::Report { .. } if doctests => {}
-                Subcommand::Nextest { .. } | Subcommand::NextestArchive => {
-                    bail!("doctest is not supported for nextest")
+                Subcommand::ShowEnv | Subcommand::Report { .. } => {
+                    // TODO: reject --doc
+                    if !doctests {
+                        specific_flag("--doc", subcommand, &["test", ""])?;
+                    }
                 }
-                _ => unexpected(flag, subcommand)?,
+                Subcommand::Nextest { .. } | Subcommand::NextestArchive => {
+                    bail!(
+                        "doctest is not supported for nextest; see <https://github.com/nextest-rs/nextest/issues/16> for more"
+                    )
+                }
+                _ => {
+                    if doc {
+                        specific_flag("--doc", subcommand, &["test", ""])?;
+                    } else {
+                        specific_flag("--doctests", subcommand, &[
+                            "test", "show-env", "report", "",
+                        ])?;
+                    }
+                }
             }
         }
         // test or nextest specific
         match subcommand {
-            Subcommand::None | Subcommand::Nextest { .. } | Subcommand::NextestArchive => {}
-            Subcommand::Test => {
-                if no_run {
-                    unexpected("--no-run", subcommand)?;
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Nextest { .. }
+            | Subcommand::NextestArchive => {}
+            Subcommand::Run
+            | Subcommand::Clean
+            | Subcommand::Report { .. }
+            | Subcommand::ShowEnv => {
+                for (passed, flag) in [
+                    (lib, "--lib"),
+                    (bins, "--bins"),
+                    (examples, "--examples"),
+                    (!test.is_empty(), "--test"),
+                    (tests, "--tests"),
+                    (!bench.is_empty(), "--bench"),
+                    (benches, "--benches"),
+                    (all_targets, "--all-targets"),
+                    (no_fail_fast, "--no-fail-fast"),
+                    (!exclude.is_empty(), "--exclude"), // TODO: allow for report subcommand
+                    (!exclude_from_test.is_empty(), "--exclude-from-test"),
+                ] {
+                    if passed {
+                        specific_flag(flag, subcommand, &[
+                            "test",
+                            "nextest",
+                            "nextest-archive",
+                            "",
+                        ])?;
+                    }
                 }
             }
-            _ => {
-                if lib {
-                    unexpected("--lib", subcommand)?;
+        }
+        if no_run {
+            match subcommand {
+                Subcommand::None | Subcommand::Nextest { .. } | Subcommand::NextestArchive => {
+                    // The following warnings should not be promoted to an error.
+                    let _guard = term::warn::ignore();
+                    warn!("--no-run is deprecated, use `cargo llvm-cov report` subcommand instead");
                 }
-                if bins {
-                    unexpected("--bins", subcommand)?;
-                }
-                if examples {
-                    unexpected("--examples", subcommand)?;
-                }
-                if !test.is_empty() {
-                    unexpected("--test", subcommand)?;
-                }
-                if tests {
-                    unexpected("--tests", subcommand)?;
-                }
-                if !bench.is_empty() {
-                    unexpected("--bench", subcommand)?;
-                }
-                if benches {
-                    unexpected("--benches", subcommand)?;
-                }
-                if all_targets {
-                    unexpected("--all-targets", subcommand)?;
-                }
-                if no_run {
-                    unexpected("--no-run", subcommand)?;
-                }
-                if no_fail_fast {
-                    unexpected("--no-fail-fast", subcommand)?;
-                }
-                if !exclude.is_empty() {
-                    unexpected("--exclude", subcommand)?;
-                }
-                if !exclude_from_test.is_empty() {
-                    unexpected("--exclude-from-test", subcommand)?;
+                _ => {
+                    specific_flag("--no-run", subcommand, &["nextest", "nextest-archive", ""])?;
                 }
             }
         }
@@ -1034,24 +1049,25 @@ impl Args {
             | Subcommand::Run
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive => {}
-            _ => {
-                if !bin.is_empty() {
-                    unexpected("--bin", subcommand)?;
-                }
-                if !example.is_empty() {
-                    unexpected("--example", subcommand)?;
-                }
-                if !exclude_from_report.is_empty() {
-                    unexpected("--exclude-from-report", subcommand)?;
-                }
-                if no_report {
-                    unexpected("--no-report", subcommand)?;
-                }
-                if no_clean {
-                    unexpected("--no-clean", subcommand)?;
-                }
-                if ignore_run_fail {
-                    unexpected("--ignore-run-fail", subcommand)?;
+            Subcommand::Clean | Subcommand::ShowEnv | Subcommand::Report { .. } => {
+                for (passed, arg) in [
+                    (!bin.is_empty(), "--bin"),
+                    (!example.is_empty(), "--example"),
+                    (no_report, "--no-report"),
+                    (no_clean, "--no-clean"),
+                    // --exclude for report subcommand means "exclude from report"
+                    (!exclude_from_report.is_empty(), "--exclude-from-report"),
+                    (ignore_run_fail, "--ignore-run-fail"),
+                ] {
+                    if passed {
+                        specific_flag(arg, subcommand, &[
+                            "test",
+                            "run",
+                            "nextest",
+                            "nextest-archive",
+                            "",
+                        ])?;
+                    }
                 }
             }
         }
@@ -1063,15 +1079,22 @@ impl Args {
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
             | Subcommand::ShowEnv => {}
-            _ => {
-                if no_cfg_coverage {
-                    unexpected("--no-cfg-coverage", subcommand)?;
-                }
-                if no_cfg_coverage_nightly {
-                    unexpected("--no-cfg-coverage-nightly", subcommand)?;
-                }
-                if no_cfg_coverage {
-                    unexpected("--no-cfg-coverage", subcommand)?;
+            Subcommand::Report { .. } | Subcommand::Clean => {
+                for (passed, arg) in [
+                    (no_cfg_coverage, "--no-cfg-coverage"),
+                    (no_cfg_coverage_nightly, "--no-cfg-coverage-nightly"),
+                    (no_rustc_wrapper, "--no-rustc-wrapper"),
+                ] {
+                    if passed {
+                        specific_flag(arg, subcommand, &[
+                            "test",
+                            "run",
+                            "nextest",
+                            "nextest-archive",
+                            "show-env",
+                            "",
+                        ])?;
+                    }
                 }
             }
         }
@@ -1082,9 +1105,59 @@ impl Args {
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
             | Subcommand::Clean => {}
-            _ => {
+            Subcommand::Run | Subcommand::Report { .. } | Subcommand::ShowEnv => {
+                // TODO: allow report?
                 if workspace {
-                    unexpected("--workspace", subcommand)?;
+                    specific_flag("--workspace", subcommand, &[
+                        "test",
+                        "nextest",
+                        "nextest-archive",
+                        "show-env",
+                        "clean",
+                        "",
+                    ])?;
+                }
+            }
+        }
+        // nextest-related
+        if subcommand.call_cargo_nextest() {
+            if let Some(profile) = profile {
+                // nextest profile will be propagated
+                cargo_args.push("--profile".to_owned());
+                cargo_args.push(profile);
+            }
+            if nextest_archive_file.is_some() {
+                bail!(
+                    "'--nextest-archive-file' is report-specific option; \
+                    consider using '--archive-file' for nextest subcommands"
+                );
+            }
+            nextest_archive_file = archive_file;
+            if let Subcommand::Nextest { archive_file: f } = &mut subcommand {
+                *f = nextest_archive_file.is_some();
+            }
+        } else {
+            if cargo_profile.is_some() {
+                bail!(
+                    "'--cargo-profile' is nextest-specific option; \
+                     consider using '--profile' instead for non-nextest subcommands"
+                );
+            }
+            cargo_profile = profile;
+            if let Subcommand::Report { nextest_archive_file: f } = &mut subcommand {
+                if archive_file.is_some() {
+                    bail!(
+                        "'--archive-file' is nextest-specific option; \
+                         consider using '--nextest-archive-file instead for report subcommand'"
+                    );
+                }
+                *f = nextest_archive_file.is_some();
+            } else {
+                if archive_file.is_some() {
+                    specific_flag("--archive-file", subcommand, &["nextest", "nextest-archive"])?;
+                }
+                if nextest_archive_file.is_some() {
+                    specific_flag("--nextest-archive-file", subcommand, &["report"])?;
                 }
             }
         }
@@ -1270,12 +1343,6 @@ impl Args {
             bail!("empty string is not allowed in --output-dir")
         }
 
-        if no_run {
-            // The following warnings should not be promoted to an error.
-            let _guard = term::warn::ignore();
-            warn!("--no-run is deprecated, use `cargo llvm-cov report` subcommand instead");
-        }
-
         // If `-vv` is passed, propagate `-v` to cargo.
         if verbose > 1 {
             cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
@@ -1293,48 +1360,6 @@ impl Args {
         if no_run {
             // --no-run is deprecated alias for report
             subcommand = Subcommand::Report { nextest_archive_file: false };
-        }
-
-        // nextest-related
-        if subcommand.call_cargo_nextest() {
-            if let Some(profile) = profile {
-                // nextest profile will be propagated
-                cargo_args.push("--profile".to_owned());
-                cargo_args.push(profile);
-            }
-            if nextest_archive_file.is_some() {
-                bail!(
-                    "'--nextest-archive-file' is report-specific option; did you mean '--archive-file'?"
-                );
-            }
-            nextest_archive_file = archive_file;
-            if let Subcommand::Nextest { archive_file: f } = &mut subcommand {
-                *f = nextest_archive_file.is_some();
-            }
-        } else {
-            if cargo_profile.is_some() {
-                bail!("'--cargo-profile' is nextest-specific option; did you mean '--profile'?");
-            }
-            cargo_profile = profile;
-            if let Subcommand::Report { nextest_archive_file: f } = &mut subcommand {
-                if archive_file.is_some() {
-                    bail!(
-                        "'--archive-file' is nextest-specific option; did you mean '--nextest-archive-file'?"
-                    );
-                }
-                *f = nextest_archive_file.is_some();
-            } else {
-                if archive_file.is_some() {
-                    bail!(
-                        "'--archive-file' is nextest-specific option and not supported for this subcommand"
-                    );
-                }
-                if nextest_archive_file.is_some() {
-                    bail!(
-                        "'--nextest-archive-file' is report-specific option and not supported for this subcommand"
-                    );
-                }
-            }
         }
 
         Ok(Some(Self {
@@ -1371,7 +1396,7 @@ impl Args {
                 mcdc,
             },
             show_env: ShowEnvOptions { show_env_format },
-            profraw_only,
+            clean: CleanOptions { profraw_only },
             doctests,
             ignore_run_fail,
             lib,
@@ -1493,4 +1518,28 @@ fn unexpected(arg: &str, subcommand: Subcommand) -> Result<()> {
         bail!("invalid option '{arg}' for subcommand '{}'", subcommand.as_str());
     }
     Err(lexopt::Error::UnexpectedArgument(arg.into()).into())
+}
+
+#[cold]
+#[inline(never)]
+fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Result<()> {
+    assert!(!specific_to.is_empty());
+    assert!(flag.starts_with('-') && !flag.starts_with("---") && flag != "--");
+    let mut list = String::new();
+    for subcmd in specific_to {
+        if subcmd.is_empty() {
+            list.push_str("no subcommand");
+        } else {
+            list.push_str(subcmd);
+        }
+        list.push(',');
+    }
+    list.pop(); // drop trailing comma
+    if subcommand == Subcommand::None {
+        bail!("option '{flag}' is specific to {list}");
+    }
+    bail!(
+        "option '{flag}' is specific to {list} and not supported for subcommand '{}'",
+        subcommand.as_str()
+    );
 }

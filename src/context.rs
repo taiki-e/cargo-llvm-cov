@@ -190,6 +190,7 @@ impl Context {
                             None => true,
                             Some(ref v) if v == "yes" => false,
                             Some(v) => {
+                                #[allow(clippy::unnecessary_debug_formatting)]
                                 if v != "no" {
                                     bail!(
                                         "CARGO_LLVM_COV_SETUP must be yes or no, but found `{v:?}`"

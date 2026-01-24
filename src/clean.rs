@@ -25,7 +25,7 @@ pub(crate) fn run(args: &mut Args) -> Result<()> {
     cli::merge_config_to_args(&ws, &mut None, &mut args.verbose, &mut args.color);
     term::set_coloring(&mut args.color);
 
-    if !args.workspace && !args.profraw_only {
+    if !args.workspace && !args.clean.profraw_only {
         for dir in &[&ws.target_dir, &ws.output_dir] {
             rm_rf(dir, args.verbose != 0)?;
         }
@@ -35,7 +35,13 @@ pub(crate) fn run(args: &mut Args) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws(&ws, &ws.metadata.workspace_members, &args.manifest, args.verbose, args.profraw_only)?;
+    clean_ws(
+        &ws,
+        &ws.metadata.workspace_members,
+        &args.manifest,
+        args.verbose,
+        args.clean.profraw_only,
+    )?;
 
     Ok(())
 }

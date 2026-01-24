@@ -372,22 +372,12 @@ fn invalid_arg() {
         ["", "test", "run", "report", "clean", "show-env", "nextest", "nextest-archive"]
     {
         if subcommand != "show-env" {
-            cargo_llvm_cov(subcommand)
-                .arg("--sh")
-                .assert_failure()
-                .stderr_contains("invalid option '--sh'");
-            cargo_llvm_cov(subcommand)
-                .arg("--pwsh")
-                .assert_failure()
-                .stderr_contains("invalid option '--pwsh'");
-            cargo_llvm_cov(subcommand)
-                .arg("--cmd")
-                .assert_failure()
-                .stderr_contains("invalid option '--cmd'");
-            cargo_llvm_cov(subcommand)
-                .arg("--fish")
-                .assert_failure()
-                .stderr_contains("invalid option '--fish'");
+            for flag in ["--sh", "--pwsh", "--cmd", "--fish"] {
+                cargo_llvm_cov(subcommand)
+                    .arg(flag)
+                    .assert_failure()
+                    .stderr_contains(format!("option '{flag}' is specific to show-env"));
+            }
         }
         if !matches!(subcommand, "" | "test") {
             if matches!(subcommand, "nextest" | "nextest-archive") {
@@ -403,12 +393,12 @@ fn invalid_arg() {
                 cargo_llvm_cov(subcommand)
                     .arg("--doc")
                     .assert_failure()
-                    .stderr_contains("invalid option '--doc'");
+                    .stderr_contains("option '--doc' is specific to");
                 if !matches!(subcommand, "report" | "show-env") {
                     cargo_llvm_cov(subcommand)
                         .arg("--doctests")
                         .assert_failure()
-                        .stderr_contains("invalid option '--doctests'");
+                        .stderr_contains("option '--doctests' is specific to");
                 }
             }
         }
@@ -428,7 +418,7 @@ fn invalid_arg() {
                 "--exclude-from-test=v",
             ] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
-                    "invalid option '{}' for subcommand '{subcommand}'",
+                    "option '{}' is specific to",
                     arg.strip_suffix("=v").unwrap_or(arg)
                 ));
             }
@@ -443,7 +433,7 @@ fn invalid_arg() {
                 "--ignore-run-fail",
             ] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
-                    "invalid option '{}' for subcommand '{subcommand}'",
+                    "option '{}' is specific to",
                     arg.strip_suffix("=v").unwrap_or(arg)
                 ));
             }
@@ -451,7 +441,7 @@ fn invalid_arg() {
         if !matches!(subcommand, "" | "test" | "run" | "nextest" | "nextest-archive" | "show-env") {
             for arg in ["--no-cfg-coverage", "--no-cfg-coverage-nightly"] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
-                    "invalid option '{}' for subcommand '{subcommand}'",
+                    "option '{}' is specific to",
                     arg.strip_suffix("=v").unwrap_or(arg)
                 ));
             }
@@ -459,7 +449,7 @@ fn invalid_arg() {
         if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive" | "clean") {
             for arg in ["--workspace", "--all"] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
-                    "invalid option '{}' for subcommand '{subcommand}'",
+                    "option '{}' is specific to",
                     if arg == "--all" {
                         "--workspace"
                     } else {
