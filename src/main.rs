@@ -1331,7 +1331,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
     if let Some(ignore_filename) = &cx.args.cov.ignore_filename_regex {
         out.push(ignore_filename);
     }
-    if !cx.args.cov.disable_default_ignore_filename_regex {
+    if !cx.args.cov.no_default_ignore_filename_regex {
         let vendor_dirs =
             cx.ws.config.source.iter().filter_map(|(_, source)| source.directory.as_deref());
 

@@ -545,7 +545,7 @@ By default, [vendored sources](https://doc.rust-lang.org/cargo/commands/cargo-ve
 ^{RUSTUP_HOME}{SEPARATOR}toolchains($|{SEPARATOR})
 ```
 
-You can use `--disable-default-ignore-filename-regex` to disable default exclude setting.
+You can use `--no-default-ignore-filename-regex` to disable default exclude setting.
 
 ### Exclude code from coverage
 

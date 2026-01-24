@@ -327,7 +327,7 @@ pub(crate) struct LlvmCovOptions {
     /// Skip source code files with file paths that match the given regular expression.
     pub(crate) ignore_filename_regex: Option<String>,
     // For debugging (unstable)
-    pub(crate) disable_default_ignore_filename_regex: bool,
+    pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
     pub(crate) show_instantiations: bool,
     /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
@@ -352,7 +352,7 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
-    /// Show coverage of the specified dependency instead of the crates in the current workspace. (unstable)
+    /// Show coverage of the specified dependency instead of the crates in the current workspace.
     pub(crate) dep_coverage: Vec<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
@@ -585,7 +585,7 @@ impl Args {
         let mut output_dir = None;
         let mut failure_mode = None;
         let mut ignore_filename_regex = None;
-        let mut disable_default_ignore_filename_regex = false;
+        let mut no_default_ignore_filename_regex = false;
         let mut show_instantiations = false;
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
@@ -790,8 +790,19 @@ impl Args {
                 Long("output-dir") => parse_opt!(output_dir),
                 Long("failure-mode") => parse_opt!(failure_mode),
                 Long("ignore-filename-regex") => parse_opt!(ignore_filename_regex),
-                Long("disable-default-ignore-filename-regex") => {
-                    parse_flag!(disable_default_ignore_filename_regex);
+                Long(
+                    flag @ ("no-default-ignore-filename-regex"
+                    | "disable-default-ignore-filename-regex"),
+                ) => {
+                    if flag == "disable-default-ignore-filename-regex" {
+                        warn!(
+                            "--disable-default-ignore-filename-regex has been renamed to \
+                             --no-default-ignore-filename-regex; \
+                             old name is still available as an alias, but may removed in \
+                             future breaking release"
+                        );
+                    }
+                    parse_flag!(no_default_ignore_filename_regex);
                 }
                 Long("show-instantiations") => parse_flag!(show_instantiations),
                 Long("hide-instantiations") => {
@@ -813,8 +824,26 @@ impl Args {
                 Long("dep-coverage") => parse_multi_opt!(dep_coverage),
 
                 // show-env options
-                Long("sh" | "export-prefix") => parse_flag!(sh),
-                Long("pwsh" | "with-pwsh-env-prefix") => parse_flag!(pwsh),
+                Long(flag @ ("sh" | "export-prefix")) => {
+                    if flag == "export-prefix" {
+                        warn!(
+                            "--export-prefix has been renamed to --sh; \
+                             old name is still available as an alias, but may removed in \
+                             future breaking release"
+                        );
+                    }
+                    parse_flag!(sh)
+                }
+                Long(flag @ ("pwsh" | "with-pwsh-env-prefix")) => {
+                    if flag == "with-pwsh-env-prefix" {
+                        warn!(
+                            "--with-pwsh-env-prefix has been renamed to --pwsh; \
+                             old name is still available as an alias, but may removed in \
+                             future breaking release"
+                        );
+                    }
+                    parse_flag!(pwsh)
+                }
                 Long("cmd") => parse_flag!(cmd),
                 Long("fish") => parse_flag!(fish),
 
@@ -1323,7 +1352,7 @@ impl Args {
                 output_dir,
                 failure_mode,
                 ignore_filename_regex,
-                disable_default_ignore_filename_regex,
+                no_default_ignore_filename_regex,
                 show_instantiations,
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,

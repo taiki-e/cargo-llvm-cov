@@ -66,9 +66,6 @@ impl Context {
         {
             // The following warnings should not be promoted to an error.
             let _guard = term::warn::ignore();
-            if args.cov.disable_default_ignore_filename_regex {
-                warn!("--disable-default-ignore-filename-regex option is unstable");
-            }
             if args.cov.branch {
                 warn!("--branch option is unstable");
             }
