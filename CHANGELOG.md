@@ -12,6 +12,36 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Improve compilation time, execution time, and disk usage by applying the flags required for code coverage instrumentation only to the crates that actually need them. ([#471](https://github.com/taiki-e/cargo-llvm-cov/pull/471))
+
+  Previously, there flags ware applied to the entire dependency graph, but most of it was actually unnecessary. Previous behavior can be opted into with `--no-rustc-wrapper`.
+
+- Fix a bug where `--package` option is not correctly handled and other unspecified workspace members are shown in the report. ([#473](https://github.com/taiki-e/cargo-llvm-cov/pull/473))
+
+- Support coverage for proc-macro and build script even with cross-compilation. ([#471](https://github.com/taiki-e/cargo-llvm-cov/pull/471))
+
+  Previously, it was only supported when testing against the host target.
+
+- Stabilize `--dep-coverage`. ([#471](https://github.com/taiki-e/cargo-llvm-cov/pull/471))
+
+  Several bugs have been fixed, and improvements such as supporting multiple crates have also been made.
+
+- Stabilize `--disable-default-ignore-filename-regex` as `--no-default-ignore-filename-regex`. ([8db80d5](https://github.com/taiki-e/cargo-llvm-cov/commit/8db80d570ed5e5cee4bbd8bf8b10da22717ba94e))
+
+  The old name is still available as an alias, but may removed in future breaking release.
+
+- `cargo llvm-cov show-env` improvements:
+  - Add `--cmd` and `--fish`. ([#472](https://github.com/taiki-e/cargo-llvm-cov/pull/472))
+  - Rename `--export-prefix` to `--sh`, `--with-pwsh-env-prefix` to `--pwsh` for consistency and clarity. ([#472](https://github.com/taiki-e/cargo-llvm-cov/pull/472))
+
+    The old names are still available as aliases, but may removed in future breaking release.
+
+- Turn some warnings into hard error. ([837a118](https://github.com/taiki-e/cargo-llvm-cov/commit/837a118f4945867a6c83cb87abe634979e8789b2))
+
+- Diagnostics improvements. ([93840f8](https://github.com/taiki-e/cargo-llvm-cov/commit/93840f8ba681112a0ec185f423ad071ee5658638))
+
+- Documentation improvements.
+
 ## [0.6.24] - 2026-01-22
 
 - Support `*-windows-gnullvm` targets. ([#470](https://github.com/taiki-e/cargo-llvm-cov/pull/470), thanks @mati865)
