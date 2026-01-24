@@ -182,7 +182,7 @@ fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
     // Using std::fs instead of fs-err is okay here since we ignore error contents
     #[allow(clippy::disallowed_methods)]
     let m = std::fs::symlink_metadata(path);
-    if m.as_ref().map(fs::Metadata::is_dir).unwrap_or(false) {
+    if m.as_ref().is_ok_and(fs::Metadata::is_dir) {
         if verbose {
             status!("Removing", "{}", path.display());
         }
