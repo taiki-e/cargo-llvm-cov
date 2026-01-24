@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- Fix regression introduced in 0.7.0 where causing coverage test failure in nextest's CI.
+- Fix regression introduced in 0.7.0 where causing coverage test failure in nextest's CI. ([6e30e6f](https://github.com/taiki-e/cargo-llvm-cov/commit/6e30e6f691e44a718fcb8dad7edb8bef3ab24307))
 
 ## [0.7.0] - 2026-01-24
 
