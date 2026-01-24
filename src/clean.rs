@@ -95,8 +95,11 @@ fn clean_ws(
         return Ok(());
     }
 
-    let package_args: Vec<_> =
-        pkg_ids.iter().flat_map(|id| ["--package", &ws.metadata.packages[id].name]).collect();
+    let mut package_args = Vec::with_capacity(pkg_ids.len() * 2);
+    for id in pkg_ids {
+        package_args.push("--package");
+        package_args.push(&ws.metadata.packages[id].name);
+    }
     let mut args_set = vec![vec![]];
     if ws.target_dir.join("release").exists() {
         args_set.push(vec!["--release"]);
