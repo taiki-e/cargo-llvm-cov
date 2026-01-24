@@ -136,6 +136,8 @@ fn issue303() {
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/361
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn issue361() {
     run("issue361", "issue361", &["--package", "crate-b"], &[]);

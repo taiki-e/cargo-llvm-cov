@@ -217,8 +217,12 @@ impl Context {
             }
         };
 
-        let workspace_members =
-            WorkspaceMembers::new(&args.exclude, &args.exclude_from_report, &ws.metadata);
+        let workspace_members = WorkspaceMembers::new(
+            &args.exclude,
+            &args.exclude_from_report,
+            &args.package,
+            &ws.metadata,
+        );
         if workspace_members.included.is_empty() {
             bail!("no crates to be measured for coverage");
         }
@@ -293,23 +297,29 @@ pub(crate) struct WorkspaceMembers {
 }
 
 impl WorkspaceMembers {
-    fn new(exclude: &[String], exclude_from_report: &[String], metadata: &Metadata) -> Self {
+    fn new(
+        exclude: &[String],
+        exclude_from_report: &[String],
+        package: &[String],
+        metadata: &Metadata,
+    ) -> Self {
         let mut excluded = vec![];
         let mut included = vec![];
-        if !exclude.is_empty() || !exclude_from_report.is_empty() {
-            for id in &metadata.workspace_members {
-                // --exclude flag doesn't handle `name:version` format
-                if exclude.contains(&metadata.packages[id].name)
-                    || exclude_from_report.contains(&metadata.packages[id].name)
-                {
-                    excluded.push(id.clone());
-                } else {
-                    included.push(id.clone());
-                }
-            }
-        } else {
-            for id in &metadata.workspace_members {
+        let has_exclude = !exclude.is_empty() || !exclude_from_report.is_empty();
+        for id in &metadata.workspace_members {
+            let pkg = &metadata.packages[id];
+            // --exclude flag doesn't handle `name:version` format
+            if has_exclude
+                && (exclude.contains(&pkg.name) || exclude_from_report.contains(&pkg.name))
+            {
+                excluded.push(id.clone());
+            } else if package.is_empty()
+                || package.contains(&pkg.name)
+                || package.contains(&format!("{}:{}", &pkg.name, &pkg.version))
+            {
                 included.push(id.clone());
+            } else {
+                excluded.push(id.clone());
             }
         }
 

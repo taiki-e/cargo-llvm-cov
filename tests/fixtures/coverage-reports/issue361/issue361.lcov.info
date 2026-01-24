@@ -1,11 +1,3 @@
-SF:crate-a/src/lib.rs
-FNF:1
-FNH:1
-BRF:0
-BRH:0
-LF:3
-LH:3
-end_of_record
 SF:crate-b/src/lib.rs
 FNF:2
 FNH:2

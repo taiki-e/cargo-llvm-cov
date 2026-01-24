@@ -74,8 +74,8 @@ pub(crate) struct Args {
     /// This flag is unstable because it automatically enables --doctests flag.
     /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
     pub(crate) doc: bool,
-    // /// Package to run tests for
-    // pub(crate) package: Vec<String>,
+    /// Package to run tests for
+    pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     pub(crate) workspace: bool,
     /// Exclude packages from both the test and report
@@ -1414,6 +1414,7 @@ impl Args {
             exclude,
             exclude_from_test,
             exclude_from_report,
+            package,
             release,
             cargo_profile,
             target,

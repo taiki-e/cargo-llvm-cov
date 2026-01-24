@@ -86,6 +86,8 @@ impl Metadata {
 pub(crate) struct Package {
     /// The name of the package.
     pub(crate) name: String,
+    /// The version of the package.
+    pub(crate) version: String,
     pub(crate) targets: Vec<Target>,
     /// Absolute path to this package's manifest.
     pub(crate) manifest_path: Utf8PathBuf,
@@ -98,6 +100,7 @@ impl Package {
         let id = map.remove_string("id")?;
         Ok((id, Self {
             name: map.remove_string("name")?,
+            version: map.remove_string("version")?,
             targets: map
                 .remove_array("targets")?
                 .into_iter()

@@ -815,8 +815,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             true
         }
     }
+    /// Make the path relative if it's a descendent of the current working dir, otherwise just return
+    /// the original path
+    fn make_relative<'a>(cx: &Context, p: &'a Path) -> &'a Path {
+        p.strip_prefix(&cx.current_dir).unwrap_or(p)
+    }
 
-    let re = pkg_hash_re(&cx.ws)?;
+    let re = pkg_hash_re(cx)?;
     let mut files = vec![];
     let mut searched_dir = String::new();
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
@@ -1014,10 +1019,11 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     Ok(files)
 }
 
-fn pkg_hash_re(ws: &Workspace) -> Result<RegexVec> {
+fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
     let mut targets = BTreeSet::new();
-    for id in &ws.metadata.workspace_members {
-        let pkg = &ws.metadata.packages[id];
+    // Do not refer cx.workspace_members.include because it mixes --exclude and --exclude-from-report.
+    for id in &cx.ws.metadata.workspace_members {
+        let pkg = &cx.ws.metadata.packages[id];
         targets.insert(&pkg.name);
         for t in &pkg.targets {
             targets.insert(&t.name);
@@ -1382,7 +1388,12 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 out.push_abs_path(path.join("toolchains"));
             }
             for path in resolve_excluded_paths(cx) {
-                out.push_abs_path(path);
+                if cx.args.remap_path_prefix {
+                    let path = path.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(&path);
+                    out.push_abs_path(path);
+                } else {
+                    out.push_abs_path(path);
+                }
             }
         } else {
             let format = Format::Json;
@@ -1442,18 +1453,14 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
     }
     if contains.is_empty() {
         for &manifest_dir in &excluded {
-            let package_path =
-                manifest_dir.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(manifest_dir);
-            excluded_path.push(package_path.to_owned());
+            excluded_path.push(manifest_dir.to_owned());
         }
         return excluded_path;
     }
 
     for &excluded in &excluded {
         let Some(included) = contains.get(&excluded) else {
-            let package_path =
-                excluded.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(excluded);
-            excluded_path.push(package_path.to_owned());
+            excluded_path.push(excluded.to_owned());
             continue;
         };
 
@@ -1461,7 +1468,6 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
             let p = e.path();
             if !p.is_dir() {
                 if p.extension().is_some_and(|e| e == "rs") {
-                    let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
                     excluded_path.push(p.to_owned().try_into().unwrap());
                 }
                 return false;
@@ -1480,7 +1486,6 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
                 // continue to walk
                 return true;
             }
-            let p = p.strip_prefix(&cx.ws.metadata.workspace_root).unwrap_or(p);
             excluded_path.push(p.to_owned().try_into().unwrap());
             false
         }) {}
@@ -1495,12 +1500,6 @@ fn target_u_upper(target: &str) -> String {
     let mut target = target_u_lower(target);
     target.make_ascii_uppercase();
     target
-}
-
-/// Make the path relative if it's a descendent of the current working dir, otherwise just return
-/// the original path
-fn make_relative<'a>(cx: &Context, p: &'a Path) -> &'a Path {
-    p.strip_prefix(&cx.current_dir).unwrap_or(p)
 }
 
 fn os_str_to_str(s: &OsStr) -> Result<&str> {
