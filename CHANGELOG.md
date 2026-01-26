@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-01-26
+
 - Back "cargo-llvm-cov subcommands other than report and clean may not work correctly ..." error to warning.
 
   This was changed from a warning to an error in 0.7.0, but it has been reverted because a case where it previously worked without issues was reported.
@@ -783,7 +785,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.24...v0.7.0
