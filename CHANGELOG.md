@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-26
+
 - Support glob pattern, versioned name with partial version or `<name>@<version>` syntax, and package spec in `--package`. Previously, only package name and versioned package name with `<name>:<full_version>` are supported. ([#476](https://github.com/taiki-e/cargo-llvm-cov/pull/476))
 
   This also fixes regression introduced in 0.7.0 where causing packages specified with `--package` are wrongly excluded from report/test when package is specified with the above syntaxes.
@@ -777,7 +779,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.24...v0.7.0
 [0.6.24]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.6.23...v0.6.24
