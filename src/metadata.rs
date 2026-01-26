@@ -12,7 +12,7 @@ type Object = Map<String, Value>;
 type ParseResult<T> = Result<T, &'static str>;
 
 /// An opaque unique identifier for referring to the package.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub(crate) struct PackageId {
     index: usize,
@@ -52,11 +52,12 @@ impl Metadata {
     fn from_obj(mut map: Object) -> ParseResult<Self> {
         let raw_packages = map.remove_array("packages")?;
         let mut packages = Vec::with_capacity(raw_packages.len());
-        let mut pkg_id_map = HashMap::with_capacity(raw_packages.len());
-        for (i, pkg) in raw_packages.into_iter().enumerate() {
-            let (id, pkg) = Package::from_value(pkg)?;
-            pkg_id_map.insert(id, i);
-            packages.push(pkg);
+        for pkg in raw_packages {
+            packages.push(Package::from_value(pkg)?);
+        }
+        let mut pkg_id_map = HashMap::with_capacity(packages.len());
+        for (i, pkg) in packages.iter().enumerate() {
+            pkg_id_map.insert(&pkg.id, i);
         }
         let workspace_members: Vec<_> = map
             .remove_array("workspace_members")?
@@ -94,6 +95,7 @@ impl ops::Index<PackageId> for Metadata {
 }
 
 pub(crate) struct Package {
+    pub(crate) id: String,
     /// The name of the package.
     pub(crate) name: String,
     /// The version of the package.
@@ -104,11 +106,11 @@ pub(crate) struct Package {
 }
 
 impl Package {
-    fn from_value(mut value: Value) -> ParseResult<(String, Self)> {
+    fn from_value(mut value: Value) -> ParseResult<Self> {
         let map = value.as_object_mut().ok_or("packages")?;
 
-        let id = map.remove_string("id")?;
-        Ok((id, Self {
+        Ok(Self {
+            id: map.remove_string("id")?,
             name: map.remove_string("name")?,
             version: map.remove_string("version")?,
             targets: map
@@ -117,7 +119,7 @@ impl Package {
                 .map(Target::from_value)
                 .collect::<Result<_, _>>()?,
             manifest_path: map.remove_string("manifest_path")?,
-        }))
+        })
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{
     cli::{ManifestOptions, Subcommand},
     context::Context,
     env,
-    metadata::Metadata,
+    metadata::{Metadata, PackageId},
     process::ProcessBuilder,
 };
 
@@ -19,6 +19,7 @@ pub(crate) struct Workspace {
     pub(crate) config: Config,
     pub(crate) metadata: Metadata,
     pub(crate) current_manifest: Utf8PathBuf,
+    pub(crate) current_package: Option<PackageId>,
 
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) build_dir: Option<Utf8PathBuf>,
@@ -49,7 +50,7 @@ impl Workspace {
     ) -> Result<Self> {
         // Metadata and config
         let config = Config::load()?;
-        let current_manifest = package_root(config.cargo(), options.manifest_path.as_deref())?;
+        let current_manifest = locate_project(config.cargo(), options.manifest_path.as_deref())?;
         let metadata = Metadata::new(current_manifest.as_std_path(), config.cargo())?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
@@ -64,6 +65,16 @@ impl Workspace {
         let mut rustc_version = config.rustc_version()?;
         rustc_version.nightly =
             rustc_version.nightly || env::var_os("RUSTC_BOOTSTRAP").unwrap_or_default() == "1";
+
+        let mut current_package = None;
+        for &id in &metadata.workspace_members {
+            let manifest_path = &*metadata[id].manifest_path;
+            // no need to use same_file as cargo-metadata and cargo-locate-project
+            // as they return absolute paths resolved in the same way.
+            if manifest_path == current_manifest {
+                current_package = Some(id);
+            }
+        }
 
         if doctests && !rustc_version.nightly {
             warn!(
@@ -132,6 +143,7 @@ impl Workspace {
             config,
             metadata,
             current_manifest,
+            current_package,
             target_dir,
             build_dir,
             output_dir,
@@ -182,18 +194,14 @@ impl Workspace {
     }
 }
 
-fn package_root(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
-    let package_root = if let Some(manifest_path) = manifest_path {
-        manifest_path.to_owned()
-    } else {
-        locate_project(cargo)?.into()
-    };
-    Ok(package_root)
-}
-
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-locate-project.html
-fn locate_project(cargo: &OsStr) -> Result<String> {
-    cmd!(cargo, "locate-project", "--message-format", "plain").read()
+fn locate_project(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf8PathBuf> {
+    let mut cmd = cmd!(cargo, "locate-project");
+    if let Some(manifest_path) = manifest_path {
+        cmd.arg("--manifest-path");
+        cmd.arg(manifest_path);
+    }
+    Ok(cmd.args(["--message-format", "plain"]).read()?.into())
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
