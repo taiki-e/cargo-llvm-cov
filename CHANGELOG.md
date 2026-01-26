@@ -12,6 +12,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Back "cargo-llvm-cov subcommands other than report and clean may not work correctly ..." error to warning.
+
+  This was changed from a warning to an error in 0.7.0, but it has been reverted because a case where it previously worked without issues was reported.
+
 ## [0.8.0] - 2026-01-26
 
 - Support glob pattern, versioned name with partial version or `<name>@<version>` syntax, and package spec in `--package`. Previously, only package name and versioned package name with `<name>:<full_version>` are supported. ([#476](https://github.com/taiki-e/cargo-llvm-cov/pull/476))

@@ -123,7 +123,7 @@ impl Context {
             if args.subcommand == Subcommand::ShowEnv {
                 warn!("nested show-env may not work correctly");
             } else {
-                bail!(
+                warn!(
                     "cargo-llvm-cov subcommands other than report and clean may not work correctly \
                      in context where environment variables are set by show-env; consider using \
                      normal {} commands",
