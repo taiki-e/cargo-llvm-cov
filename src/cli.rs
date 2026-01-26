@@ -78,11 +78,11 @@ pub(crate) struct Args {
     pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     pub(crate) workspace: bool,
-    /// Exclude packages from both the test and report
-    pub(crate) exclude: Vec<String>,
-    /// Exclude packages from the test (but not from the report)
+    /// Packages additional excluded from the test (--exclude-from-test)
+    ///
+    /// (--exclude is already contained in `cargo_args` field.)
     pub(crate) exclude_from_test: Vec<String>,
-    /// Exclude packages from the report (but not from the test)
+    /// Packages from the report (--exclude and --exclude-from-report)
     pub(crate) exclude_from_report: Vec<String>,
 
     // /// Number of parallel jobs, defaults to # of CPUs
@@ -637,7 +637,7 @@ impl Args {
         let mut archive_file = None;
         let mut nextest_archive_file = None;
 
-        let mut parser = lexopt::Parser::from_args(args.clone());
+        let mut parser = lexopt::Parser::from_args(args);
         while let Some(arg) = parser.next()? {
             macro_rules! parse_opt {
                 ($opt:tt $(,)?) => {{
@@ -1343,6 +1343,23 @@ impl Args {
             bail!("empty string is not allowed in --output-dir")
         }
 
+        for e in exclude {
+            if exclude_from_test.contains(&e) {
+                info!(
+                    "--exclude-from-test {e} is needless because it is also specified by --exclude"
+                );
+            } else {
+                // No need to push to exclude_from_test because already contained in cargo_args
+            }
+            if exclude_from_report.contains(&e) {
+                info!(
+                    "--exclude-from-report {e} is needless because it is also specified by --exclude"
+                );
+            } else {
+                exclude_from_report.push(e);
+            }
+        }
+
         // If `-vv` is passed, propagate `-v` to cargo.
         if verbose > 1 {
             cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
@@ -1411,7 +1428,6 @@ impl Args {
             all_targets,
             doc,
             workspace,
-            exclude,
             exclude_from_test,
             exclude_from_report,
             package,

@@ -16,6 +16,8 @@ microkernel
 MSYSTEM
 nextest
 notcovered
+pkgid
+pkgname
 profdata
 profraw
 rmeta

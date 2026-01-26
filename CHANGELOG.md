@@ -12,6 +12,18 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support glob pattern, versioned name with partial version or `<name>@<version>` syntax, and package spec in `--package`. Previously, only package name and versioned package name with `<name>:<full_version>` are supported. ([#476](https://github.com/taiki-e/cargo-llvm-cov/pull/476))
+
+  This also fixes regression introduced in 0.7.0 where causing packages specified with `--package` are wrongly excluded from report/test when package is specified with the above syntaxes.
+
+- Support glob pattern, versioned name, and package spec in `--exclude`. When we tested it previously, Cargo did not support this, but the current version of Cargo does support it. ([#476](https://github.com/taiki-e/cargo-llvm-cov/pull/476))
+
+- Align the exclusion behavior in reports when cargo-llvm-cov is performed in a sub-crate directory of a workspace or in the root crate of a non-virtual workspace without using `--workspace` or `--package`, to match the behavior when `--workspace` or `--package` is used (by default, only show the tested crates). ([#476](https://github.com/taiki-e/cargo-llvm-cov/pull/476))
+
+  Compatibility Note: When `--workspace` or `--package` is not used, this will exclude other untested workspace members from the report that were previously implicitly included.
+
+  If you want to test other workspace members, consider using `--workspace` or `--package`. If you don't want to test other workspace members but still want to include them in the report, consider using `--workspace` or `--exclude-from-test`.
+
 ## [0.7.1] - 2026-01-24
 
 - Fix regression introduced in 0.7.0 where causing coverage test failure in nextest's CI. ([6e30e6f](https://github.com/taiki-e/cargo-llvm-cov/commit/6e30e6f691e44a718fcb8dad7edb8bef3ab24307))
