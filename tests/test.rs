@@ -34,7 +34,7 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
 
 fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
     for (extension, args2) in test_set() {
-        test_report(model, name, extension, None, &[args, args2].concat(), envs);
+        test_report(model, name, extension, None, &[args2, args].concat(), envs);
     }
 }
 
@@ -118,6 +118,34 @@ fn instantiations() {
 fn cargo_config() {
     run("cargo_config", "cargo_config", &[], &[]);
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
+}
+
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
+#[test]
+fn trybuild() {
+    if build_context::HOST == "aarch64-pc-windows-msvc" {
+        // coverage is not supported yet on this host.
+        return;
+    }
+    run("trybuild", "trybuild", &["--test", "ui"], &[]);
+    run("trybuild", "trybuild_target", &["--test", "ui", "--target", build_context::TARGET], &[]);
+}
+
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
+#[test]
+fn ui_test() {
+    if build_context::HOST == "aarch64-pc-windows-msvc" {
+        // coverage is not supported yet on this host.
+        return;
+    }
+    if build_context::TARGET == "x86_64-pc-windows-gnullvm" {
+        // report is a bit different from other targets (no Unexecuted instantiation)
+        return;
+    }
+    run("ui_test", "ui_test", &["--test", "ui"], &[]);
+    run("ui_test", "ui_test_target", &["--test", "ui", "--target", build_context::TARGET], &[]);
 }
 
 // build-dir requires Cargo 1.91.

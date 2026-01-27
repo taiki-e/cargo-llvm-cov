@@ -1,7 +1,6 @@
 autocfg
 bindeps
 binstall
-compiletest
 demangler
 doctestbins
 easytime
@@ -24,7 +23,6 @@ rmeta
 rustfilt
 rustix
 TESTNAME
-trybuild
 winapi
 xargo
 Xdemangler

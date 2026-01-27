@@ -1,0 +1,16 @@
+[package]
+name = "ui_test-test"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dev-dependencies]
+ctrlc = "3"
+ui_test = "0.30"
+
+[[test]]
+name = "ui"
+harness = false
+
+[workspace]

@@ -127,7 +127,7 @@ jobs:
           cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci --cargo-profile dev
           cargo clean
         working-directory: tests/fixtures/crates/bin_crate
-      - name: Test nightly-specific options, old Cargo compatibility, trybuild compatibility
+      - name: Test nightly-specific options, old Cargo compatibility
         run: |
           retry() {
             for i in {1..10}; do
@@ -140,11 +140,6 @@ jobs:
             "$@"
           }
           unset RUSTFLAGS
-          if { sed --help 2>&1 || true; } | grep -Eq -e '-i extension'; then
-            in_place=(-i '')
-          else
-            in_place=(-i)
-          fi
           target="${{ matrix.target }}"
           if [[ -z "${target}" ]]; then
             target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
@@ -176,25 +171,6 @@ jobs:
               cargo +1.60 llvm-cov test --fail-under-lines 30
               popd >/dev/null
               ;;
-          esac
-
-          # Test trybuild compatibility.
-          case "${{ matrix.target }}" in
-            aarch64-pc-windows-gnullvm) ;; # coverage is not supported yet on host (aarch64-pc-windows-msvc).
-            *)
-              retry git clone --depth 1 https://github.com/taiki-e/easy-ext.git
-              pushd -- easy-ext >/dev/null
-              cargo llvm-cov --test compiletest --fail-under-lines 70
-              cargo clean
-              cargo llvm-cov --test compiletest --fail-under-lines 70 --target "${target}"
-              cargo clean
-              sed -E "${in_place[@]}" 's/trybuild = .*/trybuild = "1"/g' Cargo.toml # easy-ext uses patched trybuild
-              cargo llvm-cov --test compiletest --fail-under-lines 70
-              cargo clean
-              cargo llvm-cov --test compiletest --fail-under-lines 70 --target "${target}"
-              cargo clean
-              popd >/dev/null
-            ;;
           esac
         if: startsWith(matrix.rust, 'nightly')
       - name: Test --dep-coverage

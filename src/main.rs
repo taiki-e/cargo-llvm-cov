@@ -1006,6 +1006,23 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
     collect_trybuild_target_dir(trybuild_target_dir)?;
 
+    // ui_test
+    let ui_test_target_dir = cx.ws.ui_test_target_dir();
+    let mut collect_ui_test_target_dir = |ui_test_target_dir: Utf8PathBuf| -> Result<()> {
+        if ui_test_target_dir.is_dir() {
+            for entry in walk_target_dir(cx, &ui_test_target_dir) {
+                let path = make_relative(cx, entry.path());
+                if is_object(cx, path) {
+                    files.push(path.to_owned().into_os_string());
+                }
+            }
+            searched_dir.push(',');
+            searched_dir.push_str(ui_test_target_dir.as_str());
+        }
+        Ok(())
+    };
+    collect_ui_test_target_dir(ui_test_target_dir)?;
+
     // This sort is necessary to make the result of `llvm-cov show` match between macOS and Linux.
     files.sort_unstable();
 

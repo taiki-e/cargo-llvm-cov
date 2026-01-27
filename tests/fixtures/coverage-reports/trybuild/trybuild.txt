@@ -1,0 +1,22 @@
+    1|       |// SPDX-License-Identifier: Apache-2.0 OR MIT
+    2|       |
+    3|       |use proc_macro::TokenStream;
+    4|       |
+    5|       |#[proc_macro_attribute]
+    6|      1|pub fn m(args: TokenStream, tokens: TokenStream) -> TokenStream {
+    7|      1|    if !args.is_empty() {
+    8|      1|        return args;
+    9|      0|    }
+   10|      0|    tokens
+   11|      1|}
+  ------------------
+  | Unexecuted instantiation: trybuild_test::m
+  ------------------
+  | trybuild_test::m:
+  |    6|      1|pub fn m(args: TokenStream, tokens: TokenStream) -> TokenStream {
+  |    7|      1|    if !args.is_empty() {
+  |    8|      1|        return args;
+  |    9|      0|    }
+  |   10|      0|    tokens
+  |   11|      1|}
+  ------------------

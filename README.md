@@ -10,7 +10,7 @@ This is a wrapper around rustc [`-C instrument-coverage`][instrument-coverage] a
 
 - Generate very precise coverage data. (line, region, and branch coverage. branch coverage is currently optional and requires nightly, see [#8] for more)
 - Support `cargo test`, `cargo run`, and [`cargo nextest`][nextest] with command-line interface compatible with cargo.
-- Support for proc-macro, including coverage of UI tests.
+- Support for proc-macro, including coverage of UI tests ([trybuild](https://github.com/dtolnay/trybuild), [ui_test](https://github.com/oli-obk/ui_test)).
 - Support for doc tests. (this is currently optional and requires nightly, see [#2] for more)
 - Fast because it does not introduce extra layers between rustc, cargo, and llvm-tools.
 

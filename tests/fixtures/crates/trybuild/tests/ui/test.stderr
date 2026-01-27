@@ -1,0 +1,5 @@
+error: a
+ --> tests/ui/test.rs:3:20
+  |
+3 | #[trybuild_test::m(compile_error!("a");)]
+  |                    ^^^^^^^^^^^^^^^^^^^

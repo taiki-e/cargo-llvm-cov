@@ -42,7 +42,8 @@ pub(crate) fn cargo_llvm_cov(subcommand: &str) -> Command {
         .env_remove("CARGO_TERM_COLOR")
         .env_remove("BROWSER")
         .env_remove("RUST_LOG")
-        .env_remove("CI");
+        .env_remove("CI")
+        .env_remove("TRYBUILD");
     cmd
 }
 
