@@ -192,6 +192,11 @@ impl Workspace {
         }
         trybuild_target_dir
     }
+
+    pub(crate) fn ui_test_target_dir(&self) -> Utf8PathBuf {
+        // https://github.com/oli-obk/ui_test/blob/0.30.4/src/config.rs#L180
+        self.metadata.target_directory.join("ui")
+    }
 }
 
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-locate-project.html

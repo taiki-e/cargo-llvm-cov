@@ -1,7 +1,11 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directory: /
+    directories:
+      - /
+      # crates with [workspace] table are not recognized by the above 'directory: /'
+      - /tests/fixtures/crates/trybuild
+      - /tests/fixtures/crates/ui_test
     schedule:
       interval: daily
     commit-message:

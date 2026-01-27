@@ -149,6 +149,7 @@ fn clean_ws_inner(
     rm_rf(&ws.profdata_file, verbose)?;
 
     clean_trybuild_artifacts(ws, pkg_ids, verbose)?;
+    clean_ui_test_artifacts(ws, verbose)?;
     Ok(())
 }
 
@@ -183,6 +184,12 @@ fn clean_trybuild_artifacts(ws: &Workspace, pkg_ids: &[PackageId], verbose: bool
             }
         }
     }
+    Ok(())
+}
+
+fn clean_ui_test_artifacts(ws: &Workspace, verbose: bool) -> Result<()> {
+    let ui_test_target_dir = ws.ui_test_target_dir();
+    rm_rf(ui_test_target_dir, verbose)?;
     Ok(())
 }
 

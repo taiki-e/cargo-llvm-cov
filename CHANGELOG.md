@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Support [`ui_test`](https://github.com/oli-obk/ui_test). ([#477](https://github.com/taiki-e/cargo-llvm-cov/pull/477))
+
 ## [0.8.1] - 2026-01-26
 
 - Back "cargo-llvm-cov subcommands other than report and clean may not work correctly ..." error to warning.

@@ -7,4 +7,5 @@ lexopt
 rustversion
 ruzstd
 termcolor
+trybuild
 walkdir

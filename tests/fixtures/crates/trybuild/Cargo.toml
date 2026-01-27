@@ -1,0 +1,11 @@
+[package]
+name = "trybuild-test"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dev-dependencies]
+trybuild = "1"
+
+[workspace]
