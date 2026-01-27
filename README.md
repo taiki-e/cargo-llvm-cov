@@ -467,7 +467,7 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 Known compatible Rust (installed via rustup) and LLVM versions:
 
-|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.92 |
+|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.94 |
 | ---------- | -------------- | -------------- | -------------- |
 | LLVM 14-17 | **✓**          |                |                |
 | LLVM 18    |                | **✓**          |                |
