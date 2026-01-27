@@ -12,11 +12,10 @@ use camino::Utf8PathBuf;
 
 use crate::{
     cargo::Workspace,
-    cli::{self, Args, Subcommand},
+    cli::{self, Args, Subcommand, UnresolvedArgs},
     env,
     metadata::{Package, PackageId},
     process::ProcessBuilder,
-    regex_vec::{RegexVec, RegexVecBuilder},
     term,
 };
 
@@ -26,14 +25,13 @@ pub(crate) struct Context {
     pub(crate) args: Args,
 
     pub(crate) workspace_members: WorkspaceMembers,
-    pub(crate) build_script_re: RegexVec,
     pub(crate) current_dir: PathBuf,
 
     // Paths to executables.
     pub(crate) current_exe: PathBuf,
-    // Path to llvm-cov, can be overridden with `LLVM_COV` environment variable.
+    /// Path to llvm-cov, can be overridden with `LLVM_COV` environment variable.
     pub(crate) llvm_cov: PathBuf,
-    // Path to llvm-profdata, can be overridden with `LLVM_PROFDATA` environment variable.
+    /// Path to llvm-profdata, can be overridden with `LLVM_PROFDATA` environment variable.
     pub(crate) llvm_profdata: PathBuf,
 
     /// `LLVM_COV_FLAGS` environment variable to pass additional flags to llvm-cov.
@@ -45,32 +43,36 @@ pub(crate) struct Context {
 }
 
 impl Context {
-    pub(crate) fn new(mut args: Args) -> Result<Self> {
+    pub(crate) fn new((mut args, unresolved_args): (Args, UnresolvedArgs)) -> Result<Self> {
         let show_env = args.subcommand == Subcommand::ShowEnv;
-        let ws = Workspace::new(
-            &args.manifest,
+        let mut ws = Workspace::new(
+            unresolved_args.manifest_path.as_deref(),
             args.target.as_deref(),
             args.doctests,
-            args.cov.branch,
-            args.cov.mcdc,
+            args.branch,
+            args.mcdc,
             show_env,
         )?;
-        cli::merge_config_to_args(&ws, &mut args.target, &mut args.verbose, &mut args.color);
-        term::set_coloring(&mut args.color);
+        cli::merge_config_and_args(
+            &mut ws,
+            &mut args.target,
+            &mut args.verbose,
+            unresolved_args.color,
+        )?;
+        term::set_coloring(&mut ws.config.term.color);
         term::verbose::set(args.verbose != 0);
 
-        args.cov.html |= args.cov.open;
-        if args.cov.output_dir.is_some() && !args.cov.show() {
+        if args.report.output_dir.is_some() && !args.report.show() {
             // If the format flag is not specified, this flag is no-op.
-            args.cov.output_dir = None;
+            args.report.output_dir = None;
         }
         {
             // The following warnings should not be promoted to an error.
             let _guard = term::warn::ignore();
-            if args.cov.branch {
+            if args.branch {
                 warn!("--branch option is unstable");
             }
-            if args.cov.mcdc {
+            if args.mcdc {
                 warn!("--mcdc option is unstable");
             }
             if args.doc {
@@ -90,20 +92,19 @@ impl Context {
                  build script will not be displayed because cargo does not pass RUSTFLAGS to them"
             );
         }
-        if args.no_rustc_wrapper && !args.cov.dep_coverage.is_empty() {
+        if args.no_rustc_wrapper && !args.dep_coverage.is_empty() {
             warn!("--dep-coverage may not work together with --no-rustc-wrapper");
         }
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
-            && (!args.cov.no_cfg_coverage
-                || ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly)
+            && (!args.no_cfg_coverage || ws.rustc_version.nightly && !args.no_cfg_coverage_nightly)
         {
             let mut cfgs = String::new();
             let mut flags = String::new();
-            if !args.cov.no_cfg_coverage {
+            if !args.no_cfg_coverage {
                 cfgs.push_str("cfg(coverage)");
                 flags.push_str("--no-cfg-coverage");
             }
-            if ws.rustc_version.nightly && !args.cov.no_cfg_coverage_nightly {
+            if ws.rustc_version.nightly && !args.no_cfg_coverage_nightly {
                 if cfgs.is_empty() {
                     cfgs.push_str("cfg(coverage_nightly)");
                     flags.push_str("--no-cfg-coverage-nightly");
@@ -114,8 +115,8 @@ impl Context {
             }
             info!("cargo-llvm-cov currently setting {cfgs}; you can opt-out it by passing {flags}");
         }
-        if args.cov.output_dir.is_none() && args.cov.html {
-            args.cov.output_dir = Some(ws.output_dir.clone());
+        if args.report.output_dir.is_none() && args.report.html {
+            args.report.output_dir = Some(ws.default_output_dir.clone());
         }
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
             && env::var_os("CARGO_LLVM_COV_SHOW_ENV").is_some()
@@ -218,13 +219,15 @@ impl Context {
             }
         };
 
-        let workspace_members =
-            WorkspaceMembers::new(&ws, &args.exclude_from_report, &args.package, args.workspace)?;
+        let workspace_members = WorkspaceMembers::new(
+            &ws,
+            &unresolved_args.exclude_from_report,
+            &unresolved_args.package,
+            args.workspace,
+        )?;
         if workspace_members.included.is_empty() {
             bail!("no crates to be measured for coverage");
         }
-
-        let build_script_re = pkg_hash_re(&ws, &workspace_members.included);
 
         let mut llvm_cov_flags = env::var("LLVM_COV_FLAGS")?;
         if llvm_cov_flags.is_none() {
@@ -247,7 +250,6 @@ impl Context {
             ws,
             args,
             workspace_members,
-            build_script_re,
             current_dir: env::current_dir().unwrap(),
             current_exe: match env::current_exe() {
                 Ok(exe) => exe,
@@ -278,14 +280,6 @@ impl Context {
     pub(crate) fn cargo(&self) -> ProcessBuilder {
         self.ws.cargo(self.args.verbose)
     }
-}
-
-fn pkg_hash_re(ws: &Workspace, pkg_ids: &[PackageId]) -> RegexVec {
-    let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
-    for &id in pkg_ids {
-        re.or(&ws.metadata[id].name);
-    }
-    re.build().unwrap()
 }
 
 pub(crate) struct WorkspaceMembers {

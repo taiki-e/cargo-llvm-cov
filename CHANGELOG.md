@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Diagnostics improvements.
+
 ## [0.8.2] - 2026-01-27
 
 - Support [`ui_test`](https://github.com/oli-obk/ui_test). ([#477](https://github.com/taiki-e/cargo-llvm-cov/pull/477))

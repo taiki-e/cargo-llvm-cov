@@ -12,7 +12,7 @@ use walkdir::WalkDir;
 
 use crate::{
     cargo::{self, Workspace},
-    cli::{self, Args, ManifestOptions},
+    cli::{self, Args, CleanOptions, UnresolvedArgs},
     context::Context,
     fs,
     metadata::PackageId,
@@ -20,13 +20,15 @@ use crate::{
     term,
 };
 
-pub(crate) fn run(args: &mut Args) -> Result<()> {
-    let ws = Workspace::new(&args.manifest, None, false, false, false, false)?;
-    cli::merge_config_to_args(&ws, &mut None, &mut args.verbose, &mut args.color);
-    term::set_coloring(&mut args.color);
+pub(crate) fn run((mut args, unresolved_args): (Args, UnresolvedArgs)) -> Result<()> {
+    let mut ws =
+        Workspace::new(unresolved_args.manifest_path.as_deref(), None, false, false, false, false)?;
+    cli::merge_config_and_args(&mut ws, &mut None, &mut args.verbose, unresolved_args.color)?;
+    drop(unresolved_args);
+    term::set_coloring(&mut ws.config.term.color);
 
     if !args.workspace && !args.clean.profraw_only {
-        for dir in &[&ws.target_dir, &ws.output_dir] {
+        for dir in &[&ws.target_dir, &ws.default_output_dir] {
             rm_rf(dir, args.verbose != 0)?;
         }
         if let Some(dir) = &ws.build_dir {
@@ -35,13 +37,7 @@ pub(crate) fn run(args: &mut Args) -> Result<()> {
         return Ok(());
     }
 
-    clean_ws(
-        &ws,
-        &ws.metadata.workspace_members,
-        &args.manifest,
-        args.verbose,
-        args.clean.profraw_only,
-    )?;
+    clean_ws(&ws, &ws.metadata.workspace_members, &args.clean, args.verbose)?;
 
     Ok(())
 }
@@ -61,14 +57,13 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
 
     clean_ws_inner(&cx.ws, &cx.workspace_members.included, cx.args.verbose > 1, false)?;
 
-    let mut package_args = Vec::with_capacity(
-        (cx.workspace_members.included.len() + cx.args.cov.dep_coverage.len()) * 2,
-    );
+    let mut package_args =
+        Vec::with_capacity((cx.workspace_members.included.len() + cx.args.dep_coverage.len()) * 2);
     for &id in &cx.workspace_members.included {
         package_args.push("--package");
         package_args.push(&cx.ws.metadata[id].name);
     }
-    for dep in &cx.args.cov.dep_coverage {
+    for dep in &cx.args.dep_coverage {
         package_args.push("--package");
         package_args.push(dep);
     }
@@ -85,13 +80,12 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
 fn clean_ws(
     ws: &Workspace,
     pkg_ids: &[PackageId],
-    manifest: &ManifestOptions,
+    options: &CleanOptions,
     verbose: u8,
-    profraw_only: bool,
 ) -> Result<()> {
-    clean_ws_inner(ws, pkg_ids, verbose != 0, profraw_only)?;
+    clean_ws_inner(ws, pkg_ids, verbose != 0, options.profraw_only)?;
 
-    if profraw_only {
+    if options.profraw_only {
         return Ok(());
     }
 
@@ -120,7 +114,7 @@ fn clean_ws(
         if verbose > 0 {
             cmd.arg(format!("-{}", "v".repeat(verbose as usize)));
         }
-        manifest.cargo_args(&mut cmd);
+        options.cargo_args(&mut cmd);
         cmd.dir(&ws.metadata.workspace_root);
         if let Err(e) = if verbose > 0 { cmd.run() } else { cmd.run_with_output() } {
             warn!("{e:#}");
@@ -142,7 +136,7 @@ fn clean_ws_inner(
     }
 
     for format in &["html", "text"] {
-        rm_rf(ws.output_dir.join(format), verbose)?;
+        rm_rf(ws.default_output_dir.join(format), verbose)?;
     }
 
     rm_rf(&ws.doctests_dir, verbose)?;

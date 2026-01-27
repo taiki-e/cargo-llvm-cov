@@ -19,7 +19,7 @@ use std::{
 
 use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
-use cargo_config2::Flags;
+use cargo_config2::{Color, Flags};
 use cargo_llvm_cov::json::{CodeCovJsonExport, CoverageKind, LlvmCovJsonExport};
 use regex::Regex;
 use serde_derive::Deserialize;
@@ -28,12 +28,11 @@ use walkdir::WalkDir;
 
 use crate::{
     cargo::Workspace,
-    cli::{Args, ShowEnvOptions, Subcommand},
+    cli::{Args, ReportOptions, ShowEnvOptions, Subcommand},
     context::Context,
     metadata::Metadata,
     process::ProcessBuilder,
     regex_vec::{RegexVec, RegexVecBuilder},
-    term::Coloring,
 };
 
 #[macro_use]
@@ -73,11 +72,11 @@ fn main() -> ExitCode {
 }
 
 fn try_main() -> Result<()> {
-    let Some(mut args) = Args::parse()? else { return Ok(()) };
-    term::verbose::set(args.verbose != 0);
+    let Some(args) = Args::parse()? else { return Ok(()) };
+    term::verbose::set(args.0.verbose != 0);
 
-    match args.subcommand {
-        Subcommand::Clean => clean::run(&mut args)?,
+    match args.0.subcommand {
+        Subcommand::Clean => clean::run(args)?,
         Subcommand::ShowEnv => {
             let cx = &Context::new(args)?;
             let writer = &mut ShowEnvWriter {
@@ -91,61 +90,35 @@ fn try_main() -> Result<()> {
         }
         Subcommand::Report { .. } => {
             let cx = &Context::new(args)?;
-            create_dirs(cx)?;
             generate_report(cx)?;
         }
         Subcommand::Run => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs(cx)?;
+            create_dirs_for_build(cx)?;
             run_run(cx)?;
-            if !cx.args.cov.no_report {
-                generate_report(cx)?;
-            }
+            generate_report(cx)?;
         }
         Subcommand::Nextest { .. } => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs(cx)?;
+            create_dirs_for_build(cx)?;
             run_nextest(cx)?;
-            if !cx.args.cov.no_report {
-                generate_report(cx)?;
-            }
+            generate_report(cx)?;
         }
         Subcommand::NextestArchive => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs(cx)?;
+            create_dirs_for_build(cx)?;
             archive_nextest(cx)?;
         }
         Subcommand::None | Subcommand::Test => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs(cx)?;
+            create_dirs_for_build(cx)?;
             run_test(cx)?;
-            if !cx.args.cov.no_report {
-                generate_report(cx)?;
-            }
+            generate_report(cx)?;
         }
-    }
-    Ok(())
-}
-
-fn create_dirs(cx: &Context) -> Result<()> {
-    fs::create_dir_all(&cx.ws.target_dir)?;
-
-    if let Some(output_dir) = &cx.args.cov.output_dir {
-        fs::create_dir_all(output_dir)?;
-        if cx.args.cov.html {
-            fs::create_dir_all(output_dir.join("html"))?;
-        }
-        if cx.args.cov.text {
-            fs::create_dir_all(output_dir.join("text"))?;
-        }
-    }
-
-    if cx.args.doctests {
-        fs::create_dir_all(&cx.ws.doctests_dir)?;
     }
     Ok(())
 }
@@ -212,12 +185,12 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
-        if cx.args.cov.mcdc {
+        if cx.args.mcdc {
             // Tracking issue: https://github.com/rust-lang/rust/issues/124144
             // TODO: Unstable MC/DC support has been removed in https://github.com/rust-lang/rust/pull/144999
             flags.push("-Z");
             flags.push("coverage-options=mcdc");
-        } else if cx.args.cov.branch {
+        } else if cx.args.branch {
             // Tracking issue: https://github.com/rust-lang/rust/issues/79649
             flags.push("-Z");
             flags.push("coverage-options=branch");
@@ -233,10 +206,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             flags.push("-C");
             flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         }
-        if !cx.args.cov.no_cfg_coverage {
+        if !cx.args.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
-        if cx.ws.rustc_version.nightly && !cx.args.cov.no_cfg_coverage_nightly {
+        if cx.ws.rustc_version.nightly && !cx.args.no_cfg_coverage_nightly {
             flags.push("--cfg=coverage_nightly");
         }
         if cx.ws.target_for_config.triple().ends_with("-windows-gnullvm") {
@@ -411,6 +384,14 @@ fn has_z_flag(args: &[String], name: &str) -> bool {
     false
 }
 
+fn create_dirs_for_build(cx: &Context) -> Result<()> {
+    fs::create_dir_all(&cx.ws.target_dir)?;
+    if cx.args.doctests {
+        fs::create_dir_all(&cx.ws.doctests_dir)?;
+    }
+    Ok(())
+}
+
 fn run_test(cx: &Context) -> Result<()> {
     let mut cargo = cx.cargo();
 
@@ -557,9 +538,9 @@ fn run_run(cx: &Context) -> Result<()> {
 }
 
 fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
-    if cx.args.cov.no_report
-        || cx.args.cov.output_dir.is_some()
-        || cx.args.cov.output_path.is_some()
+    if cx.args.report.no_report
+        || cx.args.report.output_dir.is_some()
+        || cx.args.report.output_path.is_some()
     {
         // Do not redirect if unnecessary.
     } else {
@@ -569,29 +550,43 @@ fn stdout_to_stderr(cx: &Context, cargo: &mut ProcessBuilder) {
 }
 
 fn generate_report(cx: &Context) -> Result<()> {
+    if cx.args.report.no_report {
+        return Ok(());
+    }
+
+    if let Some(output_dir) = &cx.args.report.output_dir {
+        fs::create_dir_all(output_dir)?;
+        if cx.args.report.html {
+            fs::create_dir_all(output_dir.join("html"))?;
+        }
+        if cx.args.report.text {
+            fs::create_dir_all(output_dir.join("text"))?;
+        }
+    }
+
     merge_profraw(cx).context("failed to merge profile data")?;
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx, &object_files)?;
-    let format = Format::from_args(cx);
+    let format = ReportFormat::from_args(&cx.args.report);
     format
         .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
         .context("failed to generate report")?;
 
-    if cx.args.cov.fail_under_functions.is_some()
-        || cx.args.cov.fail_under_lines.is_some()
-        || cx.args.cov.fail_under_regions.is_some()
-        || cx.args.cov.fail_uncovered_functions.is_some()
-        || cx.args.cov.fail_uncovered_lines.is_some()
-        || cx.args.cov.fail_uncovered_regions.is_some()
-        || cx.args.cov.show_missing_lines
+    if cx.args.report.fail_under_functions.is_some()
+        || cx.args.report.fail_under_lines.is_some()
+        || cx.args.report.fail_under_regions.is_some()
+        || cx.args.report.fail_uncovered_functions.is_some()
+        || cx.args.report.fail_uncovered_lines.is_some()
+        || cx.args.report.fail_uncovered_regions.is_some()
+        || cx.args.report.show_missing_lines
     {
-        let format = Format::Json;
+        let format = ReportFormat::Json;
         let json = format
             .get_json(cx, &object_files, ignore_filename_regex.as_ref())
             .context("failed to get json")?;
 
-        if let Some(fail_under_functions) = cx.args.cov.fail_under_functions {
+        if let Some(fail_under_functions) = cx.args.report.fail_under_functions {
             // Handle --fail-under-functions.
             let functions_percent = json
                 .get_coverage_percent(CoverageKind::Functions)
@@ -601,7 +596,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if let Some(fail_under_lines) = cx.args.cov.fail_under_lines {
+        if let Some(fail_under_lines) = cx.args.report.fail_under_lines {
             // Handle --fail-under-lines.
             let lines_percent = json
                 .get_coverage_percent(CoverageKind::Lines)
@@ -611,7 +606,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if let Some(fail_under_regions) = cx.args.cov.fail_under_regions {
+        if let Some(fail_under_regions) = cx.args.report.fail_under_regions {
             // Handle --fail-under-regions.
             let regions_percent = json
                 .get_coverage_percent(CoverageKind::Regions)
@@ -621,7 +616,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if let Some(fail_uncovered_functions) = cx.args.cov.fail_uncovered_functions {
+        if let Some(fail_uncovered_functions) = cx.args.report.fail_uncovered_functions {
             // Handle --fail-uncovered-functions.
             let uncovered =
                 json.count_uncovered_functions().context("failed to count uncovered functions")?;
@@ -629,7 +624,7 @@ fn generate_report(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
-        if let Some(fail_uncovered_lines) = cx.args.cov.fail_uncovered_lines {
+        if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
             let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             let uncovered = uncovered_files
@@ -640,7 +635,7 @@ fn generate_report(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
-        if let Some(fail_uncovered_regions) = cx.args.cov.fail_uncovered_regions {
+        if let Some(fail_uncovered_regions) = cx.args.report.fail_uncovered_regions {
             // Handle --fail-uncovered-regions.
             let uncovered =
                 json.count_uncovered_regions().context("failed to count uncovered regions")?;
@@ -649,7 +644,7 @@ fn generate_report(cx: &Context) -> Result<()> {
             }
         }
 
-        if cx.args.cov.show_missing_lines {
+        if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
             let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             if !uncovered_files.is_empty() {
@@ -664,8 +659,8 @@ fn generate_report(cx: &Context) -> Result<()> {
         }
     }
 
-    if cx.args.cov.open {
-        let path = &cx.args.cov.output_dir.as_ref().unwrap().join("html/index.html");
+    if cx.args.report.open {
+        let path = &cx.args.report.output_dir.as_ref().unwrap().join("html/index.html");
         status!("Opening", "{path}");
         open_report(cx, path)?;
     }
@@ -716,7 +711,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
         .arg(input_files_path)
         .arg("-o")
         .arg(&cx.ws.profdata_file);
-    if let Some(mode) = &cx.args.cov.failure_mode {
+    if let Some(mode) = &cx.args.report.failure_mode {
         cmd.arg(format!("-failure-mode={mode}"));
     }
     if let Some(flags) = &cx.llvm_profdata_flags {
@@ -732,6 +727,7 @@ fn merge_profraw(cx: &Context) -> Result<()> {
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     fn walk_target_dir<'a>(
         cx: &'a Context,
+        build_script_re: &'a RegexVec,
         target_dir: &Utf8Path,
     ) -> impl Iterator<Item = walkdir::DirEntry> + 'a {
         WalkDir::new(target_dir)
@@ -743,7 +739,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     if p.file_name().is_some_and(|f| {
                         f == "incremental"
                             || f == ".fingerprint"
-                            || if cx.args.cov.include_build_script {
+                            || if cx.args.report.include_build_script {
                                 f == "out"
                             } else {
                                 f == "build"
@@ -752,7 +748,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                         // Ignore incremental compilation related files and output from build scripts.
                         return false;
                     }
-                } else if cx.args.cov.include_build_script {
+                } else if cx.args.report.include_build_script {
                     if let (Some(stem), Some(p)) = (p.file_stem(), p.parent()) {
                         fn in_build_dir(p: &Path) -> bool {
                             let Some(p) = p.parent() else { return false };
@@ -768,7 +764,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                             {
                                 // TODO: use os_str_to_str?
                                 let dir = p.file_name().unwrap().to_string_lossy();
-                                if !cx.build_script_re.is_match(&dir) {
+                                if !build_script_re.is_match(&dir) {
                                     return false;
                                 }
                             } else {
@@ -822,6 +818,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     let re = pkg_hash_re(cx)?;
+    let build_script_re = build_script_hash_re(cx);
     let mut files = vec![];
     let mut searched_dir = String::new();
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
@@ -865,21 +862,6 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             Ok(binaries_metadata)
                 if binaries_metadata.rust_build_meta.base_output_directories.len() == 1 =>
             {
-                if cx.args.target.is_some() {
-                    info!(
-                        "--target flag is no longer needed because detection from nextest archive is now supported"
-                    );
-                }
-                if cx.args.release {
-                    info!(
-                        "--release flag is no longer needed because detection from nextest archive is now supported"
-                    );
-                }
-                if cx.args.cargo_profile.is_some() {
-                    info!(
-                        "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
-                    );
-                }
                 target_dir.push(&binaries_metadata.rust_build_meta.base_output_directories[0]);
                 auto_detect_profile = true;
             }
@@ -906,7 +888,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                     build_dir.push(profile);
                 }
             }
-            for f in walk_target_dir(cx, &target_dir) {
+            for f in walk_target_dir(cx, &build_script_re, &target_dir) {
                 let f = f.path();
                 if is_object(cx, f) {
                     if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
@@ -919,7 +901,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             searched_dir.push_str(target_dir.as_str());
             if let Some(build_dir) = &build_dir {
                 if target_dir != *build_dir {
-                    for f in walk_target_dir(cx, build_dir) {
+                    for f in walk_target_dir(cx, &build_script_re, build_dir) {
                         let f = f.path();
                         if is_object(cx, f) {
                             if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
@@ -981,7 +963,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             if !trybuild_targets.is_empty() {
                 let re = Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|")))
                     .unwrap();
-                for entry in walk_target_dir(cx, &trybuild_target_dir) {
+                for entry in walk_target_dir(cx, &build_script_re, &trybuild_target_dir) {
                     let path = make_relative(cx, entry.path());
                     if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                         if re.is_match(file_stem) {
@@ -1010,7 +992,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     let ui_test_target_dir = cx.ws.ui_test_target_dir();
     let mut collect_ui_test_target_dir = |ui_test_target_dir: Utf8PathBuf| -> Result<()> {
         if ui_test_target_dir.is_dir() {
-            for entry in walk_target_dir(cx, &ui_test_target_dir) {
+            for entry in walk_target_dir(cx, &build_script_re, &ui_test_target_dir) {
                 let path = make_relative(cx, entry.path());
                 if is_object(cx, path) {
                     files.push(path.to_owned().into_os_string());
@@ -1053,6 +1035,14 @@ fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
     re.build()
 }
 
+fn build_script_hash_re(cx: &Context) -> RegexVec {
+    let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
+    for &id in &cx.workspace_members.included {
+        re.or(&cx.ws.metadata[id].name);
+    }
+    re.build().unwrap()
+}
+
 /// Collects metadata for packages generated by trybuild. If the trybuild test
 /// directory is not found, it returns an empty vector.
 fn trybuild_metadata(ws: &Workspace, target_dir: &Utf8Path) -> Result<Vec<Metadata>> {
@@ -1076,7 +1066,7 @@ fn trybuild_metadata(ws: &Workspace, target_dir: &Utf8Path) -> Result<Vec<Metada
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Format {
+enum ReportFormat {
     /// `llvm-cov report`
     None,
     /// `llvm-cov export -format=text`
@@ -1093,19 +1083,19 @@ enum Format {
     Html,
 }
 
-impl Format {
-    fn from_args(cx: &Context) -> Self {
-        if cx.args.cov.json {
+impl ReportFormat {
+    fn from_args(options: &ReportOptions) -> Self {
+        if options.json {
             Self::Json
-        } else if cx.args.cov.lcov {
+        } else if options.lcov {
             Self::LCov
-        } else if cx.args.cov.cobertura {
+        } else if options.cobertura {
             Self::Cobertura
-        } else if cx.args.cov.codecov {
+        } else if options.codecov {
             Self::Codecov
-        } else if cx.args.cov.text {
+        } else if options.text {
             Self::Text
-        } else if cx.args.cov.html {
+        } else if options.html {
             Self::Html
         } else {
             Self::None
@@ -1129,13 +1119,13 @@ impl Format {
             // Color output cannot be disabled when generating html.
             return None;
         }
-        if self == Self::Text && cx.args.cov.output_dir.is_some() {
+        if self == Self::Text && cx.args.report.output_dir.is_some() {
             return Some("-use-color=0");
         }
-        match cx.args.color {
-            Some(Coloring::Auto) | None => None,
-            Some(Coloring::Always) => Some("-use-color=1"),
-            Some(Coloring::Never) => Some("-use-color=0"),
+        match cx.ws.config.term.color {
+            Some(Color::Auto) | None => None,
+            Some(Color::Always) => Some("-use-color=1"),
+            Some(Color::Never) => Some("-use-color=0"),
         }
     }
 
@@ -1159,7 +1149,7 @@ impl Format {
         match self {
             Self::Text | Self::Html => {
                 cmd.args([
-                    &format!("-show-instantiations={}", cx.args.cov.show_instantiations),
+                    &format!("-show-instantiations={}", cx.args.report.show_instantiations),
                     "-show-line-counts-or-regions",
                     "-show-expansions",
                     "-show-branches=count",
@@ -1176,7 +1166,7 @@ impl Format {
                 demangler.push(&cx.current_exe);
                 cmd.arg(demangler);
                 demangler::set_env(&mut cmd);
-                if let Some(output_dir) = &cx.args.cov.output_dir {
+                if let Some(output_dir) = &cx.args.report.output_dir {
                     if self == Self::Html {
                         cmd.arg(format!("-output-dir={}", output_dir.join("html")));
                     } else {
@@ -1185,10 +1175,10 @@ impl Format {
                 }
             }
             Self::Json | Self::LCov | Self::Cobertura | Self::Codecov => {
-                if cx.args.cov.summary_only {
+                if cx.args.report.summary_only {
                     cmd.arg("-summary-only");
                 }
-                if cx.args.cov.skip_functions {
+                if cx.args.report.skip_functions {
                     cmd.arg("-skip-functions");
                 }
             }
@@ -1199,7 +1189,7 @@ impl Format {
             cmd.args(flags.split(' ').filter(|s| !s.trim_start().is_empty()));
         }
 
-        if cx.args.cov.cobertura {
+        if cx.args.report.cobertura {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -1217,7 +1207,7 @@ impl Format {
                 .as_secs();
             let out = lcov2cobertura::coverage_to_string(&cdata, now, demangler)?;
 
-            if let Some(output_path) = &cx.args.cov.output_path {
+            if let Some(output_path) = &cx.args.report.output_path {
                 fs::write(output_path, out)?;
                 eprintln!();
                 status!("Finished", "report saved to {output_path}");
@@ -1228,7 +1218,7 @@ impl Format {
             return Ok(());
         }
 
-        if cx.args.cov.codecov {
+        if cx.args.report.codecov {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -1237,7 +1227,7 @@ impl Format {
             let cov = CodeCovJsonExport::from_llvm_cov_json_export(cov, ignore_filename_regex);
             let out = serde_json::to_string(&cov)?;
 
-            if let Some(output_path) = &cx.args.cov.output_path {
+            if let Some(output_path) = &cx.args.report.output_path {
                 fs::write(output_path, out)?;
                 eprintln!();
                 status!("Finished", "report saved to {output_path}");
@@ -1248,7 +1238,7 @@ impl Format {
             return Ok(());
         }
 
-        if let Some(output_path) = &cx.args.cov.output_path {
+        if let Some(output_path) = &cx.args.report.output_path {
             if term::verbose() {
                 status!("Running", "{cmd}");
             }
@@ -1284,7 +1274,7 @@ impl Format {
         }
 
         if matches!(self, Self::Html | Self::Text) {
-            if let Some(output_dir) = &cx.args.cov.output_dir {
+            if let Some(output_dir) = &cx.args.report.output_dir {
                 eprintln!();
                 if self == Self::Html {
                     status!("Finished", "report saved to {}", output_dir.join("html"));
@@ -1351,10 +1341,10 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
 
     let mut out = Out::default();
 
-    if let Some(ignore_filename) = &cx.args.cov.ignore_filename_regex {
+    if let Some(ignore_filename) = &cx.args.report.ignore_filename_regex {
         out.push(ignore_filename);
     }
-    if !cx.args.cov.no_default_ignore_filename_regex {
+    if !cx.args.report.no_default_ignore_filename_regex {
         let vendor_dirs =
             cx.ws.config.source.iter().filter_map(|(_, source)| source.directory.as_deref());
 
@@ -1371,7 +1361,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
 
         vendor_dirs.for_each(|directory| out.push_abs_path(directory));
 
-        if cx.args.cov.dep_coverage.is_empty() {
+        if cx.args.dep_coverage.is_empty() {
             // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
             //       We may have a directory like tests/support, so maybe we need both?
             if cx.args.remap_path_prefix {
@@ -1413,14 +1403,14 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
                 }
             }
         } else {
-            let format = Format::Json;
+            let format = ReportFormat::Json;
             let json = format.get_json(cx, object_files, None).context("failed to get json")?;
             let crates_io_re = Regex::new(&format!(
                 "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}[0-9A-Za-z-_]+-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}"
             ))?;
             let dep_re = Regex::new(&format!(
                 "{SEPARATOR}registry{SEPARATOR}src{SEPARATOR}index\\.crates\\.io-[0-9a-f]+{SEPARATOR}({})-[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z\\.-]+)?(\\+[0-9A-Za-z\\.-]+)?{SEPARATOR}",
-                cx.args.cov.dep_coverage.join("|")
+                cx.args.dep_coverage.join("|")
             ))?;
             let mut set = BTreeSet::new();
             for data in &json.data {

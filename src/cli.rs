@@ -4,16 +4,13 @@ use std::{ffi::OsString, mem, str::FromStr};
 
 use anyhow::{Error, Result, bail, format_err};
 use camino::{Utf8Path, Utf8PathBuf};
+use cargo_config2::Color;
 use lexopt::{
     Arg::{Long, Short, Value},
     ValueExt as _,
 };
 
-use crate::{
-    env,
-    process::ProcessBuilder,
-    term::{self, Coloring},
-};
+use crate::{env, process::ProcessBuilder, term};
 
 // TODO: add --config option and passthrough to cargo-config: https://github.com/rust-lang/cargo/pull/10755/
 
@@ -21,13 +18,13 @@ use crate::{
 pub(crate) struct Args {
     pub(crate) subcommand: Subcommand,
 
-    // Subcommand-specific options
-    /// `show-env`-specific options
+    // Operation-specific options
+    /// Options only referred in "show-env" operations. (show-env subcommand)
     pub(crate) show_env: ShowEnvOptions,
-    /// `clean`-specific options
+    /// Options only referred in "clean" operations. (clean subcommand and subcommands building rust code)
     pub(crate) clean: CleanOptions,
-
-    pub(crate) cov: LlvmCovOptions,
+    /// Options only referred in "report" operations. (report subcommand and subcommands reporting coverage)
+    pub(crate) report: ReportOptions,
 
     // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
     /// Including doc tests (unstable)
@@ -74,16 +71,12 @@ pub(crate) struct Args {
     /// This flag is unstable because it automatically enables --doctests flag.
     /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
     pub(crate) doc: bool,
-    /// Package to run tests for
-    pub(crate) package: Vec<String>,
     /// Test all packages in the workspace
     pub(crate) workspace: bool,
     /// Packages additional excluded from the test (--exclude-from-test)
     ///
     /// (--exclude is already contained in `cargo_args` field.)
     pub(crate) exclude_from_test: Vec<String>,
-    /// Packages from the report (--exclude and --exclude-from-report)
-    pub(crate) exclude_from_report: Vec<String>,
 
     // /// Number of parallel jobs, defaults to # of CPUs
     // // i32 or string "default": https://github.com/rust-lang/cargo/blob/0.80.0/src/cargo/core/compiler/build_config.rs#L84-L97
@@ -121,9 +114,6 @@ pub(crate) struct Args {
     ///
     /// Use -vv (-vvv) to propagate verbosity to cargo.
     pub(crate) verbose: u8,
-    /// Coloring
-    // This flag will be propagated to both cargo and llvm-cov.
-    pub(crate) color: Option<Coloring>,
 
     /// Use --remap-path-prefix for workspace root
     ///
@@ -148,7 +138,16 @@ pub(crate) struct Args {
     /// build script will not be displayed because cargo does not pass RUSTFLAGS to them.
     pub(crate) no_rustc_wrapper: bool,
 
-    pub(crate) manifest: ManifestOptions,
+    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
+    pub(crate) no_cfg_coverage: bool,
+    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
+    pub(crate) no_cfg_coverage_nightly: bool,
+    /// Enable branch coverage. (unstable)
+    pub(crate) branch: bool,
+    /// Enable mcdc coverage. (unstable)
+    pub(crate) mcdc: bool,
+    /// Show coverage of the specified dependency instead of the crates in the current workspace.
+    pub(crate) dep_coverage: Vec<String>,
 
     pub(crate) nextest_archive_file: Option<String>,
 
@@ -254,7 +253,10 @@ impl FromStr for Subcommand {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct LlvmCovOptions {
+pub(crate) struct ReportOptions {
+    /// Run tests, but don't generate coverage report
+    pub(crate) no_report: bool,
+
     /// Export coverage data in "json" format
     ///
     /// If --output-path is not specified, the report will be printed to stdout.
@@ -331,12 +333,6 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
     pub(crate) show_instantiations: bool,
-    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
-    pub(crate) no_cfg_coverage: bool,
-    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
-    pub(crate) no_cfg_coverage_nightly: bool,
-    /// Run tests, but don't generate coverage report
-    pub(crate) no_report: bool,
     /// Exit with a status of 1 if the total function coverage is less than MIN percent.
     pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
@@ -353,19 +349,202 @@ pub(crate) struct LlvmCovOptions {
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
-    /// Show coverage of the specified dependency instead of the crates in the current workspace.
-    pub(crate) dep_coverage: Vec<String>,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
-    /// Enable branch coverage. (unstable)
-    pub(crate) branch: bool,
-    /// Enable mcdc coverage. (unstable)
-    pub(crate) mcdc: bool,
 }
 
-impl LlvmCovOptions {
+impl ReportOptions {
     pub(crate) const fn show(&self) -> bool {
         self.text || self.html
+    }
+
+    fn validate(&self, subcommand: Subcommand) -> Result<()> {
+        // Handle options specific to certain subcommands.
+        // subcommands without generate_report in main.rs.
+        let no_report_subcommands = matches!(
+            subcommand,
+            Subcommand::Clean | Subcommand::ShowEnv | Subcommand::NextestArchive
+        );
+        if self.no_report
+            && (no_report_subcommands || matches!(subcommand, Subcommand::Report { .. }))
+        {
+            if matches!(subcommand, Subcommand::NextestArchive) {
+                // TODO(semver): make this hard error on future release
+                warn!(
+                    "option '--no-report' is specific to [test,run,nextest,no subcommand] and not supported for subcommand '{}'",
+                    subcommand.as_str()
+                );
+            } else {
+                specific_flag("--no-report", subcommand, &["test", "run", "nextest", ""])?;
+            }
+        }
+        if no_report_subcommands || self.no_report {
+            let Self {
+                no_report: _,
+                json,
+                lcov,
+                cobertura,
+                codecov,
+                text,
+                html,
+                open,
+                summary_only,
+                output_path,
+                output_dir,
+                failure_mode,
+                ignore_filename_regex,
+                no_default_ignore_filename_regex,
+                show_instantiations,
+                fail_under_functions,
+                fail_under_lines,
+                fail_under_regions,
+                fail_uncovered_lines,
+                fail_uncovered_regions,
+                fail_uncovered_functions,
+                show_missing_lines,
+                include_build_script,
+                skip_functions,
+            } = self;
+            for (passed, flag) in [
+                (*json, "--json"),
+                (*lcov, "--lcov"),
+                (*cobertura, "--cobertura"),
+                (*codecov, "--codecov"),
+                (*text, "--text"),
+                (*html, "--html"),
+                (*open, "--open"),
+                (*summary_only, "--summary-only"),
+                (output_path.is_some(), "--output-path"),
+                (output_dir.is_some(), "--output-dir"),
+                (failure_mode.is_some(), "--failure-mode"),
+                (ignore_filename_regex.is_some(), "--ignore-filename-regex"),
+                (*no_default_ignore_filename_regex, "--no-default-ignore-filename-regex"),
+                (*show_instantiations, "--show-instantiations"),
+                (fail_under_functions.is_some(), "--fail-under-functions"),
+                (fail_under_lines.is_some(), "--fail-under-lines"),
+                (fail_under_regions.is_some(), "--fail-under-regions"),
+                (fail_uncovered_lines.is_some(), "--fail-uncovered-lines"),
+                (fail_uncovered_regions.is_some(), "--fail-uncovered-regions"),
+                (fail_uncovered_functions.is_some(), "--fail-uncovered-functions"),
+                (*show_missing_lines, "--show-missing-lines"),
+                (*include_build_script, "--include-build-script"),
+                (*skip_functions, "--skip-functions"),
+            ] {
+                if passed {
+                    if no_report_subcommands {
+                        // TODO(semver): make this hard error on future release
+                        warn!(
+                            "{flag} is specific to [report,test,run,nextest,no subcommand] and not supported for subcommand '{}'",
+                            subcommand.as_str()
+                        );
+                    } else {
+                        // TODO(semver): make this hard error on future release
+                        warn!("{flag} may not be used together with --no-report");
+                    }
+                }
+            }
+        }
+
+        // conflicts
+        // TODO: handle these mutual exclusions elegantly.
+        if self.lcov {
+            let flag = "--lcov";
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+        }
+        if self.cobertura {
+            let flag = "--cobertura";
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+            if self.lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if self.codecov {
+                conflicts(flag, "--codecov")?;
+            }
+        }
+        if self.codecov {
+            let flag = "--codecov";
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+            if self.lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if self.cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
+        }
+        if self.text {
+            let flag = "--text";
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+            if self.lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if self.cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
+            if self.codecov {
+                conflicts(flag, "--codecov")?;
+            }
+        }
+        if self.html || self.open {
+            let flag = if self.html { "--html" } else { "--open" };
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+            if self.lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if self.cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
+            if self.codecov {
+                conflicts(flag, "--codecov")?;
+            }
+            if self.text {
+                conflicts(flag, "--text")?;
+            }
+        }
+        if self.summary_only || self.output_path.is_some() {
+            let flag = if self.summary_only { "--summary-only" } else { "--output-path" };
+            if self.html {
+                conflicts(flag, "--html")?;
+            }
+            if self.open {
+                conflicts(flag, "--open")?;
+            }
+        }
+        if self.skip_functions {
+            let flag = "--skip-functions";
+            if self.html {
+                conflicts(flag, "--html")?;
+            }
+        }
+        if self.output_dir.is_some() {
+            let flag = "--output-dir";
+            if self.json {
+                conflicts(flag, "--json")?;
+            }
+            if self.lcov {
+                conflicts(flag, "--lcov")?;
+            }
+            if self.cobertura {
+                conflicts(flag, "--cobertura")?;
+            }
+            if self.codecov {
+                conflicts(flag, "--codecov")?;
+            }
+            if self.output_path.is_some() {
+                conflicts(flag, "--output-path")?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -464,24 +643,17 @@ pub(crate) struct ShowEnvOptions {
 pub(crate) struct CleanOptions {
     /// Clean only profraw files
     pub(crate) profraw_only: bool,
-}
 
-// https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
-#[derive(Debug, Default)]
-pub(crate) struct ManifestOptions {
-    /// Path to Cargo.toml
-    pub(crate) manifest_path: Option<Utf8PathBuf>,
-    /// Require Cargo.lock and cache are up to date
+    // These are for clean; others also accept them, but don't need to store
+    // because these flags are handled as passthrough args.
+    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
     pub(crate) frozen: bool,
-    /// Require Cargo.lock is up to date
     pub(crate) locked: bool,
-    /// Run without accessing the network
     pub(crate) offline: bool,
 }
 
-impl ManifestOptions {
+impl CleanOptions {
     pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
-        // Skip --manifest-path because it is set based on Workspace::current_manifest.
         if self.frozen {
             cmd.arg("--frozen");
         }
@@ -494,28 +666,43 @@ impl ManifestOptions {
     }
 }
 
-pub(crate) fn merge_config_to_args(
-    ws: &crate::cargo::Workspace,
+// Arguments only referred in Context::new/Workspace::new.
+// It will be dropped at an early stage.
+pub(crate) struct UnresolvedArgs {
+    /// Package to run tests for
+    pub(crate) package: Vec<String>,
+    /// Packages from the report (--exclude and --exclude-from-report)
+    pub(crate) exclude_from_report: Vec<String>,
+    /// Path to Cargo.toml
+    pub(crate) manifest_path: Option<Utf8PathBuf>,
+    /// Coloring
+    // This flag will be propagated to both cargo and llvm-cov.
+    pub(crate) color: Option<Color>,
+}
+
+pub(crate) fn merge_config_and_args(
+    ws: &mut crate::cargo::Workspace,
     target: &mut Option<String>,
     verbose: &mut u8,
-    color: &mut Option<Coloring>,
-) {
+    color: Option<Color>,
+) -> Result<()> {
     // CLI flags are prefer over config values.
     if target.is_none() {
-        target.clone_from(&ws.target_for_cli);
+        target.clone_from(&ws.config.build_target_for_cli(None::<&str>)?.pop());
     }
     if *verbose == 0 {
         *verbose = ws.config.term.verbose.unwrap_or(false) as u8;
     }
-    if color.is_none() {
-        *color = ws.config.term.color.map(Into::into);
+    if let Some(color) = color {
+        ws.config.term.color = Some(color);
     }
+    Ok(())
 }
 
 pub(crate) const FIRST_SUBCMD: &str = "llvm-cov";
 
 impl Args {
-    pub(crate) fn parse() -> Result<Option<Self>> {
+    pub(crate) fn parse() -> Result<Option<(Self, UnresolvedArgs)>> {
         // rustc/cargo args must be valid Unicode
         // https://github.com/rust-lang/rust/blob/1.84.0/compiler/rustc_driver_impl/src/args.rs#L121
         // TODO: https://github.com/rust-lang/cargo/pull/11118
@@ -581,36 +768,13 @@ impl Args {
         let mut exclude_from_test = vec![];
         let mut exclude_from_report = vec![];
 
-        // llvm-cov options
-        let mut json = false;
-        let mut lcov = false;
-        let mut cobertura = false;
-        let mut codecov = false;
-        let mut text = false;
-        let mut html = false;
-        let mut open = false;
-        let mut summary_only = false;
-        let mut output_path = None;
-        let mut output_dir = None;
-        let mut failure_mode = None;
-        let mut ignore_filename_regex = None;
-        let mut no_default_ignore_filename_regex = false;
-        let mut show_instantiations = false;
         let mut no_cfg_coverage = false;
         let mut no_cfg_coverage_nightly = false;
-        let mut no_report = false;
-        let mut fail_under_functions = None;
-        let mut fail_under_lines = None;
-        let mut fail_under_regions = None;
-        let mut fail_uncovered_lines = None;
-        let mut fail_uncovered_regions = None;
-        let mut fail_uncovered_functions = None;
-        let mut show_missing_lines = false;
-        let mut include_build_script = false;
         let mut dep_coverage = vec![];
-        let mut skip_functions = false;
         let mut branch = false;
         let mut mcdc = false;
+
+        let mut report = ReportOptions::default();
 
         // build options
         let mut release = false;
@@ -640,17 +804,17 @@ impl Args {
         let mut parser = lexopt::Parser::from_args(args);
         while let Some(arg) = parser.next()? {
             macro_rules! parse_opt {
-                ($opt:tt $(,)?) => {{
-                    if Store::is_full(&$opt) {
+                ($opt:tt $(.$field:ident)? $(,)?) => {{
+                    if Store::is_full(&$opt $(.$field)?) {
                         multi_arg(&arg)?;
                     }
-                    Store::push(&mut $opt, &parser.value()?.into_string().unwrap())?;
+                    Store::push(&mut $opt $(.$field)?, &parser.value()?.into_string().unwrap())?;
                     after_subcommand = false;
                 }};
             }
             macro_rules! parse_opt_passthrough {
-                ($opt:tt $(,)?) => {{
-                    if Store::is_full(&$opt) {
+                ($opt:tt $(.$field:ident)? $(,)?) => {{
+                    if Store::is_full(&$opt $(.$field)?) {
                         multi_arg(&arg)?;
                     }
                     match arg {
@@ -658,11 +822,11 @@ impl Args {
                             let flag = format!("--{}", flag);
                             if let Some(val) = parser.optional_value() {
                                 let val = val.into_string().unwrap();
-                                Store::push(&mut $opt, &val)?;
+                                Store::push(&mut $opt $(.$field)?, &val)?;
                                 cargo_args.push(format!("{}={}", flag, val));
                             } else {
                                 let val = parser.value()?.into_string().unwrap();
-                                Store::push(&mut $opt, &val)?;
+                                Store::push(&mut $opt $(.$field)?, &val)?;
                                 cargo_args.push(flag);
                                 cargo_args.push(val);
                             }
@@ -698,8 +862,8 @@ impl Args {
                 }};
             }
             macro_rules! parse_flag {
-                ($flag:ident $(,)?) => {{
-                    if mem::replace(&mut $flag, true) {
+                ($flag:tt $(.$field:ident)? $(,)?) => {{
+                    if mem::replace(&mut $flag $(.$field)?, true) {
                         multi_arg(&arg)?;
                     }
                     #[allow(unused_assignments)]
@@ -709,8 +873,8 @@ impl Args {
                 }};
             }
             macro_rules! parse_flag_passthrough {
-                ($flag:ident $(,)?) => {{
-                    parse_flag!($flag);
+                ($flag:tt $(.$field:ident)? $(,)?) => {{
+                    parse_flag!($flag $(.$field)?);
                     passthrough!();
                 }};
             }
@@ -768,6 +932,10 @@ impl Args {
                 Long("exclude-from-test") => parse_opt!(exclude_from_test),
                 Long("exclude-from-report") => parse_opt!(exclude_from_report),
 
+                Long("no-cfg-coverage") => parse_flag!(no_cfg_coverage),
+                Long("no-cfg-coverage-nightly") => parse_flag!(no_cfg_coverage_nightly),
+                Long("dep-coverage") => parse_multi_opt!(dep_coverage),
+
                 // build options
                 Short('r') | Long("release") => parse_flag!(release),
                 // ambiguous between nextest-related and others will be handled later
@@ -784,72 +952,56 @@ impl Args {
                 Long("profraw-only") => parse_flag!(profraw_only),
 
                 // report options
-                Long("json") => parse_flag!(json),
-                Long("lcov") => parse_flag!(lcov),
-                Long("cobertura") => parse_flag!(cobertura),
-                Long("codecov") => parse_flag!(codecov),
-                Long("text") => parse_flag!(text),
-                Long("html") => parse_flag!(html),
-                Long("open") => parse_flag!(open),
-                Long("summary-only") => parse_flag!(summary_only),
-                Long("skip-functions") => parse_flag!(skip_functions),
+                Long("no-report") => parse_flag!(report.no_report),
+                Long("json") => parse_flag!(report.json),
+                Long("lcov") => parse_flag!(report.lcov),
+                Long("cobertura") => parse_flag!(report.cobertura),
+                Long("codecov") => parse_flag!(report.codecov),
+                Long("text") => parse_flag!(report.text),
+                Long("html") => parse_flag!(report.html),
+                Long("open") => parse_flag!(report.open),
+                Long("summary-only") => parse_flag!(report.summary_only),
+                Long("skip-functions") => parse_flag!(report.skip_functions),
                 Long("branch") => parse_flag!(branch),
                 Long("mcdc") => parse_flag!(mcdc),
-                Long("output-path") => parse_opt!(output_path),
-                Long("output-dir") => parse_opt!(output_dir),
-                Long("failure-mode") => parse_opt!(failure_mode),
-                Long("ignore-filename-regex") => parse_opt!(ignore_filename_regex),
+                Long("output-path") => parse_opt!(report.output_path),
+                Long("output-dir") => parse_opt!(report.output_dir),
+                Long("failure-mode") => parse_opt!(report.failure_mode),
+                Long("ignore-filename-regex") => parse_opt!(report.ignore_filename_regex),
                 Long(
                     flag @ ("no-default-ignore-filename-regex"
                     | "disable-default-ignore-filename-regex"),
                 ) => {
                     if flag == "disable-default-ignore-filename-regex" {
-                        warn!(
-                            "--disable-default-ignore-filename-regex has been renamed to \
-                             --no-default-ignore-filename-regex; \
-                             old name is still available as an alias, but may removed in \
-                             future breaking release"
-                        );
+                        renamed(flag, "--no-default-ignore-filename-regex");
                     }
-                    parse_flag!(no_default_ignore_filename_regex);
+                    parse_flag!(report.no_default_ignore_filename_regex);
                 }
-                Long("show-instantiations") => parse_flag!(show_instantiations),
+                Long("show-instantiations") => parse_flag!(report.show_instantiations),
                 Long("hide-instantiations") => {
                     // The following warning is a hint, so it should not be promoted to an error.
                     let _guard = term::warn::ignore();
                     warn!("--hide-instantiations is now enabled by default");
                 }
-                Long("no-cfg-coverage") => parse_flag!(no_cfg_coverage),
-                Long("no-cfg-coverage-nightly") => parse_flag!(no_cfg_coverage_nightly),
-                Long("no-report") => parse_flag!(no_report),
-                Long("fail-under-functions") => parse_opt!(fail_under_functions),
-                Long("fail-under-lines") => parse_opt!(fail_under_lines),
-                Long("fail-under-regions") => parse_opt!(fail_under_regions),
-                Long("fail-uncovered-lines") => parse_opt!(fail_uncovered_lines),
-                Long("fail-uncovered-regions") => parse_opt!(fail_uncovered_regions),
-                Long("fail-uncovered-functions") => parse_opt!(fail_uncovered_functions),
-                Long("show-missing-lines") => parse_flag!(show_missing_lines),
-                Long("include-build-script") => parse_flag!(include_build_script),
-                Long("dep-coverage") => parse_multi_opt!(dep_coverage),
+                Long("fail-under-functions") => parse_opt!(report.fail_under_functions),
+                Long("fail-under-lines") => parse_opt!(report.fail_under_lines),
+                Long("fail-under-regions") => parse_opt!(report.fail_under_regions),
+                Long("fail-uncovered-lines") => parse_opt!(report.fail_uncovered_lines),
+                Long("fail-uncovered-regions") => parse_opt!(report.fail_uncovered_regions),
+                Long("fail-uncovered-functions") => parse_opt!(report.fail_uncovered_functions),
+                Long("show-missing-lines") => parse_flag!(report.show_missing_lines),
+                Long("include-build-script") => parse_flag!(report.include_build_script),
 
                 // show-env options
                 Long(flag @ ("sh" | "export-prefix")) => {
                     if flag == "export-prefix" {
-                        warn!(
-                            "--export-prefix has been renamed to --sh; \
-                             old name is still available as an alias, but may removed in \
-                             future breaking release"
-                        );
+                        renamed(flag, "--sh");
                     }
                     parse_flag!(sh);
                 }
                 Long(flag @ ("pwsh" | "with-pwsh-env-prefix")) => {
                     if flag == "with-pwsh-env-prefix" {
-                        warn!(
-                            "--with-pwsh-env-prefix has been renamed to --pwsh; \
-                             old name is still available as an alias, but may removed in \
-                             future breaking release"
-                        );
+                        renamed(flag, "--pwsh");
                     }
                     parse_flag!(pwsh);
                 }
@@ -950,6 +1102,11 @@ impl Args {
         }
 
         term::set_coloring(&mut color);
+
+        // ---------------------------------------------------------------------
+        // Arguments validations
+
+        report.validate(subcommand)?;
 
         // Handle options specific to certain subcommands.
         // show-env specific
@@ -1053,7 +1210,6 @@ impl Args {
                 for (passed, arg) in [
                     (!bin.is_empty(), "--bin"),
                     (!example.is_empty(), "--example"),
-                    (no_report, "--no-report"),
                     (no_clean, "--no-clean"),
                     // --exclude for report subcommand means "exclude from report"
                     (!exclude_from_report.is_empty(), "--exclude-from-report"),
@@ -1179,11 +1335,11 @@ impl Args {
         }
 
         // conflicts
-        if no_report && no_run {
+        if report.no_report && no_run {
             conflicts("--no-report", "--no-run")?;
         }
-        if no_report || no_run {
-            let flag = if no_report { "--no-report" } else { "--no-run" };
+        if report.no_report || no_run {
+            let flag = if report.no_report { "--no-report" } else { "--no-run" };
             if no_clean {
                 // --no-report/--no-run implicitly enable --no-clean.
                 conflicts(flag, "--no-clean")?;
@@ -1234,112 +1390,32 @@ impl Args {
         if branch && mcdc {
             conflicts("--branch", "--mcdc")?;
         }
-        // TODO: handle these mutual exclusions elegantly.
-        if lcov {
-            let flag = "--lcov";
-            if json {
-                conflicts(flag, "--json")?;
+        if subcommand.read_nextest_archive() {
+            if target.is_some() {
+                info!(
+                    "--target flag is no longer needed because detection from nextest archive is now supported"
+                );
             }
-        }
-        if cobertura {
-            let flag = "--cobertura";
-            if json {
-                conflicts(flag, "--json")?;
+            if release {
+                info!(
+                    "--release flag is no longer needed because detection from nextest archive is now supported"
+                );
             }
-            if lcov {
-                conflicts(flag, "--lcov")?;
-            }
-            if codecov {
-                conflicts(flag, "--codecov")?;
-            }
-        }
-        if codecov {
-            let flag = "--codecov";
-            if json {
-                conflicts(flag, "--json")?;
-            }
-            if lcov {
-                conflicts(flag, "--lcov")?;
-            }
-            if cobertura {
-                conflicts(flag, "--cobertura")?;
-            }
-        }
-        if text {
-            let flag = "--text";
-            if json {
-                conflicts(flag, "--json")?;
-            }
-            if lcov {
-                conflicts(flag, "--lcov")?;
-            }
-            if cobertura {
-                conflicts(flag, "--cobertura")?;
-            }
-            if codecov {
-                conflicts(flag, "--codecov")?;
-            }
-        }
-        if html || open {
-            let flag = if html { "--html" } else { "--open" };
-            if json {
-                conflicts(flag, "--json")?;
-            }
-            if lcov {
-                conflicts(flag, "--lcov")?;
-            }
-            if cobertura {
-                conflicts(flag, "--cobertura")?;
-            }
-            if codecov {
-                conflicts(flag, "--codecov")?;
-            }
-            if text {
-                conflicts(flag, "--text")?;
-            }
-        }
-        if summary_only || output_path.is_some() {
-            let flag = if summary_only { "--summary-only" } else { "--output-path" };
-            if html {
-                conflicts(flag, "--html")?;
-            }
-            if open {
-                conflicts(flag, "--open")?;
-            }
-        }
-        if skip_functions {
-            let flag = "--skip-functions";
-            if html {
-                conflicts(flag, "--html")?;
-            }
-        }
-        if output_dir.is_some() {
-            let flag = "--output-dir";
-            if json {
-                conflicts(flag, "--json")?;
-            }
-            if lcov {
-                conflicts(flag, "--lcov")?;
-            }
-            if cobertura {
-                conflicts(flag, "--cobertura")?;
-            }
-            if codecov {
-                conflicts(flag, "--codecov")?;
-            }
-            if output_path.is_some() {
-                conflicts(flag, "--output-path")?;
+            if cargo_profile.is_some() {
+                info!(
+                    "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
+                );
             }
         }
 
         // forbid_empty_values
-        if ignore_filename_regex.as_deref() == Some("") {
+        if report.ignore_filename_regex.as_deref() == Some("") {
             bail!("empty string is not allowed in --ignore-filename-regex")
         }
-        if output_path.as_deref() == Some(Utf8Path::new("")) {
+        if report.output_path.as_deref() == Some(Utf8Path::new("")) {
             bail!("empty string is not allowed in --output-path")
         }
-        if output_dir.as_deref() == Some(Utf8Path::new("")) {
+        if report.output_dir.as_deref() == Some(Utf8Path::new("")) {
             bail!("empty string is not allowed in --output-dir")
         }
 
@@ -1365,87 +1441,61 @@ impl Args {
             cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
         }
 
-        // For subsequent processing
-        if no_report || no_run {
-            // --no-report and --no-run implies --no-clean
-            no_clean = true;
-        }
-        if doc {
-            // --doc implies --doctests
-            doctests = true;
-        }
+        // ---------------------------------------------------------------------
+        // Preparation for subsequent processing
+
+        // --no-report and --no-run implies --no-clean
+        no_clean |= report.no_report | no_run;
+        // --doc implies --doctests
+        doctests |= doc;
+        // --open implies --html
+        report.html |= report.open;
         if no_run {
             // --no-run is deprecated alias for report
             subcommand = Subcommand::Report { nextest_archive_file: false };
         }
 
-        Ok(Some(Self {
-            subcommand,
-            cov: LlvmCovOptions {
-                json,
-                lcov,
-                cobertura,
-                codecov,
-                text,
-                html,
-                open,
-                summary_only,
-                output_path,
-                output_dir,
-                failure_mode,
-                ignore_filename_regex,
-                no_default_ignore_filename_regex,
-                show_instantiations,
+        Ok(Some((
+            Self {
+                subcommand,
+                report,
+                show_env: ShowEnvOptions { show_env_format },
+                clean: CleanOptions { profraw_only, frozen, locked, offline },
+                doctests,
+                ignore_run_fail,
+                lib,
+                bin,
+                bins,
+                example,
+                examples,
+                test,
+                tests,
+                bench,
+                benches,
+                all_targets,
+                doc,
+                workspace,
+                exclude_from_test,
+                release,
+                cargo_profile,
+                target,
+                coverage_target_only,
+                verbose: verbose.try_into().unwrap_or(u8::MAX),
+                remap_path_prefix,
+                include_ffi,
+                no_clean,
+                no_rustc_wrapper,
                 no_cfg_coverage,
                 no_cfg_coverage_nightly,
-                no_report,
-                fail_under_functions,
-                fail_under_lines,
-                fail_under_regions,
-                fail_uncovered_lines,
-                fail_uncovered_regions,
-                fail_uncovered_functions,
-                show_missing_lines,
-                include_build_script,
                 dep_coverage,
-                skip_functions,
                 branch,
                 mcdc,
+                nextest_archive_file,
+                cargo_args,
+                rest,
             },
-            show_env: ShowEnvOptions { show_env_format },
-            clean: CleanOptions { profraw_only },
-            doctests,
-            ignore_run_fail,
-            lib,
-            bin,
-            bins,
-            example,
-            examples,
-            test,
-            tests,
-            bench,
-            benches,
-            all_targets,
-            doc,
-            workspace,
-            exclude_from_test,
-            exclude_from_report,
-            package,
-            release,
-            cargo_profile,
-            target,
-            coverage_target_only,
-            verbose: verbose.try_into().unwrap_or(u8::MAX),
-            color,
-            remap_path_prefix,
-            include_ffi,
-            no_clean,
-            no_rustc_wrapper,
-            manifest: ManifestOptions { manifest_path, frozen, locked, offline },
-            nextest_archive_file,
-            cargo_args,
-            rest,
-        }))
+            UnresolvedArgs { package, exclude_from_report, manifest_path, color },
+        )))
     }
 }
 
@@ -1543,6 +1593,9 @@ fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Re
     assert!(!specific_to.is_empty());
     assert!(flag.starts_with('-') && !flag.starts_with("---") && flag != "--");
     let mut list = String::new();
+    if specific_to.len() != 1 {
+        list.push('[');
+    }
     for subcmd in specific_to {
         if subcmd.is_empty() {
             list.push_str("no subcommand");
@@ -1552,11 +1605,24 @@ fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Re
         list.push(',');
     }
     list.pop(); // drop trailing comma
+    if specific_to.len() != 1 {
+        list.push(']');
+    }
     if subcommand == Subcommand::None {
-        bail!("option '{flag}' is specific to {list}");
+        bail!("{flag} is specific to {list}");
     }
     bail!(
-        "option '{flag}' is specific to {list} and not supported for subcommand '{}'",
+        "{flag} is specific to {list} and not supported for subcommand '{}'",
         subcommand.as_str()
+    );
+}
+
+#[cold]
+#[inline(never)]
+fn renamed(from: &str, to: &str) {
+    warn!(
+        "{from} has been renamed to {to}; \
+         old name is still available as an alias, but may removed in \
+         future breaking release"
     );
 }

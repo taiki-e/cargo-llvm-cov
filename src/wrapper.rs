@@ -67,7 +67,7 @@ pub(crate) fn set_env(cx: &Context, env: &mut dyn EnvTarget, rustflags: &Flags) 
             crates.push(',');
         }
     }
-    for dep in &cx.args.cov.dep_coverage {
+    for dep in &cx.args.dep_coverage {
         let name = &dep.replace('-', "_");
         // TODO: should refer the lib name.
         crates.push_str(name);

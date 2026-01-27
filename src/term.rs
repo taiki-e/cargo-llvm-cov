@@ -2,74 +2,37 @@
 
 use std::{
     io::{self, IsTerminal as _, Write as _},
-    str::FromStr,
     sync::atomic::{AtomicBool, AtomicU8, Ordering},
 };
 
-use anyhow::Error;
-use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor as _};
+use cargo_config2::Color;
+use termcolor::{ColorChoice, ColorSpec, StandardStream, WriteColor as _};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(u8)]
-pub(crate) enum Coloring {
-    Auto = 0,
-    Always,
-    Never,
-}
+const AUTO: u8 = Color::Auto as u8;
+const ALWAYS: u8 = Color::Always as u8;
+const NEVER: u8 = Color::Never as u8;
 
-impl Coloring {
-    const AUTO: u8 = Self::Auto as u8;
-    const ALWAYS: u8 = Self::Always as u8;
-    const NEVER: u8 = Self::Never as u8;
-
-    pub(crate) const fn cargo_color(self) -> &'static str {
-        match self {
-            Self::Auto => "auto",
-            Self::Always => "always",
-            Self::Never => "never",
-        }
-    }
-}
-
-impl FromStr for Coloring {
-    type Err = Error;
-
-    fn from_str(color: &str) -> Result<Self, Self::Err> {
-        Ok(cargo_config2::Color::from_str(color)?.into())
-    }
-}
-
-impl From<cargo_config2::Color> for Coloring {
-    fn from(value: cargo_config2::Color) -> Self {
-        match value {
-            cargo_config2::Color::Auto => Self::Auto,
-            cargo_config2::Color::Always => Self::Always,
-            cargo_config2::Color::Never => Self::Never,
-        }
-    }
-}
-
-static COLORING: AtomicU8 = AtomicU8::new(Coloring::AUTO);
+static COLORING: AtomicU8 = AtomicU8::new(AUTO);
 // Errors during argument parsing are returned before set_coloring, so check is_terminal first.
 pub(crate) fn init_coloring() {
     if !io::stderr().is_terminal() {
-        COLORING.store(Coloring::NEVER, Ordering::Relaxed);
+        COLORING.store(NEVER, Ordering::Relaxed);
     }
 }
-pub(crate) fn set_coloring(color: &mut Option<Coloring>) {
-    let new = color.unwrap_or(Coloring::Auto);
-    if new == Coloring::Auto && coloring() == ColorChoice::Never {
+pub(crate) fn set_coloring(color: &mut Option<Color>) {
+    let new = color.unwrap_or(Color::Auto);
+    if new == Color::Auto && coloring() == ColorChoice::Never {
         // If coloring is already set to never by init_coloring, respect it.
-        *color = Some(Coloring::Never);
+        *color = Some(Color::Never);
     } else {
         COLORING.store(new as u8, Ordering::Relaxed);
     }
 }
 fn coloring() -> ColorChoice {
     match COLORING.load(Ordering::Relaxed) {
-        Coloring::AUTO => ColorChoice::Auto,
-        Coloring::ALWAYS => ColorChoice::Always,
-        Coloring::NEVER => ColorChoice::Never,
+        AUTO => ColorChoice::Auto,
+        ALWAYS => ColorChoice::Always,
+        NEVER => ColorChoice::Never,
         _ => unreachable!(),
     }
 }
@@ -105,7 +68,11 @@ global_flag!(verbose: bool = AtomicBool::new(false));
 global_flag!(error: bool = AtomicBool::new(false));
 global_flag!(warn: bool = AtomicBool::new(false));
 
-pub(crate) fn print_status(status: &str, color: Option<Color>, justified: bool) -> StandardStream {
+pub(crate) fn print_status(
+    status: &str,
+    color: Option<termcolor::Color>,
+    justified: bool,
+) -> StandardStream {
     let mut stream = StandardStream::stderr(coloring());
     let _ = stream.set_color(ColorSpec::new().set_bold(true).set_fg(color));
     if justified {

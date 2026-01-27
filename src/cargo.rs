@@ -7,7 +7,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Config;
 
 use crate::{
-    cli::{ManifestOptions, Subcommand},
+    cli::Subcommand,
     context::Context,
     env,
     metadata::{Metadata, PackageId},
@@ -23,13 +23,12 @@ pub(crate) struct Workspace {
 
     pub(crate) target_dir: Utf8PathBuf,
     pub(crate) build_dir: Option<Utf8PathBuf>,
-    pub(crate) output_dir: Utf8PathBuf,
+    pub(crate) default_output_dir: Utf8PathBuf,
     pub(crate) doctests_dir: Utf8PathBuf,
     pub(crate) profdata_file: Utf8PathBuf,
 
     rustc: ProcessBuilder,
     pub(crate) target_for_config: cargo_config2::TargetTriple,
-    pub(crate) target_for_cli: Option<String>,
     pub(crate) target_is_windows: bool,
     pub(crate) rustc_version: cargo_config2::RustcVersion,
     /// Whether `-C instrument-coverage` is available.
@@ -41,7 +40,7 @@ pub(crate) struct Workspace {
 impl Workspace {
     #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) fn new(
-        options: &ManifestOptions,
+        manifest_path: Option<&Utf8Path>,
         target: Option<&str>,
         doctests: bool,
         branch: bool,
@@ -50,7 +49,7 @@ impl Workspace {
     ) -> Result<Self> {
         // Metadata and config
         let config = Config::load()?;
-        let current_manifest = locate_project(config.cargo(), options.manifest_path.as_deref())?;
+        let current_manifest = locate_project(config.cargo(), manifest_path)?;
         let metadata = Metadata::new(current_manifest.as_std_path(), config.cargo())?;
         let mut target_for_config = config.build_target_for_config(target)?;
         if target_for_config.len() != 1 {
@@ -59,7 +58,6 @@ impl Workspace {
             );
         }
         let target_for_config = target_for_config.pop().unwrap();
-        let target_for_cli = config.build_target_for_cli(target)?.pop();
         let target_is_windows = target_for_config.triple().contains("-windows");
         let rustc = ProcessBuilder::from(config.rustc().clone());
         let mut rustc_version = config.rustc_version()?;
@@ -132,7 +130,7 @@ impl Workspace {
         };
         // The scope of --target-dir's effect depends on whether build-dir is specified in the config.
         let build_dir = config.build.build_dir.as_ref().and(Some(build_dir));
-        let output_dir = metadata.target_directory.join("llvm-cov");
+        let default_output_dir = metadata.target_directory.join("llvm-cov");
         let doctests_dir = target_dir.join("doctestbins");
 
         let name = metadata.workspace_root.file_name().unwrap_or("default").to_owned();
@@ -146,12 +144,11 @@ impl Workspace {
             current_package,
             target_dir,
             build_dir,
-            output_dir,
+            default_output_dir,
             doctests_dir,
             profdata_file,
             rustc,
             target_for_config,
-            target_for_cli,
             target_is_windows,
             rustc_version,
             stable_coverage,
@@ -288,9 +285,9 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.arg("--target");
         cmd.arg(target);
     }
-    if let Some(color) = cx.args.color {
+    if let Some(color) = cx.ws.config.term.color {
         cmd.arg("--color");
-        cmd.arg(color.cargo_color());
+        cmd.arg(color.as_str());
     }
 
     cmd.arg("--manifest-path");
@@ -302,7 +299,7 @@ pub(crate) fn clean_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.env("CARGO_BUILD_BUILD_DIR", build_dir.as_str());
     }
 
-    cx.args.manifest.cargo_args(cmd);
+    cx.args.clean.cargo_args(cmd);
 
     // If `-vv` is passed, propagate `-v` to cargo.
     if cx.args.verbose > 1 {
