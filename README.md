@@ -769,7 +769,7 @@ Prebuilt binaries are available for Linux (x86_64 gnu/musl, aarch64 gnu/musl, po
 host=$(rustc -vV | grep '^host:' | cut -d' ' -f2)
 # Download binary and install to $HOME/.cargo/bin
 curl --proto '=https' --tlsv1.2 -fsSL "https://github.com/taiki-e/cargo-llvm-cov/releases/latest/download/cargo-llvm-cov-$host.tar.gz" \
-  | tar xzf - -C "$HOME/.cargo/bin"
+  | tar xzf - -C "${CARGO_HOME:-~/.cargo}/bin"
 ```
 
 </details>
