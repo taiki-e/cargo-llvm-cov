@@ -272,16 +272,26 @@ jobs:
         if: startsWith(matrix.os, 'windows')
       - name: Install other shells (Ubuntu)
         run: |
-          sudo apt-get -o Acquire::Retries=10 -qq update
-          sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends fish zsh
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
+          retry sudo apt-get -o Acquire::Retries=10 -qq update
+          retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends csh fish tcsh zsh
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Install other shells (macOS)
         run: |
-          brew install fish
+          brew install fish tcsh
         if: startsWith(matrix.os, 'macos')
       - name: Install other shells (Windows)
         run: |
-          C:/msys64/usr/bin/pacman -S --noconfirm fish zsh
+          C:/msys64/usr/bin/pacman -S --noconfirm fish tcsh zsh
           printf '%s\n' 'C:\msys64\usr\bin' >>"${GITHUB_PATH}"
         # TODO: C:/msys64/usr/bin/pacman: No such file or directory
         if: startsWith(matrix.os, 'windows') && matrix.os != 'windows-11-arm'
@@ -299,6 +309,39 @@ jobs:
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 50
         shell: zsh {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: matrix.os != 'windows-11-arm'
+      - name: Test show-env --csh on csh
+        run: |
+          cargo llvm-cov show-env --csh > env.csh
+          cat -- env.csh
+          source ./env.csh
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: bsd-csh {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
+      - name: Test show-env --csh on tcsh
+        run: |
+          tcsh --version
+          cargo llvm-cov show-env --csh > env.csh
+          cat -- env.csh
+          source ./env.csh
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: tcsh {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --fish

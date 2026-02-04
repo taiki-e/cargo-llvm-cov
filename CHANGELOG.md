@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--csh` to `cargo llvm-cov show-env` for csh and tcsh.
+
 - Diagnostics improvements.
 
 ## [0.8.2] - 2026-01-27

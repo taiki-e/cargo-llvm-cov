@@ -506,7 +506,7 @@ cargo llvm-cov report --lcov # Generate report without tests.
 > ```
 >
 > See "Test show-env ... on ..." in [our CI config](https://github.com/taiki-e/cargo-llvm-cov/blob/HEAD/.github/workflows/ci.yml)
-> for usage with other shells.
+> for usage with other shells (cmd.exe, csh, tcsh, fish).
 
 ### Get coverage of AFL fuzzers
 

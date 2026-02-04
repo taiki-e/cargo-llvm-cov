@@ -576,19 +576,24 @@ pub(crate) enum ShowEnvFormat {
     Pwsh,
     /// Each key-value: `set {key}={value}`, where `{value}` is escaped using [`shell_escape::windows::escape`].
     Cmd,
+    /// Each key-value: `setenv {key} '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Csh,
     /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Fish,
 }
 
 impl ShowEnvFormat {
     #[allow(clippy::fn_params_excessive_bools)]
-    pub(crate) fn new(sh: bool, pwsh: bool, cmd: bool, fish: bool) -> Result<Self> {
+    pub(crate) fn new(sh: bool, pwsh: bool, cmd: bool, csh: bool, fish: bool) -> Result<Self> {
         Ok(if sh {
             if pwsh {
                 conflicts("--sh", "--pwsh")?;
             }
             if cmd {
                 conflicts("--sh", "--cmd")?;
+            }
+            if csh {
+                conflicts("--sh", "--csh")?;
             }
             if fish {
                 conflicts("--sh", "--fish")?;
@@ -598,15 +603,26 @@ impl ShowEnvFormat {
             if cmd {
                 conflicts("--pwsh", "--cmd")?;
             }
+            if csh {
+                conflicts("--pwsh", "--csh")?;
+            }
             if fish {
                 conflicts("--pwsh", "--fish")?;
             }
             ShowEnvFormat::Pwsh
         } else if cmd {
+            if csh {
+                conflicts("--cmd", "--csh")?;
+            }
             if fish {
                 conflicts("--cmd", "--fish")?;
             }
             ShowEnvFormat::Cmd
+        } else if csh {
+            if fish {
+                conflicts("--csh", "--fish")?;
+            }
+            ShowEnvFormat::Csh
         } else if fish {
             ShowEnvFormat::Fish
         } else {
@@ -633,6 +649,15 @@ impl ShowEnvFormat {
             }
             ShowEnvFormat::Cmd => {
                 writeln!(writer, "set {key}={}", escape::cmd(value.into()))
+            }
+            ShowEnvFormat::Csh => {
+                // TODO: https://en.wikipedia.org/wiki/C_shell#Quoting_and_escaping
+                let value = escape::sh(value.into());
+                if value.starts_with('"') || value.starts_with('\'') {
+                    writeln!(writer, "setenv {key} {value}")
+                } else {
+                    writeln!(writer, "setenv {key} '{value}'")
+                }
             }
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
@@ -781,6 +806,7 @@ impl Args {
         let mut sh = false;
         let mut pwsh = false;
         let mut cmd = false;
+        let mut csh = false;
         let mut fish = false;
 
         // options ambiguous between nextest-related and others
@@ -994,6 +1020,7 @@ impl Args {
                     parse_flag!(pwsh);
                 }
                 Long("cmd") => parse_flag!(cmd),
+                Long("csh") => parse_flag!(csh),
                 Long("fish") => parse_flag!(fish),
 
                 // ambiguous between nextest-related and others will be handled later
@@ -1099,11 +1126,15 @@ impl Args {
         // Handle options specific to certain subcommands.
         // show-env specific
         let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, fish)?,
+            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish)?,
             _ => {
-                for (passed, flag) in
-                    [(sh, "--sh"), (pwsh, "--pwsh"), (cmd, "--cmd"), (fish, "--fish")]
-                {
+                for (passed, flag) in [
+                    (sh, "--sh"),
+                    (pwsh, "--pwsh"),
+                    (cmd, "--cmd"),
+                    (csh, "--csh"),
+                    (fish, "--fish"),
+                ] {
                     if passed {
                         specific_flag(flag, subcommand, &["show-env"])?;
                     }
