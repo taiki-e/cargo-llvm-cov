@@ -23,8 +23,8 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
         // TODO: test Cobertura output
         ("codecov.json", &["--codecov"]),
     ];
-    if rustversion::cfg!(since(1.91)) {
-        // LLVM 21 (1.91) bumped llvm.coverage.json.export version.
+    if rustversion::cfg!(since(1.95)) {
+        // LLVM 22 (1.95) bumped llvm.coverage.json.export version.
         set.push(("json", &["--json", "--summary-only"]));
         // TODO: full JSON output is unstable between platform.
         // ("full.json", &["--json"]),
