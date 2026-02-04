@@ -807,11 +807,11 @@ impl Args {
                     }
                     match arg {
                         Long(flag) => {
-                            let flag = format!("--{}", flag);
+                            let flag = format!("--{flag}");
                             if let Some(val) = parser.optional_value() {
                                 let val = val.into_string().unwrap();
                                 Store::push(&mut $opt $(.$field)?, &val)?;
-                                cargo_args.push(format!("{}={}", flag, val));
+                                cargo_args.push(format!("{flag}={val}"));
                             } else {
                                 let val = parser.value()?.into_string().unwrap();
                                 Store::push(&mut $opt $(.$field)?, &val)?;
@@ -823,11 +823,11 @@ impl Args {
                             if let Some(val) = parser.optional_value() {
                                 let val = val.into_string().unwrap();
                                 Store::push(&mut $opt, &val)?;
-                                cargo_args.push(format!("-{}{}", flag, val));
+                                cargo_args.push(format!("-{flag}{val}"));
                             } else {
                                 let val = parser.value()?.into_string().unwrap();
                                 Store::push(&mut $opt, &val)?;
-                                cargo_args.push(format!("-{}", flag));
+                                cargo_args.push(format!("-{flag}"));
                                 cargo_args.push(val);
                             }
                         }
@@ -870,18 +870,18 @@ impl Args {
                 () => {{
                     match arg {
                         Long(flag) => {
-                            let flag = format!("--{}", flag);
+                            let flag = format!("--{flag}");
                             if let Some(val) = parser.optional_value() {
-                                cargo_args.push(format!("{}={}", flag, val.string()?));
+                                cargo_args.push(format!("{flag}={}", val.string()?));
                             } else {
                                 cargo_args.push(flag);
                             }
                         }
                         Short(flag) => {
                             if let Some(val) = parser.optional_value() {
-                                cargo_args.push(format!("-{}{}", flag, val.string()?));
+                                cargo_args.push(format!("-{flag}{}", val.string()?));
                             } else {
-                                cargo_args.push(format!("-{}", flag));
+                                cargo_args.push(format!("-{flag}"));
                             }
                         }
                         Value(_) => unreachable!(),
