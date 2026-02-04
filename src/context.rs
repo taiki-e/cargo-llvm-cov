@@ -537,7 +537,7 @@ mod tests {
             id: "registry+https://github.com/rust-lang/crates.io-index#regex@1.4.3".into(),
             name: "regex".into(),
             version: "1.4.3".into(),
-            targets: vec![].into_boxed_slice(),
+            targets: Box::default(),
             manifest_path: "".into(),
         };
         // name
@@ -574,7 +574,7 @@ mod tests {
             id: "git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3".into(),
             name: "regex".into(),
             version: "1.4.3".into(),
-            targets: vec![].into_boxed_slice(),
+            targets: Box::default(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "regex").unwrap());
@@ -596,7 +596,7 @@ mod tests {
             id: "git+https://github.com/rust-lang/cargo#0.52.0".into(),
             name: "cargo".into(),
             version: "0.52.0".into(),
-            targets: vec![].into_boxed_slice(),
+            targets: Box::default(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "https://github.com/rust-lang/cargo#0.52.0").unwrap());
@@ -611,7 +611,7 @@ mod tests {
             id: "path+file:///path/to/my/project/foo#1.1.8".into(),
             name: "foo".into(),
             version: "1.1.8".into(),
-            targets: vec![].into_boxed_slice(),
+            targets: Box::default(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "foo").unwrap());
