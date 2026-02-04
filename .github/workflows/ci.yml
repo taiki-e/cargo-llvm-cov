@@ -198,11 +198,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test show-env --sh on sh
         run: |
@@ -213,11 +213,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: sh
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == '' || startsWith(matrix.os, 'macos')
@@ -229,11 +229,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: pwsh
         working-directory: tests/fixtures/crates/bin_crate
       # TODO: --pwsh currently supports PowerShell 6+
@@ -246,11 +246,11 @@ jobs:
       #     cargo llvm-cov clean --workspace
       #     cargo build
       #     cargo run -- 1
-      #     cargo llvm-cov report --fail-under-lines 50
+      #     cargo llvm-cov report --fail-under-lines 57
       #     cargo llvm-cov clean --workspace
       #     cargo build
       #     cargo run -- 2
-      #     cargo llvm-cov report --fail-under-lines 50
+      #     cargo llvm-cov report --fail-under-lines 57
       #   shell: powershell
       #   working-directory: tests/fixtures/crates/bin_crate
       #   if: startsWith(matrix.os, 'windows')
@@ -262,11 +262,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: cmd
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'windows')
@@ -287,11 +287,11 @@ jobs:
           printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
             | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
           retry sudo apt-get -o Acquire::Retries=10 -qq update
-          retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends csh fish nushell tcsh zsh
+          retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends csh fish nushell tcsh xonsh zsh
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Install other shells (macOS)
         run: |
-          brew install fish nushell tcsh
+          brew install fish nushell tcsh xonsh
         if: startsWith(matrix.os, 'macos')
       - name: Install other shells (Windows)
         run: |
@@ -307,11 +307,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: zsh {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
@@ -323,11 +323,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: bsd-csh {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
@@ -340,11 +340,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: tcsh {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
@@ -356,11 +356,11 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: fish {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
@@ -379,12 +379,28 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 1
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
           cargo llvm-cov clean --workspace
           cargo build
           cargo run -- 2
-          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov report --fail-under-lines 57
         shell: nu {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: (!startsWith(matrix.os, 'windows'))
+      - name: Test show-env --xonsh
+        run: |
+          cargo llvm-cov show-env --xonsh > env.xsh
+          cat -- env.xsh
+          source env.xsh
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 57
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 57
+        shell: xonsh {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
 

@@ -416,7 +416,7 @@ fn invalid_arg() {
         ["", "test", "run", "report", "clean", "show-env", "nextest", "nextest-archive"]
     {
         if subcommand != "show-env" {
-            for flag in ["--sh", "--pwsh", "--cmd", "--csh", "--fish", "--nu"] {
+            for flag in ["--sh", "--pwsh", "--cmd", "--csh", "--fish", "--nu", "--xonsh"] {
                 cargo_llvm_cov(subcommand)
                     .arg(flag)
                     .assert_failure()

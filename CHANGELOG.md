@@ -15,6 +15,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 - `cargo llvm-cov show-env` improvements:
   - Add `--csh` for csh and tcsh.
   - Add `--nu` for nushell.
+  - Add `--xonsh` for xonsh.
 
 - Diagnostics improvements.
 

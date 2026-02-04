@@ -23,6 +23,9 @@ OPTIONS:
         --nu
             Make output suitable to be sourced by nushell
 
+        --xonsh
+            Make output suitable to be sourced by xonsh
+
         --doctests
             Including doc tests (unstable)
 

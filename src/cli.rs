@@ -582,6 +582,8 @@ pub(crate) enum ShowEnvFormat {
     Fish,
     /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Nu,
+    /// Each key-value: `${key} = '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Xonsh,
 }
 
 impl ShowEnvFormat {
@@ -593,6 +595,7 @@ impl ShowEnvFormat {
         csh: bool,
         fish: bool,
         nu: bool,
+        xonsh: bool,
     ) -> Result<Self> {
         Ok(if sh {
             if pwsh {
@@ -610,6 +613,9 @@ impl ShowEnvFormat {
             if nu {
                 conflicts("--sh", "--nu")?;
             }
+            if xonsh {
+                conflicts("--sh", "--xonsh")?;
+            }
             ShowEnvFormat::Sh
         } else if pwsh {
             if cmd {
@@ -624,6 +630,9 @@ impl ShowEnvFormat {
             if nu {
                 conflicts("--pwsh", "--nu")?;
             }
+            if xonsh {
+                conflicts("--pwsh", "--xonsh")?;
+            }
             ShowEnvFormat::Pwsh
         } else if cmd {
             if csh {
@@ -635,6 +644,9 @@ impl ShowEnvFormat {
             if nu {
                 conflicts("--cmd", "--nu")?;
             }
+            if xonsh {
+                conflicts("--cmd", "--xonsh")?;
+            }
             ShowEnvFormat::Cmd
         } else if csh {
             if fish {
@@ -643,14 +655,25 @@ impl ShowEnvFormat {
             if nu {
                 conflicts("--csh", "--nu")?;
             }
+            if xonsh {
+                conflicts("--csh", "--xonsh")?;
+            }
             ShowEnvFormat::Csh
         } else if fish {
             if nu {
                 conflicts("--fish", "--nu")?;
             }
+            if xonsh {
+                conflicts("--fish", "--xonsh")?;
+            }
             ShowEnvFormat::Fish
         } else if nu {
+            if xonsh {
+                conflicts("--nu", "--xonsh")?;
+            }
             ShowEnvFormat::Nu
+        } else if xonsh {
+            ShowEnvFormat::Xonsh
         } else {
             ShowEnvFormat::EscapedKeyValuePair
         })
@@ -696,6 +719,15 @@ impl ShowEnvFormat {
                     writeln!(writer, "$env.{key} = {value}")
                 } else {
                     writeln!(writer, "$env.{key} = '{value}'")
+                }
+            }
+            ShowEnvFormat::Xonsh => {
+                // TODO: https://xon.sh/tutorial_subproc_strings.html
+                let value = escape::sh(value.into());
+                if value.starts_with('"') || value.starts_with('\'') {
+                    writeln!(writer, "${key} = {value}")
+                } else {
+                    writeln!(writer, "${key} = '{value}'")
                 }
             }
         }
@@ -844,6 +876,7 @@ impl Args {
         let mut csh = false;
         let mut fish = false;
         let mut nu = false;
+        let mut xonsh = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -1059,6 +1092,7 @@ impl Args {
                 Long("csh") => parse_flag!(csh),
                 Long("fish") => parse_flag!(fish),
                 Long("nu") => parse_flag!(nu),
+                Long("xonsh") => parse_flag!(xonsh),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -1163,7 +1197,7 @@ impl Args {
         // Handle options specific to certain subcommands.
         // show-env specific
         let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish, nu)?,
+            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish, nu, xonsh)?,
             _ => {
                 for (passed, flag) in [
                     (sh, "--sh"),
@@ -1172,6 +1206,7 @@ impl Args {
                     (csh, "--csh"),
                     (fish, "--fish"),
                     (nu, "--nu"),
+                    (xonsh, "--xonsh"),
                 ] {
                     if passed {
                         specific_flag(flag, subcommand, &["show-env"])?;

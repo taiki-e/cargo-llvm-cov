@@ -27,5 +27,6 @@ TESTNAME
 winapi
 xargo
 Xdemangler
+xonsh
 xtask
 zmij
