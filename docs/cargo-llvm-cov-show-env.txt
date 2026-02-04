@@ -20,6 +20,9 @@ OPTIONS:
         --fish
             Make output suitable to be sourced by fish
 
+        --nu
+            Make output suitable to be sourced by nushell
+
         --doctests
             Including doc tests (unstable)
 

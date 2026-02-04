@@ -12,7 +12,9 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- Add `--csh` to `cargo llvm-cov show-env` for csh and tcsh.
+- `cargo llvm-cov show-env` improvements:
+  - Add `--csh` for csh and tcsh.
+  - Add `--nu` for nushell.
 
 - Diagnostics improvements.
 

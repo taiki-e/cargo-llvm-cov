@@ -580,11 +580,20 @@ pub(crate) enum ShowEnvFormat {
     Csh,
     /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Fish,
+    /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Nu,
 }
 
 impl ShowEnvFormat {
     #[allow(clippy::fn_params_excessive_bools)]
-    pub(crate) fn new(sh: bool, pwsh: bool, cmd: bool, csh: bool, fish: bool) -> Result<Self> {
+    pub(crate) fn new(
+        sh: bool,
+        pwsh: bool,
+        cmd: bool,
+        csh: bool,
+        fish: bool,
+        nu: bool,
+    ) -> Result<Self> {
         Ok(if sh {
             if pwsh {
                 conflicts("--sh", "--pwsh")?;
@@ -598,6 +607,9 @@ impl ShowEnvFormat {
             if fish {
                 conflicts("--sh", "--fish")?;
             }
+            if nu {
+                conflicts("--sh", "--nu")?;
+            }
             ShowEnvFormat::Sh
         } else if pwsh {
             if cmd {
@@ -609,6 +621,9 @@ impl ShowEnvFormat {
             if fish {
                 conflicts("--pwsh", "--fish")?;
             }
+            if nu {
+                conflicts("--pwsh", "--nu")?;
+            }
             ShowEnvFormat::Pwsh
         } else if cmd {
             if csh {
@@ -617,14 +632,25 @@ impl ShowEnvFormat {
             if fish {
                 conflicts("--cmd", "--fish")?;
             }
+            if nu {
+                conflicts("--cmd", "--nu")?;
+            }
             ShowEnvFormat::Cmd
         } else if csh {
             if fish {
                 conflicts("--csh", "--fish")?;
             }
+            if nu {
+                conflicts("--csh", "--nu")?;
+            }
             ShowEnvFormat::Csh
         } else if fish {
+            if nu {
+                conflicts("--fish", "--nu")?;
+            }
             ShowEnvFormat::Fish
+        } else if nu {
+            ShowEnvFormat::Nu
         } else {
             ShowEnvFormat::EscapedKeyValuePair
         })
@@ -662,6 +688,15 @@ impl ShowEnvFormat {
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
                 writeln!(writer, "set -gx {key}={}", escape::sh(value.into()))
+            }
+            ShowEnvFormat::Nu => {
+                // TODO: https://www.nushell.sh/lang-guide/chapters/strings_and_text.html#string-quoting
+                let value = escape::sh(value.into());
+                if value.starts_with('"') || value.starts_with('\'') {
+                    writeln!(writer, "$env.{key} = {value}")
+                } else {
+                    writeln!(writer, "$env.{key} = '{value}'")
+                }
             }
         }
     }
@@ -808,6 +843,7 @@ impl Args {
         let mut cmd = false;
         let mut csh = false;
         let mut fish = false;
+        let mut nu = false;
 
         // options ambiguous between nextest-related and others
         let mut profile = None;
@@ -1022,6 +1058,7 @@ impl Args {
                 Long("cmd") => parse_flag!(cmd),
                 Long("csh") => parse_flag!(csh),
                 Long("fish") => parse_flag!(fish),
+                Long("nu") => parse_flag!(nu),
 
                 // ambiguous between nextest-related and others will be handled later
                 Long("archive-file") => parse_opt_passthrough!(archive_file),
@@ -1126,7 +1163,7 @@ impl Args {
         // Handle options specific to certain subcommands.
         // show-env specific
         let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish)?,
+            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish, nu)?,
             _ => {
                 for (passed, flag) in [
                     (sh, "--sh"),
@@ -1134,6 +1171,7 @@ impl Args {
                     (cmd, "--cmd"),
                     (csh, "--csh"),
                     (fish, "--fish"),
+                    (nu, "--nu"),
                 ] {
                     if passed {
                         specific_flag(flag, subcommand, &["show-env"])?;

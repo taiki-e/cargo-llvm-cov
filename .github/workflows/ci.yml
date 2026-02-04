@@ -282,12 +282,16 @@ jobs:
             done
             "$@"
           }
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.fury.io/nushell/gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
+          printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
+            | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
           retry sudo apt-get -o Acquire::Retries=10 -qq update
-          retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends csh fish tcsh zsh
+          retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends csh fish nushell tcsh zsh
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Install other shells (macOS)
         run: |
-          brew install fish tcsh
+          brew install fish nushell tcsh
         if: startsWith(matrix.os, 'macos')
       - name: Install other shells (Windows)
         run: |
@@ -360,6 +364,29 @@ jobs:
         shell: fish {0}
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
+      # Split step and use absolute path to work around https://www.nushell.sh/book/thinking_in_nu.html#example-dynamically-generating-source
+      - name: Test show-env --nu (generate env)
+        run: |
+          cargo llvm-cov show-env --nu | save -f /tmp/env.nu
+          cat -- /tmp/env.nu
+        shell: nu {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: (!startsWith(matrix.os, 'windows'))
+      - name: Test show-env --nu
+        run: |
+          source /tmp/env.nu
+          echo $env
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 1
+          cargo llvm-cov report --fail-under-lines 50
+          cargo llvm-cov clean --workspace
+          cargo build
+          cargo run -- 2
+          cargo llvm-cov report --fail-under-lines 50
+        shell: nu {0}
+        working-directory: tests/fixtures/crates/bin_crate
+        if: (!startsWith(matrix.os, 'windows'))
 
   test-nextest:
     strategy:
