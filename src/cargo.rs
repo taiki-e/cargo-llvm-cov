@@ -209,24 +209,14 @@ fn locate_project(cargo: &OsStr, manifest_path: Option<&Utf8Path>) -> Result<Utf
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
 // https://doc.rust-lang.org/nightly/cargo/commands/cargo-run.html
 pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
-    if matches!(cx.args.subcommand, Subcommand::None | Subcommand::Test) && !cx.args.doctests {
-        let has_target_selection_options = cx.args.lib
-            | cx.args.bins
-            | cx.args.examples
-            | cx.args.tests
-            | cx.args.benches
-            | cx.args.all_targets
-            | cx.args.doc
-            | !cx.args.bin.is_empty()
-            | !cx.args.example.is_empty()
-            | !cx.args.test.is_empty()
-            | !cx.args.bench.is_empty();
-        if !has_target_selection_options {
-            cmd.arg("--tests");
-        }
+    if matches!(cx.args.subcommand, Subcommand::None | Subcommand::Test)
+        && !cx.args.doctests
+        && !cx.args.build.has_target_selection_options
+    {
+        cmd.arg("--tests");
     }
 
-    for exclude in &cx.args.exclude_from_test {
+    for exclude in &cx.args.build.exclude_from_test {
         cmd.arg("--exclude");
         cmd.arg(exclude);
     }
@@ -262,13 +252,13 @@ pub(crate) fn test_or_run_args(cx: &Context, cmd: &mut ProcessBuilder) {
         cmd.env("CARGO_BUILD_BUILD_DIR", build_dir.as_str());
     }
 
-    for cargo_arg in &cx.args.cargo_args {
+    for cargo_arg in &cx.args.build.cargo_args {
         cmd.arg(cargo_arg);
     }
 
-    if !cx.args.rest.is_empty() {
+    if !cx.args.build.rest.is_empty() {
         cmd.arg("--");
-        cmd.args(&cx.args.rest);
+        cmd.args(&cx.args.build.rest);
     }
 }
 

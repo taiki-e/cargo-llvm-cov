@@ -49,8 +49,8 @@ impl Context {
             unresolved_args.manifest_path.as_deref(),
             args.target.as_deref(),
             args.doctests,
-            args.branch,
-            args.mcdc,
+            args.build.branch,
+            args.build.mcdc,
             show_env,
         )?;
         cli::merge_config_and_args(
@@ -62,49 +62,17 @@ impl Context {
         term::set_coloring(&mut ws.config.term.color);
         term::verbose::set(args.verbose != 0);
 
-        if args.report.output_dir.is_some() && !args.report.show() {
-            // If the format flag is not specified, this flag is no-op.
-            args.report.output_dir = None;
-        }
-        {
-            // The following warnings should not be promoted to an error.
-            let _guard = term::warn::ignore();
-            if args.branch {
-                warn!("--branch option is unstable");
-            }
-            if args.mcdc {
-                warn!("--mcdc option is unstable");
-            }
-            if args.doc {
-                warn!("--doc option is unstable");
-            } else if args.doctests {
-                warn!("--doctests option is unstable");
-            }
-        }
-        if args.coverage_target_only {
-            info!(
-                "when --coverage-target-only flag is used, coverage for proc-macro and build script will \
-                 not be displayed"
-            );
-        } else if args.no_rustc_wrapper && args.target.is_some() {
-            info!(
-                "When both --no-rustc-wrapper flag and --target option are used, coverage for proc-macro and \
-                 build script will not be displayed because cargo does not pass RUSTFLAGS to them"
-            );
-        }
-        if args.no_rustc_wrapper && !args.dep_coverage.is_empty() {
-            warn!("--dep-coverage may not work together with --no-rustc-wrapper");
-        }
         if !matches!(args.subcommand, Subcommand::Report { .. } | Subcommand::Clean)
-            && (!args.no_cfg_coverage || ws.rustc_version.nightly && !args.no_cfg_coverage_nightly)
+            && (!args.build.no_cfg_coverage
+                || ws.rustc_version.nightly && !args.build.no_cfg_coverage_nightly)
         {
             let mut cfgs = String::new();
             let mut flags = String::new();
-            if !args.no_cfg_coverage {
+            if !args.build.no_cfg_coverage {
                 cfgs.push_str("cfg(coverage)");
                 flags.push_str("--no-cfg-coverage");
             }
-            if ws.rustc_version.nightly && !args.no_cfg_coverage_nightly {
+            if ws.rustc_version.nightly && !args.build.no_cfg_coverage_nightly {
                 if cfgs.is_empty() {
                     cfgs.push_str("cfg(coverage_nightly)");
                     flags.push_str("--no-cfg-coverage-nightly");

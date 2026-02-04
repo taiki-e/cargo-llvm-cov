@@ -22,7 +22,7 @@ const ENV_PRE_EXISTING: &str = "__CARGO_LLVM_COV_RUSTC_WRAPPER_PRE_EXISTING";
 // For caller
 
 pub(crate) fn use_wrapper(cx: &Context) -> bool {
-    if cx.args.no_rustc_wrapper {
+    if cx.args.build.no_rustc_wrapper {
         // Explicitly disabled.
         return false;
     }
@@ -44,7 +44,7 @@ pub(crate) fn set_env(cx: &Context, env: &mut dyn EnvTarget, rustflags: &Flags) 
 
     env.set(ENV_ENABLED, "1")?;
     env.set(ENV_RUSTFLAGS, &rustflags.encode()?)?;
-    match (cx.args.coverage_target_only, &cx.args.target) {
+    match (cx.args.build.coverage_target_only, &cx.args.target) {
         (true, Some(coverage_target)) => {
             env.set(ENV_COVERAGE_TARGET, coverage_target)?;
             env.set(ENV_HOST, cx.ws.config.host_triple()?)?;

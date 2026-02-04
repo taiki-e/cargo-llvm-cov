@@ -51,7 +51,7 @@ pub(crate) fn run((mut args, unresolved_args): (Args, UnresolvedArgs)) -> Result
 // - doctest bins
 // - old reports
 pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
-    if cx.args.no_clean {
+    if cx.args.clean.no_clean {
         return Ok(());
     }
 

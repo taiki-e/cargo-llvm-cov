@@ -172,12 +172,12 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 flags.push("codegen-units=1");
             }
         }
-        if cx.args.mcdc {
+        if cx.args.build.mcdc {
             // Tracking issue: https://github.com/rust-lang/rust/issues/124144
             // TODO: Unstable MC/DC support has been removed in https://github.com/rust-lang/rust/pull/144999
             flags.push("-Z");
             flags.push("coverage-options=mcdc");
-        } else if cx.args.branch {
+        } else if cx.args.build.branch {
             // Tracking issue: https://github.com/rust-lang/rust/issues/79649
             flags.push("-Z");
             flags.push("coverage-options=branch");
@@ -193,10 +193,10 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             flags.push("-C");
             flags.push("llvm-args=--instrprof-atomic-counter-update-all");
         }
-        if !cx.args.no_cfg_coverage {
+        if !cx.args.build.no_cfg_coverage {
             flags.push("--cfg=coverage");
         }
-        if cx.ws.rustc_version.nightly && !cx.args.no_cfg_coverage_nightly {
+        if cx.ws.rustc_version.nightly && !cx.args.build.no_cfg_coverage_nightly {
             flags.push("--cfg=coverage_nightly");
         }
         if cx.ws.target_for_config.triple().ends_with("-windows-gnullvm") {
@@ -269,7 +269,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             let mut rustflags =
                 cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
             rustflags.flags.append(&mut additional_flags);
-            match (cx.args.coverage_target_only, &cx.args.target) {
+            match (cx.args.build.coverage_target_only, &cx.args.target) {
                 (true, Some(coverage_target)) => {
                     env.set(
                         &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
@@ -315,7 +315,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     }
 
     // Set env vars for FFI coverage.
-    if cx.args.include_ffi {
+    if cx.args.build.include_ffi {
         // https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2347-L2365
         // Environment variables that use hyphens are not available in many environments, so we ignore them for now.
         let target_u = target_u_lower(cx.ws.target_for_config.triple());
@@ -385,13 +385,15 @@ fn run_test(cx: &Context) -> Result<()> {
     set_env(cx, &mut cargo, IsNextest(false))?;
 
     cargo.arg("test");
-    if cx.ws.need_doctest_in_workspace && !has_z_flag(&cx.args.cargo_args, "doctest-in-workspace") {
+    if cx.ws.need_doctest_in_workspace
+        && !has_z_flag(&cx.args.build.cargo_args, "doctest-in-workspace")
+    {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");
     }
 
-    if cx.args.ignore_run_fail {
+    if cx.args.build.ignore_run_fail {
         {
             let mut cargo = cargo.clone();
             cargo.arg("--no-run");
@@ -450,7 +452,7 @@ fn run_nextest(cx: &Context) -> Result<()> {
 
     cargo.arg("nextest").arg("run");
 
-    if cx.args.ignore_run_fail {
+    if cx.args.build.ignore_run_fail {
         {
             let mut cargo = cargo.clone();
             cargo.arg("--no-run");
@@ -489,7 +491,7 @@ fn run_run(cx: &Context) -> Result<()> {
 
     set_env(cx, &mut cargo, IsNextest(false))?;
 
-    if cx.args.ignore_run_fail {
+    if cx.args.build.ignore_run_fail {
         {
             let mut cargo = cargo.clone();
             cargo.arg("build");

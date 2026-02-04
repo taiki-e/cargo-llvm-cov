@@ -18,65 +18,29 @@ use crate::{env, process::ProcessBuilder, term};
 pub(crate) struct Args {
     pub(crate) subcommand: Subcommand,
 
+    // -------------------------------------------------------------------------
     // Operation-specific options
-    /// Options only referred in "show-env" operations. (show-env subcommand)
-    pub(crate) show_env: ShowEnvOptions,
-    /// Options only referred in "clean" operations. (clean subcommand and subcommands building rust code)
-    pub(crate) clean: CleanOptions,
+    /// Options only referred in "build"-related operations. (subcommands building/testing/running crates and show-env subcommand)
+    pub(crate) build: BuildOptions,
     /// Options only referred in "report" operations. (report subcommand and subcommands reporting coverage)
     pub(crate) report: ReportOptions,
+    /// Options only referred in "clean" operations. (clean subcommand and subcommands building rust code)
+    pub(crate) clean: CleanOptions,
+    /// Options only referred in "show-env" operations. (show-env subcommand)
+    pub(crate) show_env: ShowEnvOptions,
 
-    // https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/instrument-coverage.html#including-doc-tests
+    // -------------------------------------------------------------------------
+    // Options referred by various operations
     /// Including doc tests (unstable)
     ///
     /// This flag is unstable.
     /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
     pub(crate) doctests: bool,
 
-    // -------------------------------------------------------------------------
-    // `cargo test` options
-    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html
     // /// Generate coverage report without running tests
     // pub(crate) no_run: bool,
-    // /// Run all tests regardless of failure
-    // pub(crate) no_fail_fast: bool,
-    /// Run all tests regardless of failure and generate report
-    ///
-    /// If tests failed but report generation succeeded, exit with a status of 0.
-    pub(crate) ignore_run_fail: bool,
-    // /// Display one character per test instead of one line
-    // pub(crate) quiet: bool,
-    /// Test only this package's library unit tests
-    pub(crate) lib: bool,
-    /// Test only the specified binary
-    pub(crate) bin: Vec<String>,
-    /// Test all binaries
-    pub(crate) bins: bool,
-    /// Test only the specified example
-    pub(crate) example: Vec<String>,
-    /// Test all examples
-    pub(crate) examples: bool,
-    /// Test only the specified test target
-    pub(crate) test: Vec<String>,
-    /// Test all tests
-    pub(crate) tests: bool,
-    /// Test only the specified bench target
-    pub(crate) bench: Vec<String>,
-    /// Test all benches
-    pub(crate) benches: bool,
-    /// Test all targets
-    pub(crate) all_targets: bool,
-    /// Test only this library's documentation (unstable)
-    ///
-    /// This flag is unstable because it automatically enables --doctests flag.
-    /// See <https://github.com/taiki-e/cargo-llvm-cov/issues/2> for more.
-    pub(crate) doc: bool,
     /// Test all packages in the workspace
     pub(crate) workspace: bool,
-    /// Packages additional excluded from the test (--exclude-from-test)
-    ///
-    /// (--exclude is already contained in `cargo_args` field.)
-    pub(crate) exclude_from_test: Vec<String>,
 
     // /// Number of parallel jobs, defaults to # of CPUs
     // // i32 or string "default": https://github.com/rust-lang/cargo/blob/0.80.0/src/cargo/core/compiler/build_config.rs#L84-L97
@@ -96,15 +60,6 @@ pub(crate) struct Args {
     // pub(crate) no_default_features: bool,
     /// Build for the target triple
     pub(crate) target: Option<String>,
-    /// Activate coverage reporting only for the target triple
-    ///
-    /// Activate coverage reporting only for the target triple specified via `--target`.
-    /// This is important, if the project uses multiple targets via the cargo
-    /// bindeps feature, and not all targets can use `instrument-coverage`,
-    /// e.g. a microkernel, or an embedded binary.
-    ///
-    /// When this flag is used, coverage for proc-macro and build script will not be displayed.
-    pub(crate) coverage_target_only: bool,
     // TODO: Currently, we are using a subdirectory of the target directory as
     //       the actual target directory. What effect should this option have
     //       on its behavior?
@@ -119,41 +74,11 @@ pub(crate) struct Args {
     ///
     /// Note that this does not fully compatible with doctest.
     pub(crate) remap_path_prefix: bool,
-    /// Include coverage of C/C++ code linked to Rust library/binary
-    ///
-    /// Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables
-    /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
-    // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
-    pub(crate) include_ffi: bool,
-    /// Build without cleaning any old build artifacts.
-    ///
-    /// Note that this can cause false positives/false negatives due to old build artifacts.
-    pub(crate) no_clean: bool,
-    /// Build without setting RUSTC_WRAPPER
-    ///
-    /// By default, cargo-llvm-cov sets RUSTC_WRAPPER. This is usually optimal
-    /// for compilation time, execution time, and disk usage.
-    ///
-    /// When both this flag and --target option are used, coverage for proc-macro and
-    /// build script will not be displayed because cargo does not pass RUSTFLAGS to them.
-    pub(crate) no_rustc_wrapper: bool,
 
-    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
-    pub(crate) no_cfg_coverage: bool,
-    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
-    pub(crate) no_cfg_coverage_nightly: bool,
-    /// Enable branch coverage. (unstable)
-    pub(crate) branch: bool,
-    /// Enable mcdc coverage. (unstable)
-    pub(crate) mcdc: bool,
     /// Show coverage of the specified dependency instead of the crates in the current workspace.
     pub(crate) dep_coverage: Vec<String>,
 
     pub(crate) nextest_archive_file: Option<String>,
-
-    pub(crate) cargo_args: Vec<String>,
-    /// Arguments for the test binary
-    pub(crate) rest: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -252,6 +177,60 @@ impl FromStr for Subcommand {
     }
 }
 
+/// Options only referred in "build"-related operations. (subcommands building/testing/running crates and show-env subcommand)
+#[derive(Debug, Default)]
+pub(crate) struct BuildOptions {
+    /// Run all tests regardless of failure and generate report
+    ///
+    /// If tests failed but report generation succeeded, exit with a status of 0.
+    pub(crate) ignore_run_fail: bool,
+    /// Any of --lib, --bin, --bins, --example, --examples, --test, --tests, --bench, --benches, --all-targets, or --doc.
+    pub(crate) has_target_selection_options: bool,
+    /// Packages additional excluded from the test (--exclude-from-test)
+    ///
+    /// (--exclude is already contained in `cargo_args` field.)
+    pub(crate) exclude_from_test: Vec<String>,
+
+    /// Enable branch coverage. (unstable)
+    pub(crate) branch: bool,
+    /// Enable mcdc coverage. (unstable)
+    pub(crate) mcdc: bool,
+
+    /// Include coverage of C/C++ code linked to Rust library/binary
+    ///
+    /// Note that `CC`/`CXX`/`LLVM_COV`/`LLVM_PROFDATA` environment variables
+    /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
+    // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
+    pub(crate) include_ffi: bool,
+    /// Activate coverage reporting only for the target triple
+    ///
+    /// Activate coverage reporting only for the target triple specified via `--target`.
+    /// This is important, if the project uses multiple targets via the cargo
+    /// bindeps feature, and not all targets can use `instrument-coverage`,
+    /// e.g. a microkernel, or an embedded binary.
+    ///
+    /// When this flag is used, coverage for proc-macro and build script will not be displayed.
+    pub(crate) coverage_target_only: bool,
+    /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
+    pub(crate) no_cfg_coverage: bool,
+    /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
+    pub(crate) no_cfg_coverage_nightly: bool,
+
+    /// Build without setting RUSTC_WRAPPER
+    ///
+    /// By default, cargo-llvm-cov sets RUSTC_WRAPPER. This is usually optimal
+    /// for compilation time, execution time, and disk usage.
+    ///
+    /// When both this flag and --target option are used, coverage for proc-macro and
+    /// build script will not be displayed because cargo does not pass RUSTFLAGS to them.
+    pub(crate) no_rustc_wrapper: bool,
+
+    pub(crate) cargo_args: Vec<String>,
+    /// Arguments for the test binary
+    pub(crate) rest: Vec<String>,
+}
+
+/// Options only referred in "report" operations. (report subcommand and subcommands reporting coverage)
 #[derive(Debug, Default)]
 pub(crate) struct ReportOptions {
     /// Run tests, but don't generate coverage report
@@ -548,6 +527,44 @@ impl ReportOptions {
     }
 }
 
+/// Options only referred in "clean" operations. (clean subcommand and subcommands building rust code)
+#[derive(Debug, Clone)]
+pub(crate) struct CleanOptions {
+    /// Build without cleaning any old build artifacts.
+    ///
+    /// Note that this can cause false positives/false negatives due to old build artifacts.
+    pub(crate) no_clean: bool,
+    /// Clean only profraw files
+    pub(crate) profraw_only: bool,
+
+    // These are for clean; others also accept them, but don't need to store
+    // because these flags are handled as passthrough args.
+    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
+    pub(crate) frozen: bool,
+    pub(crate) locked: bool,
+    pub(crate) offline: bool,
+}
+
+impl CleanOptions {
+    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
+        if self.frozen {
+            cmd.arg("--frozen");
+        }
+        if self.locked {
+            cmd.arg("--locked");
+        }
+        if self.offline {
+            cmd.arg("--offline");
+        }
+    }
+}
+
+/// Options only referred in "show-env" operations. (show-env subcommand)
+#[derive(Debug, Clone)]
+pub(crate) struct ShowEnvOptions {
+    pub(crate) show_env_format: ShowEnvFormat,
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) enum ShowEnvFormat {
     /// Each key-value: `{key}={value}`, where `{value}` is escaped using [`shell_escape::escape`].
@@ -629,40 +646,6 @@ pub(crate) mod escape {
         // of form "\u{<code>}", but PowerShell expects "`u{<code>}". A replace call fixes
         // this.
         s.escape_unicode().to_string().replace('\\', "`")
-    }
-}
-
-/// `show-env`-specific options
-#[derive(Debug, Clone)]
-pub(crate) struct ShowEnvOptions {
-    pub(crate) show_env_format: ShowEnvFormat,
-}
-
-/// `clean`-specific options
-#[derive(Debug, Clone)]
-pub(crate) struct CleanOptions {
-    /// Clean only profraw files
-    pub(crate) profraw_only: bool,
-
-    // These are for clean; others also accept them, but don't need to store
-    // because these flags are handled as passthrough args.
-    // https://doc.rust-lang.org/nightly/cargo/commands/cargo-test.html#manifest-options
-    pub(crate) frozen: bool,
-    pub(crate) locked: bool,
-    pub(crate) offline: bool,
-}
-
-impl CleanOptions {
-    pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
-        if self.frozen {
-            cmd.arg("--frozen");
-        }
-        if self.locked {
-            cmd.arg("--locked");
-        }
-        if self.offline {
-            cmd.arg("--offline");
-        }
     }
 }
 
@@ -751,13 +734,13 @@ impl Args {
         let mut no_fail_fast = false;
         let mut ignore_run_fail = false;
         let mut lib = false;
-        let mut bin = vec![];
+        let mut bin: Vec<String> = vec![];
         let mut bins = false;
-        let mut example = vec![];
+        let mut example: Vec<String> = vec![];
         let mut examples = false;
-        let mut test = vec![];
+        let mut test: Vec<String> = vec![];
         let mut tests = false;
-        let mut bench = vec![];
+        let mut bench: Vec<String> = vec![];
         let mut benches = false;
         let mut all_targets = false;
         let mut doc = false;
@@ -1436,14 +1419,44 @@ impl Args {
             }
         }
 
-        // If `-vv` is passed, propagate `-v` to cargo.
-        if verbose > 1 {
-            cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
+        {
+            // The following warnings should not be promoted to an error.
+            let _guard = term::warn::ignore();
+            if branch {
+                warn!("--branch option is unstable");
+            }
+            if mcdc {
+                warn!("--mcdc option is unstable");
+            }
+            if doc {
+                warn!("--doc option is unstable");
+            }
+            if doctests {
+                warn!("--doctests option is unstable");
+            }
+        }
+        if coverage_target_only {
+            info!(
+                "when --coverage-target-only flag is used, coverage for proc-macro and build script will \
+                 not be displayed"
+            );
+        } else if no_rustc_wrapper && target.is_some() {
+            info!(
+                "When both --no-rustc-wrapper flag and --target option are used, coverage for proc-macro and \
+                 build script will not be displayed because cargo does not pass RUSTFLAGS to them"
+            );
+        }
+        if no_rustc_wrapper && !dep_coverage.is_empty() {
+            warn!("--dep-coverage may not work together with --no-rustc-wrapper");
         }
 
         // ---------------------------------------------------------------------
         // Preparation for subsequent processing
 
+        // If `-vv` is passed, propagate `-v` to cargo.
+        if verbose > 1 {
+            cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
+        }
         // --no-report and --no-run implies --no-clean
         no_clean |= report.no_report | no_run;
         // --doc implies --doctests
@@ -1454,45 +1467,51 @@ impl Args {
             // --no-run is deprecated alias for report
             subcommand = Subcommand::Report { nextest_archive_file: false };
         }
+        if report.output_dir.is_some() && !report.show() {
+            // If the format flag is not specified, this flag is no-op.
+            // TODO: warn
+            report.output_dir = None;
+        }
 
         Ok(Some((
             Self {
                 subcommand,
+                build: BuildOptions {
+                    ignore_run_fail,
+                    has_target_selection_options: lib
+                        | bins
+                        | examples
+                        | tests
+                        | benches
+                        | all_targets
+                        | doc
+                        | !bin.is_empty()
+                        | !example.is_empty()
+                        | !test.is_empty()
+                        | !bench.is_empty(),
+                    exclude_from_test,
+                    branch,
+                    mcdc,
+                    include_ffi,
+                    coverage_target_only,
+                    no_cfg_coverage,
+                    no_cfg_coverage_nightly,
+                    no_rustc_wrapper,
+                    cargo_args,
+                    rest,
+                },
                 report,
+                clean: CleanOptions { no_clean, profraw_only, frozen, locked, offline },
                 show_env: ShowEnvOptions { show_env_format },
-                clean: CleanOptions { profraw_only, frozen, locked, offline },
                 doctests,
-                ignore_run_fail,
-                lib,
-                bin,
-                bins,
-                example,
-                examples,
-                test,
-                tests,
-                bench,
-                benches,
-                all_targets,
-                doc,
                 workspace,
-                exclude_from_test,
                 release,
                 cargo_profile,
                 target,
-                coverage_target_only,
                 verbose: verbose.try_into().unwrap_or(u8::MAX),
                 remap_path_prefix,
-                include_ffi,
-                no_clean,
-                no_rustc_wrapper,
-                no_cfg_coverage,
-                no_cfg_coverage_nightly,
                 dep_coverage,
-                branch,
-                mcdc,
                 nextest_archive_file,
-                cargo_args,
-                rest,
             },
             UnresolvedArgs { package, exclude_from_report, manifest_path, color },
         )))
