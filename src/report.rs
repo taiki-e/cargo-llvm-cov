@@ -134,8 +134,17 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
                 writeln!(stdout, "Uncovered Lines:")?;
                 for (file, lines) in &uncovered_files {
-                    let lines: Vec<_> = lines.iter().map(ToString::to_string).collect();
-                    writeln!(stdout, "{file}: {}", lines.join(", "))?;
+                    write!(stdout, "{file}: ")?;
+                    let mut first = true;
+                    for &l in lines {
+                        if first {
+                            first = false;
+                        } else {
+                            write!(stdout, ", ")?;
+                        }
+                        write!(stdout, "{l}")?;
+                    }
+                    writeln!(stdout)?;
                 }
                 stdout.flush()?;
             }
@@ -166,12 +175,16 @@ fn open_report(cx: &Context, path: &Utf8Path) -> Result<()> {
 
 fn merge_profraw(cx: &Context) -> Result<()> {
     // Convert raw profile data.
-    let profraw_files = glob::glob(
+    let mut input_files = String::new();
+    for path in glob::glob(
         Utf8Path::new(&glob::Pattern::escape(cx.ws.target_dir.as_str())).join("*.profraw").as_str(),
     )?
     .filter_map(Result::ok)
-    .collect::<Vec<_>>();
-    if profraw_files.is_empty() {
+    {
+        input_files.push_str(os_str_to_str(path.as_os_str())?);
+        input_files.push('\n');
+    }
+    if input_files.is_empty() {
         if cx.ws.profdata_file.exists() {
             return Ok(());
         }
@@ -180,11 +193,6 @@ fn merge_profraw(cx: &Context) -> Result<()> {
              cleared, or running report subcommand without running any tests or binaries",
             cx.ws.target_dir
         );
-    }
-    let mut input_files = String::new();
-    for path in profraw_files {
-        input_files.push_str(os_str_to_str(path.as_os_str())?);
-        input_files.push('\n');
     }
     let input_files_path = &cx.ws.target_dir.join(format!("{}-profraw-list", cx.ws.name));
     fs::write(input_files_path, input_files)?;

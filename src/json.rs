@@ -120,8 +120,7 @@ impl CodeCovJsonExport {
         ignore_filename_regex: Option<&str>,
     ) -> Self {
         let re = ignore_filename_regex.map(|s| Regex::new(s).unwrap());
-        let exports: Vec<_> =
-            value.data.into_iter().map(|v| Self::from_export(v, re.as_ref())).collect();
+        let exports = value.data.into_iter().map(|v| Self::from_export(v, re.as_ref()));
 
         let mut combined = CodeCovJsonExport::default();
 

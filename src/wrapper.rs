@@ -140,12 +140,12 @@ pub(crate) fn try_main() -> Result<()> {
 
     // Fetch context from env vars.
     let crate_names = env::var_required(ENV_CRATE_NAMES)?;
-    let crate_names = crate_names.split(',').collect::<Vec<_>>();
+    let mut crate_names = crate_names.split(',');
     let wrapper_rustflags = Flags::from_encoded(&env::var_required(ENV_RUSTFLAGS)?).flags;
     let coverage_target = env::var_os(ENV_COVERAGE_TARGET);
     let host = if coverage_target.is_some() { Some(env::var_os_required(ENV_HOST)?) } else { None };
 
-    let apply_wrapper_rustflags = crate_names.iter().any(|&name| name == crate_name)
+    let apply_wrapper_rustflags = crate_names.any(|name| name == crate_name)
         && coverage_target
             .is_none_or(|coverage_target| coverage_target == target.unwrap_or(host.unwrap()));
 
