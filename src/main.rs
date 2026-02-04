@@ -136,7 +136,9 @@ struct ShowEnvWriter<W: io::Write> {
 
 impl<W: io::Write> EnvTarget for ShowEnvWriter<W> {
     fn set(&mut self, key: &str, value: &str) -> Result<()> {
-        writeln!(self.writer, "{}", self.options.show_env_format.export_string(key, value))
+        self.options
+            .show_env_format
+            .writeln(&mut self.writer, key, value)
             .context("failed to write env to stdout")
     }
     fn set_os(&mut self, key: &str, value: &OsStr) -> Result<()> {

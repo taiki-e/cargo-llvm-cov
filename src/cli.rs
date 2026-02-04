@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use std::{ffi::OsString, mem, str::FromStr};
+use std::{ffi::OsString, io, mem, str::FromStr};
 
 use anyhow::{Error, Result, bail, format_err};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -614,24 +614,29 @@ impl ShowEnvFormat {
         })
     }
 
-    pub(crate) fn export_string(&self, key: &str, value: &str) -> String {
+    pub(crate) fn writeln(
+        &self,
+        writer: &mut dyn io::Write,
+        key: &str,
+        value: &str,
+    ) -> io::Result<()> {
         match self {
             ShowEnvFormat::EscapedKeyValuePair => {
-                format!("{key}={}", shell_escape::escape(value.into()))
+                writeln!(writer, "{key}={}", shell_escape::escape(value.into()))
             }
             ShowEnvFormat::Sh => {
                 // TODO: https://github.com/sfackler/shell-escape/issues/6
-                format!("export {key}={}", escape::sh(value.into()))
+                writeln!(writer, "export {key}={}", escape::sh(value.into()))
             }
             ShowEnvFormat::Pwsh => {
-                format!("$env:{key}=\"{}\"", escape::pwsh(value))
+                writeln!(writer, "$env:{key}=\"{}\"", escape::pwsh(value))
             }
             ShowEnvFormat::Cmd => {
-                format!("set {key}={}", escape::cmd(value.into()))
+                writeln!(writer, "set {key}={}", escape::cmd(value.into()))
             }
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
-                format!("set -gx {key}={}", escape::sh(value.into()))
+                writeln!(writer, "set -gx {key}={}", escape::sh(value.into()))
             }
         }
     }
