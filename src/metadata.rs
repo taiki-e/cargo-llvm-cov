@@ -24,7 +24,7 @@ pub(crate) struct Metadata {
     /// This doesn't contain dependencies if cargo-metadata is run with --no-deps.
     pub(crate) packages: Box<[Package]>,
     /// List of members of the workspace.
-    pub(crate) workspace_members: Vec<PackageId>,
+    pub(crate) workspace_members: Box<[PackageId]>,
     /// The absolute path to the root of the workspace.
     pub(crate) workspace_root: Utf8PathBuf,
     pub(crate) target_directory: Utf8PathBuf,
@@ -57,14 +57,14 @@ impl Metadata {
         }
         let mut pkg_id_map = HashMap::with_capacity(packages.len());
         for (i, pkg) in packages.iter().enumerate() {
-            pkg_id_map.insert(&pkg.id, i);
+            pkg_id_map.insert(&*pkg.id, i);
         }
-        let workspace_members: Vec<_> = map
+        let workspace_members = map
             .remove_array("workspace_members")?
             .into_iter()
             .map(|v| -> ParseResult<_> {
                 let id: String = into_string(v).ok_or("workspace_members")?;
-                Ok(PackageId { index: pkg_id_map[&id] })
+                Ok(PackageId { index: pkg_id_map[&*id] })
             })
             .collect::<Result<_, _>>()?;
         Ok(Self {
@@ -95,14 +95,14 @@ impl ops::Index<PackageId> for Metadata {
 }
 
 pub(crate) struct Package {
-    pub(crate) id: String,
+    pub(crate) id: Box<str>,
     /// The name of the package.
-    pub(crate) name: String,
+    pub(crate) name: Box<str>,
     /// The version of the package.
-    pub(crate) version: String,
-    pub(crate) targets: Vec<Target>,
+    pub(crate) version: Box<str>,
+    pub(crate) targets: Box<[Target]>,
     /// Absolute path to this package's manifest.
-    pub(crate) manifest_path: Utf8PathBuf,
+    pub(crate) manifest_path: Box<Utf8Path>,
 }
 
 impl Package {
@@ -118,13 +118,13 @@ impl Package {
                 .into_iter()
                 .map(Target::from_value)
                 .collect::<Result<_, _>>()?,
-            manifest_path: map.remove_string("manifest_path")?,
+            manifest_path: map.remove_string::<Utf8PathBuf>("manifest_path")?.into_boxed_path(),
         })
     }
 }
 
 pub(crate) struct Target {
-    pub(crate) name: String,
+    pub(crate) name: Box<str>,
 }
 
 impl Target {

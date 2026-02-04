@@ -454,7 +454,7 @@ fn match_pkg_spec(pkg: &Package, name_or_spec: &str) -> Result<bool> {
             )),
         ))
     }
-    let name = &pkg.name;
+    let name = &*pkg.name;
     let p = name_or_spec;
     let (version, full_version) = if p.starts_with(name) {
         if p.len() == name.len() {
@@ -566,10 +566,10 @@ mod tests {
 
         // crates.io
         let pkg = &Package {
-            id: "registry+https://github.com/rust-lang/crates.io-index#regex@1.4.3".to_owned(),
-            name: "regex".to_owned(),
-            version: "1.4.3".to_owned(),
-            targets: vec![],
+            id: "registry+https://github.com/rust-lang/crates.io-index#regex@1.4.3".into(),
+            name: "regex".into(),
+            version: "1.4.3".into(),
+            targets: vec![].into_boxed_slice(),
             manifest_path: "".into(),
         };
         // name
@@ -603,10 +603,10 @@ mod tests {
 
         // git
         let pkg = &Package {
-            id: "git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3".to_owned(),
-            name: "regex".to_owned(),
-            version: "1.4.3".to_owned(),
-            targets: vec![],
+            id: "git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3".into(),
+            name: "regex".into(),
+            version: "1.4.3".into(),
+            targets: vec![].into_boxed_slice(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "regex").unwrap());
@@ -625,10 +625,10 @@ mod tests {
             .unwrap()
         );
         let pkg = &Package {
-            id: "git+https://github.com/rust-lang/cargo#0.52.0".to_owned(),
-            name: "cargo".to_owned(),
-            version: "0.52.0".to_owned(),
-            targets: vec![],
+            id: "git+https://github.com/rust-lang/cargo#0.52.0".into(),
+            name: "cargo".into(),
+            version: "0.52.0".into(),
+            targets: vec![].into_boxed_slice(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "https://github.com/rust-lang/cargo#0.52.0").unwrap());
@@ -640,10 +640,10 @@ mod tests {
 
         // local
         let pkg = &Package {
-            id: "path+file:///path/to/my/project/foo#1.1.8".to_owned(),
-            name: "foo".to_owned(),
-            version: "1.1.8".to_owned(),
-            targets: vec![],
+            id: "path+file:///path/to/my/project/foo#1.1.8".into(),
+            name: "foo".into(),
+            version: "1.1.8".into(),
+            targets: vec![].into_boxed_slice(),
             manifest_path: "".into(),
         };
         assert!(match_pkg_spec(pkg, "foo").unwrap());
