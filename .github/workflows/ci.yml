@@ -282,7 +282,7 @@ jobs:
             done
             "$@"
           }
-          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.fury.io/nushell/gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-all-errors https://apt.fury.io/nushell/gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
           printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
             | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
@@ -479,7 +479,7 @@ jobs:
           fi
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
-          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-connrefused https://apt.llvm.org/llvm-snapshot.gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-all-errors https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
           sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
             <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
