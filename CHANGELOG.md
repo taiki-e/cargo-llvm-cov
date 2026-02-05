@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-02-05
+
 - `cargo llvm-cov show-env` improvements:
   - Add `--csh` for csh and tcsh.
   - Add `--nu` for nushell.
@@ -796,7 +798,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.7.1...v0.8.0
