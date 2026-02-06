@@ -156,7 +156,7 @@ struct IsNextest(bool);
 
 fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNextest) -> Result<()> {
     fn push_common_flags(cx: &Context, flags: &mut Flags) {
-        if cx.ws.stable_coverage {
+        if cx.stable_coverage {
             flags.push("-C");
             // TODO: if user already set -C instrument-coverage=..., respect it
             // https://doc.rust-lang.org/rustc/instrument-coverage.html#-c-instrument-coverageoptions
@@ -354,25 +354,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     Ok(())
 }
 
-fn has_z_flag(args: &[String], name: &str) -> bool {
-    let mut iter = args.iter().map(String::as_str);
-    while let Some(mut arg) = iter.next() {
-        if arg == "-Z" {
-            arg = iter.next().unwrap();
-        } else if let Some(a) = arg.strip_prefix("-Z") {
-            arg = a;
-        } else {
-            continue;
-        }
-        if let Some(rest) = arg.strip_prefix(name) {
-            if rest.is_empty() || rest.starts_with('=') {
-                return true;
-            }
-        }
-    }
-    false
-}
-
 fn create_dirs_for_build(cx: &Context) -> Result<()> {
     fs::create_dir_all(&cx.ws.target_dir)?;
     if cx.args.doctests {
@@ -387,9 +368,7 @@ fn run_test(cx: &Context) -> Result<()> {
     set_env(cx, &mut cargo, IsNextest(false))?;
 
     cargo.arg("test");
-    if cx.ws.need_doctest_in_workspace
-        && !has_z_flag(&cx.args.build.cargo_args, "doctest-in-workspace")
-    {
+    if cx.need_doctest_in_workspace {
         // https://github.com/rust-lang/cargo/issues/9427
         cargo.arg("-Z");
         cargo.arg("doctest-in-workspace");

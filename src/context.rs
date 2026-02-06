@@ -40,6 +40,11 @@ pub(crate) struct Context {
     /// `LLVM_PROFDATA_FLAGS` environment variable to pass additional flags to llvm-profdata.
     /// (value: space-separated list)
     pub(crate) llvm_profdata_flags: Option<String>,
+
+    /// Whether `-Z doctest-in-workspace` is needed.
+    pub(crate) need_doctest_in_workspace: bool,
+    /// Whether `-C instrument-coverage` is available.
+    pub(crate) stable_coverage: bool,
 }
 
 impl Context {
@@ -48,9 +53,6 @@ impl Context {
         let mut ws = Workspace::new(
             unresolved_args.manifest_path.as_deref(),
             args.target.as_deref(),
-            args.doctests,
-            args.build.branch,
-            args.build.mcdc,
             show_env,
         )?;
         cli::merge_config_and_args(
@@ -214,6 +216,37 @@ impl Context {
             }
         }
 
+        let mut need_doctest_in_workspace = false;
+        if args.doctests && !has_z_flag(&args.build.cargo_args, "doctest-in-workspace") {
+            need_doctest_in_workspace = cmd!(ws.config.cargo(), "-Z", "help")
+                .read()
+                .is_ok_and(|s| s.contains("doctest-in-workspace"));
+        }
+
+        if args.doctests && !ws.rustc_version.nightly {
+            warn!(
+                "--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            );
+        }
+        if args.build.branch && !ws.rustc_version.nightly {
+            warn!(
+                "--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            );
+        }
+        if args.build.mcdc && !ws.rustc_version.nightly {
+            warn!(
+                "--mcdc flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
+            );
+        }
+        let stable_coverage =
+            ws.rustc().args(["-C", "help"]).read()?.contains("instrument-coverage");
+        if !stable_coverage && !ws.rustc_version.nightly {
+            warn!(
+                "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
+                 or using nightly toolchain (`cargo +nightly llvm-cov`)"
+            );
+        }
+
         Ok(Self {
             ws,
             args,
@@ -233,6 +266,8 @@ impl Context {
             llvm_profdata,
             llvm_cov_flags,
             llvm_profdata_flags,
+            stable_coverage,
+            need_doctest_in_workspace,
         })
     }
 
@@ -497,6 +532,25 @@ fn match_pkg_spec(pkg: &Package, name_or_spec: &str) -> Result<bool> {
         return Ok(false); // patch or pre or meta unmatched
     }
     Ok(true)
+}
+
+fn has_z_flag(args: &[String], name: &str) -> bool {
+    let mut iter = args.iter().map(String::as_str);
+    while let Some(mut arg) = iter.next() {
+        if arg == "-Z" {
+            arg = iter.next().unwrap();
+        } else if let Some(a) = arg.strip_prefix("-Z") {
+            arg = a;
+        } else {
+            continue;
+        }
+        if let Some(rest) = arg.strip_prefix(name) {
+            if rest.is_empty() || rest.starts_with('=') {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 // Adapted from https://github.com/rust-lang/miri/blob/dba35d2be72f4b78343d1a0f0b4737306f310672/cargo-miri/src/util.rs#L181-L204

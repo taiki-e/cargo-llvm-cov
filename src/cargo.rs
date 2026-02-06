@@ -31,20 +31,12 @@ pub(crate) struct Workspace {
     pub(crate) target_for_config: cargo_config2::TargetTriple,
     pub(crate) target_is_windows: bool,
     pub(crate) rustc_version: cargo_config2::RustcVersion,
-    /// Whether `-C instrument-coverage` is available.
-    pub(crate) stable_coverage: bool,
-    /// Whether `-Z doctest-in-workspace` is needed.
-    pub(crate) need_doctest_in_workspace: bool,
 }
 
 impl Workspace {
-    #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) fn new(
         manifest_path: Option<&Utf8Path>,
         target: Option<&str>,
-        doctests: bool,
-        branch: bool,
-        mcdc: bool,
         show_env: bool,
     ) -> Result<Self> {
         // Metadata and config
@@ -72,36 +64,6 @@ impl Workspace {
             if manifest_path == current_manifest {
                 current_package = Some(id);
             }
-        }
-
-        if doctests && !rustc_version.nightly {
-            warn!(
-                "--doctests flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
-            );
-        }
-        if branch && !rustc_version.nightly {
-            warn!(
-                "--branch flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
-            );
-        }
-        if mcdc && !rustc_version.nightly {
-            warn!(
-                "--mcdc flag requires nightly toolchain; consider using `cargo +nightly llvm-cov`"
-            );
-        }
-        let stable_coverage =
-            rustc.clone().args(["-C", "help"]).read()?.contains("instrument-coverage");
-        if !stable_coverage && !rustc_version.nightly {
-            warn!(
-                "cargo-llvm-cov requires rustc 1.60+; consider updating toolchain (`rustup update`)
-                 or using nightly toolchain (`cargo +nightly llvm-cov`)"
-            );
-        }
-        let mut need_doctest_in_workspace = false;
-        if doctests {
-            need_doctest_in_workspace = cmd!(config.cargo(), "-Z", "help")
-                .read()
-                .is_ok_and(|s| s.contains("doctest-in-workspace"));
         }
 
         let (target_dir, build_dir) = if let Some(mut target_dir) =
@@ -151,8 +113,6 @@ impl Workspace {
             target_for_config,
             target_is_windows,
             rustc_version,
-            stable_coverage,
-            need_doctest_in_workspace,
         })
     }
 

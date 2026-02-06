@@ -21,8 +21,7 @@ use crate::{
 };
 
 pub(crate) fn run((mut args, unresolved_args): (Args, UnresolvedArgs)) -> Result<()> {
-    let mut ws =
-        Workspace::new(unresolved_args.manifest_path.as_deref(), None, false, false, false, false)?;
+    let mut ws = Workspace::new(unresolved_args.manifest_path.as_deref(), None, false)?;
     cli::merge_config_and_args(&mut ws, &mut None, &mut args.verbose, unresolved_args.color)?;
     drop(unresolved_args);
     term::set_coloring(&mut ws.config.term.color);
