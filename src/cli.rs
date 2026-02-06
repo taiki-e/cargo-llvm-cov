@@ -339,25 +339,22 @@ impl ReportOptions {
 
     fn validate(&self, subcommand: Subcommand) -> Result<()> {
         // Handle options specific to certain subcommands.
-        // subcommands without generate_report in main.rs.
-        let no_report_subcommands = matches!(
-            subcommand,
-            Subcommand::Clean | Subcommand::ShowEnv | Subcommand::NextestArchive
-        );
-        if self.no_report
-            && (no_report_subcommands || matches!(subcommand, Subcommand::Report { .. }))
-        {
+        let (subcommands_without_report, no_report_incompat) = match subcommand {
+            // subcommands without generate_report in main.rs.
+            Subcommand::Clean | Subcommand::ShowEnv | Subcommand::NextestArchive => (true, true),
+            Subcommand::Report { .. } => (false, true),
+            Subcommand::None | Subcommand::Test | Subcommand::Run | Subcommand::Nextest { .. } => {
+                (false, false)
+            }
+        };
+        if no_report_incompat && self.no_report {
             if matches!(subcommand, Subcommand::NextestArchive) {
-                // TODO(semver): make this hard error on future release
-                warn!(
-                    "option '--no-report' is specific to [test,run,nextest,no subcommand] and not supported for subcommand '{}'",
-                    subcommand.as_str()
-                );
+                specific_flag_warn("--no-report", subcommand, &["test", "run", "nextest", ""]);
             } else {
                 specific_flag("--no-report", subcommand, &["test", "run", "nextest", ""])?;
             }
         }
-        if no_report_subcommands || self.no_report {
+        if subcommands_without_report || self.no_report {
             let Self {
                 no_report: _,
                 json,
@@ -384,41 +381,38 @@ impl ReportOptions {
                 include_build_script,
                 skip_functions,
             } = self;
-            for (passed, flag) in [
-                (*json, "--json"),
-                (*lcov, "--lcov"),
-                (*cobertura, "--cobertura"),
-                (*codecov, "--codecov"),
-                (*text, "--text"),
-                (*html, "--html"),
-                (*open, "--open"),
-                (*summary_only, "--summary-only"),
-                (output_path.is_some(), "--output-path"),
-                (output_dir.is_some(), "--output-dir"),
-                (failure_mode.is_some(), "--failure-mode"),
-                (ignore_filename_regex.is_some(), "--ignore-filename-regex"),
-                (*no_default_ignore_filename_regex, "--no-default-ignore-filename-regex"),
-                (*show_instantiations, "--show-instantiations"),
-                (fail_under_functions.is_some(), "--fail-under-functions"),
-                (fail_under_lines.is_some(), "--fail-under-lines"),
-                (fail_under_regions.is_some(), "--fail-under-regions"),
-                (fail_uncovered_lines.is_some(), "--fail-uncovered-lines"),
-                (fail_uncovered_regions.is_some(), "--fail-uncovered-regions"),
-                (fail_uncovered_functions.is_some(), "--fail-uncovered-functions"),
-                (*show_missing_lines, "--show-missing-lines"),
-                (*include_build_script, "--include-build-script"),
-                (*skip_functions, "--skip-functions"),
+            for (flag, passed) in [
+                ("--json", *json),
+                ("--lcov", *lcov),
+                ("--cobertura", *cobertura),
+                ("--codecov", *codecov),
+                ("--text", *text),
+                ("--html", *html),
+                ("--open", *open),
+                ("--summary-only", *summary_only),
+                ("--output-path", output_path.is_some()),
+                ("--output-dir", output_dir.is_some()),
+                ("--failure-mode", failure_mode.is_some()),
+                ("--ignore-filename-regex", ignore_filename_regex.is_some()),
+                ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
+                ("--show-instantiations", *show_instantiations),
+                ("--fail-under-functions", fail_under_functions.is_some()),
+                ("--fail-under-lines", fail_under_lines.is_some()),
+                ("--fail-under-regions", fail_under_regions.is_some()),
+                ("--fail-uncovered-lines", fail_uncovered_lines.is_some()),
+                ("--fail-uncovered-regions", fail_uncovered_regions.is_some()),
+                ("--fail-uncovered-functions", fail_uncovered_functions.is_some()),
+                ("--show-missing-lines", *show_missing_lines),
+                ("--include-build-script", *include_build_script),
+                ("--skip-functions", *skip_functions),
             ] {
                 if passed {
-                    if no_report_subcommands {
-                        // TODO(semver): make this hard error on future release
-                        warn!(
-                            "{flag} is specific to [report,test,run,nextest,no subcommand] and not supported for subcommand '{}'",
-                            subcommand.as_str()
-                        );
+                    if subcommands_without_report {
+                        specific_flag_warn(flag, subcommand, &[
+                            "report", "test", "run", "nextest", "",
+                        ]);
                     } else {
-                        // TODO(semver): make this hard error on future release
-                        warn!("{flag} may not be used together with --no-report");
+                        conflicts_warn(flag, "--no-report");
                     }
                 }
             }
@@ -528,7 +522,7 @@ impl ReportOptions {
 }
 
 /// Options only referred in "clean" operations. (clean subcommand and subcommands building rust code)
-#[derive(Debug, Clone)]
+#[derive(Debug, Default)]
 pub(crate) struct CleanOptions {
     /// Build without cleaning any old build artifacts.
     ///
@@ -546,6 +540,31 @@ pub(crate) struct CleanOptions {
 }
 
 impl CleanOptions {
+    fn validate(&self, subcommand: Subcommand) -> Result<()> {
+        let (no_clean_incompat, profraw_only_incompat) = match subcommand {
+            Subcommand::Report { .. } | Subcommand::ShowEnv => (true, true),
+            Subcommand::Clean => (true, false),
+            Subcommand::None
+            | Subcommand::Test
+            | Subcommand::Run
+            | Subcommand::Nextest { .. }
+            | Subcommand::NextestArchive => (false, true),
+        };
+        if no_clean_incompat && self.no_clean {
+            specific_flag("--no-clean", subcommand, &[
+                "test",
+                "run",
+                "nextest",
+                "nextest-archive",
+                "",
+            ])?;
+        }
+        if profraw_only_incompat && self.profraw_only {
+            specific_flag("--profraw-only", subcommand, &["clean"])?;
+        }
+        Ok(())
+    }
+
     pub(crate) fn cargo_args(&self, cmd: &mut ProcessBuilder) {
         if self.frozen {
             cmd.arg("--frozen");
@@ -565,30 +584,10 @@ pub(crate) struct ShowEnvOptions {
     pub(crate) show_env_format: ShowEnvFormat,
 }
 
-#[derive(Debug, Clone, Default)]
-pub(crate) enum ShowEnvFormat {
-    /// Each key-value: `{key}={value}`, where `{value}` is escaped using [`shell_escape::escape`].
-    #[default]
-    EscapedKeyValuePair,
-    /// Each key-value: `export {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
-    Sh,
-    /// Each key-value: `$env:{key}="{value}"`, where `{value}` is PowerShell Unicode escaped e.g. "`u{72}".
-    Pwsh,
-    /// Each key-value: `set {key}={value}`, where `{value}` is escaped using [`shell_escape::windows::escape`].
-    Cmd,
-    /// Each key-value: `setenv {key} '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
-    Csh,
-    /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
-    Fish,
-    /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
-    Nu,
-    /// Each key-value: `${key} = '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
-    Xonsh,
-}
-
-impl ShowEnvFormat {
+impl ShowEnvOptions {
     #[allow(clippy::fn_params_excessive_bools)]
     pub(crate) fn new(
+        subcommand: Subcommand,
         sh: bool,
         pwsh: bool,
         cmd: bool,
@@ -597,7 +596,22 @@ impl ShowEnvFormat {
         nu: bool,
         xonsh: bool,
     ) -> Result<Self> {
-        Ok(if sh {
+        let show_env_format = if subcommand != Subcommand::ShowEnv {
+            for (flag, passed) in [
+                ("--sh", sh),
+                ("--pwsh", pwsh),
+                ("--cmd", cmd),
+                ("--csh", csh),
+                ("--fish", fish),
+                ("--nu", nu),
+                ("--xonsh", xonsh),
+            ] {
+                if passed {
+                    specific_flag(flag, subcommand, &["show-env"])?;
+                }
+            }
+            ShowEnvFormat::default()
+        } else if sh {
             if pwsh {
                 conflicts("--sh", "--pwsh")?;
             }
@@ -675,10 +689,34 @@ impl ShowEnvFormat {
         } else if xonsh {
             ShowEnvFormat::Xonsh
         } else {
-            ShowEnvFormat::EscapedKeyValuePair
-        })
+            ShowEnvFormat::default()
+        };
+        Ok(Self { show_env_format })
     }
+}
 
+#[derive(Debug, Clone, Default)]
+pub(crate) enum ShowEnvFormat {
+    /// Each key-value: `{key}={value}`, where `{value}` is escaped using [`shell_escape::escape`].
+    #[default]
+    EscapedKeyValuePair,
+    /// Each key-value: `export {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Sh,
+    /// Each key-value: `$env:{key}="{value}"`, where `{value}` is PowerShell Unicode escaped e.g. "`u{72}".
+    Pwsh,
+    /// Each key-value: `set {key}={value}`, where `{value}` is escaped using [`shell_escape::windows::escape`].
+    Cmd,
+    /// Each key-value: `setenv {key} '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Csh,
+    /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Fish,
+    /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Nu,
+    /// Each key-value: `${key} = '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    Xonsh,
+}
+
+impl ShowEnvFormat {
     pub(crate) fn writeln(
         &self,
         writer: &mut dyn io::Write,
@@ -821,9 +859,6 @@ impl Args {
         let mut after_subcommand = false;
 
         let mut manifest_path = None;
-        let mut frozen = false;
-        let mut locked = false;
-        let mut offline = false;
         let mut color = None;
 
         let mut doctests = false;
@@ -855,6 +890,7 @@ impl Args {
         let mut mcdc = false;
 
         let mut report = ReportOptions::default();
+        let mut clean = CleanOptions::default();
 
         // build options
         let mut release = false;
@@ -863,11 +899,7 @@ impl Args {
         let mut remap_path_prefix = false;
         let mut include_ffi = false;
         let mut verbose: usize = 0;
-        let mut no_clean = false;
         let mut no_rustc_wrapper = false;
-
-        // clean options
-        let mut profraw_only = false;
 
         // show-env options
         let mut sh = false;
@@ -988,9 +1020,9 @@ impl Args {
             match arg {
                 Long("color") => parse_opt_passthrough!(color),
                 Long("manifest-path") => parse_opt!(manifest_path),
-                Long("frozen") => parse_flag_passthrough!(frozen),
-                Long("locked") => parse_flag_passthrough!(locked),
-                Long("offline") => parse_flag_passthrough!(offline),
+                Long("frozen") => parse_flag_passthrough!(clean.frozen),
+                Long("locked") => parse_flag_passthrough!(clean.locked),
+                Long("offline") => parse_flag_passthrough!(clean.offline),
 
                 Long("doctests") => parse_flag!(doctests),
                 Long("ignore-run-fail") => parse_flag!(ignore_run_fail),
@@ -1028,11 +1060,11 @@ impl Args {
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
-                Long("no-clean") => parse_flag!(no_clean),
+                Long("no-clean") => parse_flag!(clean.no_clean),
                 Long("no-rustc-wrapper") => parse_flag!(no_rustc_wrapper),
 
                 // clean options
-                Long("profraw-only") => parse_flag!(profraw_only),
+                Long("profraw-only") => parse_flag!(clean.profraw_only),
 
                 // report options
                 Long("no-report") => parse_flag!(report.no_report),
@@ -1192,33 +1224,13 @@ impl Args {
         // ---------------------------------------------------------------------
         // Arguments validations
 
+        // Handle options specific to certain operations.
+        // report specific
         report.validate(subcommand)?;
-
-        // Handle options specific to certain subcommands.
-        // show-env specific
-        let show_env_format = match subcommand {
-            Subcommand::ShowEnv => ShowEnvFormat::new(sh, pwsh, cmd, csh, fish, nu, xonsh)?,
-            _ => {
-                for (passed, flag) in [
-                    (sh, "--sh"),
-                    (pwsh, "--pwsh"),
-                    (cmd, "--cmd"),
-                    (csh, "--csh"),
-                    (fish, "--fish"),
-                    (nu, "--nu"),
-                    (xonsh, "--xonsh"),
-                ] {
-                    if passed {
-                        specific_flag(flag, subcommand, &["show-env"])?;
-                    }
-                }
-                ShowEnvFormat::default()
-            }
-        };
         // clean specific
-        if profraw_only && !matches!(subcommand, Subcommand::Clean) {
-            specific_flag("--profraw-only", subcommand, &["clean"])?;
-        }
+        clean.validate(subcommand)?;
+        // show-env specific
+        let show_env = ShowEnvOptions::new(subcommand, sh, pwsh, cmd, csh, fish, nu, xonsh)?;
         // test or show-env or report specific
         if doc || doctests {
             match subcommand {
@@ -1255,18 +1267,18 @@ impl Args {
             | Subcommand::Clean
             | Subcommand::Report { .. }
             | Subcommand::ShowEnv => {
-                for (passed, flag) in [
-                    (lib, "--lib"),
-                    (bins, "--bins"),
-                    (examples, "--examples"),
-                    (!test.is_empty(), "--test"),
-                    (tests, "--tests"),
-                    (!bench.is_empty(), "--bench"),
-                    (benches, "--benches"),
-                    (all_targets, "--all-targets"),
-                    (no_fail_fast, "--no-fail-fast"),
-                    (!exclude.is_empty(), "--exclude"), // TODO: allow for report subcommand
-                    (!exclude_from_test.is_empty(), "--exclude-from-test"),
+                for (flag, passed) in [
+                    ("--lib", lib),
+                    ("--bins", bins),
+                    ("--examples", examples),
+                    ("--test", !test.is_empty()),
+                    ("--tests", tests),
+                    ("--bench", !bench.is_empty()),
+                    ("--benches", benches),
+                    ("--all-targets", all_targets),
+                    ("--no-fail-fast", no_fail_fast),
+                    ("--exclude", !exclude.is_empty()), // TODO: allow for report subcommand
+                    ("--exclude-from-test", !exclude_from_test.is_empty()),
                 ] {
                     if passed {
                         specific_flag(flag, subcommand, &[
@@ -1298,17 +1310,16 @@ impl Args {
             | Subcommand::Run
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive => {}
-            Subcommand::Clean | Subcommand::ShowEnv | Subcommand::Report { .. } => {
-                for (passed, arg) in [
-                    (!bin.is_empty(), "--bin"),
-                    (!example.is_empty(), "--example"),
-                    (no_clean, "--no-clean"),
+            Subcommand::Report { .. } | Subcommand::Clean | Subcommand::ShowEnv => {
+                for (flag, passed) in [
+                    ("--bin", !bin.is_empty()),
+                    ("--example", !example.is_empty()),
                     // --exclude for report subcommand means "exclude from report"
-                    (!exclude_from_report.is_empty(), "--exclude-from-report"),
-                    (ignore_run_fail, "--ignore-run-fail"),
+                    ("--exclude-from-report", !exclude_from_report.is_empty()),
+                    ("--ignore-run-fail", ignore_run_fail),
                 ] {
                     if passed {
-                        specific_flag(arg, subcommand, &[
+                        specific_flag(flag, subcommand, &[
                             "test",
                             "run",
                             "nextest",
@@ -1328,13 +1339,13 @@ impl Args {
             | Subcommand::NextestArchive
             | Subcommand::ShowEnv => {}
             Subcommand::Report { .. } | Subcommand::Clean => {
-                for (passed, arg) in [
-                    (no_cfg_coverage, "--no-cfg-coverage"),
-                    (no_cfg_coverage_nightly, "--no-cfg-coverage-nightly"),
-                    (no_rustc_wrapper, "--no-rustc-wrapper"),
+                for (flag, passed) in [
+                    ("--no-cfg-coverage", no_cfg_coverage),
+                    ("--no-cfg-coverage-nightly", no_cfg_coverage_nightly),
+                    ("--no-rustc-wrapper", no_rustc_wrapper),
                 ] {
                     if passed {
-                        specific_flag(arg, subcommand, &[
+                        specific_flag(flag, subcommand, &[
                             "test",
                             "run",
                             "nextest",
@@ -1432,7 +1443,7 @@ impl Args {
         }
         if report.no_report || no_run {
             let flag = if report.no_report { "--no-report" } else { "--no-run" };
-            if no_clean {
+            if clean.no_clean {
                 // --no-report/--no-run implicitly enable --no-clean.
                 conflicts(flag, "--no-clean")?;
             }
@@ -1442,73 +1453,60 @@ impl Args {
             conflicts("--ignore-run-fail", "--no-fail-fast")?;
         }
         if doc || doctests {
-            let flag = if doc { "--doc" } else { "--doctests" };
-            if lib {
-                conflicts(flag, "--lib")?;
-            }
-            if !bin.is_empty() {
-                conflicts(flag, "--bin")?;
-            }
-            if bins {
-                conflicts(flag, "--bins")?;
-            }
-            if !example.is_empty() {
-                conflicts(flag, "--example")?;
-            }
-            if examples {
-                conflicts(flag, "--examples")?;
-            }
-            if !test.is_empty() {
-                conflicts(flag, "--test")?;
-            }
-            if tests {
-                conflicts(flag, "--tests")?;
-            }
-            if !bench.is_empty() {
-                conflicts(flag, "--bench")?;
-            }
-            if benches {
-                conflicts(flag, "--benches")?;
-            }
-            if all_targets {
-                conflicts(flag, "--all-targets")?;
+            let doc_flag = if doc { "--doc" } else { "--doctests" };
+            for (flag, passed) in [
+                ("--lib", lib),
+                ("--bin", !bin.is_empty()),
+                ("--bins", bins),
+                ("--example", !example.is_empty()),
+                ("--examples", examples),
+                ("--test", !test.is_empty()),
+                ("--tests", tests),
+                ("--bench", !bench.is_empty()),
+                ("--benches", benches),
+                ("--all-targets", all_targets),
+            ] {
+                if passed {
+                    conflicts(flag, doc_flag)?;
+                }
             }
         }
-        if !package.is_empty() && workspace {
-            // cargo allows the combination of --package and --workspace, but
-            // we reject it because the situation where both flags are specified is odd.
-            conflicts("--package", "--workspace")?;
+        if workspace {
+            if !package.is_empty() {
+                // cargo allows the combination of --package and --workspace, but
+                // we reject it because the situation where both flags are specified is odd.
+                conflicts("--package", "--workspace")?;
+            }
+            if clean.profraw_only {
+                conflicts_warn("--profraw-only", "--workspace");
+            }
         }
         if branch && mcdc {
             conflicts("--branch", "--mcdc")?;
         }
         if subcommand.read_nextest_archive() {
-            if target.is_some() {
-                info!(
-                    "--target flag is no longer needed because detection from nextest archive is now supported"
-                );
-            }
-            if release {
-                info!(
-                    "--release flag is no longer needed because detection from nextest archive is now supported"
-                );
-            }
-            if cargo_profile.is_some() {
-                info!(
-                    "--cargo-profile flag is no longer needed because detection from nextest archive is now supported"
-                );
+            for (flag, passed) in [
+                ("--target", target.is_some()),
+                ("--release", release),
+                ("--cargo-profile", cargo_profile.is_some()),
+            ] {
+                if passed {
+                    info!(
+                        "{flag} is no longer needed because detection from nextest archive is now supported"
+                    );
+                }
             }
         }
 
         // forbid_empty_values
-        if report.ignore_filename_regex.as_deref() == Some("") {
-            bail!("empty string is not allowed in --ignore-filename-regex")
-        }
-        if report.output_path.as_deref() == Some(Utf8Path::new("")) {
-            bail!("empty string is not allowed in --output-path")
-        }
-        if report.output_dir.as_deref() == Some(Utf8Path::new("")) {
-            bail!("empty string is not allowed in --output-dir")
+        for (flag, is_empty) in [
+            ("--ignore-filename-regex", report.ignore_filename_regex.as_deref() == Some("")),
+            ("--output-path", report.output_path.as_deref() == Some(Utf8Path::new(""))),
+            ("--output-dir", report.output_dir.as_deref() == Some(Utf8Path::new(""))),
+        ] {
+            if is_empty {
+                bail!("empty string is not allowed in {flag}")
+            }
         }
 
         for e in exclude {
@@ -1567,7 +1565,7 @@ impl Args {
             cargo_args.push(format!("-{}", "v".repeat(verbose - 1)));
         }
         // --no-report and --no-run implies --no-clean
-        no_clean |= report.no_report | no_run;
+        clean.no_clean |= report.no_report | no_run;
         // --doc implies --doctests
         doctests |= doc;
         // --open implies --html
@@ -1610,8 +1608,8 @@ impl Args {
                     rest,
                 },
                 report,
-                clean: CleanOptions { no_clean, profraw_only, frozen, locked, offline },
-                show_env: ShowEnvOptions { show_env_format },
+                clean,
+                show_env,
                 doctests,
                 workspace,
                 release,
@@ -1698,9 +1696,19 @@ fn requires(flag: &str, requires: &[&str]) -> Result<()> {
 }
 
 #[cold]
+fn conflicts_msg(a: &str, b: &str) -> String {
+    format!("{a} may not be used together with {b}")
+}
+#[cold]
 #[inline(never)]
 fn conflicts(a: &str, b: &str) -> Result<()> {
-    bail!("{a} may not be used together with {b}");
+    Err(Error::msg(conflicts_msg(a, b)))
+}
+// TODO(semver): replace this with conflicts on future breaking release
+#[cold]
+#[inline(never)]
+fn conflicts_warn(a: &str, b: &str) {
+    warn!("{}", conflicts_msg(a, b));
 }
 
 #[cold]
@@ -1716,8 +1724,7 @@ fn unexpected(arg: &str, subcommand: Subcommand) -> Result<()> {
 }
 
 #[cold]
-#[inline(never)]
-fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Result<()> {
+fn specific_flag_msg(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> String {
     assert!(!specific_to.is_empty());
     assert!(flag.starts_with('-') && !flag.starts_with("---") && flag != "--");
     let mut list = String::new();
@@ -1737,12 +1744,24 @@ fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Re
         list.push(']');
     }
     if subcommand == Subcommand::None {
-        bail!("{flag} is specific to {list}");
+        format!("{flag} is specific to {list}")
+    } else {
+        format!(
+            "{flag} is specific to {list} and not supported for subcommand '{}'",
+            subcommand.as_str()
+        )
     }
-    bail!(
-        "{flag} is specific to {list} and not supported for subcommand '{}'",
-        subcommand.as_str()
-    );
+}
+#[cold]
+#[inline(never)]
+fn specific_flag(flag: &str, subcommand: Subcommand, specific_to: &[&str]) -> Result<()> {
+    Err(Error::msg(specific_flag_msg(flag, subcommand, specific_to)))
+}
+// TODO(semver): replace this with conflicts on future breaking release
+#[cold]
+#[inline(never)]
+fn specific_flag_warn(flag: &str, subcommand: Subcommand, specific_to: &[&str]) {
+    warn!("{}", specific_flag_msg(flag, subcommand, specific_to));
 }
 
 #[cold]
