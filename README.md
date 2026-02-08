@@ -508,6 +508,41 @@ cargo llvm-cov report --lcov # Generate report without tests.
 > See "Test show-env ..." in [our CI config](https://github.com/taiki-e/cargo-llvm-cov/blob/HEAD/.github/workflows/ci.yml)
 > for usage with other shells (cmd.exe, csh, tcsh, fish, nushell, xonsh).
 
+> [!NOTE]
+> When collecting coverage from externally-run long-running servers (for example a server
+> built with Tokio and Axum), two different concerns must be addressed:
+>
+> - LLVM profiling runtime: LLVM's coverage runtime writes profiling data (.profraw) when
+>   the process is allowed to shut down cleanly. SIGKILL cannot be intercepted and will
+>   prevent the runtime from flushing profiling data. Relying on an unhandled signal may
+>   therefore result in no coverage being recorded.
+>
+> - Async runtime (Tokio): Tokio-based servers typically run as a long-lived future that
+>   only completes when the server is shut down. Sending a plain SIGTERM to the process
+>   does not necessarily stop that future unless the application explicitly listens for
+>   the signal and triggers a graceful shutdown of the server.
+>
+> A minimal pattern is to run the server future and concurrently listen for SIGTERM; when
+> the signal is received, initiate a graceful shutdown so the process can exit cleanly and
+> the LLVM runtime can flush profiling data. Example:
+>
+> ```rust
+> let listener = tokio::net::TcpListener::bind(addr).await?;
+> let server = axum::serve(listener, app.into_make_service());
+> let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+> tokio::select! {
+>     res = server => res?,
+>     _ = sigterm.recv() => {
+>         tracing::info!("Received SIGTERM, shutting down");
+>     }
+> }
+> ```
+>
+> After external tests complete, send SIGTERM (not SIGKILL) to the process. Plain SIGTERM
+> without a corresponding shutdown handler in the application may not be sufficient; the
+> application must observe the signal and shut down its server/futures so the LLVM runtime
+> can write out coverage data.
+
 ### Get coverage of AFL fuzzers
 
 Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
