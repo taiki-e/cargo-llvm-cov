@@ -4,7 +4,7 @@ use std::ffi::OsStr;
 
 use anyhow::{Context as _, Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
-use cargo_config2::Config;
+use cargo_config2::{Config, cfg::TargetOs};
 
 use crate::{
     cli::Subcommand,
@@ -50,7 +50,7 @@ impl Workspace {
             );
         }
         let target_for_config = target_for_config.pop().unwrap();
-        let target_is_windows = target_for_config.triple().contains("-windows");
+        let target_is_windows = config.cfg::<TargetOs, _>(&target_for_config)? == TargetOs::windows;
         let rustc = ProcessBuilder::from(config.rustc().clone());
         let mut rustc_version = config.rustc_version()?;
         rustc_version.nightly =
