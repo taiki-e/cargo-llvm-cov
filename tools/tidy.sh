@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0 OR MIT
-# shellcheck disable=SC2046
 set -CeEuo pipefail
 IFS=$'\n\t'
 trap -- 's=$?; printf >&2 "%s\n" "${0##*/}:${LINENO}: \`${BASH_COMMAND}\` exit with ${s}"; exit ${s}' ERR
@@ -14,7 +13,7 @@ cd -- "$(dirname -- "$0")"/..
 # - git 1.8+
 # - jq 1.6+
 # - npm (node 18+)
-# - python 3.6+ and pipx
+# - python 3.6+, pipx
 # - shfmt
 # - shellcheck
 # - zizmor
@@ -71,7 +70,7 @@ check_diff() {
     fi
   else
     local res
-    res=$(git --no-pager diff --exit-code --name-only "$@" || true)
+    res=$(git --no-pager diff --name-only "$@")
     if [[ -n "${res}" ]]; then
       warn "please commit changes made by formatter/generator if exists on the following files"
       print_fenced "${res}"$'\n'
@@ -116,7 +115,6 @@ check_alt() {
   fi
 }
 check_hidden() {
-  local res
   for file in "$@"; do
     check_alt ".${file}" "${file}" "$(LC_ALL=C comm -23 <(ls_files "*${file}") <(ls_files "*.${file}"))"
   done
@@ -125,6 +123,7 @@ sed_rhs_escape() {
   sed -E 's/\\/\\\\/g; s/\&/\\\&/g; s/\//\\\//g' <<<"$1"
 }
 
+should_fail=''
 if [[ $# -gt 0 ]]; then
   cat <<EOF
 USAGE:
@@ -174,14 +173,19 @@ case "$(uname -s)" in
       done
     fi
     ;;
+  Haiku) ostype=haiku ;;
+  Minix) ostype=minix ;;
+  GNU) ostype=hurd ;;
+  AIX) ostype=aix ;;
+  HP-UX) ostype=hpux ;;
   MINGW* | MSYS* | CYGWIN* | Windows_NT)
     ostype=windows
     if type -P jq >/dev/null; then
       # https://github.com/jqlang/jq/issues/1854
-      _tmp=$(jq -r .a <<<'{}')
-      if [[ "${_tmp}" != 'null' ]]; then
-        _tmp=$(jq -b -r .a 2>/dev/null <<<'{}' || true)
-        if [[ "${_tmp}" == 'null' ]]; then
+      _tmp=$(jq -r .a <<<'{}' | wc -c)
+      if [[ "${_tmp}" != 5 ]]; then
+        _tmp=$({ jq -b -r .a 2>/dev/null <<<'{}' || true; } | wc -c)
+        if [[ "${_tmp}" == 5 ]]; then
           jq() { command jq -b "$@"; }
         else
           jq() { command jq "$@" | tr -d '\r'; }
@@ -195,7 +199,6 @@ case "$(uname -s)" in
 esac
 
 check_install git
-exclude_from_ls_files=()
 # - `find` lists symlinks. `! ( -name <dir> -prune )` means recursively ignore <dir>. `cut` removes the leading `./`.
 #   This can be replaced with `fd -H -t l`.
 # - `git submodule status` lists submodules. The first `cut` removes the first character indicates status ( |+|-).
@@ -204,6 +207,7 @@ find_prune=(\! \( -name .git -prune \))
 while IFS= read -r; do
   find_prune+=(\! \( -name "${REPLY}" -prune \))
 done < <(sed -E 's/#.*//g; s/^[ \t]+//g; s/\/[ \t]+$//g; /^$/d' .gitignore)
+exclude_from_ls_files=()
 while IFS=$'\n' read -r; do
   exclude_from_ls_files+=("${REPLY}")
 done < <({
@@ -227,12 +231,24 @@ ls_files() {
   fi
 }
 
+# Referred by both Rust and Markdown check.
+markdown_files=()
+while IFS=$'\n' read -r; do markdown_files+=("${REPLY}"); done < <(ls_files '*.md')
+if [[ ${TIDY_EXPECTED_MARKDOWN_FILE_COUNT:-${#markdown_files[@]}} -ne ${#markdown_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_MARKDOWN_FILE_COUNT} of Markdown files, but found ${#markdown_files[@]}; consider updating TIDY_EXPECTED_MARKDOWN_FILE_COUNT env var"
+fi
+
 # Rust (if exists)
-if [[ -n "$(ls_files '*.rs')" ]]; then
+rust_files=()
+while IFS=$'\n' read -r; do rust_files+=("${REPLY}"); done < <(ls_files '*.rs')
+if [[ ${TIDY_EXPECTED_RUST_FILE_COUNT:-${#rust_files[@]}} -ne ${#rust_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_RUST_FILE_COUNT} of Rust files, but found ${#rust_files[@]}; consider updating TIDY_EXPECTED_RUST_FILE_COUNT env var"
+fi
+if [[ ${#rust_files[@]} -gt 0 ]]; then
   info "checking Rust code style"
   check_config .rustfmt.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.rustfmt.toml"
   check_config .clippy.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.clippy.toml"
-  if check_install cargo jq python3 pipx; then
+  if check_install cargo jq pipx; then
     # `cargo fmt` cannot recognize files not included in the current workspace and modules
     # defined inside macros, so run rustfmt directly.
     # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
@@ -242,16 +258,16 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
         retry rustup component add rustfmt &>/dev/null
       fi
       info "running \`rustfmt \$(git ls-files '*.rs')\`"
-      rustfmt $(ls_files '*.rs')
+      rustfmt "${rust_files[@]}"
     else
       if type -P rustup >/dev/null; then
         retry rustup component add rustfmt --toolchain nightly &>/dev/null
       fi
       info "running \`rustfmt +nightly \$(git ls-files '*.rs')\`"
-      rustfmt +nightly $(ls_files '*.rs')
+      rustfmt +nightly "${rust_files[@]}"
     fi
-    check_diff $(ls_files '*.rs')
-    cast_without_turbofish=$(grep -Fn '.cast()' $(ls_files '*.rs') || true)
+    check_diff "${rust_files[@]}"
+    cast_without_turbofish=$(grep -Fn '.cast()' "${rust_files[@]}" || true)
     if [[ -n "${cast_without_turbofish}" ]]; then
       error "please replace \`.cast()\` with \`.cast::<type_name>()\`:"
       printf '%s\n' "${cast_without_turbofish}"
@@ -332,7 +348,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
   fi
   # Sync markdown to rustdoc.
   first=1
-  for markdown in $(ls_files '*.md'); do
+  for markdown in "${markdown_files[@]}"; do
     markers=$(grep -En '^<!-- tidy:sync-markdown-to-rustdoc:(start[^ ]*|end) -->' "${markdown}" || true)
     # BSD wc's -l emits spaces before number.
     if [[ ! "$(LC_ALL=C wc -l <<<"${markers}")" =~ ^\ *2$ ]]; then
@@ -381,10 +397,11 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
     fi
     new='<!-- tidy:sync-markdown-to-rustdoc:start -->'$'\a'
     empty_line_re='^ *$'
-    gfm_alert_re='^> {0,4}\[!.*\] *$'
+    gfm_alert_re='^ *> {0,4}\[!.*\] *$'
     rust_code_block_re='^ *```(rust|rs) *$'
     code_block_attr=''
     in_alert=''
+    leading_spaces=''
     first_line=1
     ignore=''
     while IFS='' read -rd$'\a' line; do
@@ -401,7 +418,7 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
       elif [[ -n "${in_alert}" ]]; then
         if [[ "${line}" =~ ${empty_line_re} ]]; then
           in_alert=''
-          new+=$'\a'"</div>"$'\a'
+          new+=$'\a'"${leading_spaces}</div>"$'\a'
         fi
       elif [[ "${line}" =~ ${gfm_alert_re} ]]; then
         alert="${line#*[\!}"
@@ -418,8 +435,13 @@ if [[ -n "$(ls_files '*.rs')" ]]; then
             ;;
         esac
         in_alert=1
-        new+="<div class=\"rustdoc-alert rustdoc-alert-${alert_lower}\">"$'\a\a'
-        new+="> **${alert_sign} ${alert:0:1}${alert_lower:1}**"$'\a>\a'
+        leading_spaces="${line%%[^ ]*}"
+        # GitHub doesn't handle indented GFM alerts...
+        if [[ -n "${leading_spaces}" ]]; then
+          error "GitHub doesn't handle indented GFM alerts"
+        fi
+        new+="${leading_spaces}<div class=\"rustdoc-alert rustdoc-alert-${alert_lower}\">"$'\a\a'
+        new+="${leading_spaces}> **${alert_sign} ${alert:0:1}${alert_lower:1}**"$'\a'"${leading_spaces}>"$'\a'
         continue
       fi
       if [[ "${line}" =~ ${rust_code_block_re} ]]; then
@@ -459,15 +481,20 @@ check_hidden clippy.toml deny.toml rustfmt.toml
 
 # C/C++/Protobuf (if exists)
 clang_format_ext=('*.c' '*.h' '*.cpp' '*.hpp' '*.proto')
-if [[ -n "$(ls_files "${clang_format_ext[@]}")" ]]; then
+clang_format_files=()
+while IFS=$'\n' read -r; do clang_format_files+=("${REPLY}"); done < <(ls_files "${clang_format_ext[@]}")
+if [[ ${TIDY_EXPECTED_CLANG_FORMAT_FILE_COUNT:-${#clang_format_files[@]}} -ne ${#clang_format_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_CLANG_FORMAT_FILE_COUNT} of C/C++/Protobuf files, but found ${#clang_format_files[@]}; consider updating TIDY_EXPECTED_CLANG_FORMAT_FILE_COUNT env var"
+fi
+if [[ ${#clang_format_files[@]} -gt 0 ]]; then
   info "checking C/C++/Protobuf code style"
   check_config .clang-format
   if check_install clang-format; then
     IFS=' '
     info "running \`clang-format -i \$(git ls-files ${clang_format_ext[*]})\`"
     IFS=$'\n\t'
-    clang-format -i $(ls_files "${clang_format_ext[@]}")
-    check_diff $(ls_files "${clang_format_ext[@]}")
+    clang-format -i "${clang_format_files[@]}"
+    check_diff "${clang_format_files[@]}"
   fi
   printf '\n'
 else
@@ -480,15 +507,20 @@ check_alt '.hpp extension' 'other extensions' "$(ls_files '*.hh' '*.hp' '*.hxx' 
 
 # YAML/HTML/CSS/JavaScript/JSON (if exists)
 prettier_ext=('*.css' '*.html' '*.js' '*.json' '*.yml' '*.yaml')
-if [[ -n "$(ls_files "${prettier_ext[@]}")" ]]; then
+prettier_files=()
+while IFS=$'\n' read -r; do prettier_files+=("${REPLY}"); done < <(ls_files "${prettier_ext[@]}")
+if [[ ${TIDY_EXPECTED_PRETTIER_FILE_COUNT:-${#prettier_files[@]}} -ne ${#prettier_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_PRETTIER_FILE_COUNT} of YAML/HTML/CSS/JavaScript/JSON files, but found ${#prettier_files[@]}; consider updating TIDY_EXPECTED_PRETTIER_FILE_COUNT env var"
+fi
+if [[ ${#prettier_files[@]} -gt 0 ]]; then
   info "checking YAML/HTML/CSS/JavaScript/JSON code style"
   check_config .editorconfig
   if check_install npm; then
     IFS=' '
     info "running \`npx -y prettier -l -w \$(git ls-files ${prettier_ext[*]})\`"
     IFS=$'\n\t'
-    npx -y prettier -l -w $(ls_files "${prettier_ext[@]}")
-    check_diff $(ls_files "${prettier_ext[@]}")
+    npx -y prettier -l -w "${prettier_files[@]}"
+    check_diff "${prettier_files[@]}"
   fi
   printf '\n'
 else
@@ -499,13 +531,18 @@ check_alt '.editorconfig' 'other configs' "$(ls_files '*.prettierrc*' '*prettier
 check_alt '.yml extension' '.yaml extension' "$(ls_files '*.yaml' | { grep -Fv '.markdownlint-cli2.yaml' || true; })"
 
 # TOML (if exists)
+toml_files=()
+while IFS=$'\n' read -r; do toml_files+=("${REPLY}"); done < <(ls_files '*.toml')
+if [[ ${TIDY_EXPECTED_TOML_FILE_COUNT:-${#toml_files[@]}} -ne ${#toml_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_TOML_FILE_COUNT} of TOML files, but found ${#toml_files[@]}; consider updating TIDY_EXPECTED_TOML_FILE_COUNT env var"
+fi
 if [[ -n "$(ls_files '*.toml' | { grep -Fv '.taplo.toml' || true; })" ]]; then
   info "checking TOML style"
   check_config .taplo.toml
   if check_install npm; then
     info "running \`npx -y @taplo/cli fmt \$(git ls-files '*.toml')\`"
-    RUST_LOG=warn npx -y @taplo/cli fmt $(ls_files '*.toml')
-    check_diff $(ls_files '*.toml')
+    RUST_LOG=warn npx -y @taplo/cli fmt "${toml_files[@]}"
+    check_diff "${toml_files[@]}"
   fi
   printf '\n'
 else
@@ -514,12 +551,12 @@ fi
 check_hidden taplo.toml
 
 # Markdown (if exists)
-if [[ -n "$(ls_files '*.md')" ]]; then
+if [[ ${#markdown_files[@]} -gt 0 ]]; then
   info "checking markdown style"
   check_config .markdownlint-cli2.yaml
   if check_install npm; then
     info "running \`npx -y markdownlint-cli2 \$(git ls-files '*.md')\`"
-    if ! npx -y markdownlint-cli2 $(ls_files '*.md'); then
+    if ! npx -y markdownlint-cli2 "${markdown_files[@]}"; then
       error "check failed; please resolve the above markdownlint error(s)"
     fi
   fi
@@ -579,6 +616,12 @@ if [[ -n "$(ls_files '*action.yml')" ]]; then
       fi
     fi
   done
+fi
+if [[ ${TIDY_EXPECTED_SHELL_FILE_COUNT:-${#shell_files[@]}} -ne ${#shell_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_SHELL_FILE_COUNT} of shell script files, but found ${#shell_files[@]}; consider updating TIDY_EXPECTED_SHELL_FILE_COUNT env var"
+fi
+if [[ ${TIDY_EXPECTED_DOCKER_FILE_COUNT:-${#docker_files[@]}} -ne ${#docker_files[@]} ]]; then
+  error "expected ${TIDY_EXPECTED_DOCKER_FILE_COUNT} of dockerfiles, but found ${#docker_files[@]}; consider updating TIDY_EXPECTED_DOCKER_FILE_COUNT env var"
 fi
 # correctness
 res=$({ grep -En '(\[\[ .* ]]|(^|[^\$])\(\(.*\)\))( +#| *$)' "${bash_files[@]}" || true; } | { grep -Ev '^[^ ]+: *(#|//)' || true; } | LC_ALL=C sort)
@@ -851,10 +894,19 @@ EOF
         for job in $(jq -c '.jobs | to_entries[] | select(.value.steps)' <<<"${workflow}"); do
           name=$(jq -r '.key' <<<"${job}")
           job=$(jq -r '.value' <<<"${job}")
+          eval "$(jq -r '@sh "RUNS_ON=\(."runs-on") TIMEOUT_MINUTES=\(."timeout-minutes") JOB_DEFAULT_SHELL=\(.defaults.run.shell)"' <<<"${job}")"
+          if [[ "${TIMEOUT_MINUTES}" == 'null' ]]; then
+            error ".jobs.${name}.timeout-minutes must be set"
+          fi
+          if [[ "${RUNS_ON}" == 'ubuntu-slim' ]]; then
+            case "${TIMEOUT_MINUTES}" in
+              ? | 1[0-5]) ;;
+              *) error ".jobs.${name}.timeout-minutes must be <= 15 because max execution time of ubuntu-slim runner is 15 minutes" ;;
+            esac
+          fi
           n=0
-          job_default_shell=$(jq -r '.defaults.run.shell' <<<"${job}")
-          if [[ "${job_default_shell}" == 'null' ]]; then
-            job_default_shell="${default_shell}"
+          if [[ "${JOB_DEFAULT_SHELL}" == 'null' ]]; then
+            JOB_DEFAULT_SHELL="${default_shell}"
           fi
           for step in $(jq -c '.steps[]' <<<"${job}"); do
             prepare=''
@@ -865,7 +917,7 @@ EOF
             fi
             if [[ "${shell}" == 'null' ]]; then
               if [[ -z "${prepare}" ]]; then
-                shell="${job_default_shell}"
+                shell="${JOB_DEFAULT_SHELL}"
               elif grep -Eq '^ *chsh +-s +[^ ]+/bash' <<<"${prepare}"; then
                 shell='bash'
               else
@@ -917,6 +969,7 @@ if [[ ${#zizmor_targets[@]} -gt 0 ]]; then
   if [[ "${ostype}" =~ ^(netbsd|openbsd|dragonfly|illumos|solaris)$ ]] && [[ -n "${CI:-}" ]] && ! type -P zizmor >/dev/null; then
     warn "this check is skipped on NetBSD/OpenBSD/Dragonfly/illumos/Solaris due to installing zizmor is hard on these platform"
   elif check_install zizmor; then
+    # zizmor can also be used via pipx, but old version will be installed if glibc version is old.
     IFS=' '
     info "running \`zizmor -q ${zizmor_targets[*]}\`"
     IFS=$'\n\t'
@@ -931,7 +984,7 @@ check_alt '.sh extension' '*.bash extension' "$(ls_files '*.bash')"
 if [[ -f tools/.tidy-check-license-headers ]]; then
   info "checking license headers (experimental)"
   failed_files=''
-  for p in $(LC_ALL=C comm -12 <(eval $(<tools/.tidy-check-license-headers) | LC_ALL=C sort) <(ls_files | LC_ALL=C sort)); do
+  for p in $(LC_ALL=C comm -12 <(eval "$(<tools/.tidy-check-license-headers)" | LC_ALL=C sort) <(ls_files | LC_ALL=C sort)); do
     case "${p##*/}" in
       *.stderr | *.expanded.rs) continue ;; # generated files
       *.json) continue ;;                   # no comment support
@@ -973,7 +1026,7 @@ fi
 if [[ -f .cspell.json ]]; then
   info "spell checking"
   project_dictionary=.github/.cspell/project-dictionary.txt
-  if check_install npm jq python3 pipx; then
+  if check_install npm jq pipx; then
     has_rust=''
     if [[ -n "$(ls_files '*Cargo.toml')" ]]; then
       has_rust=1
