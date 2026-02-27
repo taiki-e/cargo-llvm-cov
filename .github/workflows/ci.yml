@@ -457,6 +457,7 @@ jobs:
           - llvm: '19'
           - llvm: '20'
           - llvm: '21'
+          - llvm: '22'
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
