@@ -837,7 +837,7 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
     }
     if !cx.args.report.no_default_ignore_filename_regex {
         let vendor_dirs =
-            cx.ws.config.source.iter().filter_map(|(_, source)| source.directory.as_deref());
+            cx.ws.config.source.values().filter_map(|source| source.directory.as_deref());
 
         // On Windows, file paths in cargo config.toml's can use `/` or `\` (when escaped as `\\`).
         // This value is going to be passed through into a regex, not through a path resolution step
