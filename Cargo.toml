@@ -82,12 +82,12 @@ unused_trait_names = "warn"
 # Suppress buggy or noisy clippy lints
 bool_assert_comparison = { level = "allow", priority = 1 }
 borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286
-cast_lossless = { level = "allow", priority = 1 } # https://godbolt.org/z/Pv6vbGG6E
+cast_lossless = { level = "allow", priority = 1 } # suggested code has poor codegen with -C opt-level=0 https://godbolt.org/z/GzTxzbd9q
+collapsible_match = { level = "allow", priority = 1 }
 declare_interior_mutable_const = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7665
 doc_markdown = { level = "allow", priority = 1 }
 float_cmp = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/7725
 incompatible_msrv = { level = "allow", priority = 1 } # buggy: doesn't consider cfg, https://github.com/rust-lang/rust-clippy/issues/12280, https://github.com/rust-lang/rust-clippy/issues/12257#issuecomment-2093667187
-lint_groups_priority = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/12920
 manual_assert = { level = "allow", priority = 1 }
 manual_range_contains = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/6455#issuecomment-1225966395
 missing_errors_doc = { level = "allow", priority = 1 }
@@ -103,7 +103,6 @@ struct_field_names = { level = "allow", priority = 1 }
 too_many_arguments = { level = "allow", priority = 1 }
 too_many_lines = { level = "allow", priority = 1 }
 type_complexity = { level = "allow", priority = 1 }
-unreadable_literal = { level = "allow", priority = 1 }
 
 [profile.release]
 codegen-units = 1

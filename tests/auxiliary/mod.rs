@@ -147,7 +147,7 @@ const INSTR_PROF_RAW_MAGIC_64: u64 = (255_u64 << 56)
     | (('f' as u64) << 16)
     | (('r' as u64) << 8)
     | 129_u64;
-const INSTR_PROF_RAW_MAGIC_32: u64 = 18405209413953933953;
+const INSTR_PROF_RAW_MAGIC_32: u64 = 18_405_209_413_953_933_953;
 
 fn perturb_header(path: &Path) {
     let mut file = fs::OpenOptions::new().read(true).write(true).open(path).unwrap(); // Not buffered because it is read and written only once each.
