@@ -44,6 +44,7 @@ jobs:
       contents: read
       pull-requests: write # for gh pr edit --add-assignee
       repository-projects: read # for gh pr edit --add-assignee
+      security-events: write # for github/codeql-action/*
     secrets: inherit
     with:
       check-external-types: false
