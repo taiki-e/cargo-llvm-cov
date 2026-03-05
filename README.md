@@ -510,19 +510,22 @@ cargo llvm-cov report --lcov # Generate report without tests.
 
 ### Get coverage of AFL fuzzers
 
-Cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
+cargo-llvm-cov can be used with [AFL.rs](https://github.com/rust-fuzz/afl.rs) similar to the way external tests are done, but with a few caveats.
 
 ```sh
-# Set environment variables and clean workspace
+# Set environment variables and clean workspace.
+# If your fuzzer directory is in a separated workspace, you have to pass
+# `--dep-coverage <package_name>` to `cargo llvm-cov show-env` and then run
+# `cargo llvm-cov clean -p <package_name>`.
 source <(cargo llvm-cov show-env --sh)
 cargo llvm-cov clean --workspace
-# Build the fuzz target
+# Build the fuzz target.
 cargo afl build
-# Run the fuzzer, the AFL_FUZZER_LOOPCOUNT is needed, because otherwise .profraw files aren't emitted
-# To get coverage of current corpus, minimize it and set it as input, then run the fuzzer until it processes the corpus
+# Run the fuzzer, the AFL_FUZZER_LOOPCOUNT is needed, because otherwise .profraw files aren't emitted.
+# To get coverage of current corpus, minimize it and set it as input, then run the fuzzer until it processes the corpus.
 AFL_FUZZER_LOOPCOUNT=20 cargo afl fuzz -c - -i in -o out target/debug/fuzz-target
-# Generate report
-# If you pass `--release` to `cargo afl build`, you also need to pass `--release` to `cargo llvm-cov report`
+# Generate report.
+# If you pass `--release` to `cargo afl build`, you also need to pass `--release` to `cargo llvm-cov report`.
 cargo llvm-cov report --lcov
 ```
 
