@@ -86,11 +86,21 @@ jobs:
       - run: |
           IFS=$'\n\t'
           trap -- 's=$?; printf >&2 "%s\n" "${0##*/}:${LINENO}: \`${BASH_COMMAND}\` exit with ${s}"; exit ${s}' ERR
+          retry() {
+            for i in {1..10}; do
+              if "$@"; then
+                return 0
+              else
+                sleep "${i}"
+              fi
+            done
+            "$@"
+          }
           bail() {
             printf '::error::%s\n' "$*"
             exit 1
           }
-          git fetch origin --tags &>/dev/null
+          retry git fetch origin --tags &>/dev/null
           git checkout "${REF}"
           # Make sure the current revision is same as release step.
           rev=$(git rev-parse HEAD)

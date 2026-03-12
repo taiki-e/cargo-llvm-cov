@@ -41,9 +41,8 @@ jobs:
   tidy:
     uses: taiki-e/github-actions/.github/workflows/tidy.yml@main
     permissions:
-      contents: read
-      pull-requests: write # for gh pr edit --add-assignee
-      repository-projects: read # for gh pr edit --add-assignee
+      contents: write # for creating branch for pr
+      pull-requests: write # unused (used in `codegen-automerge: true` case)
       security-events: write # for github/codeql-action/*
     secrets: inherit
     with:
@@ -78,9 +77,10 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@cargo-hack
-      - uses: taiki-e/install-action@cargo-minimal-versions
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack,cargo-minimal-versions,nextest
+          fallback: none
       - uses: taiki-e/setup-cross-toolchain-action@main
         with:
           target: ${{ matrix.target }}
@@ -268,7 +268,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: cmd
+        shell: cmd # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'windows')
       - name: Install other shells (Ubuntu)
@@ -420,7 +420,10 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@main
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@nextest
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+          fallback: none
       - run: cargo install --path . --debug
       - name: Test nextest
         run: |
@@ -446,7 +449,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # See also LLVM version table in https://github.com/taiki-e/portable-atomic/blob/HEAD/.github/workflows/ci.yml.
+        # See also LLVM version table in https://github.com/taiki-e/portable-atomic/blob/HEAD/tools/matrix.sh.
         include:
           - llvm: '14'
             os: ubuntu-22.04

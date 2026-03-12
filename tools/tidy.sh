@@ -909,8 +909,21 @@ EOF
             JOB_DEFAULT_SHELL="${default_shell}"
           fi
           for step in $(jq -c '.steps[]' <<<"${job}"); do
+            uses=''
+            # https://github.com/vmactions: prepare, run
+            # https://github.com/cross-platform-actions/action: run, shell
+            # https://github.com/uraimo/run-on-arch-action: setup, install, run, shell
             prepare=''
-            eval "$(jq -r 'if .run then @sh "RUN=\(.run) shell=\(.shell)" else @sh "RUN=\(.with.run) prepare=\(.with.prepare) shell=\(.with.shell)" end' <<<"${step}")"
+            setup=''
+            install=''
+            eval "$(jq -r 'if .run then @sh "RUN=\(.run) shell=\(.shell)" else @sh "uses=\(.uses) FALLBACK=\(.with.fallback) RUN=\(.with.run) prepare=\(.with.prepare) setup=\(.with.setup) install=\(.with.install) shell=\(.with.shell)" end' <<<"${step}")"
+            if [[ "${uses}" == */install-action@* ]]; then
+              if [[ "${FALLBACK}" != 'none' ]]; then
+                error "'fallback: none' must be set for install-action (${name}.steps[${n}])"
+              fi
+              _=$((n++))
+              continue
+            fi
             if [[ "${RUN}" == 'null' ]]; then
               _=$((n++))
               continue
@@ -924,8 +937,14 @@ EOF
                 shell='sh'
               fi
             fi
-            shellcheck_for_gha "${RUN}" "${shell}" "${workflow_path} ${name}.steps[${n}].run"
-            shellcheck_for_gha "${prepare:-null}" 'sh' "${workflow_path} ${name}.steps[${n}].run"
+            if [[ -z "${uses}" ]]; then
+              shellcheck_for_gha "${RUN}" "${shell}" "${workflow_path} ${name}.steps[${n}].run"
+            else
+              shellcheck_for_gha "${RUN}" "${shell}" "${workflow_path} ${name}.steps[${n}].with.run"
+            fi
+            shellcheck_for_gha "${prepare:-null}" 'sh' "${workflow_path} ${name}.steps[${n}].with.prepare"
+            shellcheck_for_gha "${setup:-null}" "${shell}" "${workflow_path} ${name}.steps[${n}].with.setup"
+            shellcheck_for_gha "${install:-null}" "${shell}" "${workflow_path} ${name}.steps[${n}].with.install"
             _=$((n++))
           done
         done
