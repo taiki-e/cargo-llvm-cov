@@ -218,45 +218,64 @@ fn merge_profraw(cx: &Context) -> Result<()> {
 fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     fn walk_target_dir<'a>(
         cx: &'a Context,
-        build_script_re: &'a RegexVec,
+        build_script_v1_layout_re: &'a RegexVec,
+        build_script_v2_layout_re: &'a RegexVec,
         target_dir: &Utf8Path,
     ) -> impl Iterator<Item = walkdir::DirEntry> + 'a {
+        let build_dir = target_dir.join("build"); // <target>/{debug,release}/build
         WalkDir::new(target_dir)
             .into_iter()
             .filter_entry(move |e| {
                 let p = e.path();
-                // Refs: https://github.com/rust-lang/cargo/blob/0.85.0/src/cargo/core/compiler/layout.rs.
-                if p.is_dir() {
-                    if p.file_name().is_some_and(|f| {
-                        f == "incremental"
-                            || f == ".fingerprint"
-                            || if cx.args.report.include_build_script {
-                                f == "out"
-                            } else {
-                                f == "build"
-                            }
-                    }) {
-                        // Ignore incremental compilation related files and output from build scripts.
-                        return false;
-                    }
-                } else if cx.args.report.include_build_script {
-                    if let (Some(stem), Some(p)) = (p.file_stem(), p.parent()) {
-                        fn in_build_dir(p: &Path) -> bool {
-                            let Some(p) = p.parent() else { return false };
-                            let Some(f) = p.file_name() else { return false };
-                            f == "build"
-                        }
-                        if in_build_dir(p) {
-                            if stem == "build-script-build"
-                                || stem
-                                    .to_str()
-                                    .unwrap_or_default()
-                                    .starts_with("build_script_build-")
-                            {
-                                // TODO: use os_str_to_str?
-                                let dir = p.file_name().unwrap().to_string_lossy();
-                                if !build_script_re.is_match(&dir) {
+                // Note that Cargo has 2 file layouts. At the time of writing v2 is still unstable
+                // but planned to replace the v1 layout.
+                // v1: https://github.com/rust-lang/cargo/blob/0.85.0/src/cargo/core/compiler/layout.rs.
+                // v2: https://github.com/rust-lang/cargo/blob/592bc40115849f2f16855f4adb6cc795c208765b/src/cargo/core/compiler/layout.rs
+                if p.is_dir()
+                    && p.file_name().is_some_and(|f| {
+                        f == "incremental" || f == ".fingerprint" || f == "fingerprint"
+                    })
+                {
+                    // Ignore incremental compilation related files and Cargo fingerprints
+                    return false;
+                }
+                if let (Some(stem), Some(parent)) = (p.file_stem(), p.parent()) {
+                    if parent.starts_with(&build_dir) {
+                        if p.is_dir() && p.file_name().is_some_and(|f| f == "out") {
+                            let is_v2_layout = parent.join("fingerprint").exists();
+                            if is_v2_layout {
+                                // In the v2 layout, the `<target>/debug/$build-unit/out` dir is a
+                                // generic directory that may be the $OUT_DIR for build script
+                                // execution units or the compilation output.
+                                // We check this by seeing if a `run` directory is present which
+                                // indicates this is a build script run
+                                if parent.join("run").exists() {
                                     return false;
+                                }
+                            } else {
+                                // In the v1 layout, `out` is always the build script $OUT_DIR
+                                // which we don't care about.
+                                return false;
+                            }
+                        }
+
+                        if stem == "build-script-build"
+                            || stem.to_str().unwrap_or_default().starts_with("build_script_build-")
+                        {
+                            if cx.args.report.include_build_script {
+                                let is_v2_layout =
+                                    parent.parent().unwrap().join("fingerprint").exists();
+                                if is_v2_layout {
+                                    let dir = parent.to_string_lossy();
+                                    if !build_script_v2_layout_re.is_match(&dir) {
+                                        return false;
+                                    }
+                                } else {
+                                    // TODO: use os_str_to_str?
+                                    let dir = parent.file_name().unwrap().to_string_lossy();
+                                    if !build_script_v1_layout_re.is_match(&dir) {
+                                        return false;
+                                    }
                                 }
                             } else {
                                 return false;
@@ -273,7 +292,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         // We check extension instead of using is_executable crate because it always return true on WSL:
         // - https://github.com/taiki-e/cargo-llvm-cov/issues/316
         // - https://github.com/taiki-e/cargo-llvm-cov/issues/342
-        if ext == "d" || ext == "rlib" || ext == "rmeta" || f.ends_with(".cargo-lock") {
+        if ext == "d"
+            || ext == "rlib"
+            || ext == "rmeta"
+            || f.ends_with(".cargo-lock")
+            || f.ends_with(".cargo-build-lock")
+        {
             return false;
         }
         if cx.ws.target_is_windows
@@ -309,7 +333,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     }
 
     let re = pkg_hash_re(cx)?;
-    let build_script_re = build_script_hash_re(cx);
+    let build_script_v1_layout_re = build_script_hash_v1_layout_re(cx);
+    let build_script_v2_layout_re = build_script_hash_v2_layout_re(cx);
     let mut files = vec![];
     let mut searched_dir = String::new();
     // To support testing binary crate like tests that use the CARGO_BIN_EXE
@@ -364,50 +389,58 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
     }
 
-    let mut collect_target_dir =
-        |mut target_dir: Utf8PathBuf, mut build_dir: Option<Utf8PathBuf>| -> Result<()> {
-            if !auto_detect_profile {
-                // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-                let profile = match cx.args.cargo_profile.as_deref() {
-                    None if cx.args.release => "release",
-                    Some("release" | "bench") => "release",
-                    None | Some("dev" | "test") => "debug",
-                    Some(p) => p,
-                };
-                target_dir.push(profile);
-                if let Some(build_dir) = &mut build_dir {
-                    build_dir.push(profile);
-                }
+    let mut collect_target_dir = |mut target_dir: Utf8PathBuf,
+                                  mut build_dir: Option<Utf8PathBuf>|
+     -> Result<()> {
+        if !auto_detect_profile {
+            // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
+            let profile = match cx.args.cargo_profile.as_deref() {
+                None if cx.args.release => "release",
+                Some("release" | "bench") => "release",
+                None | Some("dev" | "test") => "debug",
+                Some(p) => p,
+            };
+            target_dir.push(profile);
+            if let Some(build_dir) = &mut build_dir {
+                build_dir.push(profile);
             }
-            for f in walk_target_dir(cx, &build_script_re, &target_dir) {
-                let f = f.path();
-                if is_object(cx, f) {
-                    if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
-                        if re.is_match(file_stem) {
-                            files.push(make_relative(cx, f).to_owned().into_os_string());
-                        }
+        }
+        for f in
+            walk_target_dir(cx, &build_script_v1_layout_re, &build_script_v2_layout_re, &target_dir)
+        {
+            let f = f.path();
+            if is_object(cx, f) {
+                if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
+                    if re.is_match(file_stem) {
+                        files.push(make_relative(cx, f).to_owned().into_os_string());
                     }
                 }
             }
-            searched_dir.push_str(target_dir.as_str());
-            if let Some(build_dir) = &build_dir {
-                if target_dir != *build_dir {
-                    for f in walk_target_dir(cx, &build_script_re, build_dir) {
-                        let f = f.path();
-                        if is_object(cx, f) {
-                            if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
-                                if re.is_match(file_stem) {
-                                    files.push(make_relative(cx, f).to_owned().into_os_string());
-                                }
+        }
+        searched_dir.push_str(target_dir.as_str());
+        if let Some(build_dir) = &build_dir {
+            if target_dir != *build_dir {
+                for f in walk_target_dir(
+                    cx,
+                    &build_script_v1_layout_re,
+                    &build_script_v2_layout_re,
+                    build_dir,
+                ) {
+                    let f = f.path();
+                    if is_object(cx, f) {
+                        if let Some(file_stem) = fs::file_stem_recursive(f).unwrap().to_str() {
+                            if re.is_match(file_stem) {
+                                files.push(make_relative(cx, f).to_owned().into_os_string());
                             }
                         }
                     }
-                    searched_dir.push(',');
-                    searched_dir.push_str(build_dir.as_str());
                 }
+                searched_dir.push(',');
+                searched_dir.push_str(build_dir.as_str());
             }
-            Ok(())
-        };
+        }
+        Ok(())
+    };
     // Check both host and target because proc-macro and build script are built for host.
     // https://doc.rust-lang.org/nightly/cargo/reference/build-cache.html
     if let Some(target) = &cx.args.target {
@@ -454,7 +487,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
             if !trybuild_targets.is_empty() {
                 let re = Regex::new(&format!("^({})(-[0-9a-f]+)?$", trybuild_targets.join("|")))
                     .unwrap();
-                for entry in walk_target_dir(cx, &build_script_re, &trybuild_target_dir) {
+                for entry in walk_target_dir(
+                    cx,
+                    &build_script_v1_layout_re,
+                    &build_script_v2_layout_re,
+                    &trybuild_target_dir,
+                ) {
                     let path = make_relative(cx, entry.path());
                     if let Some(file_stem) = fs::file_stem_recursive(path).unwrap().to_str() {
                         if re.is_match(file_stem) {
@@ -483,7 +521,12 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     let ui_test_target_dir = cx.ws.ui_test_target_dir();
     let mut collect_ui_test_target_dir = |ui_test_target_dir: Utf8PathBuf| -> Result<()> {
         if ui_test_target_dir.is_dir() {
-            for entry in walk_target_dir(cx, &build_script_re, &ui_test_target_dir) {
+            for entry in walk_target_dir(
+                cx,
+                &build_script_v1_layout_re,
+                &build_script_v2_layout_re,
+                &ui_test_target_dir,
+            ) {
                 let path = make_relative(cx, entry.path());
                 if is_object(cx, path) {
                     files.push(path.to_owned().into_os_string());
@@ -526,8 +569,16 @@ fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
     re.build()
 }
 
-fn build_script_hash_re(cx: &Context) -> RegexVec {
+fn build_script_hash_v1_layout_re(cx: &Context) -> RegexVec {
     let mut re = RegexVecBuilder::new("^(", ")-[0-9a-f]+$");
+    for &id in &cx.workspace_members.included {
+        re.or(&cx.ws.metadata[id].name);
+    }
+    re.build().unwrap()
+}
+
+fn build_script_hash_v2_layout_re(cx: &Context) -> RegexVec {
+    let mut re = RegexVecBuilder::new("build/(", ")/[0-9a-f]+/out$");
     for &id in &cx.workspace_members.included {
         re.or(&cx.ws.metadata[id].name);
     }
