@@ -109,7 +109,10 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
         }
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered_files = json.get_uncovered_lines(
+                ignore_filename_regex.as_deref(),
+                cx.args.report.include_filename_regex.as_deref(),
+            );
             let uncovered = uncovered_files
                 .iter()
                 .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
@@ -129,7 +132,10 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered_files = json.get_uncovered_lines(
+                ignore_filename_regex.as_deref(),
+                cx.args.report.include_filename_regex.as_deref(),
+            );
             if !uncovered_files.is_empty() {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
                 writeln!(stdout, "Uncovered Lines:")?;
@@ -636,6 +642,10 @@ impl ReportFormat {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
         }
+        if let Some(include_filename_regex) = &cx.args.report.include_filename_regex {
+            cmd.arg("-include-filename-regex");
+            cmd.arg(include_filename_regex);
+        }
 
         match self {
             Self::Text | Self::Html => {
@@ -715,7 +725,11 @@ impl ReportFormat {
             }
             let cov = cmd.read()?;
             let cov: LlvmCovJsonExport = serde_json::from_str(&cov)?;
-            let cov = CodeCovJsonExport::from_llvm_cov_json_export(cov, ignore_filename_regex);
+            let cov = CodeCovJsonExport::from_llvm_cov_json_export(
+                cov,
+                ignore_filename_regex,
+                cx.args.report.include_filename_regex.as_deref(),
+            );
             let out = serde_json::to_string(&cov)?;
 
             if let Some(output_path) = &cx.args.report.output_path {
@@ -796,6 +810,10 @@ impl ReportFormat {
         if let Some(ignore_filename_regex) = ignore_filename_regex {
             cmd.arg("-ignore-filename-regex");
             cmd.arg(ignore_filename_regex);
+        }
+        if let Some(include_filename_regex) = &cx.args.report.include_filename_regex {
+            cmd.arg("-include-filename-regex");
+            cmd.arg(include_filename_regex);
         }
         if term::verbose() {
             status!("Running", "{cmd}");
