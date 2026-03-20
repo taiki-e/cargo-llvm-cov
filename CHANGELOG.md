@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-03-20
+
 - Publish [artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations).
 
 ## [0.8.4] - 2026-02-06
@@ -804,7 +806,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.4...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.2...v0.8.3
 [0.8.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.1...v0.8.2
