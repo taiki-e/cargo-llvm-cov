@@ -15,15 +15,6 @@ on:
           - minor
           - major
 
-env:
-  CARGO_INCREMENTAL: 0
-  CARGO_NET_GIT_FETCH_WITH_CLI: true
-  CARGO_NET_RETRY: 10
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  RUSTFLAGS: -D warnings
-  RUSTUP_MAX_RETRIES: 10
-
 defaults:
   run:
     shell: bash --noprofile --norc -CeEuxo pipefail {0}
@@ -33,116 +24,30 @@ jobs:
     if: github.repository_owner == 'taiki-e'
     uses: taiki-e/github-actions/.github/workflows/rust-release.yml@main
     permissions:
-      contents: write # for taiki-e/create-gh-release-action
-      id-token: write # for rust-lang/crates-io-auth-action
+      contents: write # for taiki-e/create-gh-release-action / taiki-e/upload-rust-binary-action
+      id-token: write # for rust-lang/crates-io-auth-action / actions/attest
+      attestations: write # for actions/attest
     secrets: inherit
     with:
       version: ${{ inputs.version }}
-      draft: true
-
-  upload-assets:
-    name: ${{ matrix.target }}
-    if: github.repository_owner == 'taiki-e'
-    needs: release
-    strategy:
-      matrix:
-        include:
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: aarch64-unknown-linux-musl
-          - target: aarch64-apple-darwin
-            os: macos-14
-          # -C instrument-coverage doesn't support aarch64-pc-windows-msvc yet (https://github.com/rust-lang/rust/issues/150123),
-          # but cross-compile to aarch64-pc-windows-gnullvm works.
-          - target: aarch64-pc-windows-msvc
-            os: windows-2022
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: x86_64-unknown-linux-musl
-          - target: x86_64-apple-darwin
-            os: macos-14
-          - target: x86_64-pc-windows-msvc
-            os: windows-2022
-          - target: x86_64-unknown-freebsd
-          # - target: x86_64-unknown-illumos # error[E0463]: can't find crate for `profiler_builtins`
-          - target: universal-apple-darwin
-            os: macos-14
-          - target: powerpc64le-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: powerpc64le-unknown-linux-musl
-          - target: riscv64gc-unknown-linux-gnu
-            os: ubuntu-22.04
-          - target: riscv64gc-unknown-linux-musl
-          - target: s390x-unknown-linux-gnu
-            os: ubuntu-22.04
-          # - target: s390x-unknown-linux-musl # tier 3
-    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
-    timeout-minutes: 60
-    permissions:
-      contents: write # for taiki-e/upload-rust-binary-action
-    steps:
-      - uses: taiki-e/checkout-action@v1
-      # TODO: Use checkout-action's option once https://github.com/taiki-e/checkout-action/issues/3 implemented.
-      - run: |
-          IFS=$'\n\t'
-          trap -- 's=$?; printf >&2 "%s\n" "${0##*/}:${LINENO}: \`${BASH_COMMAND}\` exit with ${s}"; exit ${s}' ERR
-          retry() {
-            for i in {1..10}; do
-              if "$@"; then
-                return 0
-              else
-                sleep "${i}"
-              fi
-            done
-            "$@"
-          }
-          bail() {
-            printf '::error::%s\n' "$*"
-            exit 1
-          }
-          retry git fetch origin --tags &>/dev/null
-          git checkout "${REF}"
-          # Make sure the current revision is same as release step.
-          rev=$(git rev-parse HEAD)
-          if [[ "${rev}" != "${RELEASE_REV}" ]]; then
-            bail "revision difference between release step"
-          fi
-        env:
-          REF: ${{ needs.release.outputs.ref }}
-          RELEASE_REV: ${{ needs.release.outputs.rev }}
-      - uses: taiki-e/github-actions/install-rust@stable
-      - uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
-          runner: none
-      - run: printf '%s\n' "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static" >>"${GITHUB_ENV}"
-        if: contains(matrix.target, '-windows-msvc')
-      - run: printf '%s\n' "RUSTFLAGS=${RUSTFLAGS} -C target-feature=+crt-static -C link-self-contained=yes" >>"${GITHUB_ENV}"
-        if: contains(matrix.target, '-linux-musl')
-      # https://doc.rust-lang.org/rustc/platform-support.html
-      - run: printf 'MACOSX_DEPLOYMENT_TARGET=10.12\n' >>"${GITHUB_ENV}"
-        if: matrix.target == 'x86_64-apple-darwin'
-      - run: printf 'MACOSX_DEPLOYMENT_TARGET=11.0\n' >>"${GITHUB_ENV}"
-        if: matrix.target == 'aarch64-apple-darwin' || matrix.target == 'universal-apple-darwin'
-      - uses: taiki-e/upload-rust-binary-action@v1
-        with:
-          bin: cargo-llvm-cov
-          target: ${{ matrix.target }}
-          tar: all
-          zip: windows
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{ needs.release.outputs.ref }}
-
-  github-release:
-    if: github.repository_owner == 'taiki-e'
-    needs: [release, upload-assets]
-    runs-on: ubuntu-slim
-    timeout-minutes: 15 # Max execution time of ubuntu-slim runner.
-    permissions:
-      contents: write # for gh release edit
-    steps:
-      - uses: taiki-e/checkout-action@v1
-      - run: gh release edit "${REF#refs/tags/}" --draft=false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REF: ${{ needs.release.outputs.ref }}
+      bin: cargo-llvm-cov
+      # -C instrument-coverage doesn't support aarch64-pc-windows-msvc yet (https://github.com/rust-lang/rust/issues/150123),
+      # but cross-compile to aarch64-pc-windows-gnullvm works.
+      # Skip x86_64-unknown-illumos because it doesn't support -C instrument-coverage: error[E0463]: can't find crate for `profiler_builtins`
+      # Skip s390x-unknown-linux-musl because it's tier 3
+      bin-target: |
+        aarch64-unknown-linux-gnu
+        aarch64-unknown-linux-musl
+        aarch64-apple-darwin
+        aarch64-pc-windows-msvc
+        x86_64-unknown-linux-gnu
+        x86_64-unknown-linux-musl
+        x86_64-apple-darwin
+        x86_64-pc-windows-msvc
+        x86_64-unknown-freebsd
+        universal-apple-darwin
+        powerpc64le-unknown-linux-gnu
+        powerpc64le-unknown-linux-musl
+        riscv64gc-unknown-linux-gnu
+        riscv64gc-unknown-linux-musl
+        s390x-unknown-linux-gnu

@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Publish [artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations).
+
 ## [0.8.4] - 2026-02-06
 
 - Update minimal version of `cargo-config2` to 0.1.40 to fix error with custom targets in [recent nightly](https://github.com/rust-lang/rust/pull/150151).
