@@ -776,7 +776,7 @@ curl --proto '=https' --tlsv1.2 -fsSL -o cargo-llvm-cov.tar.gz "https://github.c
 # Verify release attestations.
 gh release -R https://github.com/taiki-e/cargo-llvm-cov verify-asset cargo-llvm-cov.tar.gz
 # Verify artifact attestations.
-gh attestation verify --owner taiki-e cargo-llvm-cov.tar.gz
+gh attestation verify --repo taiki-e/cargo-llvm-cov --signer-workflow taiki-e/github-actions/.github/workflows/rust-release.yml cargo-llvm-cov.tar.gz
 # Install to $CARGO_HOME/bin (or $HOME/.cargo/bin if CARGO_HOME is unset).
 tar xf cargo-llvm-cov.tar.gz -C "${CARGO_HOME:-"$HOME/.cargo"}"/bin
 # Remove archive.
