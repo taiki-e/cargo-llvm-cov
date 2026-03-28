@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-#![cfg(not(miri))] // Miri doesn't support file with non-default mode: https://github.com/rust-lang/miri/pull/2720
+#![cfg(not(miri))] // Miri doesn't support std::process::Command: https://github.com/rust-lang/miri/issues/3374
 
 mod auxiliary;
 
