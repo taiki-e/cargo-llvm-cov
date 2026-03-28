@@ -7,13 +7,13 @@ trap -- 'printf >&2 "%s\n" "${0##*/}: trapped SIGINT"; exit 1' SIGINT
 cd -- "$(dirname -- "$0")"/..
 
 # USAGE:
-#    GH_TOKEN=$(gh auth token) ./tools/tidy.sh
+#    GITHUB_TOKEN=$(gh auth token) ./tools/tidy.sh
 #
 # Note: This script requires the following tools:
 # - git 1.8+
 # - jq 1.6+
 # - npm (node 18+)
-# - python 3.6+, pipx
+# - python 3.6+, uv
 # - shfmt
 # - shellcheck
 # - zizmor
@@ -136,8 +136,8 @@ py_suffix=''
 if type -P python3 >/dev/null; then
   py_suffix=3
 fi
-yq() { pipx run yq "$@"; }
-tomlq() { pipx run --spec yq tomlq "$@"; }
+yq() { uvx yq "$@"; }
+tomlq() { uvx --from yq tomlq "$@"; }
 case "$(uname -s)" in
   Linux)
     if [[ "$(uname -o)" == 'Android' ]]; then
@@ -190,8 +190,8 @@ case "$(uname -s)" in
         else
           jq() { command jq "$@" | tr -d '\r'; }
         fi
-        yq() { pipx run yq "$@" | tr -d '\r'; }
-        tomlq() { pipx run --spec yq tomlq "$@" | tr -d '\r'; }
+        yq() { uvx yq "$@" | tr -d '\r'; }
+        tomlq() { uvx --from yq tomlq "$@" | tr -d '\r'; }
       fi
     fi
     ;;
@@ -248,7 +248,7 @@ if [[ ${#rust_files[@]} -gt 0 ]]; then
   info "checking Rust code style"
   check_config .rustfmt.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.rustfmt.toml"
   check_config .clippy.toml "; consider adding with reference to https://github.com/taiki-e/cargo-hack/blob/HEAD/.clippy.toml"
-  if check_install cargo jq pipx; then
+  if check_install cargo jq uv; then
     # `cargo fmt` cannot recognize files not included in the current workspace and modules
     # defined inside macros, so run rustfmt directly.
     # We need to use nightly rustfmt because we use the unstable formatting options of rustfmt.
@@ -833,7 +833,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2086,SC2096,SC2129
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in .github/workflows/*.yml and **/action.yml"
-    if check_install jq python3 pipx; then
+    if check_install jq python3 uv; then
       shellcheck_for_gha() {
         local text=$1
         local shell=$2
@@ -988,7 +988,8 @@ if [[ ${#zizmor_targets[@]} -gt 0 ]]; then
   if [[ "${ostype}" =~ ^(netbsd|openbsd|dragonfly|illumos|solaris)$ ]] && [[ -n "${CI:-}" ]] && ! type -P zizmor >/dev/null; then
     warn "this check is skipped on NetBSD/OpenBSD/Dragonfly/illumos/Solaris due to installing zizmor is hard on these platform"
   elif check_install zizmor; then
-    # zizmor can also be used via pipx, but old version will be installed if glibc version is old.
+    # zizmor can also be used via uvx, but old version will be installed if glibc version is old.
+    # Do not use `zizmor -q .` here because it also attempts to check submodules.
     IFS=' '
     info "running \`zizmor -q ${zizmor_targets[*]}\`"
     IFS=$'\n\t'
@@ -1045,7 +1046,7 @@ fi
 if [[ -f .cspell.json ]]; then
   info "spell checking"
   project_dictionary=.github/.cspell/project-dictionary.txt
-  if check_install npm jq pipx; then
+  if check_install npm jq uv; then
     has_rust=''
     if [[ -n "$(ls_files '*Cargo.toml')" ]]; then
       has_rust=1

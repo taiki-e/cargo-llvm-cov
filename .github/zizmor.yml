@@ -2,10 +2,8 @@
 # https://docs.zizmor.sh/configuration/
 
 rules:
-  dependabot-cooldown: { disable: true } # Unless dependencies are pinned/locked, the effect is limited.
   secrets-inherit: { disable: true }
   unpinned-uses:
     config:
       policies:
         taiki-e/*: any
-        '*': ref-pin
