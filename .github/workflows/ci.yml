@@ -44,7 +44,8 @@ jobs:
       contents: write # for creating branch for pr
       pull-requests: write # unused (used in `codegen-automerge: true` case)
       security-events: write # for github/codeql-action/*
-    secrets: inherit
+    secrets:
+      PR_TOKEN_APP_PRIVATE_KEY: ${{ secrets.PR_TOKEN_APP_PRIVATE_KEY }}
     with:
       check-external-types: false
       docs: false
@@ -91,9 +92,8 @@ jobs:
       - name: Test cargo llvm-cov nextest
         run: |
           unset RUSTFLAGS
-          target="${{ matrix.target }}"
-          if [[ -z "${target}" ]]; then
-            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          if [[ -z "${TARGET}" ]]; then
+            TARGET=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           fi
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
@@ -116,7 +116,7 @@ jobs:
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           cargo clean
           rm -- a.tar.zst
-          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${target}"
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${TARGET}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           cargo clean
@@ -127,6 +127,8 @@ jobs:
           cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci --cargo-profile dev
           cargo clean
+        env:
+          TARGET: ${{ matrix.target }}
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test nightly-specific options, old Cargo compatibility
         run: |
@@ -141,9 +143,8 @@ jobs:
             "$@"
           }
           unset RUSTFLAGS
-          target="${{ matrix.target }}"
-          if [[ -z "${target}" ]]; then
-            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          if [[ -z "${TARGET}" ]]; then
+            TARGET=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           fi
 
           # Test nightly-specific options
@@ -164,7 +165,7 @@ jobs:
           popd >/dev/null
 
           # Test minimum runnable Cargo version.
-          case "${{ matrix.target }}" in
+          case "${TARGET}" in
             *-windows-gnullvm) ;; # target unavailable on Rust 1.60.
             *)
               retry rustup toolchain add 1.60 --no-self-update
@@ -173,6 +174,8 @@ jobs:
               popd >/dev/null
               ;;
           esac
+        env:
+          TARGET: ${{ matrix.target }}
         if: startsWith(matrix.rust, 'nightly')
       - name: Test --dep-coverage
         run: |
@@ -187,7 +190,7 @@ jobs:
       - name: Test show-env --sh on bash
         run: |
           bash --version
-          if [[ "${{ matrix.os }}" == "macos"* ]]; then
+          if [[ "$(uname -s)" == 'Darwin' ]]; then
             # macOS's /bin/bash is too old.
             cargo llvm-cov show-env --sh > env.sh
             # shellcheck disable=SC1091
@@ -479,29 +482,31 @@ jobs:
             done
             "$@"
           }
-          if type -P clang-"${{ matrix.llvm }}" &>/dev/null; then
+          if type -P clang-"${LLVM_VERSION}" >/dev/null; then
             exit 0
           fi
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
           retry curl --proto '=https' --tlsv1.2 -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
-          sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
-            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
+          sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${LLVM_VERSION}.list" >/dev/null \
+            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main"
           retry sudo apt-get -o Acquire::Retries=10 -qq update
           apt_packages=(
-            clang-"${{ matrix.llvm }}"
-            libc++-"${{ matrix.llvm }}"-dev
-            libc++abi-"${{ matrix.llvm }}"-dev
-            libclang-"${{ matrix.llvm }}"-dev
-            lld-"${{ matrix.llvm }}"
-            llvm-"${{ matrix.llvm }}"
-            llvm-"${{ matrix.llvm }}"-dev
+            clang-"${LLVM_VERSION}"
+            libc++-"${LLVM_VERSION}"-dev
+            libc++abi-"${LLVM_VERSION}"-dev
+            libclang-"${LLVM_VERSION}"-dev
+            lld-"${LLVM_VERSION}"
+            llvm-"${LLVM_VERSION}"
+            llvm-"${LLVM_VERSION}"-dev
           )
           if ! sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"; then
             retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 upgrade -y
             retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"
           fi
+        env:
+          LLVM_VERSION: ${{ matrix.llvm }}
       - run: cargo install --path . --debug
       - name: Test
         run: |
@@ -515,11 +520,11 @@ jobs:
             done
             "$@"
           }
-          export CC="clang-${{ matrix.llvm }}"
-          export CXX="clang++-${{ matrix.llvm }}"
-          export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
-          export LLVM_PROFDATA="llvm-profdata-${{ matrix.llvm }}"
-          case "${{ matrix.llvm }}" in
+          export CC="clang-${LLVM_VERSION}"
+          export CXX="clang++-${LLVM_VERSION}"
+          export LLVM_COV="llvm-cov-${LLVM_VERSION}"
+          export LLVM_PROFDATA="llvm-profdata-${LLVM_VERSION}"
+          case "${LLVM_VERSION}" in
             1[4-7])
               retry rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
               cargo clean
@@ -550,4 +555,6 @@ jobs:
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
           esac
+        env:
+          LLVM_VERSION: ${{ matrix.llvm }}
         working-directory: tests/fixtures/crates/ffi

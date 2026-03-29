@@ -86,11 +86,6 @@ check_config() {
 check_install() {
   for tool in "$@"; do
     if ! type -P "${tool}" >/dev/null; then
-      if [[ "${tool}" == 'python3' ]]; then
-        if type -P python >/dev/null; then
-          continue
-        fi
-      fi
       error "'${tool}' is required to run this check"
       return 1
     fi
@@ -132,10 +127,6 @@ EOF
   exit 1
 fi
 
-py_suffix=''
-if type -P python3 >/dev/null; then
-  py_suffix=3
-fi
 yq() { uvx yq "$@"; }
 tomlq() { uvx --from yq tomlq "$@"; }
 case "$(uname -s)" in
@@ -700,7 +691,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2096
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in \`\$(git ls-files '*Dockerfile*')\`"
-    if check_install jq python3 parse-dockerfile; then
+    if check_install jq parse-dockerfile; then
       shellcheck_for_dockerfile() {
         local text=$1
         local shell=$2
@@ -833,7 +824,7 @@ elif check_install shellcheck; then
     # Exclude SC2096 due to the way the temporary script is created.
     shellcheck_exclude=SC2086,SC2096,SC2129
     info "running \`shellcheck --exclude ${shellcheck_exclude}\` for scripts in .github/workflows/*.yml and **/action.yml"
-    if check_install jq python3 uv; then
+    if check_install jq uv; then
       shellcheck_for_gha() {
         local text=$1
         local shell=$2
@@ -846,16 +837,8 @@ elif check_install shellcheck; then
           *) return ;;
         esac
         text="#!/usr/bin/env ${shell%' {0}'}"$'\n'"${text}"
-        # Use python because sed doesn't support .*?.
-        text=$(
-          "python${py_suffix}" - <<EOF
-import re
-text = re.sub(r"\\\${{.*?}}", "\${__GHA_SYNTAX__}", r'''${text}''')
-print(text)
-EOF
-        )
         case "${ostype}" in
-          windows) text=${text//$'\r'/} ;; # Python print emits \r\n.
+          windows) text=${text//$'\r'/} ;; # Parse error on git bash/msys2 bash.
         esac
         local color=auto
         if [[ -t 1 ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
@@ -989,11 +972,11 @@ if [[ ${#zizmor_targets[@]} -gt 0 ]]; then
     warn "this check is skipped on NetBSD/OpenBSD/Dragonfly/illumos/Solaris due to installing zizmor is hard on these platform"
   elif check_install zizmor; then
     # zizmor can also be used via uvx, but old version will be installed if glibc version is old.
-    # Do not use `zizmor -q .` here because it also attempts to check submodules.
+    # Do not use `zizmor .` here because it also attempts to check submodules.
     IFS=' '
-    info "running \`zizmor -q ${zizmor_targets[*]}\`"
+    info "running \`zizmor -q --pedantic ${zizmor_targets[*]}\`"
     IFS=$'\n\t'
-    zizmor -q "${zizmor_targets[@]}"
+    zizmor -q --pedantic "${zizmor_targets[@]}"
   fi
 fi
 printf '\n'

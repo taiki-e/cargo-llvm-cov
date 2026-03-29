@@ -19,6 +19,10 @@ defaults:
   run:
     shell: bash --noprofile --norc -CeEuxo pipefail {0}
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   release:
     if: github.repository_owner == 'taiki-e'
@@ -27,7 +31,8 @@ jobs:
       contents: write # for taiki-e/create-gh-release-action / taiki-e/upload-rust-binary-action
       id-token: write # for rust-lang/crates-io-auth-action / actions/attest
       attestations: write # for actions/attest
-    secrets: inherit
+    secrets:
+      PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
     with:
       version: ${{ inputs.version }}
       bin: cargo-llvm-cov
