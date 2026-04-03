@@ -3,6 +3,7 @@
 
 rules:
   anonymous-definition: { disable: true }
+  dependabot-cooldown: { config: { days: 14 } }
   unpinned-uses:
     config:
       policies:

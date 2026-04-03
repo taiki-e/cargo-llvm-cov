@@ -316,7 +316,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: zsh {0}
+        shell: zsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --csh on csh
@@ -332,7 +332,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: bsd-csh {0}
+        shell: bsd-csh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Test show-env --csh on tcsh
@@ -349,7 +349,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: tcsh {0}
+        shell: tcsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --fish
@@ -365,7 +365,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: fish {0}
+        shell: fish {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       # Split step and use absolute path to work around https://www.nushell.sh/book/thinking_in_nu.html#example-dynamically-generating-source
@@ -373,7 +373,7 @@ jobs:
         run: |
           cargo llvm-cov show-env --nu | save -f /tmp/env.nu
           cat -- /tmp/env.nu
-        shell: nu {0}
+        shell: nu {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
       - name: Test show-env --nu
@@ -388,7 +388,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: nu {0}
+        shell: nu {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
       - name: Test show-env --xonsh
@@ -404,7 +404,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: xonsh {0}
+        shell: xonsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
 
