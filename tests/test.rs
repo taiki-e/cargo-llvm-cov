@@ -199,10 +199,7 @@ fn no_coverage() {
 #[test]
 fn merge() {
     // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if !cfg!(any(
-        all(target_arch = "x86_64", target_os = "linux"),
-        all(target_arch = "aarch64", target_os = "macos"),
-    )) {
+    if !cfg!(any(all(target_arch = "x86_64", target_os = "linux"))) {
         return;
     }
     let output_dir = fixtures_dir().join("coverage-reports").join("merge");

@@ -6,13 +6,13 @@
   | merge::func:
   |    1|      1|fn func(x: i32) -> bool {
   |    2|      1|    if x < 0 { true } else { false }
-  |                             ^0
+  |                                           ^0
   |    3|      1|}
   ------------------
   | merge::func:
   |    1|      1|fn func(x: i32) -> bool {
   |    2|      1|    if x < 0 { true } else { false }
-  |                                           ^0
+  |                             ^0
   |    3|      1|}
   ------------------
     4|       |
@@ -27,16 +27,16 @@
   | merge::test:
   |    6|      1|fn test() {
   |    7|       |    #[cfg(feature = "a")]
-  |    8|      1|    assert!(!func(1));
+  |    8|       |    assert!(!func(1));
   |    9|       |    #[cfg(feature = "b")]
-  |   10|       |    assert!(func(-1));
+  |   10|      1|    assert!(func(-1));
   |   11|      1|}
   ------------------
   | merge::test:
   |    6|      1|fn test() {
   |    7|       |    #[cfg(feature = "a")]
-  |    8|       |    assert!(!func(1));
+  |    8|      1|    assert!(!func(1));
   |    9|       |    #[cfg(feature = "b")]
-  |   10|      1|    assert!(func(-1));
+  |   10|       |    assert!(func(-1));
   |   11|      1|}
   ------------------
