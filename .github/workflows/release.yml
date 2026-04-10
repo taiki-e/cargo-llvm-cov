@@ -26,13 +26,14 @@ concurrency:
 jobs:
   release:
     if: github.repository_owner == 'taiki-e'
-    uses: taiki-e/github-actions/.github/workflows/rust-release.yml@main
+    uses: taiki-e/github-actions/.github/workflows/rust-release.yml@dec917193d835117a7238865adf83273d9fcd27a # main
     permissions:
       contents: write # for taiki-e/create-gh-release-action / taiki-e/upload-rust-binary-action
       id-token: write # for rust-lang/crates-io-auth-action / actions/attest
       attestations: write # for actions/attest
     secrets:
-      PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+      PUSH_TOKEN_APP_CLIENT_ID: ${{ secrets.PUSH_TOKEN_APP_CLIENT_ID }}
+      PUSH_TOKEN_APP_PRIVATE_KEY: ${{ secrets.PUSH_TOKEN_APP_PRIVATE_KEY }}
     with:
       version: ${{ inputs.version }}
       bin: cargo-llvm-cov

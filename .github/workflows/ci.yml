@@ -33,13 +33,13 @@ concurrency:
 
 jobs:
   miri:
-    uses: taiki-e/github-actions/.github/workflows/miri.yml@main
+    uses: taiki-e/github-actions/.github/workflows/miri.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   msrv:
-    uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
+    uses: taiki-e/github-actions/.github/workflows/msrv.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   release-dry-run:
-    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
+    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@dec917193d835117a7238865adf83273d9fcd27a # main
     permissions:
       contents: write # for creating branch for pr
       pull-requests: write # unused (used in `codegen-automerge: true` case)
@@ -74,15 +74,15 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
         with:
           tool: cargo-hack,cargo-minimal-versions,nextest
           fallback: none
-      - uses: taiki-e/setup-cross-toolchain-action@main
+      - uses: taiki-e/setup-cross-toolchain-action@d62f33b587e73b0004731caebc7d2d46b18a7567 # v1.39.2
         with:
           target: ${{ matrix.target }}
         if: matrix.target != ''
@@ -227,8 +227,14 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == '' || startsWith(matrix.os, 'macos')
       - name: Test show-env --pwsh on pwsh
         run: |
+          Set-StrictMode -Version Latest
           pwsh --version
-          Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+          function set_env() {
+            [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '')]
+            param()
+            Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+          }
+          set_env
           env
           cargo llvm-cov clean --workspace
           cargo build
@@ -286,7 +292,7 @@ jobs:
             done
             "$@"
           }
-          retry curl --proto '=https' --tlsv1.2 -fsSL https://apt.fury.io/nushell/gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 https://apt.fury.io/nushell/gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
           printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
             | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
@@ -419,11 +425,11 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
         with:
           tool: nextest
           fallback: none
@@ -468,8 +474,10 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@stable
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
+        with:
+          toolchain: stable
       - name: Install LLVM
         run: |
           retry() {
@@ -487,10 +495,10 @@ jobs:
           fi
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
-          retry curl --proto '=https' --tlsv1.2 -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
           sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${LLVM_VERSION}.list" >/dev/null \
-            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main"
+            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main"
           retry sudo apt-get -o Acquire::Retries=10 -qq update
           apt_packages=(
             clang-"${LLVM_VERSION}"

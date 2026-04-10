@@ -27,15 +27,14 @@ fi
 if [[ -n "${TIDY_DEV:-}" ]]; then
   image="ghcr.io/taiki-e/tidy:latest"
 else
-  image="ghcr.io/taiki-e/tidy@sha256:4552cbce9426e102f9650cd9f8381e836fc8fda081dcbddcc7f31b15d48d1654"
+  image="ghcr.io/taiki-e/tidy@sha256:bce85a4321f80c09f2b68420e9149bcf7c085130ab1e1fca54443f76833cd184"
 fi
 user="$(id -u):$(id -g)"
 workdir=$(pwd)
 tmp=$(mktemp -d)
 trap -- 'rm -rf -- "${tmp:?}"' EXIT
-mkdir -p -- "${tmp}/zizmor"
-touch -- "${tmp}/dummy"
-mkdir -- "${tmp}/dummy-dir"
+mkdir -p -- "${tmp}"/{pwsh-cache,pwsh-local,zizmor-cache,dummy-dir,tmp}
+touch -- "${tmp}"/dummy
 code=0
 color=''
 if [[ -t 1 ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
@@ -84,22 +83,25 @@ docker_run() {
 set +e
 docker_run \
   --mount "type=bind,source=${workdir},target=${workdir}" --workdir "${workdir}" \
+  --mount "type=bind,source=${tmp}/tmp,target=/tmp/tidy" \
+  --mount "type=bind,source=${tmp}/pwsh-cache,target=/.cache/powershell" \
+  --mount "type=bind,source=${tmp}/pwsh-local,target=/.local/share/powershell" \
   --network=none \
   "${image}" \
   /checks/offline.sh
 # Some good audits requires access to GitHub API.
 docker_run \
   --mount "type=bind,source=${workdir},target=${workdir},readonly" --workdir "${workdir}" \
-  --mount "type=bind,source=${tmp}/zizmor,target=/.cache/zizmor" \
+  --mount "type=bind,source=${tmp}/zizmor-cache,target=/.cache/zizmor" \
   --env GH_TOKEN --env GITHUB_TOKEN --env ZIZMOR_GITHUB_TOKEN \
   "${image}" \
   /checks/zizmor.sh
 # We use remote dictionary.
 docker_run \
   --mount "type=bind,source=${workdir},target=${workdir},readonly" --workdir "${workdir}" \
-  --mount "type=bind,source=${workdir}/.cspell.json,target=${workdir}/.cspell.json" \
   --mount "type=bind,source=${workdir}/.github/.cspell/project-dictionary.txt,target=${workdir}/.github/.cspell/project-dictionary.txt" \
   --mount "type=bind,source=${workdir}/.github/.cspell/rust-dependencies.txt,target=${workdir}/.github/.cspell/rust-dependencies.txt" \
+  --mount "type=bind,source=${tmp}/tmp,target=/tmp/tidy" \
   "${image}" \
   /checks/cspell.sh
 
