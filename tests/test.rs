@@ -155,6 +155,27 @@ fn build_dir() {
     run("build_dir", "build_dir", &[], &[]);
 }
 
+// https://github.com/rust-lang/cargo/issues/15010
+// build-dir v2 layout is not yet stable
+#[rustversion::attr(not(nightly), ignore)]
+#[test]
+fn build_dir_layout_v2() {
+    run("real1", "workspace_root", &[], &[("CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT", "true")]);
+    run("real1", "all", &["--all"], &[("CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT", "true")]);
+    run("real1", "manifest_path", &["--manifest-path", "member1/member2/Cargo.toml"], &[(
+        "CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT",
+        "true",
+    )]);
+    run("real1", "package1", &["--package", "member2"], &[(
+        "CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT",
+        "true",
+    )]);
+    run("real1", "exclude", &["--all", "--exclude", "crate1"], &[(
+        "CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT",
+        "true",
+    )]);
+}
+
 // https://github.com/taiki-e/cargo-llvm-cov/issues/303
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
 #[rustversion::attr(before(1.88), ignore)]
