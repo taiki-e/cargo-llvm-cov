@@ -308,6 +308,8 @@ pub(crate) struct ReportOptions {
     pub(crate) failure_mode: Option<String>,
     /// Skip source code files with file paths that match the given regular expression.
     pub(crate) ignore_filename_regex: Option<String>,
+    /// Only include source code files with file paths that match the given regular expression.
+    pub(crate) include_filename_regex: Option<String>,
     // For debugging (unstable)
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
@@ -369,6 +371,7 @@ impl ReportOptions {
                 output_dir,
                 failure_mode,
                 ignore_filename_regex,
+                include_filename_regex,
                 no_default_ignore_filename_regex,
                 show_instantiations,
                 fail_under_functions,
@@ -394,6 +397,7 @@ impl ReportOptions {
                 ("--output-dir", output_dir.is_some()),
                 ("--failure-mode", failure_mode.is_some()),
                 ("--ignore-filename-regex", ignore_filename_regex.is_some()),
+                ("--include-filename-regex", include_filename_regex.is_some()),
                 ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
                 ("--show-instantiations", *show_instantiations),
                 ("--fail-under-functions", fail_under_functions.is_some()),
@@ -1083,6 +1087,7 @@ impl Args {
                 Long("output-dir") => parse_opt!(report.output_dir),
                 Long("failure-mode") => parse_opt!(report.failure_mode),
                 Long("ignore-filename-regex") => parse_opt!(report.ignore_filename_regex),
+                Long("include-filename-regex") => parse_opt!(report.include_filename_regex),
                 Long(
                     flag @ ("no-default-ignore-filename-regex"
                     | "disable-default-ignore-filename-regex"),
@@ -1501,6 +1506,7 @@ impl Args {
         // forbid_empty_values
         for (flag, is_empty) in [
             ("--ignore-filename-regex", report.ignore_filename_regex.as_deref() == Some("")),
+            ("--include-filename-regex", report.include_filename_regex.as_deref() == Some("")),
             ("--output-path", report.output_path.as_deref() == Some(Utf8Path::new(""))),
             ("--output-dir", report.output_dir.as_deref() == Some(Utf8Path::new(""))),
         ] {
