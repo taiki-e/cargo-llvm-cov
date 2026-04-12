@@ -202,6 +202,15 @@ impl LlvmCovJsonExport {
         Ok(covered * 100_f64 / count)
     }
 
+    // Checks if each file meets the minimum line coverage threshold.
+    #[must_use]
+    pub fn all_files_above_coverage(&self, threshold: f64) -> bool {
+        self.data
+            .iter()
+            .flat_map(|export| export.files.iter())
+            .all(|file| file.summary.lines.percent > threshold)
+    }
+
     /// Gets the list of uncovered lines of all files.
     #[must_use]
     pub fn get_uncovered_lines(&self, ignore_filename_regex: Option<&str>) -> UncoveredLines {
@@ -602,6 +611,26 @@ mod tests {
     #[test]
     fn test_get_regions_percent() {
         test_get_coverage_percent(CoverageKind::Regions);
+    }
+
+    #[test]
+    fn test_all_files_above_coverage() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        let cases = vec![
+            // (path, minimum_coverage, all_files_above_coverage)
+            ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 60_f64, false),
+            ("tests/fixtures/coverage-reports/no_coverage/no_coverage.json", 50_f64, true),
+            ("tests/fixtures/coverage-reports/no_test/no_test.json", 90_f64, false),
+        ];
+
+        for (file, min_coverage, covered) in cases {
+            let file = &manifest_dir.join(file);
+            let s = fs::read_to_string(file).unwrap();
+            let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+            assert_eq!(json.all_files_above_coverage(min_coverage), covered, "{file:?}");
+        }
     }
 
     #[test]

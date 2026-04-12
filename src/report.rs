@@ -58,6 +58,7 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
     if cx.args.report.fail_under_functions.is_some()
         || cx.args.report.fail_under_lines.is_some()
+        || cx.args.report.fail_under_file_lines.is_some()
         || cx.args.report.fail_under_regions.is_some()
         || cx.args.report.fail_uncovered_functions.is_some()
         || cx.args.report.fail_uncovered_lines.is_some()
@@ -85,6 +86,13 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
                 .get_coverage_percent(CoverageKind::Lines)
                 .context("failed to get line coverage")?;
             if lines_percent < fail_under_lines {
+                term::error::set(true);
+            }
+        }
+
+        if let Some(fail_under_file_lines) = cx.args.report.fail_under_file_lines {
+            // Handle --fail-under-file-lines.
+            if !json.all_files_above_coverage(fail_under_file_lines) {
                 term::error::set(true);
             }
         }
