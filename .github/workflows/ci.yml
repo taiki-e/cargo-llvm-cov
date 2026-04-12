@@ -33,18 +33,19 @@ concurrency:
 
 jobs:
   miri:
-    uses: taiki-e/github-actions/.github/workflows/miri.yml@main
+    uses: taiki-e/github-actions/.github/workflows/miri.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   msrv:
-    uses: taiki-e/github-actions/.github/workflows/msrv.yml@main
+    uses: taiki-e/github-actions/.github/workflows/msrv.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   release-dry-run:
-    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@main
+    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@dec917193d835117a7238865adf83273d9fcd27a # main
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@dec917193d835117a7238865adf83273d9fcd27a # main
     permissions:
       contents: write # for creating branch for pr
       pull-requests: write # unused (used in `codegen-automerge: true` case)
       security-events: write # for github/codeql-action/*
-    secrets: inherit
+    secrets:
+      PR_TOKEN_APP_PRIVATE_KEY: ${{ secrets.PR_TOKEN_APP_PRIVATE_KEY }}
     with:
       check-external-types: false
       docs: false
@@ -73,15 +74,15 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
         with:
           tool: cargo-hack,cargo-minimal-versions,nextest
           fallback: none
-      - uses: taiki-e/setup-cross-toolchain-action@main
+      - uses: taiki-e/setup-cross-toolchain-action@d62f33b587e73b0004731caebc7d2d46b18a7567 # v1.39.2
         with:
           target: ${{ matrix.target }}
         if: matrix.target != ''
@@ -91,9 +92,8 @@ jobs:
       - name: Test cargo llvm-cov nextest
         run: |
           unset RUSTFLAGS
-          target="${{ matrix.target }}"
-          if [[ -z "${target}" ]]; then
-            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          if [[ -z "${TARGET}" ]]; then
+            TARGET=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           fi
           cargo llvm-cov nextest --text --fail-under-lines 50
           cargo llvm-cov nextest --text --fail-under-lines 50 --profile default --cargo-profile dev
@@ -116,7 +116,7 @@ jobs:
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           cargo clean
           rm -- a.tar.zst
-          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${target}"
+          cargo llvm-cov nextest-archive --archive-file a.tar.zst --target "${TARGET}"
           cargo llvm-cov nextest --archive-file a.tar.zst --text --fail-under-lines 70
           cargo llvm-cov report --nextest-archive-file a.tar.zst --fail-under-lines 70
           cargo clean
@@ -127,6 +127,8 @@ jobs:
           cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci
           cargo llvm-cov nextest --text --fail-under-lines 100 --profile ci --cargo-profile dev
           cargo clean
+        env:
+          TARGET: ${{ matrix.target }}
         working-directory: tests/fixtures/crates/bin_crate
       - name: Test nightly-specific options, old Cargo compatibility
         run: |
@@ -141,9 +143,8 @@ jobs:
             "$@"
           }
           unset RUSTFLAGS
-          target="${{ matrix.target }}"
-          if [[ -z "${target}" ]]; then
-            target=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
+          if [[ -z "${TARGET}" ]]; then
+            TARGET=$(rustc -vV | grep -E '^host:' | cut -d' ' -f2)
           fi
 
           # Test nightly-specific options
@@ -164,7 +165,7 @@ jobs:
           popd >/dev/null
 
           # Test minimum runnable Cargo version.
-          case "${{ matrix.target }}" in
+          case "${TARGET}" in
             *-windows-gnullvm) ;; # target unavailable on Rust 1.60.
             *)
               retry rustup toolchain add 1.60 --no-self-update
@@ -173,6 +174,8 @@ jobs:
               popd >/dev/null
               ;;
           esac
+        env:
+          TARGET: ${{ matrix.target }}
         if: startsWith(matrix.rust, 'nightly')
       - name: Test --dep-coverage
         run: |
@@ -187,7 +190,7 @@ jobs:
       - name: Test show-env --sh on bash
         run: |
           bash --version
-          if [[ "${{ matrix.os }}" == "macos"* ]]; then
+          if [[ "$(uname -s)" == 'Darwin' ]]; then
             # macOS's /bin/bash is too old.
             cargo llvm-cov show-env --sh > env.sh
             # shellcheck disable=SC1091
@@ -224,8 +227,14 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == '' || startsWith(matrix.os, 'macos')
       - name: Test show-env --pwsh on pwsh
         run: |
+          Set-StrictMode -Version Latest
           pwsh --version
-          Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+          function set_env() {
+            [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingInvokeExpression', '')]
+            param()
+            Invoke-Expression (cargo llvm-cov show-env --pwsh | Out-String)
+          }
+          set_env
           env
           cargo llvm-cov clean --workspace
           cargo build
@@ -283,7 +292,7 @@ jobs:
             done
             "$@"
           }
-          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-all-errors https://apt.fury.io/nushell/gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 https://apt.fury.io/nushell/gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/fury-nushell.gpg
           printf '%s\n' "deb [signed-by=/etc/apt/keyrings/fury-nushell.gpg] https://apt.fury.io/nushell/ /" \
             | sudo tee -- /etc/apt/sources.list.d/fury-nushell.list
@@ -313,7 +322,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: zsh {0}
+        shell: zsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --csh on csh
@@ -329,7 +338,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: bsd-csh {0}
+        shell: bsd-csh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: startsWith(matrix.os, 'ubuntu') || matrix.os == ''
       - name: Test show-env --csh on tcsh
@@ -346,7 +355,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: tcsh {0}
+        shell: tcsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --fish
@@ -362,7 +371,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: fish {0}
+        shell: fish {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: matrix.os != 'windows-11-arm'
       # Split step and use absolute path to work around https://www.nushell.sh/book/thinking_in_nu.html#example-dynamically-generating-source
@@ -370,7 +379,7 @@ jobs:
         run: |
           cargo llvm-cov show-env --nu | save -f /tmp/env.nu
           cat -- /tmp/env.nu
-        shell: nu {0}
+        shell: nu {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
       - name: Test show-env --nu
@@ -385,7 +394,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: nu {0}
+        shell: nu {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
       - name: Test show-env --xonsh
@@ -401,7 +410,7 @@ jobs:
           cargo build
           cargo run -- 2
           cargo llvm-cov report --fail-under-lines 57
-        shell: xonsh {0}
+        shell: xonsh {0} # zizmor: ignore[misfeature] used for compatibility testing
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
 
@@ -416,11 +425,11 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@main
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
         with:
           tool: nextest
           fallback: none
@@ -465,8 +474,10 @@ jobs:
     runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/checkout-action@v1
-      - uses: taiki-e/github-actions/install-rust@stable
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
+        with:
+          toolchain: stable
       - name: Install LLVM
         run: |
           retry() {
@@ -479,29 +490,31 @@ jobs:
             done
             "$@"
           }
-          if type -P clang-"${{ matrix.llvm }}" &>/dev/null; then
+          if type -P clang-"${LLVM_VERSION}" >/dev/null; then
             exit 0
           fi
           codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
-          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 --retry-all-errors https://apt.llvm.org/llvm-snapshot.gpg.key \
+          retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null
-          sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${{ matrix.llvm }}.list" >/dev/null \
-            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${{ matrix.llvm }} main"
+          sudo tee -- "/etc/apt/sources.list.d/llvm-toolchain-${codename}-${LLVM_VERSION}.list" >/dev/null \
+            <<<"deb [signed-by=/etc/apt/keyrings/llvm-snapshot.gpg] https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${LLVM_VERSION} main"
           retry sudo apt-get -o Acquire::Retries=10 -qq update
           apt_packages=(
-            clang-"${{ matrix.llvm }}"
-            libc++-"${{ matrix.llvm }}"-dev
-            libc++abi-"${{ matrix.llvm }}"-dev
-            libclang-"${{ matrix.llvm }}"-dev
-            lld-"${{ matrix.llvm }}"
-            llvm-"${{ matrix.llvm }}"
-            llvm-"${{ matrix.llvm }}"-dev
+            clang-"${LLVM_VERSION}"
+            libc++-"${LLVM_VERSION}"-dev
+            libc++abi-"${LLVM_VERSION}"-dev
+            libclang-"${LLVM_VERSION}"-dev
+            lld-"${LLVM_VERSION}"
+            llvm-"${LLVM_VERSION}"
+            llvm-"${LLVM_VERSION}"-dev
           )
           if ! sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"; then
             retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 upgrade -y
             retry sudo apt-get -o Acquire::Retries=10 -o Dpkg::Use-Pty=0 install -y --no-install-recommends "${apt_packages[@]}"
           fi
+        env:
+          LLVM_VERSION: ${{ matrix.llvm }}
       - run: cargo install --path . --debug
       - name: Test
         run: |
@@ -515,11 +528,11 @@ jobs:
             done
             "$@"
           }
-          export CC="clang-${{ matrix.llvm }}"
-          export CXX="clang++-${{ matrix.llvm }}"
-          export LLVM_COV="llvm-cov-${{ matrix.llvm }}"
-          export LLVM_PROFDATA="llvm-profdata-${{ matrix.llvm }}"
-          case "${{ matrix.llvm }}" in
+          export CC="clang-${LLVM_VERSION}"
+          export CXX="clang++-${LLVM_VERSION}"
+          export LLVM_COV="llvm-cov-${LLVM_VERSION}"
+          export LLVM_PROFDATA="llvm-profdata-${LLVM_VERSION}"
+          case "${LLVM_VERSION}" in
             1[4-7])
               retry rustup toolchain add 1.60 1.65 1.70 1.73 1.77 --no-self-update
               cargo clean
@@ -550,4 +563,6 @@ jobs:
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
           esac
+        env:
+          LLVM_VERSION: ${{ matrix.llvm }}
         working-directory: tests/fixtures/crates/ffi
