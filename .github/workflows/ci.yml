@@ -78,7 +78,7 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
+      - uses: taiki-e/install-action@5939f3337e40968c39aa70f5ecb1417a92fb25a0 # v2.75.15
         with:
           tool: cargo-hack,cargo-minimal-versions,nextest
           fallback: none
@@ -429,7 +429,7 @@ jobs:
       - uses: taiki-e/github-actions/install-rust@dec917193d835117a7238865adf83273d9fcd27a # main # zizmor: ignore[stale-action-refs]
         with:
           toolchain: ${{ matrix.rust }}
-      - uses: taiki-e/install-action@b8be7f5e140177087325943c4a8e169d01c59b3d # v2.75.3
+      - uses: taiki-e/install-action@5939f3337e40968c39aa70f5ecb1417a92fb25a0 # v2.75.15
         with:
           tool: nextest
           fallback: none
