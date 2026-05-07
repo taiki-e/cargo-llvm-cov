@@ -561,8 +561,8 @@ fn ask_to_run(cmd: &ProcessBuilder, ask: bool, text: &str) -> Result<()> {
     let is_ci = env::var_os("CI").is_some() || env::var_os("TF_BUILD").is_some();
     if ask && !is_ci {
         let mut buf = String::new();
-        print!("I will run {cmd} to {text}.\nProceed? [Y/n] ");
-        io::stdout().flush()?;
+        eprint!("I will run {cmd} to {text}.\nProceed? [Y/n] ");
+        io::stderr().flush()?;
         io::stdin().read_line(&mut buf)?;
         match buf.trim().to_lowercase().as_str() {
             // Proceed.
