@@ -82,27 +82,23 @@ fn try_main() -> Result<()> {
         Subcommand::Run => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs_for_build(cx)?;
             run_run(cx)?;
             report::generate(cx)?;
         }
         Subcommand::Nextest { .. } => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs_for_build(cx)?;
             run_nextest(cx)?;
             report::generate(cx)?;
         }
         Subcommand::NextestArchive => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs_for_build(cx)?;
             archive_nextest(cx)?;
         }
         Subcommand::None | Subcommand::Test => {
             let cx = &Context::new(args)?;
             clean::clean_partial(cx)?;
-            create_dirs_for_build(cx)?;
             run_test(cx)?;
             report::generate(cx)?;
         }
@@ -350,14 +346,6 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
     env.set("CARGO_LLVM_COV", "1")?;
     if cx.args.subcommand == Subcommand::ShowEnv {
         env.set("CARGO_LLVM_COV_SHOW_ENV", "1")?;
-    }
-    Ok(())
-}
-
-fn create_dirs_for_build(cx: &Context) -> Result<()> {
-    fs::create_dir_all(&cx.ws.target_dir)?;
-    if cx.args.doctests {
-        fs::create_dir_all(&cx.ws.doctests_dir)?;
     }
     Ok(())
 }
