@@ -316,6 +316,8 @@ pub(crate) struct ReportOptions {
     pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
     pub(crate) fail_under_lines: Option<f64>,
+    /// Exit with a status of 1 if the files line coverage is less than MIN percent.
+    pub(crate) fail_under_file_lines: Option<f64>,
     /// Exit with a status of 1 if the total region coverage is less than MIN percent.
     pub(crate) fail_under_regions: Option<f64>,
     /// Exit with a status of 1 if the uncovered lines are greater than MAX.
@@ -373,6 +375,7 @@ impl ReportOptions {
                 show_instantiations,
                 fail_under_functions,
                 fail_under_lines,
+                fail_under_file_lines,
                 fail_under_regions,
                 fail_uncovered_lines,
                 fail_uncovered_regions,
@@ -398,6 +401,7 @@ impl ReportOptions {
                 ("--show-instantiations", *show_instantiations),
                 ("--fail-under-functions", fail_under_functions.is_some()),
                 ("--fail-under-lines", fail_under_lines.is_some()),
+                ("--fail-under-file-lines", fail_under_file_lines.is_some()),
                 ("--fail-under-regions", fail_under_regions.is_some()),
                 ("--fail-uncovered-lines", fail_uncovered_lines.is_some()),
                 ("--fail-uncovered-regions", fail_uncovered_regions.is_some()),
@@ -1100,6 +1104,7 @@ impl Args {
                 }
                 Long("fail-under-functions") => parse_opt!(report.fail_under_functions),
                 Long("fail-under-lines") => parse_opt!(report.fail_under_lines),
+                Long("fail-under-file-lines") => parse_opt!(report.fail_under_file_lines),
                 Long("fail-under-regions") => parse_opt!(report.fail_under_regions),
                 Long("fail-uncovered-lines") => parse_opt!(report.fail_uncovered_lines),
                 Long("fail-uncovered-regions") => parse_opt!(report.fail_uncovered_regions),

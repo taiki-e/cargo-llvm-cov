@@ -170,6 +170,9 @@ OPTIONS:
         --fail-under-lines <MIN>
             Exit with a status of 1 if the total line coverage is less than MIN percent
 
+        --fail-under-file-lines <MIN>
+            Exit with a status of 1 if the files line coverage is less than MIN percent
+
         --fail-under-regions <MIN>
             Exit with a status of 1 if the total region coverage is less than MIN percent
 
