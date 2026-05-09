@@ -9,12 +9,21 @@ cd -- "$(dirname -- "$0")"/..
 #    GITHUB_TOKEN=$(gh auth token) ./tools/tidy.sh
 #
 # Note: This script requires the following tools:
-# - docker
+# - docker or podman (or compatible CLI specified by TIDY_DOCKER_PATH. when both available and TIDY_DOCKER_PATH is not set, docker is preferred)
 #
 # This script is shared by projects under github.com/taiki-e, so there may also
 # be checks for files not included in this repository, but they will be skipped
 # if the corresponding files do not exist.
 # It is not intended for manual editing.
+
+bail() {
+  if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    printf '::error::%s\n' "$*"
+  else
+    printf >&2 'error: %s\n' "$*"
+  fi
+  exit 1
+}
 
 if [[ $# -gt 0 ]]; then
   cat <<EOF
@@ -24,24 +33,29 @@ EOF
   exit 1
 fi
 
+image='ghcr.io/taiki-e/tidy'
 if [[ -n "${TIDY_DEV:-}" ]]; then
-  image="ghcr.io/taiki-e/tidy:latest"
+  image+=':latest'
 else
-  image="ghcr.io/taiki-e/tidy@sha256:bce85a4321f80c09f2b68420e9149bcf7c085130ab1e1fca54443f76833cd184"
+  image+='@sha256:1d3a5d57c486cbac02ef3d8ee29bb0768ebd1fbffef61a61d282215464e2551d'
 fi
 user="$(id -u):$(id -g)"
-workdir=$(pwd)
+workdir="${PWD}"
 tmp=$(mktemp -d)
 trap -- 'rm -rf -- "${tmp:?}"' EXIT
 mkdir -p -- "${tmp}"/{pwsh-cache,pwsh-local,zizmor-cache,dummy-dir,tmp}
-touch -- "${tmp}"/dummy
+printf '' >"${tmp}"/dummy
 code=0
 color=''
 if [[ -t 1 ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
   color=1
 fi
+# Refs:
+# - https://docs.docker.com/reference/cli/docker/container/run/
+# - https://docs.podman.io/en/latest/markdown/podman-run.1.html
+# - https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
 common_args=(
-  run --rm --init -i --user "${user}"
+  run --rm --init
   --cap-drop=all
   --security-opt=no-new-privileges
   --read-only
@@ -59,6 +73,30 @@ common_args=(
   --env TIDY_EXPECTED_SHELL_FILE_COUNT
   --env TIDY_EXPECTED_DOCKER_FILE_COUNT
 )
+if [[ -n "${TIDY_DOCKER_PATH:-}" ]]; then
+  docker="${TIDY_DOCKER_PATH}"
+elif type -P docker >/dev/null; then
+  docker='docker'
+elif type -P podman >/dev/null; then
+  docker='podman'
+else
+  bail 'this script requires docker or podman'
+fi
+rootless=''
+if [[ "$("${docker}" --version)" == *'podman'* ]]; then
+  if [[ "$("${docker}" info)" == *'rootless: true'* ]]; then
+    rootless=1
+  fi
+elif [[ "$("${docker}" info -f '{{println .SecurityOptions}}')" == *'rootless'* ]]; then
+  rootless=1
+fi
+if [[ -n "${rootless}" ]]; then
+  printf 'docker path: %s\n' "${docker} (rootless)"
+else
+  printf 'docker path: %s\n' "${docker}"
+  common_args+=(--user "${user}")
+fi
+
 # Map ignored files (e.g., .env) to dummy files.
 while IFS= read -r path; do
   if [[ -d "${path}" ]]; then
@@ -73,7 +111,9 @@ while IFS= read -r path; do
 done < <(git status --porcelain --ignored | grep -E '^!!' | cut -d' ' -f2)
 
 docker_run() {
-  docker "${common_args[@]}" "$@"
+  local script="$1"
+  shift
+  "${docker}" "${common_args[@]}" "$@" "${image}" /checks/"${script}"
   code2="$?"
   if [[ ${code} -eq 0 ]] && [[ ${code2} -ne 0 ]]; then
     code="${code2}"
@@ -81,28 +121,23 @@ docker_run() {
 }
 
 set +e
-docker_run \
+docker_run offline.sh \
   --mount "type=bind,source=${workdir},target=${workdir}" --workdir "${workdir}" \
+  --mount "type=bind,source=${workdir}/.git,target=${workdir}/.git,readonly" \
   --mount "type=bind,source=${tmp}/tmp,target=/tmp/tidy" \
   --mount "type=bind,source=${tmp}/pwsh-cache,target=/.cache/powershell" \
   --mount "type=bind,source=${tmp}/pwsh-local,target=/.local/share/powershell" \
-  --network=none \
-  "${image}" \
-  /checks/offline.sh
+  --network=none
 # Some good audits requires access to GitHub API.
-docker_run \
+docker_run zizmor.sh \
   --mount "type=bind,source=${workdir},target=${workdir},readonly" --workdir "${workdir}" \
   --mount "type=bind,source=${tmp}/zizmor-cache,target=/.cache/zizmor" \
-  --env GH_TOKEN --env GITHUB_TOKEN --env ZIZMOR_GITHUB_TOKEN \
-  "${image}" \
-  /checks/zizmor.sh
+  --env GH_TOKEN --env GITHUB_TOKEN --env ZIZMOR_GITHUB_TOKEN
 # We use remote dictionary.
-docker_run \
+docker_run cspell.sh \
   --mount "type=bind,source=${workdir},target=${workdir},readonly" --workdir "${workdir}" \
   --mount "type=bind,source=${workdir}/.github/.cspell/project-dictionary.txt,target=${workdir}/.github/.cspell/project-dictionary.txt" \
   --mount "type=bind,source=${workdir}/.github/.cspell/rust-dependencies.txt,target=${workdir}/.github/.cspell/rust-dependencies.txt" \
-  --mount "type=bind,source=${tmp}/tmp,target=/tmp/tidy" \
-  "${image}" \
-  /checks/cspell.sh
+  --mount "type=bind,source=${tmp}/tmp,target=/tmp/tidy"
 
 exit "${code}"
