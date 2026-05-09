@@ -44,15 +44,21 @@ pub(crate) fn set_env(cx: &Context, env: &mut dyn EnvTarget, rustflags: &Flags) 
 
     env.set(ENV_ENABLED, "1")?;
     env.set(ENV_RUSTFLAGS, &rustflags.encode()?)?;
-    match (cx.args.build.coverage_target_only, &cx.args.target) {
-        (true, Some(coverage_target)) => {
-            env.set(ENV_COVERAGE_TARGET, coverage_target)?;
-            env.set(ENV_HOST, cx.ws.config.host_triple()?)?;
-        }
-        _ => {
-            env.unset(ENV_COVERAGE_TARGET)?;
-            env.unset(ENV_HOST)?;
-        }
+    if let Some(restriction) = cx.args.build.target_restriction {
+        let host_triple = cx.ws.config.host_triple()?;
+        let coverage_target = match restriction {
+            cli::TargetRestriction::TargetOnly => cx
+                .args
+                .target
+                .as_deref()
+                .expect("`--target` must be specified when `--coverage-target-only` is used"),
+            cli::TargetRestriction::HostOnly => host_triple,
+        };
+        env.set(ENV_COVERAGE_TARGET, coverage_target)?;
+        env.set(ENV_HOST, host_triple)?;
+    } else {
+        env.unset(ENV_COVERAGE_TARGET)?;
+        env.unset(ENV_HOST)?;
     }
     let mut crates = String::new();
     for &id in &cx.ws.metadata.workspace_members {
