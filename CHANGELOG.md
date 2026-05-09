@@ -12,6 +12,14 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add support for unstable new layout of Cargo's `build-dir` (`-Zbuild-dir-new-layout`). ([#483](https://github.com/taiki-e/cargo-llvm-cov/pull/483), thanks @ranger-ross)
+
+- Add `--fail-under-file-lines` option to set per-file coverage threshold. ([#486](https://github.com/taiki-e/cargo-llvm-cov/pull/486), thanks @krady21)
+
+- Ask to run `rustup install` on stderr. ([#490](https://github.com/taiki-e/cargo-llvm-cov/pull/490), thanks @narpfel)
+
+- Fix "missing or invalid `CACHEDIR.TAG` file" error with recent Cargo. ([#491](https://github.com/taiki-e/cargo-llvm-cov/pull/491))
+
 ## [0.8.5] - 2026-03-20
 
 - Publish [artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations).

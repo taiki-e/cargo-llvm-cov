@@ -1,6 +1,7 @@
 autocfg
 bindeps
 binstall
+CACHEDIR
 demangler
 doctestbins
 easytime
@@ -30,4 +31,5 @@ xargo
 Xdemangler
 xonsh
 xtask
+Zbuild
 zmij
