@@ -89,7 +89,7 @@ pub(crate) fn assert_output(output_path: &Path, expected: &str) {
             &[]
         };
         let mut child = Command::new("git")
-            .arg("--no-pager")
+            .args(["-c", "core.fsmonitor=false", "--no-pager"])
             .args(color)
             .args(["diff", "--no-index", "--"])
             .arg("-")

@@ -6,6 +6,7 @@ doctestbins
 easytime
 fcoverage
 fprofile
+fsmonitor
 instrprof
 libclang
 libhello
