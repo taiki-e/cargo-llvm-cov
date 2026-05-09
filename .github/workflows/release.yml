@@ -21,7 +21,7 @@ concurrency:
 jobs:
   release:
     if: github.repository_owner == 'taiki-e'
-    uses: taiki-e/github-actions/.github/workflows/rust-release.yml@2474ed4664eb8903c151603a9d841512c069f7f6 # main
+    uses: taiki-e/github-actions/.github/workflows/rust-release.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
     permissions:
       contents: write # for taiki-e/create-gh-release-action / taiki-e/upload-rust-binary-action
       id-token: write # for rust-lang/crates-io-auth-action / actions/attest

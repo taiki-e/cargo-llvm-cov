@@ -32,24 +32,24 @@ concurrency:
 
 jobs:
   miri:
-    uses: taiki-e/github-actions/.github/workflows/miri.yml@2474ed4664eb8903c151603a9d841512c069f7f6 # main
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/miri.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
   msrv:
-    uses: taiki-e/github-actions/.github/workflows/msrv.yml@2474ed4664eb8903c151603a9d841512c069f7f6 # main
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/msrv.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
   release-dry-run:
-    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@2474ed4664eb8903c151603a9d841512c069f7f6 # main
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@2474ed4664eb8903c151603a9d841512c069f7f6 # main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
     permissions:
-      contents: write # for creating branch for pr
-      pull-requests: write # unused (used in `codegen-automerge: true` case)
       security-events: write # for github/codeql-action/*
-    secrets:
-      PR_TOKEN_APP_PRIVATE_KEY: ${{ secrets.PR_TOKEN_APP_PRIVATE_KEY }}
     with:
       check-external-types: false
       docs: false
 
   test:
+    needs: tidy
     strategy:
       fail-fast: false
       matrix:
@@ -411,6 +411,7 @@ jobs:
         if: (!startsWith(matrix.os, 'windows'))
 
   test-nextest:
+    needs: tidy
     strategy:
       fail-fast: false
       matrix:
@@ -448,6 +449,7 @@ jobs:
           popd >/dev/null
 
   test-llvm:
+    needs: tidy
     strategy:
       fail-fast: false
       matrix:
