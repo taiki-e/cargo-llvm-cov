@@ -289,7 +289,7 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
                 } else {
                     env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
                 }
-            };
+            }
         }
     }
 
