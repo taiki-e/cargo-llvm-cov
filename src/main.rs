@@ -267,23 +267,27 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             let mut rustflags =
                 cx.ws.config.rustflags(&cx.ws.target_for_config)?.unwrap_or_default();
             rustflags.flags.append(&mut additional_flags);
-            match (cx.args.build.coverage_target_only, &cx.args.target) {
-                (true, Some(coverage_target)) => {
-                    env.set(
-                        &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_target)),
-                        &rustflags.encode_space_separated()?,
-                    )?;
-                    env.unset("RUSTFLAGS")?;
+
+            if let Some(restriction) = cx.args.build.target_restriction {
+                let coverage_triple = match restriction {
+                    cli::TargetRestriction::TargetOnly => cx.args.target.as_deref().expect(
+                        "`--target` must be specified when `--coverage-target-only` is used",
+                    ),
+                    cli::TargetRestriction::HostOnly => cx.ws.config.host_triple()?,
+                };
+                env.set(
+                    &format!("CARGO_TARGET_{}_RUSTFLAGS", target_u_upper(coverage_triple)),
+                    &rustflags.encode_space_separated()?,
+                )?;
+                env.unset("RUSTFLAGS")?;
+                env.unset("CARGO_ENCODED_RUSTFLAGS")?;
+            } else {
+                // First, try with RUSTFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
+                if let Ok(v) = rustflags.encode_space_separated() {
+                    env.set("RUSTFLAGS", &v)?;
                     env.unset("CARGO_ENCODED_RUSTFLAGS")?;
-                }
-                _ => {
-                    // First, try with RUSTFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
-                    if let Ok(v) = rustflags.encode_space_separated() {
-                        env.set("RUSTFLAGS", &v)?;
-                        env.unset("CARGO_ENCODED_RUSTFLAGS")?;
-                    } else {
-                        env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
-                    }
+                } else {
+                    env.set("CARGO_ENCODED_RUSTFLAGS", &rustflags.encode()?)?;
                 }
             }
         }

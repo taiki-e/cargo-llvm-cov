@@ -177,6 +177,25 @@ impl FromStr for Subcommand {
     }
 }
 
+/// Restriction to apply to the coverage target.
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum TargetRestriction {
+    /// Activate coverage reporting only for the target triple
+    ///
+    /// Activate coverage reporting only for the target triple specified via `--target`.
+    /// This is important, if the project uses multiple targets via the cargo
+    /// bindeps feature, and not all targets can use `instrument-coverage`,
+    /// e.g. a microkernel, or an embedded binary.
+    ///
+    /// When this flag is used, coverage for proc-macro and build script will not be displayed.
+    TargetOnly,
+    /// Activate coverage reporting only for the host target triple.
+    ///
+    /// In cross-compilation builds, this can be used to get coverage for build scripts and proc-macro
+    /// while skipping coverage for the cross-compiled target which may not support `instrument-coverage`.
+    HostOnly,
+}
+
 /// Options only referred in "build"-related operations. (subcommands building/testing/running crates and show-env subcommand)
 #[derive(Debug, Default)]
 pub(crate) struct BuildOptions {
@@ -202,15 +221,8 @@ pub(crate) struct BuildOptions {
     /// must be set to Clang/LLVM compatible with the LLVM version used in rustc.
     // TODO: support specifying languages like: --include-ffi=c,  --include-ffi=c,c++
     pub(crate) include_ffi: bool,
-    /// Activate coverage reporting only for the target triple
-    ///
-    /// Activate coverage reporting only for the target triple specified via `--target`.
-    /// This is important, if the project uses multiple targets via the cargo
-    /// bindeps feature, and not all targets can use `instrument-coverage`,
-    /// e.g. a microkernel, or an embedded binary.
-    ///
-    /// When this flag is used, coverage for proc-macro and build script will not be displayed.
-    pub(crate) coverage_target_only: bool,
+    /// Possible restrictions to apply to the coverage target.
+    pub(crate) target_restriction: Option<TargetRestriction>,
     /// Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov.
     pub(crate) no_cfg_coverage: bool,
     /// Unset cfg(coverage_nightly), which is enabled when code is built using cargo-llvm-cov and nightly compiler.
@@ -900,6 +912,7 @@ impl Args {
         let mut release = false;
         let mut target = None;
         let mut coverage_target_only = false;
+        let mut coverage_host_only = false;
         let mut remap_path_prefix = false;
         let mut include_ffi = false;
         let mut verbose: usize = 0;
@@ -1062,6 +1075,7 @@ impl Args {
                 Long("cargo-profile") => parse_opt!(cargo_profile),
                 Long("target") => parse_opt!(target),
                 Long("coverage-target-only") => parse_flag!(coverage_target_only),
+                Long("coverage-host-only") => parse_flag!(coverage_host_only),
                 Long("remap-path-prefix") => parse_flag!(remap_path_prefix),
                 Long("include-ffi") => parse_flag!(include_ffi),
                 Long("no-clean") => parse_flag!(clean.no_clean),
@@ -1441,6 +1455,9 @@ impl Args {
         if coverage_target_only && target.is_none() {
             requires("--coverage-target-only", &["--target"])?;
         }
+        if coverage_target_only && coverage_host_only {
+            conflicts("--coverage-target-only", "--coverage-host-only")?;
+        }
 
         // conflicts
         if report.no_report && no_run {
@@ -1605,7 +1622,13 @@ impl Args {
                     branch,
                     mcdc,
                     include_ffi,
-                    coverage_target_only,
+                    target_restriction: if coverage_target_only {
+                        Some(TargetRestriction::TargetOnly)
+                    } else if coverage_host_only {
+                        Some(TargetRestriction::HostOnly)
+                    } else {
+                        None
+                    },
                     no_cfg_coverage,
                     no_cfg_coverage_nightly,
                     no_rustc_wrapper,

@@ -263,6 +263,13 @@ OPTIONS:
 
             When this flag is used, coverage for proc-macro and build script will not be displayed.
 
+        --coverage-host-only
+            Activate coverage reporting only for the host target triple
+
+            In cross-compilation builds, this can be used to get coverage for build scripts and
+            proc-macro while skipping coverage for the cross-compiled target which may not support
+            `instrument-coverage`.
+
     -v, --verbose
             Use verbose output
 
