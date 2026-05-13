@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--coverage-host-only` flag. ([#493](https://github.com/taiki-e/cargo-llvm-cov/pull/493), thanks @davidhewitt)
+
 ## [0.8.6] - 2026-05-09
 
 - Add support for unstable new layout of Cargo's `build-dir` (`-Zbuild-dir-new-layout`). ([#483](https://github.com/taiki-e/cargo-llvm-cov/pull/483), thanks @ranger-ross)
