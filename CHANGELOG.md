@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-05-13
+
 - Add `--coverage-host-only` flag. ([#493](https://github.com/taiki-e/cargo-llvm-cov/pull/493), thanks @davidhewitt)
 
 ## [0.8.6] - 2026-05-09
@@ -818,7 +820,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...HEAD
+[0.8.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...v0.8.7
 [0.8.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.4...v0.8.5
 [0.8.4]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.3...v0.8.4
