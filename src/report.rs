@@ -121,14 +121,12 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered = uncovered_files.as_ref().unwrap().iter().fold(
-                0_u64,
-                |uncovered, (_, file)| {
+            let uncovered =
+                uncovered_files.as_ref().unwrap().iter().fold(0_u64, |uncovered, (_, file)| {
                     uncovered
                         + file.whole_file_missed.len() as u64
                         + file.per_instantiation_missed.len() as u64
-                },
-            );
+                });
 
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
@@ -201,12 +199,7 @@ fn show_missing_lines(
         for (file, info) in uncovered_files {
             for entry in &info.per_instantiation_missed {
                 for name in &entry.function_names {
-                    writeln!(
-                        out,
-                        "{file}:{} in {:#}",
-                        entry.line,
-                        rustc_demangle::demangle(name),
-                    )?;
+                    writeln!(out, "{file}:{} in {:#}", entry.line, rustc_demangle::demangle(name))?;
                 }
             }
         }
