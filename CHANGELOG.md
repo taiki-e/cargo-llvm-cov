@@ -12,6 +12,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix `--show-missing-lines` and `--fail-uncovered-lines` under-reporting lines missed by a specific monomorphization but covered by a sibling instantiation or derive. Adds an `Uncovered Lines (per instantiation):` section to the output. ([#404](https://github.com/taiki-e/cargo-llvm-cov/issues/404))
+
+  Compatibility Note: `--fail-uncovered-lines <N>` may now fail in cases that previously passed, since the new count matches `llvm-cov report`'s file-summary Missed Lines.
+
 ## [0.8.7] - 2026-05-13
 
 - Add `--coverage-host-only` flag. ([#493](https://github.com/taiki-e/cargo-llvm-cov/pull/493), thanks @davidhewitt)
