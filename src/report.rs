@@ -121,14 +121,12 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered = uncovered_files.as_ref().unwrap().iter().fold(
-                0_u64,
-                |uncovered, (_, file)| {
+            let uncovered =
+                uncovered_files.as_ref().unwrap().iter().fold(0_u64, |uncovered, (_, file)| {
                     uncovered
                         + file.whole_file_missed.len() as u64
                         + file.per_instantiation_missed.len() as u64
-                },
-            );
+                });
 
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
@@ -146,8 +144,7 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
         if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
             let uncovered_files = uncovered_files.as_ref().unwrap();
-            let has_whole_file =
-                uncovered_files.values().any(|f| !f.whole_file_missed.is_empty());
+            let has_whole_file = uncovered_files.values().any(|f| !f.whole_file_missed.is_empty());
             let has_per_instantiation =
                 uncovered_files.values().any(|f| !f.per_instantiation_missed.is_empty());
             if has_whole_file || has_per_instantiation {

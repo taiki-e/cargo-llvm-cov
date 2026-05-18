@@ -148,8 +148,8 @@ impl CodeCovJsonExport {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PerInstantiationLine {
     pub line: u64,
-    /// Mangled function names responsible for the missed line.
-    /// Demangled at format time.
+    /// Mangled function names responsible for the missed line. The report layer
+    /// formats them via `rustc_demangle`.
     pub function_names: Vec<String>,
 }
 
@@ -236,8 +236,9 @@ impl LlvmCovJsonExport {
     /// Gets the list of uncovered lines of all files.
     ///
     /// Mirrors `llvm-cov report`'s file-summary line accounting, which is computed
-    /// per InstantiationGroup (group of monomorphizations sharing a source location)
-    /// and then summed across groups. See `llvm/tools/llvm-cov/CoverageSummaryInfo.cpp`
+    /// per InstantiationGroup (functions sharing a source location, e.g. multiple
+    /// instantiations of one generic) and then summed across groups. See
+    /// `llvm/tools/llvm-cov/CoverageSummaryInfo.cpp`
     /// `sumRegions` and `FunctionCoverageSummary::get(Group, Summaries)`, and
     /// `llvm/lib/ProfileData/Coverage/CoverageMapping.cpp` `FunctionInstantiationSetCollector`.
     ///
@@ -300,29 +301,27 @@ impl LlvmCovJsonExport {
 
                 covered_anywhere.entry(file_name.clone()).or_default().extend(&covered);
 
-                groups.entry((file_name.clone(), group_key)).or_default().push(
-                    GroupedFunction {
-                        count: function.count,
-                        name: function.name.clone(),
-                        lines,
-                        covered,
-                    },
-                );
+                groups.entry((file_name.clone(), group_key)).or_default().push(GroupedFunction {
+                    count: function.count,
+                    name: function.name.clone(),
+                    lines,
+                    covered,
+                });
             }
         }
 
         // file -> line -> responsible mangled function names.
         let mut all_missed: BTreeMap<String, BTreeMap<u64, Vec<String>>> = BTreeMap::new();
 
-        for ((file_name, _group_key), funcs) in &groups {
+        for ((file_name, _group_key), instances) in &groups {
             let mut group_live_covered: BTreeSet<u64> = BTreeSet::new();
-            for f in funcs {
+            for f in instances {
                 if f.count > 0 {
                     group_live_covered.extend(&f.covered);
                 }
             }
 
-            for f in funcs {
+            for f in instances {
                 for line in f.lines.difference(&f.covered) {
                     let suppressed = f.count == 0 && group_live_covered.contains(line);
                     if !suppressed {
@@ -346,10 +345,9 @@ impl LlvmCovJsonExport {
                 if covered_elsewhere {
                     names.sort();
                     names.dedup();
-                    uncovered_file.per_instantiation_missed.push(PerInstantiationLine {
-                        line,
-                        function_names: names,
-                    });
+                    uncovered_file
+                        .per_instantiation_missed
+                        .push(PerInstantiationLine { line, function_names: names });
                 } else {
                     uncovered_file.whole_file_missed.push(line);
                 }
@@ -751,13 +749,10 @@ mod tests {
         let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
-        let expected: UncoveredLines = vec![(
-            "src/lib.rs".to_owned(),
-            UncoveredFile {
-                whole_file_missed: vec![7, 8, 9],
-                per_instantiation_missed: vec![],
-            },
-        )]
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![7, 8, 9],
+            per_instantiation_missed: vec![],
+        })]
         .into_iter()
         .collect();
         assert_eq!(uncovered_lines, expected);
@@ -798,13 +793,10 @@ mod tests {
         let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
-        let expected: UncoveredLines = vec![(
-            "src/lib.rs".to_owned(),
-            UncoveredFile {
-                whole_file_missed: vec![15, 17],
-                per_instantiation_missed: vec![],
-            },
-        )]
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![15, 17],
+            per_instantiation_missed: vec![],
+        })]
         .into_iter()
         .collect();
         // This was just '11', i.e. there were two problems:
@@ -816,11 +808,12 @@ mod tests {
         assert_eq!(uncovered_lines, expected);
     }
 
-    /// Same-group asymmetric live instantiations (the freshl case): two live monomorphizations
-    /// of `list_recursive` share a source location. One has a `kind=0 count=0` region at line 289
-    /// with no covering region in the same function; the other covers line 289 with count=1.
-    /// Per-line max view shows the line covered (bug hidden), but the file summary counts it as
-    /// missed because LLVM's intra-group MAX-per-dimension merge surfaces the asymmetry.
+    /// Same-group asymmetric live instantiations: two live instantiations of one generic
+    /// share a source location and so belong to the same InstantiationGroup. One has a
+    /// `kind=0 count=0` region at line 289 with no covering region in the same function; the
+    /// other covers line 289 with count=1. The per-line max view shows the line covered, but
+    /// the file summary counts it as missed because LLVM's intra-group MAX-per-dimension merge
+    /// surfaces the asymmetry.
     #[test]
     fn test_get_uncovered_lines_same_group_asymmetric() {
         let file = format!(
@@ -832,16 +825,13 @@ mod tests {
 
         let uncovered_lines = json.get_uncovered_lines(None);
 
-        let expected: UncoveredLines = vec![(
-            "src/lib.rs".to_owned(),
-            UncoveredFile {
-                whole_file_missed: vec![],
-                per_instantiation_missed: vec![PerInstantiationLine {
-                    line: 289,
-                    function_names: vec!["_RNvCsTEST1_5crate1_14list_recursive".to_owned()],
-                }],
-            },
-        )]
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![],
+            per_instantiation_missed: vec![PerInstantiationLine {
+                line: 289,
+                function_names: vec!["_RNvCsTEST1_5crate1_14list_recursive".to_owned()],
+            }],
+        })]
         .into_iter()
         .collect();
         assert_eq!(uncovered_lines, expected);
@@ -862,16 +852,13 @@ mod tests {
 
         let uncovered_lines = json.get_uncovered_lines(None);
 
-        let expected: UncoveredLines = vec![(
-            "src/lib.rs".to_owned(),
-            UncoveredFile {
-                whole_file_missed: vec![],
-                per_instantiation_missed: vec![PerInstantiationLine {
-                    line: 3,
-                    function_names: vec!["_RNvXNtCsTEST_4test3Foo7Display3fmt".to_owned()],
-                }],
-            },
-        )]
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![],
+            per_instantiation_missed: vec![PerInstantiationLine {
+                line: 3,
+                function_names: vec!["_RNvXNtCsTEST_4test3Foo7Display3fmt".to_owned()],
+            }],
+        })]
         .into_iter()
         .collect();
         assert_eq!(uncovered_lines, expected);
