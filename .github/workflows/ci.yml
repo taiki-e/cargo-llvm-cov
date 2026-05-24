@@ -31,22 +31,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  miri:
-    needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/miri.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
-  msrv:
-    needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/msrv.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
-  release-dry-run:
-    needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/release-dry-run.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@bb4b993445b42a3c480b92e7bc504c051c6d159b # main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@3637cc7cf76d2ce698edc313bcd39bad8a92caa8 # main
     permissions:
       security-events: write # for github/codeql-action/*
     with:
-      check-external-types: false
+      check-external-types: false # TODO
       docs: false
+  miri:
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@3637cc7cf76d2ce698edc313bcd39bad8a92caa8 # main
+  msrv:
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@3637cc7cf76d2ce698edc313bcd39bad8a92caa8 # main
+  release-dry-run:
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@3637cc7cf76d2ce698edc313bcd39bad8a92caa8 # main
 
   test:
     needs: tidy
@@ -74,11 +74,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@7ea35f098a7369cd23488403f58be9c491a6c55f # v2.77.0
+      - uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
         with:
           tool: rust@${{ matrix.rust }},cargo-hack,cargo-minimal-versions,nextest
           fallback: none
-      - uses: taiki-e/setup-cross-toolchain-action@129361238c06ff2cc1c4ca5c5d2217af441ffdf6 # v1.40.1
+      - uses: taiki-e/setup-cross-toolchain-action@3d9770ce98eb7dbcf378563182a5e8031165f75b # v1.41.0
         with:
           target: ${{ matrix.target }}
         if: matrix.target != ''
@@ -423,7 +423,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@7ea35f098a7369cd23488403f58be9c491a6c55f # v2.77.0
+      - uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
         with:
           tool: rust@${{ matrix.rust }},nextest
           fallback: none
@@ -470,7 +470,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@7ea35f098a7369cd23488403f58be9c491a6c55f # v2.77.0
+      - uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
         with:
           tool: rust@stable
           fallback: none
@@ -489,8 +489,7 @@ jobs:
           if type -P clang-"${LLVM_VERSION}" >/dev/null; then
             exit 0
           fi
-          # shellcheck source=/dev/null
-          codename=$(. /etc/os-release; printf '%s\n' "${VERSION_CODENAME}")
+          codename=$(grep -E '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
           sudo mkdir -pm755 -- /etc/apt/keyrings
           retry curl --proto '=https' --tlsv1.2 -fsSL --retry 10 https://apt.llvm.org/llvm-snapshot.gpg.key \
             | sudo gpg --dearmor -o /etc/apt/keyrings/llvm-snapshot.gpg >/dev/null

@@ -40,7 +40,6 @@ build.allow-build-scripts = [
     { name = "zmij" }, # via serde_json
 ]
 build.bypass = [
-    { name = "autocfg", allow-globs = ["tests/wrap_ignored"] }, # via fs-err
     # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
     { name = "windows_aarch64_gnullvm", allow-globs = ["lib/*.a"] },
     { name = "windows_aarch64_msvc", allow-globs = ["lib/*.lib"] },
