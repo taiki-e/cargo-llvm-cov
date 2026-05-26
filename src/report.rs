@@ -143,14 +143,19 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
                 writeln!(stdout, "Uncovered Lines:")?;
                 for (file, lines) in &uncovered_files {
                     write!(stdout, "{file}: ")?;
+                    let uncovered_line_segments = aggregate_consecutive_lines(lines);
                     let mut first = true;
-                    for &l in lines {
+                    for &(start, end) in &uncovered_line_segments {
                         if first {
                             first = false;
                         } else {
                             write!(stdout, ", ")?;
                         }
-                        write!(stdout, "{l}")?;
+                        if start == end {
+                            write!(stdout, "{start}")?;
+                        } else {
+                            write!(stdout, "{start}-{end}")?;
+                        }
                     }
                     writeln!(stdout)?;
                 }
@@ -1048,4 +1053,18 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         }) {}
     }
     excluded_path
+}
+
+fn aggregate_consecutive_lines(lines: &[u64]) -> Vec<(u64, u64)> {
+    let mut segments: Vec<(u64, u64)> = Vec::new();
+    for &line in lines {
+        if let Some(last) = segments.last_mut() {
+            if last.1 + 1 == line {
+                last.1 = line;
+            }
+        } else {
+            segments.push((line, line));
+        }
+    }
+    segments
 }
