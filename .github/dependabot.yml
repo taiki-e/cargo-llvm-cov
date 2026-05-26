@@ -22,7 +22,3 @@ updates:
     commit-message:
       prefix: ''
     labels: []
-    groups:
-      github-actions:
-        patterns:
-          - '*'

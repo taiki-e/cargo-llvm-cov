@@ -1,4 +1,3 @@
-autocfg
 bindeps
 binstall
 CACHEDIR
