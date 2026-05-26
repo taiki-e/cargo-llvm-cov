@@ -1058,12 +1058,11 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
 fn aggregate_consecutive_lines(lines: &[u64]) -> Vec<(u64, u64)> {
     let mut segments: Vec<(u64, u64)> = Vec::new();
     for &line in lines {
-        if let Some(last) = segments.last_mut() {
-            if last.1 + 1 == line {
-                last.1 = line;
+        match segments.last_mut() {
+            Some((start, end)) if *end + 1 == line => {
+                *end = line;
             }
-        } else {
-            segments.push((line, line));
+            _ => segments.push((line, line)),
         }
     }
     segments
