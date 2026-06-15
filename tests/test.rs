@@ -585,6 +585,8 @@ fn update_readme() {
     test_helper::doc::sync_command_output_to_markdown(path, "readme-long-help", command, new);
 }
 
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn workspace_with_bin() {
     let model = "workspace-with-bin";
