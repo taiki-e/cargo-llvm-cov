@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "member1",
+]
+
+[[bin]]
+name = "demo"
+
+[package]
+edition = "2024"
+name = "demo"

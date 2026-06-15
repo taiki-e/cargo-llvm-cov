@@ -511,7 +511,7 @@ fn invalid_arg() {
                 ));
             }
         }
-        if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive" | "clean") {
+        if !matches!(subcommand, "" | "test" | "nextest" | "nextest-archive" | "clean" | "report") {
             for arg in ["--workspace", "--all"] {
                 cargo_llvm_cov(subcommand).arg(arg).assert_failure().stderr_contains(format!(
                     "{} is specific to",
@@ -583,4 +583,23 @@ fn update_readme() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md");
     let command = "cargo llvm-cov --help";
     test_helper::doc::sync_command_output_to_markdown(path, "readme-long-help", command, new);
+}
+
+#[test]
+fn workspace_with_bin() {
+    let model = "workspace-with-bin";
+    let workspace_root = test_project(model);
+    let output_dir = fixtures_dir().join("coverage-reports").join(model);
+    for subcommand in ["test", "report"] {
+        let output_path = &output_dir.join(subcommand).with_extension("txt");
+        let expected = &fs::read_to_string(output_path).unwrap_or_default();
+        cargo_llvm_cov(subcommand)
+            .args(["--color", "never", "--workspace", "--output-path"])
+            .arg(output_path)
+            .current_dir(workspace_root.path())
+            .assert_success();
+
+        normalize_output(output_path, &[]);
+        assert_output(output_path, expected);
+    }
 }
