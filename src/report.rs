@@ -1059,7 +1059,7 @@ fn aggregate_consecutive_lines(lines: &[u64]) -> Vec<(u64, u64)> {
     let mut segments: Vec<(u64, u64)> = Vec::new();
     for &line in lines {
         match segments.last_mut() {
-            Some((start, end)) if *end + 1 == line => {
+            Some((_, end)) if *end + 1 == line => {
                 *end = line;
             }
             _ => segments.push((line, line)),
