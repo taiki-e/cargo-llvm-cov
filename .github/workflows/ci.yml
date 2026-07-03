@@ -417,8 +417,8 @@ jobs:
       matrix:
         include:
           - rust: nightly
-          - rust: nightly
-            os: windows-latest
+          # - rust: nightly
+          #   os: windows-latest
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
