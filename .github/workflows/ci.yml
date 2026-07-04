@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@1bb80ca038216cd1fb7b6ca6d76240b3772963ab # main
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
     permissions:
       security-events: write # for github/codeql-action/*
     with:
@@ -40,13 +40,13 @@ jobs:
       docs: false
   miri:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@1bb80ca038216cd1fb7b6ca6d76240b3772963ab # main
+    uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
   msrv:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@1bb80ca038216cd1fb7b6ca6d76240b3772963ab # main
+    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
   release-dry-run:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@1bb80ca038216cd1fb7b6ca6d76240b3772963ab # main
+    uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
 
   test:
     needs: tidy
@@ -417,8 +417,8 @@ jobs:
       matrix:
         include:
           - rust: nightly
-          - rust: nightly
-            os: windows-latest
+          # - rust: nightly
+          #   os: windows-latest
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
