@@ -1382,9 +1382,9 @@ impl Args {
             | Subcommand::Test
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
+            | Subcommand::Report { .. }
             | Subcommand::Clean => {}
-            Subcommand::Run | Subcommand::Report { .. } | Subcommand::ShowEnv => {
-                // TODO: allow report?
+            Subcommand::Run | Subcommand::ShowEnv => {
                 if workspace {
                     specific_flag("--workspace", subcommand, &[
                         "test",
@@ -1392,6 +1392,7 @@ impl Args {
                         "nextest-archive",
                         "show-env",
                         "clean",
+                        "report",
                         "",
                     ])?;
                 }
