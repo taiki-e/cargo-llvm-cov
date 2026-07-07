@@ -115,12 +115,18 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
+        let uncovered_files = (cx.args.report.fail_uncovered_lines.is_some()
+            || cx.args.report.show_missing_lines)
+            .then(|| json.get_uncovered_lines(ignore_filename_regex.as_deref()));
+
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
-            let uncovered = uncovered_files
-                .iter()
-                .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
+            let uncovered =
+                uncovered_files.as_ref().unwrap().iter().fold(0_u64, |uncovered, (_, file)| {
+                    uncovered
+                        + file.whole_file_missed.len() as u64
+                        + file.per_instantiation_missed.len() as u64
+                });
 
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
@@ -137,22 +143,48 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
-            if !uncovered_files.is_empty() {
+            let uncovered_files = uncovered_files.as_ref().unwrap();
+            let has_whole_file = uncovered_files.values().any(|f| !f.whole_file_missed.is_empty());
+            let has_per_instantiation =
+                uncovered_files.values().any(|f| !f.per_instantiation_missed.is_empty());
+            if has_whole_file || has_per_instantiation {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
-                writeln!(stdout, "Uncovered Lines:")?;
-                for (file, lines) in &uncovered_files {
-                    write!(stdout, "{file}: ")?;
-                    let mut first = true;
-                    for &l in lines {
-                        if first {
-                            first = false;
-                        } else {
-                            write!(stdout, ", ")?;
+                if has_whole_file {
+                    writeln!(stdout, "Uncovered Lines:")?;
+                    for (file, info) in uncovered_files {
+                        if info.whole_file_missed.is_empty() {
+                            continue;
                         }
-                        write!(stdout, "{l}")?;
+                        write!(stdout, "{file}: ")?;
+                        let mut first = true;
+                        for &l in &info.whole_file_missed {
+                            if first {
+                                first = false;
+                            } else {
+                                write!(stdout, ", ")?;
+                            }
+                            write!(stdout, "{l}")?;
+                        }
+                        writeln!(stdout)?;
                     }
-                    writeln!(stdout)?;
+                }
+                if has_per_instantiation {
+                    if has_whole_file {
+                        writeln!(stdout)?;
+                    }
+                    writeln!(stdout, "Uncovered Lines (per instantiation):")?;
+                    for (file, info) in uncovered_files {
+                        for entry in &info.per_instantiation_missed {
+                            for name in &entry.function_names {
+                                writeln!(
+                                    stdout,
+                                    "{file}:{} in {:#}",
+                                    entry.line,
+                                    rustc_demangle::demangle(name),
+                                )?;
+                            }
+                        }
+                    }
                 }
                 stdout.flush()?;
             }
