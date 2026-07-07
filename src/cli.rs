@@ -71,8 +71,6 @@ pub(crate) struct Args {
     pub(crate) verbose: u8,
 
     /// Use --remap-path-prefix for workspace root
-    ///
-    /// Note that this does not fully compatible with doctest.
     pub(crate) remap_path_prefix: bool,
 
     /// Show coverage of the specified dependency instead of the crates in the current workspace.
