@@ -6,6 +6,8 @@ unmaintained = "none"
 unsound = "all"
 git-fetch-with-cli = true
 ignore = [
+    "RUSTSEC-2026-0194", # quick-xml (via lcov2cobertura). Not affected since lcov2cobertura emits xml, but doesn't parse.
+    "RUSTSEC-2026-0195", # quick-xml (via lcov2cobertura). Not affected since lcov2cobertura doesn't use affected APIs.
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
