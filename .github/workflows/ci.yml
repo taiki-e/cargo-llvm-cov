@@ -356,7 +356,7 @@ jobs:
         if: matrix.os != 'windows-11-arm'
       - name: Test show-env --fish
         run: |
-          cargo llvm-cov show-env --sh > env.fish
+          cargo llvm-cov show-env --fish > env.fish
           cat -- env.fish
           source env.fish
           cargo llvm-cov clean --workspace
