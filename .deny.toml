@@ -22,12 +22,14 @@ build.include-workspace = false # covered by tools/tidy.sh
 build.include-archives = true
 build.allow-build-scripts = [
     { name = "anyhow" },
+    { name = "build-context" },
     { name = "camino" },
     { name = "fs-err" },
     { name = "libc" },
     { name = "proc-macro2" }, # via serde_derive
     { name = "quote" }, # via serde_derive
     { name = "rustix" }, # via tar
+    { name = "rustversion" },
     { name = "serde_core" },
     { name = "serde_json" },
     { name = "serde" }, # https://github.com/serde-rs/serde/issues/2972
@@ -51,6 +53,7 @@ build.bypass = [
     { name = "windows_x86_64_gnu", allow-globs = ["lib/*.a"] },
     { name = "windows_x86_64_gnullvm", allow-globs = ["lib/*.a"] },
     { name = "windows_x86_64_msvc", allow-globs = ["lib/*.lib"] },
+    { name = "libc", allow = [{ path = "etc/libc-util.py" }] },
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
