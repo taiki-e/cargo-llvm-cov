@@ -306,6 +306,19 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             rustdocflags.push("unstable-options");
             rustdocflags.push("--persist-doctests");
             rustdocflags.push(cx.ws.doctests_dir.as_str());
+            // Since the 2024 edition rustdoc merges all doctests of a crate into a
+            // single binary. The directory it then creates under --persist-doctests
+            // is named after the edition only (merged_doctest_<edition>_<n>), not
+            // after the crate. Cargo invokes rustdoc once per package, so in a
+            // workspace every package writes to the same directory and all but the
+            // last one are overwritten.
+            // https://github.com/taiki-e/cargo-llvm-cov/issues/440
+            //
+            // --merge-doctests is available since 1.94-nightly.
+            if cx.ws.rustc_version.major_minor() >= (1, 94) {
+                rustdocflags.push("--merge-doctests");
+                rustdocflags.push("no");
+            }
         }
         // First, try with RUSTDOCFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
         if let Ok(v) = rustdocflags.encode_space_separated() {
