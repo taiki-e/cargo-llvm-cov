@@ -1,0 +1,5 @@
+[package]
+name = "member1"
+version = "0.0.0"
+
+[dependencies]
