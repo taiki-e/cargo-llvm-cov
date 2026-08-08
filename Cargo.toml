@@ -81,6 +81,7 @@ transmute_undefined_repr = "warn"
 undocumented_unsafe_blocks = "warn"
 unused_trait_names = "warn"
 # Suppress buggy or noisy clippy lints
+assert_is_empty = { level = "allow", priority = 1 } # completely useless in assert_ne case
 bool_assert_comparison = { level = "allow", priority = 1 }
 borrow_as_ptr = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/8286
 cast_lossless = { level = "allow", priority = 1 } # suggested code has poor codegen with -C opt-level=0 https://godbolt.org/z/GzTxzbd9q
