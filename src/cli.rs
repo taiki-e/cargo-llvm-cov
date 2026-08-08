@@ -1036,7 +1036,7 @@ impl Args {
 
             match arg {
                 Long("color") => parse_opt_passthrough!(color),
-                Long("manifest-path") => parse_opt!(manifest_path),
+                Short('m') | Long("manifest-path") => parse_opt!(manifest_path),
                 Long("frozen") => parse_flag_passthrough!(clean.frozen),
                 Long("locked") => parse_flag_passthrough!(clean.locked),
                 Long("offline") => parse_flag_passthrough!(clean.offline),
