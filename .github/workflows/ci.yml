@@ -468,6 +468,8 @@ jobs:
           - llvm: '20'
           - llvm: '21'
           - llvm: '22'
+          # TODO: not listed in https://apt.llvm.org/
+          # - llvm: '23'
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
@@ -551,12 +553,15 @@ jobs:
               cargo clean
               cargo +1.81 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
-            *)
-              retry rustup toolchain add 1.82 beta nightly --no-self-update
+            19 | 2[0-2])
+              retry rustup toolchain add 1.82 beta --no-self-update
               cargo clean
               cargo +1.82 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+              ;;
+            *)
+              retry rustup toolchain add nightly --no-self-update
               cargo clean
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
