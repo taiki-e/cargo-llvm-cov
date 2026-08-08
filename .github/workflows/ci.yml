@@ -72,6 +72,8 @@ jobs:
             target: aarch64-pc-windows-gnullvm
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
+    env:
+      __CARGO_TEMPORARY_BUILD_DIR_NEW_LAYOUT_OPT_OUT: 1 # opt-out for https://github.com/rust-lang/cargo/pull/17272 to fix tests
     steps:
       - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
       - uses: taiki-e/install-action@b8cecb83565409bcc297b2df6e77f030b2a468d5 # v2.82.0
@@ -466,6 +468,8 @@ jobs:
           - llvm: '20'
           - llvm: '21'
           - llvm: '22'
+          # TODO: not listed in https://apt.llvm.org/
+          # - llvm: '23'
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
@@ -549,12 +553,15 @@ jobs:
               cargo clean
               cargo +1.81 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
-            *)
-              retry rustup toolchain add 1.82 beta nightly --no-self-update
+            19 | 2[0-2])
+              retry rustup toolchain add 1.82 beta --no-self-update
               cargo clean
               cargo +1.82 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+              ;;
+            *)
+              retry rustup toolchain add nightly --no-self-update
               cargo clean
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
