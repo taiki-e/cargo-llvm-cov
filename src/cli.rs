@@ -724,7 +724,7 @@ pub(crate) enum ShowEnvFormat {
     Cmd,
     /// Each key-value: `setenv {key} '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Csh,
-    /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    /// Each key-value: `set -gx {key} {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Fish,
     /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Nu,
@@ -764,7 +764,7 @@ impl ShowEnvFormat {
             }
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
-                writeln!(writer, "set -gx {key}={}", escape::sh(value.into()))
+                writeln!(writer, "set -gx {key} {}", escape::sh(value.into()))
             }
             ShowEnvFormat::Nu => {
                 // TODO: https://www.nushell.sh/lang-guide/chapters/strings_and_text.html#string-quoting
