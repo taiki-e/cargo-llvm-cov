@@ -51,6 +51,7 @@ build.bypass = [
     { name = "windows_x86_64_gnu", allow-globs = ["lib/*.a"] },
     { name = "windows_x86_64_gnullvm", allow-globs = ["lib/*.a"] },
     { name = "windows_x86_64_msvc", allow-globs = ["lib/*.lib"] },
+    { name = "libc", allow = [{ path = "etc/libc-util.py" }] }, # TODO: remove once https://github.com/rust-lang/libc/pull/5312 released
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html

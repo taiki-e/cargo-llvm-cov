@@ -724,7 +724,7 @@ pub(crate) enum ShowEnvFormat {
     Cmd,
     /// Each key-value: `setenv {key} '{value}'`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Csh,
-    /// Each key-value: `set -gx {key}={value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
+    /// Each key-value: `set -gx {key} {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Fish,
     /// Each key-value: `$env.{key} = {value}`, where `{value}` is escaped using [`shell_escape::unix::escape`].
     Nu,
@@ -764,7 +764,7 @@ impl ShowEnvFormat {
             }
             ShowEnvFormat::Fish => {
                 // TODO: https://fishshell.com/docs/current/language.html#quotes
-                writeln!(writer, "set -gx {key}={}", escape::sh(value.into()))
+                writeln!(writer, "set -gx {key} {}", escape::sh(value.into()))
             }
             ShowEnvFormat::Nu => {
                 // TODO: https://www.nushell.sh/lang-guide/chapters/strings_and_text.html#string-quoting
@@ -1036,7 +1036,7 @@ impl Args {
 
             match arg {
                 Long("color") => parse_opt_passthrough!(color),
-                Long("manifest-path") => parse_opt!(manifest_path),
+                Short('m') | Long("manifest-path") => parse_opt!(manifest_path),
                 Long("frozen") => parse_flag_passthrough!(clean.frozen),
                 Long("locked") => parse_flag_passthrough!(clean.locked),
                 Long("offline") => parse_flag_passthrough!(clean.offline),
@@ -1382,9 +1382,9 @@ impl Args {
             | Subcommand::Test
             | Subcommand::Nextest { .. }
             | Subcommand::NextestArchive
+            | Subcommand::Report { .. }
             | Subcommand::Clean => {}
-            Subcommand::Run | Subcommand::Report { .. } | Subcommand::ShowEnv => {
-                // TODO: allow report?
+            Subcommand::Run | Subcommand::ShowEnv => {
                 if workspace {
                     specific_flag("--workspace", subcommand, &[
                         "test",
@@ -1392,6 +1392,7 @@ impl Args {
                         "nextest-archive",
                         "show-env",
                         "clean",
+                        "report",
                         "",
                     ])?;
                 }
