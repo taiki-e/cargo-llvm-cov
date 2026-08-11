@@ -547,6 +547,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     };
     collect_ui_test_target_dir(ui_test_target_dir)?;
 
+    // Explicitly specified object files (e.g. binaries of non-workspace crates
+    // like examples or external test crates). These bypass the workspace-member
+    // filename whitelist used by the automatic detection above.
+    for obj in &cx.args.report.object {
+        files.push(Utf8PathBuf::from(obj).into_os_string());
+    }
+
     // This sort is necessary to make the result of `llvm-cov show` match between macOS and Linux.
     files.sort_unstable();
 
