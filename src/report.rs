@@ -914,13 +914,37 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         if cx.args.dep_coverage.is_empty() {
             // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
             //       We may have a directory like tests/support, so maybe we need both?
+            //       `--include-tests-examples-benches` currently lifts the directory
+            //       exclusion wholesale as an opt-in workaround.
+            let exclude_test_dirs = !cx.args.report.include_tests_examples_benches;
             if cx.args.remap_path_prefix {
-                out.push(format!(
-                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}|{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$"
-                ));
+                if exclude_test_dirs {
+                    out.push(format!(
+                        r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}"
+                    ));
+                } else {
+                    out.push(format!(
+                        r"(^|{SEPARATOR})rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}"
+                    ));
+                }
+                // Test entry files (e.g. `tests.rs`, `foo_tests.rs`) are always
+                // excluded, regardless of `--include-tests-examples-benches`.
+                out.push(format!(r"{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$"));
             } else {
+                if exclude_test_dirs {
+                    out.push(format!(
+                        r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}",
+                        workspace_root = regex::escape(cx.ws.metadata.workspace_root.as_str())
+                    ));
+                } else {
+                    out.push(format!(
+                        r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}"
+                    ));
+                }
+                // Test entry files (e.g. `tests.rs`, `foo_tests.rs`) are always
+                // excluded, regardless of `--include-tests-examples-benches`.
                 out.push(format!(
-                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$",
+                    r"^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$",
                     workspace_root = regex::escape(cx.ws.metadata.workspace_root.as_str())
                 ));
             }
