@@ -4,7 +4,7 @@
 // TODO: reflect https://github.com/llvm/llvm-project/commit/8ecbb0404d740d1ab173554e47cef39cd5e3ef8c#diff-e5de2b538138d03e13b43901f61adc61992516c742991ebaf1a13f2f8623910a?
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fmt,
 };
 
@@ -143,8 +143,30 @@ impl CodeCovJsonExport {
     }
 }
 
-/// Files -> list of uncovered lines.
-type UncoveredLines = BTreeMap<String, Vec<u64>>;
+/// A source line that is missed in a specific live instantiation but covered
+/// by some other function in the same file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PerInstantiationLine {
+    pub line: u64,
+    /// Mangled function names responsible for the missed line. The report layer
+    /// formats them via `rustc_demangle`.
+    pub function_names: Vec<String>,
+}
+
+/// Per-file uncovered lines, split into whole-file and per-instantiation cases
+/// to mirror `llvm-cov report`'s file-summary accounting across InstantiationGroups.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UncoveredFile {
+    /// Lines for which no function in the file has any covered region.
+    pub whole_file_missed: Vec<u64>,
+    /// Lines covered by some function in the file but missed in one or more
+    /// specific live instantiations (or in a dead instantiation that has no
+    /// live sibling in its group covering the line).
+    pub per_instantiation_missed: Vec<PerInstantiationLine>,
+}
+
+/// Files -> uncovered info.
+pub type UncoveredLines = BTreeMap<String, UncoveredFile>;
 
 #[non_exhaustive]
 #[derive(Clone, Copy)]
@@ -212,80 +234,132 @@ impl LlvmCovJsonExport {
     }
 
     /// Gets the list of uncovered lines of all files.
+    ///
+    /// Mirrors `llvm-cov report`'s file-summary line accounting, which is computed
+    /// per InstantiationGroup (functions sharing a source location, e.g. multiple
+    /// instantiations of one generic) and then summed across groups. See
+    /// `llvm/tools/llvm-cov/CoverageSummaryInfo.cpp`
+    /// `sumRegions` and `FunctionCoverageSummary::get(Group, Summaries)`, and
+    /// `llvm/lib/ProfileData/Coverage/CoverageMapping.cpp` `FunctionInstantiationSetCollector`.
+    ///
+    /// Rule, per function F (only `kind == 0` Code regions are considered, matching
+    /// LLVM's `sumRegions` filter):
+    /// - `func_lines(F)` = lines touched by some Code region in F.
+    /// - `func_covered(F)` = lines L where some Code region in F has `count > 0`.
+    /// - `func_missed(F)` = `func_lines(F) - func_covered(F)`.
+    /// - Group F into `(file, (first_region.line_start, first_region.column_start))`.
+    /// - For each L in `func_missed(F)`:
+    ///   - If F is live (`F.count > 0`): always emit `(L, F.name)`.
+    ///   - If F is dead (`F.count == 0`): emit `(L, F.name)` only if no live function
+    ///     in the same group has a covering region at L.
+    ///
+    /// Output partition: a missed line L is "whole-file" if no function anywhere in
+    /// the file covers L; otherwise it is "per-instantiation" (the file is covered
+    /// elsewhere, but specific instantiations contribute the miss).
     #[must_use]
     pub fn get_uncovered_lines(&self, ignore_filename_regex: Option<&str>) -> UncoveredLines {
-        let mut uncovered_files: UncoveredLines = BTreeMap::new();
-        let mut covered_files: UncoveredLines = BTreeMap::new();
         let re = ignore_filename_regex.map(|s| Regex::new(s).unwrap());
+
+        // (file, group_key) -> functions in that InstantiationGroup. group_key =
+        // (first_region.line_start, first_region.column_start), matching LLVM's
+        // FunctionInstantiationSetCollector (CoverageMapping.cpp:1149).
+        let mut groups: BTreeMap<(String, (u64, u64)), Vec<GroupedFunction>> = BTreeMap::new();
+        let mut covered_anywhere: BTreeMap<String, BTreeSet<u64>> = BTreeMap::new();
+
         for data in &self.data {
-            if let Some(ref functions) = data.functions {
-                // Iterate over all functions inside the coverage data.
-                for function in functions {
-                    if function.filenames.is_empty() {
+            let Some(ref functions) = data.functions else { continue };
+            for function in functions {
+                if function.filenames.is_empty() || function.regions.is_empty() {
+                    continue;
+                }
+                let file_name = &function.filenames[0];
+                if let Some(ref re) = re {
+                    if re.is_match(file_name) {
                         continue;
                     }
-                    let file_name = &function.filenames[0];
-                    if let Some(ref re) = re {
-                        if re.is_match(file_name) {
-                            continue;
-                        }
-                    }
-                    let mut lines: BTreeMap<u64, u64> = BTreeMap::new();
-                    // Iterate over all possible regions inside a function:
-                    for region in &function.regions {
-                        // LineStart, ColumnStart, LineEnd, ColumnEnd, ExecutionCount, FileID, ExpandedFileID, Kind
-                        let line_start = region.0;
-                        let line_end = region.2;
-                        let exec_count = region.4;
-                        // Remember the execution count for each line of that region:
-                        for line in line_start..=line_end {
-                            *lines.entry(line).or_insert(0) += exec_count;
-                        }
-                    }
+                }
 
-                    let mut uncovered_lines: Vec<u64> = lines
-                        .iter()
-                        .filter(|(_line, exec_count)| **exec_count == 0)
-                        .map(|(line, _exec_count)| *line)
-                        .collect();
-                    let mut covered_lines: Vec<u64> = lines
-                        .iter()
-                        .filter(|(_line, exec_count)| **exec_count > 0)
-                        .map(|(line, _exec_count)| *line)
-                        .collect();
-                    if !uncovered_lines.is_empty() {
-                        uncovered_files
-                            .entry(file_name.clone())
-                            .or_default()
-                            .append(&mut uncovered_lines);
+                let first = &function.regions[0];
+                let group_key = (first.line_start(), first.column_start());
+
+                let mut lines = BTreeSet::new();
+                let mut covered = BTreeSet::new();
+                for region in &function.regions {
+                    if region.kind() != 0 {
+                        continue;
                     }
-                    if !covered_lines.is_empty() {
-                        covered_files
+                    for line in RegionLocation::from(region).lines() {
+                        lines.insert(line);
+                        if region.execution_count() > 0 {
+                            covered.insert(line);
+                        }
+                    }
+                }
+                if lines.is_empty() {
+                    continue;
+                }
+
+                covered_anywhere.entry(file_name.clone()).or_default().extend(&covered);
+
+                groups.entry((file_name.clone(), group_key)).or_default().push(GroupedFunction {
+                    count: function.count,
+                    name: function.name.clone(),
+                    lines,
+                    covered,
+                });
+            }
+        }
+
+        // file -> line -> responsible mangled function names.
+        let mut all_missed: BTreeMap<String, BTreeMap<u64, Vec<String>>> = BTreeMap::new();
+
+        for ((file_name, _group_key), instances) in &groups {
+            let mut group_live_covered: BTreeSet<u64> = BTreeSet::new();
+            for f in instances {
+                if f.count > 0 {
+                    group_live_covered.extend(&f.covered);
+                }
+            }
+
+            for f in instances {
+                for line in f.lines.difference(&f.covered) {
+                    let suppressed = f.count == 0 && group_live_covered.contains(line);
+                    if !suppressed {
+                        all_missed
                             .entry(file_name.clone())
                             .or_default()
-                            .append(&mut covered_lines);
+                            .entry(*line)
+                            .or_default()
+                            .push(f.name.clone());
                     }
                 }
             }
         }
 
-        for uncovered_file in &mut uncovered_files {
-            // Check if a line is both covered and non-covered. It's covered in this case.
-            let file_name = uncovered_file.0;
-            let uncovered_lines = uncovered_file.1;
-            if let Some(covered_lines) = covered_files.get(file_name) {
-                uncovered_lines.retain(|&x| !covered_lines.contains(&x));
+        let mut result: UncoveredLines = BTreeMap::new();
+        for (file_name, line_map) in all_missed {
+            let file_covered = covered_anywhere.get(&file_name);
+            let mut uncovered_file = UncoveredFile::default();
+            for (line, mut names) in line_map {
+                let covered_elsewhere = file_covered.is_some_and(|c| c.contains(&line));
+                if covered_elsewhere {
+                    names.sort();
+                    names.dedup();
+                    uncovered_file
+                        .per_instantiation_missed
+                        .push(PerInstantiationLine { line, function_names: names });
+                } else {
+                    uncovered_file.whole_file_missed.push(line);
+                }
             }
-
-            // Remove duplicates.
-            uncovered_lines.sort_unstable();
-            uncovered_lines.dedup();
+            if !uncovered_file.whole_file_missed.is_empty()
+                || !uncovered_file.per_instantiation_missed.is_empty()
+            {
+                result.insert(file_name, uncovered_file);
+            }
         }
 
-        // Remove empty keys.
-        uncovered_files.retain(|_, v| !v.is_empty());
-
-        uncovered_files
+        result
     }
 
     pub fn count_uncovered_functions(&self) -> Result<u64> {
@@ -509,6 +583,15 @@ impl RegionLocation {
     }
 }
 
+/// One function's contribution to its InstantiationGroup, with kind=0 region
+/// data pre-expanded into per-line sets.
+struct GroupedFunction {
+    count: u64,
+    name: String,
+    lines: BTreeSet<u64>,
+    covered: BTreeSet<u64>,
+}
+
 /// Object summarizing the coverage for this file
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(test, serde(deny_unknown_fields))]
@@ -666,8 +749,12 @@ mod tests {
         let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
-        let expected: UncoveredLines =
-            vec![("src/lib.rs".to_owned(), vec![7, 8, 9])].into_iter().collect();
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![7, 8, 9],
+            per_instantiation_missed: vec![],
+        })]
+        .into_iter()
+        .collect();
         assert_eq!(uncovered_lines, expected);
     }
 
@@ -706,12 +793,92 @@ mod tests {
         let uncovered_lines = json.get_uncovered_lines(ignore_filename_regex);
 
         // Then make sure the file / line data matches the `llvm-cov report` output:
-        let expected: UncoveredLines =
-            vec![("src/lib.rs".to_owned(), vec![15, 17])].into_iter().collect();
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![15, 17],
+            per_instantiation_missed: vec![],
+        })]
+        .into_iter()
+        .collect();
         // This was just '11', i.e. there were two problems:
         // 1) line 11 has a serde macro which expands to multiple functions; some of those were
         //    covered, which should be presented as a "covered" 11th line.
         // 2) only the last function with missing lines were reported, so 15 and 17 was missing.
+        // The group-aware rule preserves this: dead instances at line 11 are grouped with
+        // the live RelationDict at the same (line, col) and suppressed by it.
+        assert_eq!(uncovered_lines, expected);
+    }
+
+    /// Same-group asymmetric live instantiations: two live instantiations of one generic
+    /// share a source location and so belong to the same InstantiationGroup. One has a
+    /// `kind=0 count=0` region at line 289 with no covering region in the same function; the
+    /// other covers line 289 with count=1. The per-line max view shows the line covered, but
+    /// the file summary counts it as missed because LLVM's intra-group MAX-per-dimension merge
+    /// surfaces the asymmetry.
+    #[test]
+    fn test_get_uncovered_lines_same_group_asymmetric() {
+        let file = format!(
+            "{}/tests/fixtures/show-missing-lines-same-group-asymmetric.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        let uncovered_lines = json.get_uncovered_lines(None);
+
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![],
+            per_instantiation_missed: vec![PerInstantiationLine {
+                line: 289,
+                function_names: vec!["_RNvCsTEST1_5crate1_14list_recursive".to_owned()],
+            }],
+        })]
+        .into_iter()
+        .collect();
+        assert_eq!(uncovered_lines, expected);
+    }
+
+    /// Different-group dead vs live (the strum #404 case): a dead `Display::fmt` and a live
+    /// `EnumIter::iter` are in different InstantiationGroups (different source locations).
+    /// The file summary sums per-group totals so Display's miss stands, even though line 3 is
+    /// covered by EnumIter from a different group.
+    #[test]
+    fn test_get_uncovered_lines_different_group() {
+        let file = format!(
+            "{}/tests/fixtures/show-missing-lines-different-group.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        let uncovered_lines = json.get_uncovered_lines(None);
+
+        let expected: UncoveredLines = vec![("src/lib.rs".to_owned(), UncoveredFile {
+            whole_file_missed: vec![],
+            per_instantiation_missed: vec![PerInstantiationLine {
+                line: 3,
+                function_names: vec!["_RNvXNtCsTEST_4test3Foo7Display3fmt".to_owned()],
+            }],
+        })]
+        .into_iter()
+        .collect();
+        assert_eq!(uncovered_lines, expected);
+    }
+
+    /// Intra-group suppression: a dead instance and a live instance share a source location.
+    /// The live sibling covers the line, so the dead instance's miss is forgiven (matches
+    /// LLVM's intra-group merge that lets a single fully-covering instance hide the miss).
+    #[test]
+    fn test_get_uncovered_lines_intra_group_suppression() {
+        let file = format!(
+            "{}/tests/fixtures/show-missing-lines-intra-group-suppression.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let s = fs::read_to_string(file).unwrap();
+        let json = serde_json::from_str::<LlvmCovJsonExport>(&s).unwrap();
+
+        let uncovered_lines = json.get_uncovered_lines(None);
+
+        let expected: UncoveredLines = UncoveredLines::new();
         assert_eq!(uncovered_lines, expected);
     }
 }
