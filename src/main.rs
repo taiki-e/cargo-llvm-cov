@@ -315,9 +315,9 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             // https://github.com/taiki-e/cargo-llvm-cov/issues/440
             //
             // --merge-doctests is available since 1.94-nightly.
+            // https://github.com/rust-lang/rust/pull/149565
             if cx.ws.rustc_version.major_minor() >= (1, 94) {
-                rustdocflags.push("--merge-doctests");
-                rustdocflags.push("no");
+                rustdocflags.push("--merge-doctests=no");
             }
         }
         // First, try with RUSTDOCFLAGS because `nextest` subcommand sometimes doesn't work well with encoded flags.
