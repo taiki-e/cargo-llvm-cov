@@ -468,8 +468,7 @@ jobs:
           - llvm: '20'
           - llvm: '21'
           - llvm: '22'
-          # TODO: not listed in https://apt.llvm.org/
-          # - llvm: '23'
+          - llvm: '23'
     runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
     timeout-minutes: 60
     steps:
