@@ -12,7 +12,18 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Change `--show-missing-lines` reporting to aggregate consecutive line numbers. ([#497](https://github.com/taiki-e/cargo-llvm-cov/pull/497), thanks @saroad2)
+  - This is a breaking change for users who were previously parsing the output programmatically.
+
+- Fix doctest coverage in 2024 edition workspaces with multiple packages. ([#507](https://github.com/taiki-e/cargo-llvm-cov/pull/507), thanks @Eljees)
+
 - Fix an issue where build scripts appeared in reports even without `--include-build-script` when Cargo's new build-dir layout is used.
+
+- Fix output format of `--fish`. ([#504](https://github.com/taiki-e/cargo-llvm-cov/pull/504), thanks @olexander-movchan)
+
+- Support `--workspace`/`--all` in `cargo llvm-cov report` subcommand. ([#500](https://github.com/taiki-e/cargo-llvm-cov/pull/500), thanks @palfrey)
+
+- Support `-m` alias [added in Cargo 1.97](https://github.com/rust-lang/cargo/pull/16858).
 
 ## [0.8.7] - 2026-05-13
 
