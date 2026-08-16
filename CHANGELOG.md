@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Fix an issue where build scripts appeared in reports even without `--include-build-script` when Cargo's new build-dir layout is used.
+
 ## [0.8.7] - 2026-05-13
 
 - Add `--coverage-host-only` flag. ([#493](https://github.com/taiki-e/cargo-llvm-cov/pull/493), thanks @davidhewitt)

@@ -273,6 +273,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                         }
 
                         if stem == "build-script-build"
+                            || stem == "build_script_build"
                             || stem.to_str().unwrap_or_default().starts_with("build_script_build-")
                         {
                             if cx.args.report.include_build_script {
