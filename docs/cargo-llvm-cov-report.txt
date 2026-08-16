@@ -89,9 +89,9 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
-        --include-tests-examples-benches
-            Include source files under `tests`/`examples`/`benches` directories in
-            the report, which are excluded by default. Test entry files
+        --include-examples
+            Include source files under the `examples` directory in the report,
+            which are excluded by default. Test entry files
             (`tests.rs`/`*_tests.rs`) remain excluded.
 
         --fail-under-functions <MIN>
