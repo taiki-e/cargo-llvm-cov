@@ -140,26 +140,7 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
             let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             if !uncovered_files.is_empty() {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
-                writeln!(stdout, "Uncovered Lines:")?;
-                for (file, lines) in &uncovered_files {
-                    write!(stdout, "{file}: ")?;
-                    let uncovered_line_segments = aggregate_consecutive_lines(lines);
-                    let mut first = true;
-                    for &(start, end) in &uncovered_line_segments {
-                        if first {
-                            first = false;
-                        } else {
-                            write!(stdout, ", ")?;
-                        }
-                        if start == end {
-                            write!(stdout, "{start}")?;
-                        } else {
-                            write!(stdout, "{start}-{end}")?;
-                        }
-                    }
-                    writeln!(stdout)?;
-                }
-                stdout.flush()?;
+                show_missing_lines(&mut stdout, &uncovered_files)?;
             }
         }
     }
@@ -169,6 +150,34 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
         status!("Opening", "{path}");
         open_report(cx, path)?;
     }
+    Ok(())
+}
+
+fn show_missing_lines(
+    out: &mut dyn io::Write,
+    uncovered_files: &cargo_llvm_cov::json::UncoveredLines,
+) -> Result<()> {
+    writeln!(out, "Uncovered Lines:")?;
+    for (file, lines) in uncovered_files {
+        write!(out, "{file}: ")?;
+        let mut first = true;
+        for segment in lines.chunk_by(|a, b| a.checked_add(1) == Some(*b)) {
+            let start = segment[0];
+            let end = segment[segment.len() - 1];
+            if first {
+                first = false;
+            } else {
+                write!(out, ", ")?;
+            }
+            if start == end {
+                write!(out, "{start}")?;
+            } else {
+                write!(out, "{start}-{end}")?;
+            }
+        }
+        writeln!(out)?;
+    }
+    out.flush()?;
     Ok(())
 }
 
@@ -1056,15 +1065,29 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
     excluded_path
 }
 
-fn aggregate_consecutive_lines(lines: &[u64]) -> Vec<(u64, u64)> {
-    let mut segments: Vec<(u64, u64)> = Vec::new();
-    for &line in lines {
-        match segments.last_mut() {
-            Some((_, end)) if *end + 1 == line => {
-                *end = line;
-            }
-            _ => segments.push((line, line)),
-        }
+#[cfg(test)]
+mod tests {
+    use cargo_llvm_cov::json::UncoveredLines;
+
+    #[test]
+    fn show_missing_lines() {
+        let mut m = UncoveredLines::new();
+        m.insert("f".to_owned(), vec![]);
+        let mut o = vec![];
+
+        o.clear();
+        m.get_mut("f").unwrap().push(1);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1\n");
+
+        o.clear();
+        m.get_mut("f").unwrap().push(2);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-2\n");
+
+        o.clear();
+        m.get_mut("f").unwrap().extend_from_slice(&[3, 5, 7, 8]);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-3, 5, 7-8\n");
     }
-    segments
 }

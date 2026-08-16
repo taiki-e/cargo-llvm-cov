@@ -144,7 +144,7 @@ impl CodeCovJsonExport {
 }
 
 /// Files -> list of uncovered lines.
-type UncoveredLines = BTreeMap<String, Vec<u64>>;
+pub type UncoveredLines = BTreeMap<String, Vec<u64>>;
 
 #[non_exhaustive]
 #[derive(Clone, Copy)]
