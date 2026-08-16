@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-16
+
 - Change `--show-missing-lines` reporting to aggregate consecutive line numbers. ([#497](https://github.com/taiki-e/cargo-llvm-cov/pull/497), thanks @saroad2)
   - This is a breaking change for users who were previously parsing the output programmatically.
 
@@ -833,7 +835,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...v0.9.0
 [0.8.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...v0.8.7
 [0.8.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.4...v0.8.5
