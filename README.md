@@ -3,6 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/cargo-llvm-cov?style=flat-square&logo=rust)](https://crates.io/crates/cargo-llvm-cov)
 [![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
 [![github actions](https://img.shields.io/github/actions/workflow/status/taiki-e/cargo-llvm-cov/ci.yml?branch=main&style=flat-square&logo=github)](https://github.com/taiki-e/cargo-llvm-cov/actions)
+[![inspect.software](https://raw.githubusercontent.com/inspect-software/badges/main/v1/t/taiki-e/cargo-llvm-cov.svg)](https://inspect.software/software/taiki-e/cargo-llvm-cov)
 
 Cargo subcommand to easily use LLVM source-based code coverage.
 
