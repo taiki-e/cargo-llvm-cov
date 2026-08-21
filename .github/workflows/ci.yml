@@ -553,14 +553,16 @@ jobs:
               cargo +1.81 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             19 | 2[0-2])
-              retry rustup toolchain add 1.82 beta --no-self-update
+              retry rustup toolchain add 1.82 1.98 --no-self-update
               cargo clean
               cargo +1.82 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
-              cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
+              cargo +1.98 llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
             *)
-              retry rustup toolchain add nightly --no-self-update
+              retry rustup toolchain add beta nightly --no-self-update
+              cargo clean
+              cargo +beta llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               cargo clean
               cargo +nightly llvm-cov test --text --include-ffi --fail-under-lines 70 -vv
               ;;
