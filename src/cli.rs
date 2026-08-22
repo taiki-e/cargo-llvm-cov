@@ -324,6 +324,13 @@ pub(crate) struct ReportOptions {
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
     pub(crate) show_instantiations: bool,
+    /// Include source files in the `examples` directory in the report.
+    ///
+    /// By default, files under `tests`/`examples`/`benches` directories are
+    /// excluded from the report; this flag lifts the exclusion only for the
+    /// `examples` directory. Test entry files (`tests.rs`/`*_tests.rs`) are
+    /// always excluded.
+    pub(crate) include_examples: bool,
     /// Exit with a status of 1 if the total function coverage is less than MIN percent.
     pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
@@ -385,6 +392,7 @@ impl ReportOptions {
                 ignore_filename_regex,
                 no_default_ignore_filename_regex,
                 show_instantiations,
+                include_examples,
                 fail_under_functions,
                 fail_under_lines,
                 fail_under_file_lines,
@@ -411,6 +419,7 @@ impl ReportOptions {
                 ("--ignore-filename-regex", ignore_filename_regex.is_some()),
                 ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
                 ("--show-instantiations", *show_instantiations),
+                ("--include-examples", *include_examples),
                 ("--fail-under-functions", fail_under_functions.is_some()),
                 ("--fail-under-lines", fail_under_lines.is_some()),
                 ("--fail-under-file-lines", fail_under_file_lines.is_some()),
@@ -1111,6 +1120,7 @@ impl Args {
                     parse_flag!(report.no_default_ignore_filename_regex);
                 }
                 Long("show-instantiations") => parse_flag!(report.show_instantiations),
+                Long("include-examples") => parse_flag!(report.include_examples),
                 Long("hide-instantiations") => {
                     // The following warning is a hint, so it should not be promoted to an error.
                     let _guard = term::warn::ignore();

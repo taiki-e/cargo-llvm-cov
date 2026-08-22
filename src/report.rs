@@ -7,6 +7,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     ffi::{OsStr, OsString},
+    fmt::Write as _,
     io::{self, BufRead as _, BufWriter, Read as _, Write as _},
     path::Path,
     time::SystemTime,
@@ -929,16 +930,35 @@ fn ignore_filename_regex(cx: &Context, object_files: &[OsString]) -> Result<Opti
         if cx.args.dep_coverage.is_empty() {
             // TODO: Should we use the actual target path instead of using `tests|examples|benches`?
             //       We may have a directory like tests/support, so maybe we need both?
-            if cx.args.remap_path_prefix {
-                out.push(format!(
-                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|tests|examples|benches){SEPARATOR}|{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$"
-                ));
+            // `--include-examples` only lifts the exclusion for the `examples` directory;
+            // `tests`/`benches` directories are still excluded.
+            let dirs = if cx.args.report.include_examples {
+                "tests|benches"
             } else {
-                out.push(format!(
-                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests|examples|benches){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$",
+                "tests|examples|benches"
+            };
+            let mut ignore_re = String::new();
+            if cx.args.remap_path_prefix {
+                let _ = write!(
+                    ignore_re,
+                    r"(^|{SEPARATOR})(rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)|{dirs}){SEPARATOR}"
+                );
+                // Test entry files (e.g. `tests.rs`, `foo_tests.rs`) are always excluded.
+                let _ = write!(ignore_re, r"|{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$");
+            } else {
+                let _ = write!(
+                    ignore_re,
+                    r"{SEPARATOR}rustc{SEPARATOR}([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+){SEPARATOR}|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}({dirs}){SEPARATOR}",
                     workspace_root = regex::escape(cx.ws.metadata.workspace_root.as_str())
-                ));
+                );
+                // Test entry files (e.g. `tests.rs`, `foo_tests.rs`) are always excluded.
+                let _ = write!(
+                    ignore_re,
+                    r"|^{workspace_root}({SEPARATOR}.*)?{SEPARATOR}(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$",
+                    workspace_root = regex::escape(cx.ws.metadata.workspace_root.as_str())
+                );
             }
+            out.push(ignore_re);
             out.push_abs_path(&cx.ws.target_dir);
             if let Some(build_dir) = &cx.ws.build_dir {
                 if *build_dir != cx.ws.target_dir {
