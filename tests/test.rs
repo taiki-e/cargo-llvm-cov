@@ -112,6 +112,21 @@ fn instantiations() {
     run("instantiations", "instantiations", &[], &[]);
 }
 
+// `--coverage-watermark` only changes the colors in the html report, so there is nothing stable
+// to snapshot. Just check that the html report is still generated when the flag is passed.
+#[rustversion::attr(before(1.88), ignore)]
+#[test]
+fn coverage_watermark() {
+    let workspace_root = test_project("real1");
+    let output_dir = tempfile::tempdir().unwrap();
+    cargo_llvm_cov("test")
+        .args(["--html", "--coverage-watermark", "70,40", "--output-dir"])
+        .arg(output_dir.path())
+        .current_dir(workspace_root.path())
+        .assert_success();
+    assert!(output_dir.path().join("html").join("index.html").exists());
+}
+
 // 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
 #[rustversion::attr(before(1.88), ignore)]
 #[test]

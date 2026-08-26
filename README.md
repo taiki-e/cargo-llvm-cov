@@ -142,6 +142,13 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
+        --coverage-watermark <HIGH,LOW>
+            Set the coverage watermarks (percentages) used for the colors of the html report
+
+            Regions with coverage of at least HIGH percent are shown in green, at least LOW
+            percent in yellow, and the rest in red. This flag can only be used together with
+            --html or --open.
+
         --no-cfg-coverage
             Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
 

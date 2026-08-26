@@ -727,6 +727,12 @@ impl ReportFormat {
                     // -show-mcdc requires LLVM 18+
                     cmd.arg("-show-mcdc");
                 }
+                // -coverage-watermark only affects the coloring of the html report.
+                if self == Self::Html {
+                    if let Some(coverage_watermark) = &cx.args.report.coverage_watermark {
+                        cmd.arg(format!("-coverage-watermark={coverage_watermark}"));
+                    }
+                }
                 let mut demangler = OsString::from("-Xdemangler=");
                 demangler.push(&cx.current_exe);
                 cmd.arg(demangler);
