@@ -43,7 +43,7 @@ jobs:
     uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
   msrv:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
+    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@dc24bff2366e8ddeea5e0e4168df3d6f4b93f596 # 2026.8.8
   release-dry-run:
     needs: tidy
     uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@e6a1170cbd07eb898017958967912976fce18f2d # 2026.7.3
