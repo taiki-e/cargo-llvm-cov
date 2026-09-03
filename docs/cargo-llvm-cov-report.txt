@@ -89,6 +89,13 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
+        --coverage-watermark <HIGH,LOW>
+            Set the coverage watermarks (percentages) used for the colors of the html report
+
+            Regions with coverage of at least HIGH percent are shown in green, at least LOW
+            percent in yellow, and the rest in red. This flag can only be used together with
+            --html or --open.
+
         --fail-under-functions <MIN>
             Exit with a status of 1 if the total function coverage is less than MIN percent
 

@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--coverage-watermark` option to set the coverage color thresholds of the html report.
+
 ## [0.9.0] - 2026-08-16
 
 - Change `--show-missing-lines` reporting to aggregate consecutive line numbers. ([#497](https://github.com/taiki-e/cargo-llvm-cov/pull/497), thanks @saroad2)
