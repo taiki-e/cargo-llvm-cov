@@ -320,6 +320,13 @@ pub(crate) struct ReportOptions {
     pub(crate) failure_mode: Option<String>,
     /// Skip source code files with file paths that match the given regular expression.
     pub(crate) ignore_filename_regex: Option<String>,
+    /// Add an object file (binary) to the coverage report.
+    ///
+    /// Can be specified multiple times. This is useful for including binaries
+    /// that are not part of the current workspace (e.g. examples or external
+    /// test crates) in the report, which would otherwise be filtered out by
+    /// the automatic object-file detection.
+    pub(crate) object: Vec<String>,
     // For debugging (unstable)
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
@@ -383,6 +390,7 @@ impl ReportOptions {
                 output_dir,
                 failure_mode,
                 ignore_filename_regex,
+                object,
                 no_default_ignore_filename_regex,
                 show_instantiations,
                 fail_under_functions,
@@ -409,6 +417,7 @@ impl ReportOptions {
                 ("--output-dir", output_dir.is_some()),
                 ("--failure-mode", failure_mode.is_some()),
                 ("--ignore-filename-regex", ignore_filename_regex.is_some()),
+                ("--object", !object.is_empty()),
                 ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
                 ("--show-instantiations", *show_instantiations),
                 ("--fail-under-functions", fail_under_functions.is_some()),
@@ -1101,6 +1110,27 @@ impl Args {
                 Long("output-dir") => parse_opt!(report.output_dir),
                 Long("failure-mode") => parse_opt!(report.failure_mode),
                 Long("ignore-filename-regex") => parse_opt!(report.ignore_filename_regex),
+                Long("object") => {
+                    // Ideally `parse_multi_opt!` would support dotted field access like
+                    // `report.object`, but modifying the macro risks regressions in its
+                    // existing callers (e.g. `--dep-coverage`), so the splitting logic is
+                    // inlined here instead.
+                    let val = parser.value()?;
+                    let mut val = val.to_str().unwrap();
+                    if val.starts_with('\'') && val.ends_with('\'')
+                        || val.starts_with('"') && val.ends_with('"')
+                    {
+                        val = &val[1..val.len() - 1];
+                    }
+                    let sep = if val.contains(',') { ',' } else { ' ' };
+                    report
+                        .object
+                        .extend(val.split(sep).filter(|s| !s.is_empty()).map(str::to_owned));
+                    #[allow(unused_assignments)]
+                    {
+                        after_subcommand = false;
+                    }
+                }
                 Long(
                     flag @ ("no-default-ignore-filename-regex"
                     | "disable-default-ignore-filename-regex"),
