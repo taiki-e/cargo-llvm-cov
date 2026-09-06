@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-06
+
 - Fix build-dir v2 path matching on Windows. ([#521](https://github.com/taiki-e/cargo-llvm-cov/pull/521), thanks @davidkna)
 
 ## [0.9.0] - 2026-08-16
@@ -837,7 +839,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...v0.9.0
 [0.8.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...v0.8.7
 [0.8.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.5...v0.8.6
