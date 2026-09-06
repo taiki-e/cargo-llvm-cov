@@ -12,7 +12,7 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
-- Fix build-dir v2 path matching on Windows.
+- Fix build-dir v2 path matching on Windows. ([#521](https://github.com/taiki-e/cargo-llvm-cov/pull/521), thanks @davidkna)
 
 ## [0.9.0] - 2026-08-16
 
