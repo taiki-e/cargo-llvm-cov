@@ -89,6 +89,11 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
+        --include-examples
+            Include source files under the `examples` directory in the report,
+            which are excluded by default. Test entry files
+            (`tests.rs`/`*_tests.rs`) remain excluded.
+
         --fail-under-functions <MIN>
             Exit with a status of 1 if the total function coverage is less than MIN percent
 
