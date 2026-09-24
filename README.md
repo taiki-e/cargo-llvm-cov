@@ -200,6 +200,9 @@ OPTIONS:
 
             This flag can only be used together with --json, --lcov, or --cobertura.
 
+        --exclude-ignored-lines
+            Exclude ignored uncovered lines (ending with `//cargo-llvm-cov:ignore`).
+
         --branch
             Enable branch coverage. (unstable)
 
