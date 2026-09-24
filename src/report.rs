@@ -51,6 +51,7 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
     let object_files = object_files(cx).context("failed to collect object files")?;
     let ignore_filename_regex = ignore_filename_regex(cx, &object_files)?;
+    let exclude_ignored_lines = cx.args.report.exclude_ignored_lines;
     let format = ReportFormat::from_args(&cx.args.report);
     format
         .generate_report(cx, &object_files, ignore_filename_regex.as_deref())
@@ -117,7 +118,8 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
         }
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered_files =
+                json.get_uncovered_lines(ignore_filename_regex.as_deref(), exclude_ignored_lines);
             let uncovered = uncovered_files
                 .iter()
                 .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
@@ -137,7 +139,8 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered_files =
+                json.get_uncovered_lines(ignore_filename_regex.as_deref(), exclude_ignored_lines);
             if !uncovered_files.is_empty() {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
                 show_missing_lines(&mut stdout, &uncovered_files)?;

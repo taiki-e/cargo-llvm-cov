@@ -344,6 +344,8 @@ pub(crate) struct ReportOptions {
     pub(crate) include_build_script: bool,
     /// Skip functions in coverage report.
     pub(crate) skip_functions: bool,
+    /// Exclude ignored uncovered lines (ending with `//cargo-llvm-cov:ignore`)
+    pub(crate) exclude_ignored_lines: bool,
 }
 
 impl ReportOptions {
@@ -395,6 +397,7 @@ impl ReportOptions {
                 show_missing_lines,
                 include_build_script,
                 skip_functions,
+                exclude_ignored_lines,
             } = self;
             for (flag, passed) in [
                 ("--json", *json),
@@ -421,6 +424,7 @@ impl ReportOptions {
                 ("--show-missing-lines", *show_missing_lines),
                 ("--include-build-script", *include_build_script),
                 ("--skip-functions", *skip_functions),
+                ("--exclude-ignored-lines", *exclude_ignored_lines),
             ] {
                 if passed {
                     if subcommands_without_report {
@@ -1125,6 +1129,7 @@ impl Args {
                 Long("fail-uncovered-functions") => parse_opt!(report.fail_uncovered_functions),
                 Long("show-missing-lines") => parse_flag!(report.show_missing_lines),
                 Long("include-build-script") => parse_flag!(report.include_build_script),
+                Long("exclude-ignored-lines") => parse_flag!(report.exclude_ignored_lines),
 
                 // show-env options
                 Long(flag @ ("sh" | "export-prefix")) => {
