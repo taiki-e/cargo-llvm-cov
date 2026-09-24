@@ -4,8 +4,9 @@
 // TODO: reflect https://github.com/llvm/llvm-project/commit/8ecbb0404d740d1ab173554e47cef39cd5e3ef8c#diff-e5de2b538138d03e13b43901f61adc61992516c742991ebaf1a13f2f8623910a?
 
 use std::{
-    collections::{BTreeMap, HashMap},
-    fmt,
+    collections::{BTreeMap, BTreeSet, HashMap},
+    fmt, fs,
+    io::{BufRead, BufReader},
 };
 
 use anyhow::{Context as _, Result};
@@ -276,6 +277,17 @@ impl LlvmCovJsonExport {
             if let Some(covered_lines) = covered_files.get(file_name) {
                 uncovered_lines.retain(|&x| !covered_lines.contains(&x));
             }
+
+            // Get ignored lines for the file and remove them
+            let ignored: BTreeSet<u64> =
+                BufReader::new(fs::File::open(file_name).expect("open file"))
+                    .lines()
+                    .enumerate()
+                    .filter_map(|(i, line)| {
+                        line.unwrap().ends_with("//cargo-llvm-cov:ignore").then_some(i as u64 + 1)
+                    })
+                    .collect();
+            uncovered_lines.retain(|&x| !ignored.contains(&x));
 
             // Remove duplicates.
             uncovered_lines.sort_unstable();
