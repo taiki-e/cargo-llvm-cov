@@ -300,6 +300,11 @@ fn set_env(cx: &Context, env: &mut dyn EnvTarget, IsNextest(is_nextest): IsNexte
             cx.ws.config.rustdocflags(&cx.ws.target_for_config)?.unwrap_or_default();
         {
             push_common_flags(cx, &mut rustdocflags);
+            // https://github.com/rust-lang/rust/pull/155307
+            if cx.args.remap_path_prefix {
+                rustdocflags.push("--remap-path-prefix");
+                rustdocflags.push(format!("{}/=", cx.ws.metadata.workspace_root));
+            }
             // flags needed for doctest coverage.
             // https://doc.rust-lang.org/nightly/rustc/instrument-coverage.html#including-doc-tests
             rustdocflags.push("-Z");
