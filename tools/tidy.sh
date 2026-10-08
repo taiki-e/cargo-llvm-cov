@@ -37,7 +37,7 @@ image='ghcr.io/taiki-e/tidy'
 if [[ -n "${TIDY_DEV:-}" ]]; then
   image+=':latest'
 else
-  image+='@sha256:151cd5c4f7c88bd21322c7dab255d60e699ffe4d4903e4e712429952537df6cf'
+  image+='@sha256:99d576935b91cbb7c97ad4b11b8888c5f36a0b8a720d2bab9a2ac3cc2a4b97c7'
 fi
 user="$(id -u):$(id -g)"
 workdir="${PWD}"
