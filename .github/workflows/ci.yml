@@ -62,8 +62,9 @@ jobs:
             os: macos-latest
           - rust: nightly
             os: windows-latest
-          - rust: nightly-i686-pc-windows-msvc
+          - rust: nightly
             os: windows-latest
+            target: i686-pc-windows-msvc
           - rust: nightly
             os: windows-latest
             target: x86_64-pc-windows-gnullvm
