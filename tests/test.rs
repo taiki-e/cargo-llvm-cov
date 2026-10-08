@@ -140,7 +140,7 @@ fn ui_test() {
         // coverage is not supported yet on this host.
         return;
     }
-    if build_context::TARGET == "x86_64-pc-windows-gnullvm" {
+    if build_context::TARGET != build_context::HOST {
         // report is a bit different from other targets (no Unexecuted instantiation)
         return;
     }
