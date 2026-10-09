@@ -29,7 +29,7 @@ cargo-config2 = "0.1.41"
 duct = { version = "1", default-features = false }
 fs-err = "3"
 glob = "0.3"
-lcov2cobertura = "1.0.1"
+lcov2cobertura = "1.0.10"
 lexopt = "0.3"
 opener = { version = "0.8", default-features = false }
 regex = { version = "1.3", default-features = false, features = ["perf", "std"] }
