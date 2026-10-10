@@ -9,7 +9,7 @@ on:
       - main
       - dev
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * 5'
   workflow_dispatch:
 
 env:
