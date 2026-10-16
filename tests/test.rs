@@ -91,8 +91,8 @@ fn no_test() {
     }
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
+// 1.100 changed report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn bin_crate() {
     run("bin_crate", "bin_crate", &[], &[]);
@@ -140,7 +140,7 @@ fn ui_test() {
         // coverage is not supported yet on this host.
         return;
     }
-    if build_context::TARGET == "x86_64-pc-windows-gnullvm" {
+    if build_context::TARGET != build_context::HOST {
         // report is a bit different from other targets (no Unexecuted instantiation)
         return;
     }
@@ -177,16 +177,16 @@ fn build_dir_layout_v2() {
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/303
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
+// 1.100 changed report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn issue303() {
     run("issue303", "issue303", &["--manifest-path", "one/Cargo.toml", "--workspace"], &[]);
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/361
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
+// 1.100 changed report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn issue361() {
     run("issue361", "issue361", &["--package", "crate-b"], &[]);

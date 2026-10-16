@@ -62,8 +62,9 @@ jobs:
             os: macos-latest
           - rust: nightly
             os: windows-latest
-          - rust: nightly-i686-pc-windows-msvc
+          - rust: nightly
             os: windows-latest
+            target: i686-pc-windows-msvc
           - rust: nightly
             os: windows-latest
             target: x86_64-pc-windows-gnullvm
@@ -167,6 +168,9 @@ jobs:
             *-windows-gnullvm) ;; # target unavailable on Rust 1.60.
             *)
               retry rustup toolchain add 1.60 --no-self-update
+              if [[ -n "${TARGET}" ]]; then
+                retry rustup +1.60 target add "${TARGET}"
+              fi
               pushd -- easytime >/dev/null
               cargo +1.60 llvm-cov test --fail-under-lines 30
               popd >/dev/null

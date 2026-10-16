@@ -31,27 +31,9 @@ build.allow-build-scripts = [
     { name = "serde_core" },
     { name = "serde_json" },
     { name = "serde" }, # https://github.com/serde-rs/serde/issues/2972
-    { name = "windows_aarch64_gnullvm" },
-    { name = "windows_aarch64_msvc" },
-    { name = "windows_i686_gnu" },
-    { name = "windows_i686_gnullvm" },
-    { name = "windows_i686_msvc" },
-    { name = "windows_x86_64_gnu" },
-    { name = "windows_x86_64_gnullvm" },
-    { name = "windows_x86_64_msvc" },
     { name = "zmij" }, # via serde_json
 ]
 build.bypass = [
-    # Import libraries are necessary because raw-dylib (requires 1.71+ for x86, 1.65+ for others) is not available on MSRV of them.
-    { name = "windows_aarch64_gnullvm", allow-globs = ["lib/*.a"] },
-    { name = "windows_aarch64_msvc", allow-globs = ["lib/*.lib"] },
-    { name = "windows_i686_gnu", allow-globs = ["lib/*.a"] },
-    { name = "windows_i686_gnullvm", allow-globs = ["lib/*.a"] },
-    { name = "windows_i686_msvc", allow-globs = ["lib/*.lib"] },
-    { name = "windows_x86_64_gnu", allow-globs = ["lib/*.a"] },
-    { name = "windows_x86_64_gnullvm", allow-globs = ["lib/*.a"] },
-    { name = "windows_x86_64_msvc", allow-globs = ["lib/*.lib"] },
-    { name = "libc", allow = [{ path = "etc/libc-util.py" }] }, # TODO: remove once https://github.com/rust-lang/libc/pull/5312 released
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
