@@ -2,9 +2,9 @@
 
 use std::{
     collections::HashSet,
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     io::{self, Write as _},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use anyhow::{Context as _, Result, bail};
@@ -179,13 +179,25 @@ impl Context {
                             ask,
                             "install the `llvm-tools-preview` component for the selected toolchain",
                         )?;
+                        (
+                            llvm_cov_env.unwrap_or(llvm_cov),
+                            llvm_profdata_env.unwrap_or(llvm_profdata),
+                        )
+                    } else if llvm_cov_env.is_none() && llvm_profdata_env.is_none() {
+                        match find_distro_tools(&ws) {
+                            Some(pair) => pair,
+                            None => bail!(
+                                "failed to find llvm-tools-preview, please install llvm-tools-preview, or set LLVM_COV and LLVM_PROFDATA environment variables",
+                            ),
+                        }
                     } else {
                         bail!(
                             "failed to find llvm-tools-preview, please install llvm-tools-preview, or set LLVM_COV and LLVM_PROFDATA environment variables",
                         );
                     }
+                } else {
+                    (llvm_cov_env.unwrap_or(llvm_cov), llvm_profdata_env.unwrap_or(llvm_profdata))
                 }
-                (llvm_cov_env.unwrap_or(llvm_cov), llvm_profdata_env.unwrap_or(llvm_profdata))
             }
         };
 
@@ -578,9 +590,119 @@ fn ask_to_run(cmd: &ProcessBuilder, ask: bool, text: &str) -> Result<()> {
     Ok(())
 }
 
+fn find_in_path(
+    name: &str,
+    path: Option<&OsStr>,
+    mut get_version: impl FnMut(&Path) -> Option<String>,
+) -> Option<(PathBuf, String)> {
+    let path = path?;
+    let file_name = format!("{name}{}", env::consts::EXE_SUFFIX);
+    for dir in env::split_paths(path) {
+        let candidate = dir.join(&file_name);
+        if candidate.is_file() {
+            if let Some(version) = get_version(&candidate) {
+                return Some((candidate, version));
+            }
+        }
+    }
+    None
+}
+
+fn find_pair_in_path_from(
+    path: Option<&OsStr>,
+    mut get_version: impl FnMut(&str, &Path) -> Option<String>,
+) -> Option<((PathBuf, String), (PathBuf, String))> {
+    let llvm_cov = find_in_path("llvm-cov", path, |p| get_version("llvm-cov", p))?;
+    let llvm_profdata = find_in_path("llvm-profdata", path, |p| get_version("llvm-profdata", p))?;
+    Some((llvm_cov, llvm_profdata))
+}
+
+fn find_pair_in_path() -> Option<((PathBuf, String), (PathBuf, String))> {
+    find_pair_in_path_from(env::var_os("PATH").as_deref(), |_, p| llvm_tool_version(p))
+}
+
+fn parse_rustc_llvm_version(output: &str) -> Option<&str> {
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("LLVM version:") {
+            let version = rest.split_whitespace().next()?;
+            if !version.is_empty() {
+                return Some(version);
+            }
+        }
+    }
+    None
+}
+
+fn parse_llvm_tool_version(output: &str) -> Option<&str> {
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(idx) = line.find("LLVM version") {
+            let mut rest = line[idx + "LLVM version".len()..].trim();
+            if let Some(stripped) = rest.strip_prefix(':') {
+                rest = stripped.trim();
+            }
+            let version = rest.split_whitespace().next()?;
+            if !version.is_empty() {
+                return Some(version);
+            }
+        }
+    }
+    None
+}
+
+fn versions_match(rustc: &str, cov: &str, profdata: &str) -> bool {
+    rustc == cov && cov == profdata
+}
+
+fn rustc_llvm_version(ws: &Workspace) -> Option<String> {
+    let output = ws.rustc().args(["-vV"]).read().ok()?;
+    parse_rustc_llvm_version(&output).map(ToOwned::to_owned)
+}
+
+fn llvm_tool_version(path: &Path) -> Option<String> {
+    let output = cmd!(path, "--version").read().ok()?;
+    parse_llvm_tool_version(&output).map(ToOwned::to_owned)
+}
+
+fn find_distro_tools(ws: &Workspace) -> Option<(PathBuf, PathBuf)> {
+    let Some(((llvm_cov, cov_version), (llvm_profdata, profdata_version))) = find_pair_in_path()
+    else {
+        if term::verbose() {
+            info!(
+                "fallback to PATH LLVM tools rejected: llvm-cov or llvm-profdata not found in PATH"
+            );
+        }
+        return None;
+    };
+
+    let Some(rustc_version) = rustc_llvm_version(ws) else {
+        if term::verbose() {
+            info!("fallback to PATH LLVM tools rejected: failed to determine rustc LLVM version");
+        }
+        return None;
+    };
+
+    if versions_match(&rustc_version, &cov_version, &profdata_version) {
+        Some((llvm_cov, llvm_profdata))
+    } else {
+        if term::verbose() {
+            info!(
+                "fallback to PATH LLVM tools rejected: rustc LLVM version ({rustc_version}) does not match llvm-cov ({cov_version}) and llvm-profdata ({profdata_version})"
+            );
+        }
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Package, match_pkg_spec};
+    use std::path::Path;
+
+    use super::{
+        Package, find_in_path, find_pair_in_path_from, match_pkg_spec, parse_llvm_tool_version,
+        parse_rustc_llvm_version, versions_match,
+    };
 
     #[test]
     fn test_match_pkg_spec() {
@@ -673,5 +795,153 @@ mod tests {
         assert!(match_pkg_spec(pkg, "file:///path/to/my/project/foo#1.1.8").unwrap());
         assert!(match_pkg_spec(pkg, "path+file:///path/to/my/project/foo#1.1").unwrap());
         assert!(match_pkg_spec(pkg, "path+file:///path/to/my/project/foo#1.1.8").unwrap());
+    }
+
+    #[test]
+    fn test_parse_rustc_llvm_version() {
+        let realistic = "\
+rustc 1.98.1 (48a229cea 2026-09-01) (Arch Linux rust 1:1.98.1-1.1)
+binary: rustc
+commit-hash: 48a229ceaefd4985c50990b14116b6d856af0985
+commit-date: 2026-09-01
+host: x86_64-unknown-linux-gnu
+release: 1.98.1
+LLVM version: 22.1.8
+";
+        assert_eq!(parse_rustc_llvm_version(realistic), Some("22.1.8"));
+
+        let with_trailing = "\
+release: 1.98.1
+LLVM version: 22.1.8-rust-1.80.0
+";
+        assert_eq!(parse_rustc_llvm_version(with_trailing), Some("22.1.8-rust-1.80.0"));
+
+        let missing = "\
+rustc 1.98.1
+binary: rustc
+release: 1.98.1
+";
+        assert_eq!(parse_rustc_llvm_version(missing), None);
+
+        // Malformed cases
+        assert_eq!(parse_rustc_llvm_version("LLVM version:"), None);
+        assert_eq!(parse_rustc_llvm_version("LLVM version:   "), None);
+        assert_eq!(parse_rustc_llvm_version(""), None);
+        assert_eq!(parse_rustc_llvm_version("random text without llvm version"), None);
+    }
+
+    #[test]
+    fn test_parse_llvm_tool_version() {
+        let realistic = "\
+LLVM (http://llvm.org/):
+  LLVM version 22.1.8
+  Optimized build.
+";
+        assert_eq!(parse_llvm_tool_version(realistic), Some("22.1.8"));
+
+        let distro_prefix = "\
+Ubuntu LLVM version 18.1.8
+  Optimized build.
+";
+        assert_eq!(parse_llvm_tool_version(distro_prefix), Some("18.1.8"));
+
+        let homebrew = "\
+Homebrew LLVM version 19.1.3
+  Optimized build.
+";
+        assert_eq!(parse_llvm_tool_version(homebrew), Some("19.1.3"));
+
+        let with_colon = "\
+LLVM version: 22.1.8
+";
+        assert_eq!(parse_llvm_tool_version(with_colon), Some("22.1.8"));
+
+        let missing = "\
+LLVM (http://llvm.org/):
+  Optimized build.
+";
+        assert_eq!(parse_llvm_tool_version(missing), None);
+
+        // Malformed cases
+        assert_eq!(parse_llvm_tool_version("LLVM version"), None);
+        assert_eq!(parse_llvm_tool_version("LLVM version:"), None);
+        assert_eq!(parse_llvm_tool_version("LLVM version   "), None);
+        assert_eq!(parse_llvm_tool_version(""), None);
+        assert_eq!(parse_llvm_tool_version("garbage output"), None);
+    }
+
+    #[test]
+    fn test_versions_match() {
+        // Exact version match accepted
+        assert!(versions_match("22.1.8", "22.1.8", "22.1.8"));
+
+        // Patch mismatch rejected
+        assert!(!versions_match("22.1.8", "22.1.7", "22.1.8"));
+        assert!(!versions_match("22.1.8", "22.1.8", "22.1.7"));
+        assert!(!versions_match("22.1.7", "22.1.8", "22.1.8"));
+
+        // Minor mismatch rejected
+        assert!(!versions_match("22.1.8", "22.0.0", "22.0.0"));
+
+        // Major mismatch rejected
+        assert!(!versions_match("22.1.8", "21.1.8", "21.1.8"));
+        assert!(!versions_match("21.1.8", "22.1.8", "22.1.8"));
+    }
+
+    #[test]
+    fn test_find_in_path() {
+        let temp_dir1 = tempfile::tempdir().unwrap();
+        let temp_dir2 = tempfile::tempdir().unwrap();
+        let cov_name = format!("llvm-cov{}", std::env::consts::EXE_SUFFIX);
+
+        let path_env = std::env::join_paths([temp_dir1.path(), temp_dir2.path()]).unwrap();
+
+        // 1. Neither found
+        assert_eq!(find_in_path("llvm-cov", Some(&path_env), |_| None), None);
+
+        // 2. Earlier candidate in PATH is unusable (e.g. non-executable 0644), later candidate is valid
+        fs_err::write(temp_dir1.path().join(&cov_name), b"not executable").unwrap();
+        fs_err::write(temp_dir2.path().join(&cov_name), b"valid").unwrap();
+
+        let result = find_in_path("llvm-cov", Some(&path_env), |path| {
+            if path == temp_dir2.path().join(&cov_name) { Some("22.1.8".to_owned()) } else { None }
+        });
+        assert_eq!(result, Some((temp_dir2.path().join(&cov_name), "22.1.8".to_owned())));
+
+        // 3. Edge case: path is None
+        assert_eq!(find_in_path("llvm-cov", None, |_| Some("22.1.8".to_owned())), None);
+    }
+
+    #[test]
+    fn test_find_pair_in_path() {
+        let temp_dir1 = tempfile::tempdir().unwrap();
+        let temp_dir2 = tempfile::tempdir().unwrap();
+        let cov_name = format!("llvm-cov{}", std::env::consts::EXE_SUFFIX);
+        let profdata_name = format!("llvm-profdata{}", std::env::consts::EXE_SUFFIX);
+
+        let path_env = std::env::join_paths([temp_dir1.path(), temp_dir2.path()]).unwrap();
+
+        let mock_version = |_name: &str, _path: &Path| Some("22.1.8".to_owned());
+
+        // 1. Neither found
+        assert_eq!(find_pair_in_path_from(Some(&path_env), mock_version), None);
+
+        // 2. Only llvm-cov found
+        fs_err::write(temp_dir1.path().join(&cov_name), b"").unwrap();
+        assert_eq!(find_pair_in_path_from(Some(&path_env), mock_version), None);
+
+        // 3. Only llvm-profdata found
+        fs_err::remove_file(temp_dir1.path().join(&cov_name)).unwrap();
+        fs_err::write(temp_dir2.path().join(&profdata_name), b"").unwrap();
+        assert_eq!(find_pair_in_path_from(Some(&path_env), mock_version), None);
+
+        // 4. Both found (even across different directories in PATH)
+        fs_err::write(temp_dir1.path().join(&cov_name), b"").unwrap();
+        let (cov, profdata) = find_pair_in_path_from(Some(&path_env), mock_version).unwrap();
+        assert_eq!(cov, (temp_dir1.path().join(&cov_name), "22.1.8".to_owned()));
+        assert_eq!(profdata, (temp_dir2.path().join(&profdata_name), "22.1.8".to_owned()));
+
+        // Edge case: path is None
+        assert_eq!(find_pair_in_path_from(None, mock_version), None);
     }
 }
