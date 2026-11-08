@@ -4,7 +4,12 @@
 
 mod auxiliary;
 
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    io::{self, Write as _},
+    path::Path,
+    process::Command,
+};
 
 use cargo_config2::Flags;
 use fs_err as fs;
@@ -572,6 +577,64 @@ fn version() {
             ));
         }
     }
+}
+
+#[test]
+fn argfile() -> io::Result<()> {
+    let tempdir = tempfile::tempdir().unwrap();
+    let argfile = tempdir.path().join("args");
+    let mut file = fs::File::create(&argfile)?;
+    file.write_all(b"llvm-cov\nshow-env\n")?;
+    file.sync_all()?;
+    drop(file);
+
+    // `@path` is expanded to one argument per line, and may also supply the subcommand.
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .arg(format!("@{}", argfile.display()))
+        .assert_success()
+        .stdout_contains("LLVM_PROFILE_FILE=");
+    tempdir.close()
+}
+
+// cargo passes rustc args via an `@path` argfile when the command line is too long,
+// in which case the rustc-wrapper receives them that way as well.
+#[test]
+fn argfile_rustc_wrapper() {
+    if build_context::HOST == "aarch64-pc-windows-msvc" {
+        // coverage is not supported yet on this host.
+        return;
+    }
+    let workspace_root = test_project("bin_crate");
+    // `__CARGO_TEST_FORCE_ARGFILE` forces cargo to always use argfiles
+    cargo_llvm_cov("test")
+        .current_dir(&workspace_root)
+        .arg("--text")
+        .env("__CARGO_TEST_FORCE_ARGFILE", "1")
+        .assert_success()
+        .stdout_contains("fn main");
+}
+
+#[cfg(windows)]
+#[test]
+fn argfile_rustc_wrapper_long_command() -> io::Result<()> {
+    let tempdir = tempfile::tempdir().unwrap();
+    let argfile = tempdir.path().join("args");
+    let mut contents = String::from("--version\n");
+    for i in 0..4000 {
+        contents.push_str(&format!("--cfg\nlong_argument_{i}\n"));
+    }
+    let mut file = fs::File::create(&argfile)?;
+    file.write_all(contents.as_bytes())?;
+    file.sync_all()?;
+    drop(file);
+
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .env("__CARGO_LLVM_COV_RUSTC_WRAPPER", "1")
+        .arg("rustc")
+        .arg(format!("@{}", argfile.display()))
+        .assert_success()
+        .stdout_contains("rustc ");
+    tempdir.close()
 }
 
 #[test]
