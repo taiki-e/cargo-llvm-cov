@@ -584,7 +584,7 @@ fn argfile() -> io::Result<()> {
     let tempdir = tempfile::tempdir().unwrap();
     let argfile = tempdir.path().join("args");
     let mut file = fs::File::create(&argfile)?;
-    file.write_all(b"llvm-cov\nshow-env\n")?;
+    file.write_all(b"llvm-cov\n--version\n")?;
     file.sync_all()?;
     drop(file);
 
@@ -592,17 +592,17 @@ fn argfile() -> io::Result<()> {
     Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
         .arg(format!("@{}", argfile.display()))
         .assert_success()
-        .stdout_contains("LLVM_PROFILE_FILE=");
+        .stdout_eq(format!("cargo-llvm-cov {}", env!("CARGO_PKG_VERSION")));
     tempdir.close()
 }
 
 // cargo passes rustc args via an `@path` argfile when the command line is too long,
 // in which case the rustc-wrapper receives them that way as well.
 #[test]
-fn argfile_rustc_wrapper() {
+fn argfile_rustc_wrapper() -> io::Result<()> {
     if build_context::HOST == "aarch64-pc-windows-msvc" {
         // coverage is not supported yet on this host.
-        return;
+        return Ok(());
     }
     let workspace_root = test_project("bin_crate");
     // `__CARGO_TEST_FORCE_ARGFILE` forces cargo to always use argfiles
@@ -612,6 +612,7 @@ fn argfile_rustc_wrapper() {
         .env("__CARGO_TEST_FORCE_ARGFILE", "1")
         .assert_success()
         .stdout_contains("fn main");
+    workspace_root.close()
 }
 
 #[cfg(windows)]
