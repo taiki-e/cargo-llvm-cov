@@ -416,13 +416,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                                   mut build_dir: Option<Utf8PathBuf>|
      -> Result<()> {
         if !auto_detect_profile {
-            // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
-            let profile = match cx.args.cargo_profile.as_deref() {
-                None if cx.args.release => "release",
-                Some("release" | "bench") => "release",
-                None | Some("dev" | "test") => "debug",
-                Some(p) => p,
-            };
+            let profile = cx.profile_dir_name();
             target_dir.push(profile);
             if let Some(build_dir) = &mut build_dir {
                 build_dir.push(profile);

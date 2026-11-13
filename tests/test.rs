@@ -321,6 +321,60 @@ fn clean_ws() {
     }
 }
 
+// https://github.com/taiki-e/cargo-llvm-cov/issues/536
+// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
+#[rustversion::attr(before(1.88), ignore)]
+#[test]
+fn clean_other_layout() {
+    let model = "real1";
+    let name = "clean_other_layout";
+    let output_dir = fixtures_dir().join("coverage-reports").join(model);
+    fs::create_dir_all(&output_dir).unwrap();
+    let exe = if cfg!(windows) { ".exe" } else { "" };
+    for (extension, args) in test_set() {
+        let workspace_root = test_project(model);
+        let output_path = &output_dir.join(name).with_extension(extension);
+        let expected = &fs::read_to_string(output_path).unwrap_or_default();
+
+        // What a Cargo with the other build-dir layout leaves behind. These are not object files,
+        // so llvm-cov fails if they are reported.
+        let target_dir = workspace_root.path().join("target/llvm-cov-target");
+        fs::create_dir_all(&target_dir).unwrap();
+        fs::write(target_dir.join("CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n")
+            .unwrap();
+        let profile_dir = target_dir.join("debug");
+        let unit_dir = profile_dir.join("build/crate1/0123456789abcdef");
+        fs::create_dir_all(unit_dir.join("fingerprint")).unwrap();
+        let stale = [
+            profile_dir.join(format!("deps/crate1-0123456789abcdef{exe}")),
+            unit_dir.join(format!("out/crate1-0123456789abcdef{exe}")),
+        ];
+        for path in &stale {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, "").unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt as _;
+                fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+            }
+        }
+
+        cargo_llvm_cov("")
+            .args(["--color", "never", "--output-path"])
+            .arg(output_path)
+            .arg("--remap-path-prefix")
+            .args(args)
+            .current_dir(workspace_root.path())
+            .assert_success();
+
+        normalize_output(output_path, args);
+        assert_output(output_path, expected);
+        for path in &stale {
+            assert!(!path.exists(), "{}", path.display());
+        }
+    }
+}
+
 #[test]
 fn clean_profraw_only() {
     let model = "real1";

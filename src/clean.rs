@@ -73,6 +73,22 @@ pub(crate) fn clean_partial(cx: &Context) -> Result<()> {
         warn!("{e:#}");
     }
 
+    let profile = cx.profile_dir_name();
+    for dir in [Some(&cx.ws.target_dir), cx.ws.build_dir.as_ref()].into_iter().flatten() {
+        let mut profile_dirs = vec![dir.join(profile)];
+        if let Some(target) = &cx.args.target {
+            profile_dirs.push(dir.join(target).join(profile));
+        }
+        for profile_dir in profile_dirs {
+            clean_other_layout(
+                &cx.ws,
+                &cx.workspace_members.included,
+                &profile_dir,
+                cx.args.verbose > 1,
+            )?;
+        }
+    }
+
     Ok(())
 }
 
@@ -117,6 +133,51 @@ fn clean_ws(
         cmd.dir(&ws.metadata.workspace_root);
         if let Err(e) = if verbose > 0 { cmd.run() } else { cmd.run_with_output() } {
             warn!("{e:#}");
+        }
+    }
+    for dir in [Some(&ws.target_dir), ws.build_dir.as_ref()].into_iter().flatten() {
+        let mut profile_dirs = vec![dir.clone()];
+        for target in target_list.lines().map(str::trim).filter(|s| !s.is_empty()) {
+            if dir.join(target).exists() {
+                profile_dirs.push(dir.join(target));
+            }
+        }
+        for profile_dir in profile_dirs {
+            for profile in ["debug", "release"] {
+                clean_other_layout(ws, pkg_ids, &profile_dir.join(profile), verbose != 0)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+// `cargo clean` only removes artifacts in the build-dir layout of the Cargo that runs it, and the
+// v2 layout is the default since Cargo 1.100. Remove the artifacts of the given packages that a
+// Cargo with the other layout left in `profile_dir`, otherwise they are reported as object files:
+// - v1 layout: `deps/<target>-<hash>`
+// - v2 layout: `build/<package>/<hash>/`
+// https://github.com/taiki-e/cargo-llvm-cov/issues/536
+fn clean_other_layout(
+    ws: &Workspace,
+    pkg_ids: &[PackageId],
+    profile_dir: &Utf8Path,
+    verbose: bool,
+) -> Result<()> {
+    let mut re = RegexVecBuilder::new("^(lib)?(", ")(-[0-9a-f]+)?$");
+    for &id in pkg_ids {
+        let pkg = &ws.metadata[id];
+        rm_rf(profile_dir.join("build").join(&*pkg.name), verbose)?;
+        re.or(&pkg.name.replace('-', "(-|_)"));
+        for t in &pkg.targets {
+            re.or(&t.name.replace('-', "(-|_)"));
+        }
+    }
+    let re = re.build()?;
+    let Ok(entries) = fs::read_dir(profile_dir.join("deps")) else { return Ok(()) };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if fs::file_stem_recursive(&path).unwrap().to_str().is_some_and(|stem| re.is_match(stem)) {
+            rm_rf(path, verbose)?;
         }
     }
     Ok(())
