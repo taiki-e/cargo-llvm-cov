@@ -343,11 +343,11 @@ fn clean_other_layout() {
         fs::write(target_dir.join("CACHEDIR.TAG"), "Signature: 8a477f597d28d172789f06886806bc55\n")
             .unwrap();
         let profile_dir = target_dir.join("debug");
-        let unit_dir = profile_dir.join("build/crate1/0123456789abcdef");
+        let unit_dir = profile_dir.join("build/crate1/0123456789012345");
         fs::create_dir_all(unit_dir.join("fingerprint")).unwrap();
         let stale = [
-            profile_dir.join(format!("deps/crate1-0123456789abcdef{exe}")),
-            unit_dir.join(format!("out/crate1-0123456789abcdef{exe}")),
+            profile_dir.join(format!("deps/crate1-0123456789012345{exe}")),
+            unit_dir.join(format!("out/crate1-0123456789012345{exe}")),
         ];
         for path in &stale {
             fs::create_dir_all(path.parent().unwrap()).unwrap();
