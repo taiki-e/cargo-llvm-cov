@@ -2,7 +2,7 @@
 
 use std::{ffi::OsString, io, mem, str::FromStr};
 
-use anyhow::{Error, Result, bail, format_err};
+use anyhow::{Context as _, Error, Result, bail, format_err};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Color;
 use lexopt::{
@@ -835,16 +835,32 @@ pub(crate) fn merge_config_and_args(
 
 pub(crate) const FIRST_SUBCMD: &str = "llvm-cov";
 
+/// Expands `@path` arguments to the contents of the file, one argument per line.
+///
+/// https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+pub(crate) fn expand_argfiles(args: impl IntoIterator<Item = OsString>) -> Result<Vec<OsString>> {
+    let mut expanded = vec![];
+    for arg in args {
+        match arg.to_str().and_then(|arg| arg.strip_prefix('@')) {
+            Some(path) => {
+                let contents = fs_err::read_to_string(path)
+                    .with_context(|| format!("failed to read argument file {path:?}"))?;
+                expanded.extend(contents.lines().map(OsString::from));
+            }
+            None => expanded.push(arg),
+        }
+    }
+    Ok(expanded)
+}
+
 impl Args {
     pub(crate) fn parse() -> Result<Option<(Self, UnresolvedArgs)>> {
         // rustc/cargo args must be valid Unicode
         // https://github.com/rust-lang/rust/blob/1.84.0/compiler/rustc_driver_impl/src/args.rs#L121
         // TODO: https://github.com/rust-lang/cargo/pull/11118
-        fn handle_args(
-            args: impl IntoIterator<Item = impl Into<OsString>>,
-        ) -> impl Iterator<Item = Result<String>> {
+        fn handle_args(args: Vec<OsString>) -> impl Iterator<Item = Result<String>> {
             args.into_iter().enumerate().map(|(i, arg)| {
-                arg.into().into_string().map_err(|arg| {
+                arg.into_string().map_err(|arg| {
                     #[allow(clippy::unnecessary_debug_formatting)]
                     {
                         format_err!("argument {} is not valid Unicode: {arg:?}", i + 1)
@@ -853,21 +869,18 @@ impl Args {
             })
         }
 
-        let mut raw_args = handle_args(env::args_os());
-        raw_args.next(); // cargo
+        let all_args_raw = env::args_os().skip(1); // cargo
+        let expanded_args = expand_argfiles(all_args_raw)?;
+        let mut raw_args = handle_args(expanded_args);
         match raw_args.next().transpose()? {
             Some(arg) if arg == FIRST_SUBCMD => {}
             Some(arg) => bail!("expected subcommand '{FIRST_SUBCMD}', found argument '{arg}'"),
             None => bail!("expected subcommand '{FIRST_SUBCMD}'"),
         }
-        let mut args = vec![];
-        for arg in &mut raw_args {
-            let arg = arg?;
-            if arg == "--" {
-                break;
-            }
-            args.push(arg);
-        }
+        let args = raw_args
+            .by_ref()
+            .take_while(|arg| !matches!(arg, Ok(arg) if arg == "--"))
+            .collect::<Result<Vec<_>>>()?;
         let rest = raw_args.collect::<Result<Vec<_>>>()?;
 
         let mut cargo_args = vec![];

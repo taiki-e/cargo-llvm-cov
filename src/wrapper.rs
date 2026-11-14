@@ -127,7 +127,8 @@ pub(crate) fn try_main() -> Result<()> {
     let args = raw_args.collect::<Vec<_>>();
     let mut crate_name = None;
     let mut target = None;
-    let mut parser = lexopt::Parser::from_args(&args);
+    let expanded_args = cli::expand_argfiles(args.iter().cloned())?;
+    let mut parser = lexopt::Parser::from_args(&expanded_args);
     while let Some(arg) = parser.next()? {
         match arg {
             Long("crate-name") => crate_name = Some(parser.value()?),
