@@ -115,12 +115,18 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
                 term::error::set(true);
             }
         }
+        let uncovered_files = (cx.args.report.fail_uncovered_lines.is_some()
+            || cx.args.report.show_missing_lines)
+            .then(|| json.get_uncovered_lines(ignore_filename_regex.as_deref()));
+
         if let Some(fail_uncovered_lines) = cx.args.report.fail_uncovered_lines {
             // Handle --fail-uncovered-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
-            let uncovered = uncovered_files
-                .iter()
-                .fold(0_u64, |uncovered, (_, lines)| uncovered + lines.len() as u64);
+            let uncovered =
+                uncovered_files.as_ref().unwrap().iter().fold(0_u64, |uncovered, (_, file)| {
+                    uncovered
+                        + file.whole_file_missed.len() as u64
+                        + file.per_instantiation_missed.len() as u64
+                });
 
             if uncovered > fail_uncovered_lines {
                 term::error::set(true);
@@ -137,10 +143,10 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
 
         if cx.args.report.show_missing_lines {
             // Handle --show-missing-lines.
-            let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
+            let uncovered_files = uncovered_files.as_ref().unwrap();
             if !uncovered_files.is_empty() {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
-                show_missing_lines(&mut stdout, &uncovered_files)?;
+                show_missing_lines(&mut stdout, uncovered_files)?;
             }
         }
     }
@@ -157,25 +163,46 @@ fn show_missing_lines(
     out: &mut dyn io::Write,
     uncovered_files: &cargo_llvm_cov::json::UncoveredLines,
 ) -> Result<()> {
-    writeln!(out, "Uncovered Lines:")?;
-    for (file, lines) in uncovered_files {
-        write!(out, "{file}: ")?;
-        let mut first = true;
-        for segment in lines.chunk_by(|a, b| a.checked_add(1) == Some(*b)) {
-            let start = segment[0];
-            let end = segment[segment.len() - 1];
-            if first {
-                first = false;
-            } else {
-                write!(out, ", ")?;
+    let has_whole_file = uncovered_files.values().any(|f| !f.whole_file_missed.is_empty());
+    let has_per_instantiation =
+        uncovered_files.values().any(|f| !f.per_instantiation_missed.is_empty());
+    if has_whole_file {
+        writeln!(out, "Uncovered Lines:")?;
+        for (file, info) in uncovered_files {
+            if info.whole_file_missed.is_empty() {
+                continue;
             }
-            if start == end {
-                write!(out, "{start}")?;
-            } else {
-                write!(out, "{start}-{end}")?;
+            write!(out, "{file}: ")?;
+            let mut first = true;
+            for segment in info.whole_file_missed.chunk_by(|a, b| a.checked_add(1) == Some(*b)) {
+                let start = segment[0];
+                let end = segment[segment.len() - 1];
+                if first {
+                    first = false;
+                } else {
+                    write!(out, ", ")?;
+                }
+                if start == end {
+                    write!(out, "{start}")?;
+                } else {
+                    write!(out, "{start}-{end}")?;
+                }
+            }
+            writeln!(out)?;
+        }
+    }
+    if has_per_instantiation {
+        if has_whole_file {
+            writeln!(out)?;
+        }
+        writeln!(out, "Uncovered Lines (per instantiation):")?;
+        for (file, info) in uncovered_files {
+            for entry in &info.per_instantiation_missed {
+                for name in &entry.function_names {
+                    writeln!(out, "{file}:{} in {:#}", entry.line, rustc_demangle::demangle(name))?;
+                }
             }
         }
-        writeln!(out)?;
     }
     out.flush()?;
     Ok(())
@@ -1076,28 +1103,55 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use cargo_llvm_cov::json::UncoveredLines;
+    use cargo_llvm_cov::json::{PerInstantiationLine, UncoveredFile, UncoveredLines};
 
     #[test]
     fn show_missing_lines() {
         let mut m = UncoveredLines::new();
-        m.insert("f".to_owned(), vec![]);
+        m.insert("f".to_owned(), UncoveredFile::default());
         let mut o = vec![];
 
         o.clear();
-        m.get_mut("f").unwrap().push(1);
+        m.get_mut("f").unwrap().whole_file_missed.push(1);
         super::show_missing_lines(&mut o, &m).unwrap();
         assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1\n");
 
         o.clear();
-        m.get_mut("f").unwrap().push(2);
+        m.get_mut("f").unwrap().whole_file_missed.push(2);
         super::show_missing_lines(&mut o, &m).unwrap();
         assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-2\n");
 
         o.clear();
-        m.get_mut("f").unwrap().extend_from_slice(&[3, 5, 7, 8]);
+        m.get_mut("f").unwrap().whole_file_missed.extend_from_slice(&[3, 5, 7, 8]);
         super::show_missing_lines(&mut o, &m).unwrap();
         assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-3, 5, 7-8\n");
+    }
+
+    #[test]
+    fn show_missing_lines_per_instantiation() {
+        let mut m = UncoveredLines::new();
+        m.insert("f".to_owned(), UncoveredFile {
+            whole_file_missed: vec![],
+            per_instantiation_missed: vec![PerInstantiationLine {
+                line: 4,
+                function_names: vec!["_ZN4demo3fooE".to_owned(), "_ZN4demo3barE".to_owned()],
+            }],
+        });
+        m.insert("g".to_owned(), UncoveredFile::default());
+        let mut o = vec![];
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(
+            str::from_utf8(&o).unwrap(),
+            "Uncovered Lines (per instantiation):\nf:4 in demo::foo\nf:4 in demo::bar\n"
+        );
+
+        o.clear();
+        m.get_mut("f").unwrap().whole_file_missed.extend_from_slice(&[1, 2, 3]);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(
+            str::from_utf8(&o).unwrap(),
+            "Uncovered Lines:\nf: 1-3\n\nUncovered Lines (per instantiation):\nf:4 in demo::foo\nf:4 in demo::bar\n"
+        );
     }
 
     #[test]

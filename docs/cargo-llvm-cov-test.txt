@@ -139,7 +139,8 @@ OPTIONS:
             Exit with a status of 1 if the uncovered functions are greater than MAX
 
         --show-missing-lines
-            Show lines with no coverage
+            Show lines with no coverage, including per-instantiation gaps in
+            generics and derives
 
         --include-build-script
             Include build script in coverage report
