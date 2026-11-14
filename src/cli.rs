@@ -835,16 +835,30 @@ pub(crate) fn merge_config_and_args(
 
 pub(crate) const FIRST_SUBCMD: &str = "llvm-cov";
 
-/// Expands `@path` arguments to the contents of the file, one argument per line.
+/// Expands `@path` arguments to the contents of the file, one argument per line,
+/// until `--` is encountered (including in an argument file).
 ///
 /// https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
 pub(crate) fn expand_argfiles(args: impl IntoIterator<Item = OsString>) -> Result<Vec<OsString>> {
     let mut expanded = vec![];
+    let mut passthrough = false;
     for arg in args {
+        if arg == "--" {
+            passthrough = true;
+        }
+        if passthrough {
+            expanded.push(arg);
+            continue;
+        }
         match arg.to_str().and_then(|arg| arg.strip_prefix('@')) {
+            Some(path) if path.starts_with("shell:") => {
+                warn!("@shell: argument files are not supported");
+                expanded.push(arg);
+            }
             Some(path) => {
                 let contents = fs_err::read_to_string(path)
                     .with_context(|| format!("failed to read argument file {path:?}"))?;
+                passthrough = contents.lines().any(|arg| arg == "--");
                 expanded.extend(contents.lines().map(OsString::from));
             }
             None => expanded.push(arg),

@@ -596,6 +596,42 @@ fn argfile() -> io::Result<()> {
     tempdir.close()
 }
 
+#[test]
+fn argfile_after_separator() -> io::Result<()> {
+    let tempdir = tempfile::tempdir().unwrap();
+    let missing = format!("@{}", tempdir.path().join("missing").display());
+    let expected = format!("cargo-llvm-cov {}", env!("CARGO_PKG_VERSION"));
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .args(["llvm-cov", "--version", "--", &missing, "@shell:missing"])
+        .assert_success()
+        .stdout_eq(&expected)
+        .stderr_eq("");
+
+    // A separator supplied by an argument file also ends expansion.
+    let argfile = tempdir.path().join("args");
+    fs::write(&argfile, "llvm-cov\n--version\n--\n@missing\n@shell:missing\n")?;
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .arg(format!("@{}", argfile.display()))
+        .arg(&missing)
+        .assert_success()
+        .stdout_eq(&expected)
+        .stderr_eq("");
+    tempdir.close()
+}
+
+#[test]
+fn argfile_shell_warning() {
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .args(["llvm-cov", "@shell:missing"])
+        .assert_failure()
+        .stderr_contains("warning: @shell: argument files are not supported");
+    Command::new(env!("CARGO_BIN_EXE_cargo-llvm-cov"))
+        .env("__CARGO_LLVM_COV_RUSTC_WRAPPER", "1")
+        .args(["rustc", "@shell:missing"])
+        .assert_failure()
+        .stderr_contains("warning: @shell: argument files are not supported");
+}
+
 // cargo passes rustc args via an `@path` argfile when the command line is too long,
 // in which case the rustc-wrapper receives them that way as well.
 #[test]
