@@ -338,7 +338,8 @@ pub(crate) struct ReportOptions {
     pub(crate) fail_uncovered_regions: Option<u64>,
     /// Exit with a status of 1 if the uncovered functions are greater than MAX.
     pub(crate) fail_uncovered_functions: Option<u64>,
-    /// Show lines with no coverage.
+    /// Show lines with no coverage, including per-instantiation gaps in
+    /// generics and derives.
     pub(crate) show_missing_lines: bool,
     /// Include build script in coverage report.
     pub(crate) include_build_script: bool,
