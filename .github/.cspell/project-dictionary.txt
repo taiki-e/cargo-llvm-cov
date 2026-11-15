@@ -1,3 +1,5 @@
+argfile
+argfiles
 bindeps
 binstall
 CACHEDIR
