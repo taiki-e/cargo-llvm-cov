@@ -12,6 +12,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add support for `@argfile` arguments ([#533](https://github.com/taiki-e/cargo-llvm-cov/pull/533), thanks @davidkna)
+
+- Remove dependency on `fs-err`.
+
 ## [0.9.1] - 2026-09-06
 
 - Fix build-dir v2 path matching on Windows. ([#521](https://github.com/taiki-e/cargo-llvm-cov/pull/521), thanks @davidkna)
