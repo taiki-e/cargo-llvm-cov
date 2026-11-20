@@ -856,7 +856,8 @@ pub(crate) fn expand_argfiles(args: impl IntoIterator<Item = OsString>) -> Resul
                 expanded.push(arg);
             }
             Some(path) => {
-                let contents = fs_err::read_to_string(path)
+                #[allow(clippy::disallowed_methods)] // we have own error message.
+                let contents = std::fs::read_to_string(path)
                     .with_context(|| format!("failed to read argument file {path:?}"))?;
                 passthrough = contents.lines().any(|arg| arg == "--");
                 expanded.extend(contents.lines().map(OsString::from));
