@@ -137,23 +137,11 @@ OPTIONS:
     -p, --package <SPEC>
             Package to run tests for
 
-    -j, --jobs <N>
-            Number of parallel jobs, defaults to # of CPUs
-
     -r, --release
             Build artifacts in release mode, with optimizations
 
         --profile <PROFILE-NAME>
             Build artifacts with the specified profile
-
-    -F, --features <FEATURES>
-            Space or comma separated list of features to activate
-
-        --all-features
-            Activate all available features
-
-        --no-default-features
-            Do not activate the `default` feature
 
         --target <TRIPLE>
             Build for the target triple
