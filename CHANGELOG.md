@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-11-20
+
 - Add support for `@argfile` arguments ([#533](https://github.com/taiki-e/cargo-llvm-cov/pull/533), thanks @davidkna)
 
 - Remove dependency on `fs-err`.
@@ -843,7 +845,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...v0.9.0
 [0.8.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...v0.8.7
