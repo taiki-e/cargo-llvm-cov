@@ -86,6 +86,9 @@ OPTIONS:
         --ignore-filename-regex <PATTERN>
             Skip source code files with file paths that match the given regular expression
 
+        --include-filename-regex <PATTERN>
+            Only include source code files with file paths that match the given regular expression
+
         --show-instantiations
             Show instantiations in report
 
