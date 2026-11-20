@@ -21,6 +21,7 @@ build.include-archives = true
 build.allow-build-scripts = [
     { name = "anyhow" },
     { name = "camino" },
+    { name = "filetime" },
     { name = "fs-err" },
     { name = "libc" },
     { name = "proc-macro2" }, # via serde_derive
