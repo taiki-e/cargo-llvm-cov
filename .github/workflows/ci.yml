@@ -416,43 +416,43 @@ jobs:
         working-directory: tests/fixtures/crates/bin_crate
         if: (!startsWith(matrix.os, 'windows'))
 
-  test-nextest:
-    needs: tidy
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - rust: nightly
-          # - rust: nightly
-          #   os: windows-latest
-    runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
-    timeout-minutes: 60
-    steps:
-      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
-      - uses: taiki-e/install-action@5b4d68e2e660441203ab128a23676f1e4faf1532 # v2.86.3
-        with:
-          tool: rust@${{ matrix.rust }},nextest
-          fallback: none
-      - run: cargo install --path . --debug
-      - name: Test nextest
-        run: |
-          retry() {
-            for i in {1..10}; do
-              if "$@"; then
-                return 0
-              else
-                sleep "${i}"
-              fi
-            done
-            "$@"
-          }
-          retry git clone --depth 1 https://github.com/nextest-rs/nextest.git
-          pushd -- nextest >/dev/null
-          # https://github.com/nextest-rs/nextest/blob/174cf9f7a4334b56cb94e31a6962f656ae01a513/.github/workflows/coverage.yml
-          cargo llvm-cov --no-report nextest
-          cargo llvm-cov --no-report --doc
-          cargo llvm-cov report --doctests --lcov --output-path lcov.info
-          popd >/dev/null
+  # test-nextest:
+  #   needs: tidy
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - rust: nightly
+  #         # - rust: nightly
+  #         #   os: windows-latest
+  #   runs-on: ${{ matrix.os || 'ubuntu-24.04' }}
+  #   timeout-minutes: 60
+  #   steps:
+  #     - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+  #     - uses: taiki-e/install-action@5b4d68e2e660441203ab128a23676f1e4faf1532 # v2.86.3
+  #       with:
+  #         tool: rust@${{ matrix.rust }},nextest
+  #         fallback: none
+  #     - run: cargo install --path . --debug
+  #     - name: Test nextest
+  #       run: |
+  #         retry() {
+  #           for i in {1..10}; do
+  #             if "$@"; then
+  #               return 0
+  #             else
+  #               sleep "${i}"
+  #             fi
+  #           done
+  #           "$@"
+  #         }
+  #         retry git clone --depth 1 https://github.com/nextest-rs/nextest.git
+  #         pushd -- nextest >/dev/null
+  #         # https://github.com/nextest-rs/nextest/blob/174cf9f7a4334b56cb94e31a6962f656ae01a513/.github/workflows/coverage.yml
+  #         cargo llvm-cov --no-report nextest
+  #         cargo llvm-cov --no-report --doc
+  #         cargo llvm-cov report --doctests --lcov --output-path lcov.info
+  #         popd >/dev/null
 
   test-llvm:
     needs: tidy

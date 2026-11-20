@@ -323,7 +323,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         {
             return false;
         }
-        // Using std::fs instead of fs-err is okay here since we ignore error contents
+        // Using std::fs instead of crate::fs is okay here since we ignore error contents
         #[allow(clippy::disallowed_methods)]
         let Ok(metadata) = std::fs::metadata(f) else {
             return false;
@@ -376,15 +376,16 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         target_dir.push("target");
         let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
-        let file = fs::File::open(archive_file)?; // TODO: Buffering?
-        let decoder = ruzstd::decoding::StreamingDecoder::new(file)?;
+        let file = fs::open(archive_file)?; // TODO: Buffering?
+        let read_error = || format!("failed to read from file `{archive_file}`");
+        let decoder = ruzstd::decoding::StreamingDecoder::new(file).with_context(read_error)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
-        for entry in archive.entries()? {
-            let mut entry = entry?;
+        for entry in archive.entries().with_context(read_error)? {
+            let mut entry = entry.with_context(read_error)?;
             let path = entry.path()?;
             if path.ends_with("target/nextest/binaries-metadata.json") {
-                entry.read_to_end(&mut binaries_metadata)?;
+                entry.read_to_end(&mut binaries_metadata).with_context(read_error)?;
                 break;
             }
         }
