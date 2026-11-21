@@ -283,6 +283,17 @@ impl Context {
     pub(crate) fn cargo(&self) -> ProcessBuilder {
         self.ws.cargo(self.args.verbose)
     }
+
+    /// The name of the directory that the artifacts of the selected profile are written to.
+    pub(crate) fn profile_dir_name(&self) -> &str {
+        // https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#custom-profiles
+        match self.args.cargo_profile.as_deref() {
+            None if self.args.release => "release",
+            Some("release" | "bench") => "release",
+            None | Some("dev" | "test") => "debug",
+            Some(p) => p,
+        }
+    }
 }
 
 pub(crate) struct WorkspaceMembers {
