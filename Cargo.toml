@@ -46,7 +46,7 @@ walkdir = "2.2.3"
 build-context = "0.1"
 fs-err = "3"
 tempfile = { version = "3", default-features = false }
-test-helper = { features = ["cli", "doc", "git"], git = "https://github.com/taiki-e/test-helper.git", rev = "b931ac1a34794aede5b019c613e50157a35a7ec4" }
+taiki-e-test-helper = { version = "0.1", features = ["cli", "doc", "git"] }
 
 [lints]
 workspace = true
