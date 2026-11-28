@@ -12,6 +12,33 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--coverage-watermark` option to set the coverage color thresholds of the html report.
+
+## [0.9.2] - 2026-11-20
+
+- Add support for `@argfile` arguments ([#533](https://github.com/taiki-e/cargo-llvm-cov/pull/533), thanks @davidkna)
+
+- Remove dependency on `fs-err`.
+
+## [0.9.1] - 2026-09-06
+
+- Fix build-dir v2 path matching on Windows. ([#521](https://github.com/taiki-e/cargo-llvm-cov/pull/521), thanks @davidkna)
+
+## [0.9.0] - 2026-08-16
+
+- Change `--show-missing-lines` reporting to aggregate consecutive line numbers. ([#497](https://github.com/taiki-e/cargo-llvm-cov/pull/497), thanks @saroad2)
+  - This is a breaking change for users who were previously parsing the output programmatically.
+
+- Fix doctest coverage in 2024 edition workspaces with multiple packages. ([#507](https://github.com/taiki-e/cargo-llvm-cov/pull/507), thanks @Eljees)
+
+- Fix an issue where build scripts appeared in reports even without `--include-build-script` when Cargo's new build-dir layout is used.
+
+- Fix output format of `--fish`. ([#504](https://github.com/taiki-e/cargo-llvm-cov/pull/504), thanks @olexander-movchan)
+
+- Support `--workspace`/`--all` in `cargo llvm-cov report` subcommand. ([#500](https://github.com/taiki-e/cargo-llvm-cov/pull/500), thanks @palfrey)
+
+- Support `-m` alias [added in Cargo 1.97](https://github.com/rust-lang/cargo/pull/16858).
+
 ## [0.8.7] - 2026-05-13
 
 - Add `--coverage-host-only` flag. ([#493](https://github.com/taiki-e/cargo-llvm-cov/pull/493), thanks @davidhewitt)
@@ -820,7 +847,10 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 Initial release
 
-[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...HEAD
+[Unreleased]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.1...v0.9.2
+[0.9.1]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.7...v0.9.0
 [0.8.7]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.6...v0.8.7
 [0.8.6]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.5...v0.8.6
 [0.8.5]: https://github.com/taiki-e/cargo-llvm-cov/compare/v0.8.4...v0.8.5

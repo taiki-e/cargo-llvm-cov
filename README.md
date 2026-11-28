@@ -142,6 +142,13 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
+        --coverage-watermark <HIGH,LOW>
+            Set the coverage watermarks (percentages) used for the colors of the html report
+
+            Regions with coverage of at least HIGH percent are shown in green, at least LOW
+            percent in yellow, and the rest in red. This flag can only be used together with
+            --html or --open and requires LLVM 15+ (Rust 1.65+).
+
         --no-cfg-coverage
             Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov
 
@@ -477,11 +484,12 @@ LLVM_PROFDATA=<llvm-profdata-path> \
 
 Known compatible Rust (installed via rustup) and LLVM versions:
 
-|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.95 |
-| ---------- | -------------- | -------------- | -------------- |
-| LLVM 14-17 | **✓**          |                |                |
-| LLVM 18    |                | **✓**          |                |
-| LLVM 19-22 |                |                | **✓**          |
+|            | Rust 1.60-1.77 | Rust 1.78-1.81 | Rust 1.82-1.98 | Rust 1.99-1.100 |
+| ---------- | -------------- | -------------- | -------------- | --------------- |
+| LLVM 14-17 | **✓**          |                |                |                 |
+| LLVM 18    |                | **✓**          |                |                 |
+| LLVM 19-22 |                |                | **✓**          |                 |
+| LLVM 23    |                |                |                | **✓**           |
 
 ### Get coverage of external tests
 
@@ -501,6 +509,8 @@ cargo build # Build rust binaries with instrumentation.
 
 cargo llvm-cov report --lcov # Generate report without tests.
 ```
+
+To include additional instrumented binaries in the report, pass `--object <PATH>` to `cargo llvm-cov report` once per binary.
 
 > [!CAUTION]
 > cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest`/etc. commands.

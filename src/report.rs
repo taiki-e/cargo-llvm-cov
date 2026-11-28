@@ -141,21 +141,7 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
             let uncovered_files = json.get_uncovered_lines(ignore_filename_regex.as_deref());
             if !uncovered_files.is_empty() {
                 let mut stdout = BufWriter::new(io::stdout().lock()); // Buffered because it is written with newline many times.
-                writeln!(stdout, "Uncovered Lines:")?;
-                for (file, lines) in &uncovered_files {
-                    write!(stdout, "{file}: ")?;
-                    let mut first = true;
-                    for &l in lines {
-                        if first {
-                            first = false;
-                        } else {
-                            write!(stdout, ", ")?;
-                        }
-                        write!(stdout, "{l}")?;
-                    }
-                    writeln!(stdout)?;
-                }
-                stdout.flush()?;
+                show_missing_lines(&mut stdout, &uncovered_files)?;
             }
         }
     }
@@ -165,6 +151,34 @@ pub(crate) fn generate(cx: &Context) -> Result<()> {
         status!("Opening", "{path}");
         open_report(cx, path)?;
     }
+    Ok(())
+}
+
+fn show_missing_lines(
+    out: &mut dyn io::Write,
+    uncovered_files: &cargo_llvm_cov::json::UncoveredLines,
+) -> Result<()> {
+    writeln!(out, "Uncovered Lines:")?;
+    for (file, lines) in uncovered_files {
+        write!(out, "{file}: ")?;
+        let mut first = true;
+        for segment in lines.chunk_by(|a, b| a.checked_add(1) == Some(*b)) {
+            let start = segment[0];
+            let end = segment[segment.len() - 1];
+            if first {
+                first = false;
+            } else {
+                write!(out, ", ")?;
+            }
+            if start == end {
+                write!(out, "{start}")?;
+            } else {
+                write!(out, "{start}-{end}")?;
+            }
+        }
+        writeln!(out)?;
+    }
+    out.flush()?;
     Ok(())
 }
 
@@ -251,24 +265,20 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                 if let (Some(stem), Some(parent)) = (p.file_stem(), p.parent()) {
                     if parent.starts_with(&build_dir) {
                         if p.is_dir() && p.file_name().is_some_and(|f| f == "out") {
-                            let is_v2_layout = parent.join("fingerprint").exists();
-                            if is_v2_layout {
-                                // In the v2 layout, the `<target>/debug/$build-unit/out` dir is a
-                                // generic directory that may be the $OUT_DIR for build script
-                                // execution units or the compilation output.
-                                // We check this by seeing if a `run` directory is present which
-                                // indicates this is a build script run
-                                if parent.join("run").exists() {
-                                    return false;
-                                }
-                            } else {
+                            if !is_v2_layout_unit_dir(parent, build_dir.as_std_path()) {
                                 // In the v1 layout, `out` is always the build script $OUT_DIR
                                 // which we don't care about.
+                                return false;
+                            }
+                            // In the v2 layout, `out` is generic. A `run` dir marks the
+                            // build script execution unit.
+                            if parent.join("run").exists() {
                                 return false;
                             }
                         }
 
                         if stem == "build-script-build"
+                            || stem == "build_script_build"
                             || stem.to_str().unwrap_or_default().starts_with("build_script_build-")
                         {
                             if cx.args.report.include_build_script {
@@ -314,7 +324,7 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         {
             return false;
         }
-        // Using std::fs instead of fs-err is okay here since we ignore error contents
+        // Using std::fs instead of crate::fs is okay here since we ignore error contents
         #[allow(clippy::disallowed_methods)]
         let Ok(metadata) = std::fs::metadata(f) else {
             return false;
@@ -367,15 +377,16 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         }
         target_dir.push("target");
         let archive_file = cx.args.nextest_archive_file.as_ref().unwrap();
-        let file = fs::File::open(archive_file)?; // TODO: Buffering?
-        let decoder = ruzstd::decoding::StreamingDecoder::new(file)?;
+        let file = fs::open(archive_file)?; // TODO: Buffering?
+        let read_error = || format!("failed to read from file `{archive_file}`");
+        let decoder = ruzstd::decoding::StreamingDecoder::new(file).with_context(read_error)?;
         let mut archive = Archive::new(decoder);
         let mut binaries_metadata = vec![];
-        for entry in archive.entries()? {
-            let mut entry = entry?;
+        for entry in archive.entries().with_context(read_error)? {
+            let mut entry = entry.with_context(read_error)?;
             let path = entry.path()?;
             if path.ends_with("target/nextest/binaries-metadata.json") {
-                entry.read_to_end(&mut binaries_metadata)?;
+                entry.read_to_end(&mut binaries_metadata).with_context(read_error)?;
                 break;
             }
         }
@@ -548,6 +559,8 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
     };
     collect_ui_test_target_dir(ui_test_target_dir)?;
 
+    files.extend(cx.args.report.object.iter().map(|path| path.as_os_str().to_owned()));
+
     // This sort is necessary to make the result of `llvm-cov show` match between macOS and Linux.
     files.sort_unstable();
 
@@ -559,6 +572,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         );
     }
     Ok(files)
+}
+
+/// Returns `true` when `unit_dir` is a v2 build-dir layout unit dir,
+/// `build/<unit>/<hash>`. Path shape, not the `fingerprint` sibling, since
+/// nextest archives extract `out` dirs without it.
+fn is_v2_layout_unit_dir(unit_dir: &Path, build_dir: &Path) -> bool {
+    unit_dir.parent().and_then(Path::parent) == Some(build_dir)
 }
 
 fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
@@ -587,11 +607,20 @@ fn build_script_hash_v1_layout_re(cx: &Context) -> RegexVec {
 }
 
 fn build_script_hash_v2_layout_re(cx: &Context) -> RegexVec {
-    let mut re = RegexVecBuilder::new("build/(", ")/[0-9a-f]+/out$");
+    let mut re = build_script_hash_v2_layout_re_builder();
     for &id in &cx.workspace_members.included {
         re.or(&cx.ws.metadata[id].name);
     }
     re.build().unwrap()
+}
+
+fn build_script_hash_v2_layout_re_builder() -> RegexVecBuilder {
+    // TODO: Use `std::path::SEPARATORS_STR` once it is stable.
+    if cfg!(windows) {
+        RegexVecBuilder::new(r"build[/\\](", r")[/\\][0-9a-f]+[/\\]out$")
+    } else {
+        RegexVecBuilder::new("build/(", ")/[0-9a-f]+/out$")
+    }
 }
 
 /// Collects metadata for packages generated by trybuild. If the trybuild test
@@ -712,6 +741,12 @@ impl ReportFormat {
                 {
                     // -show-mcdc requires LLVM 18+
                     cmd.arg("-show-mcdc");
+                }
+                // -coverage-watermark only affects the coloring of the html report.
+                if self == Self::Html {
+                    if let Some(coverage_watermark) = &cx.args.report.coverage_watermark {
+                        cmd.arg(format!("-coverage-watermark={coverage_watermark}"));
+                    }
                 }
                 let mut demangler = OsString::from("-Xdemangler=");
                 demangler.push(&cx.current_exe);
@@ -1068,4 +1103,70 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
         }) {}
     }
     excluded_path
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use cargo_llvm_cov::json::UncoveredLines;
+
+    #[test]
+    fn show_missing_lines() {
+        let mut m = UncoveredLines::new();
+        m.insert("f".to_owned(), vec![]);
+        let mut o = vec![];
+
+        o.clear();
+        m.get_mut("f").unwrap().push(1);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1\n");
+
+        o.clear();
+        m.get_mut("f").unwrap().push(2);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-2\n");
+
+        o.clear();
+        m.get_mut("f").unwrap().extend_from_slice(&[3, 5, 7, 8]);
+        super::show_missing_lines(&mut o, &m).unwrap();
+        assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-3, 5, 7-8\n");
+    }
+
+    #[test]
+    fn v2_layout_unit_dir() {
+        let build_dir = Path::new("target/debug/build");
+        // v2 unit dirs are two components below `build/`.
+        assert!(super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro/abc123"),
+            build_dir
+        ));
+        // v1 build-script dirs are one component below `build/`.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro-abc123"),
+            build_dir
+        ));
+        // Nested dirs inside a build-script $OUT_DIR are not unit dirs.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro-abc123/out/nested"),
+            build_dir
+        ));
+        // Dirs outside `build/` are not unit dirs.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/incremental/repro-abc123"),
+            build_dir
+        ));
+    }
+
+    #[test]
+    fn build_script_hash_v2_layout_matches_native_path_separators() {
+        let mut re = super::build_script_hash_v2_layout_re_builder();
+        re.or("starship");
+        let re = re.build().unwrap();
+
+        #[cfg(windows)]
+        assert!(re.is_match(r"target\debug\build\starship\abc123\out"));
+        assert!(re.is_match(r"target/debug/build/starship/abc123/out"));
+        assert!(!re.is_match("target/debug/build/other/abc123/out"));
+    }
 }
