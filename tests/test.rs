@@ -140,6 +140,20 @@ fn coverage_watermark() {
     assert!(output_dir.path().join("html").join("index.html").exists());
 }
 
+#[cfg(unix)] // `echo` may not be available on Windows.
+#[test]
+fn coverage_watermark_llvm_version_check() {
+    let workspace_root = test_project("real1");
+    cargo_llvm_cov("test")
+        .args(["--html", "--coverage-watermark=70,40"])
+        .env("LLVM_COV", "echo")
+        .env("LLVM_PROFDATA", "echo")
+        .current_dir(workspace_root.path())
+        .assert_failure()
+        .stderr_contains("--coverage-watermark requires llvm-cov from LLVM 15+");
+    assert!(!workspace_root.path().join("target/llvm-cov-target").exists());
+}
+
 #[test]
 fn cargo_config() {
     if RUSTC_MINOR_VERSION < 88 {
@@ -561,6 +575,27 @@ fn invalid_arg() {
                     }
                 ));
             }
+        }
+        if matches!(subcommand, "" | "test" | "run" | "nextest" | "report") {
+            cargo_llvm_cov(subcommand)
+                .args(["--coverage-watermark=70,40"])
+                .assert_failure()
+                .stderr_contains(
+                    "--coverage-watermark can only be used together with either --html or --open",
+                );
+            if subcommand != "report" {
+                cargo_llvm_cov(subcommand)
+                    .args(["--html", "--coverage-watermark=70,40", "--no-report"])
+                    .assert_failure()
+                    .stderr_contains(
+                        "--coverage-watermark may not be used together with --no-report",
+                    );
+            }
+        } else {
+            cargo_llvm_cov(subcommand)
+                .args(["--html", "--coverage-watermark=70,40"])
+                .assert_failure()
+                .stderr_contains("--coverage-watermark is specific to");
         }
     }
 }

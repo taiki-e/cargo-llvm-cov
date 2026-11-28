@@ -189,6 +189,15 @@ impl Context {
             }
         };
 
+        if args.report.coverage_watermark.is_some() {
+            let help = cmd!(&llvm_cov, "show", "--help")
+                .read()
+                .context("failed to check llvm-cov support for --coverage-watermark")?;
+            if !help.contains("-coverage-watermark") {
+                bail!("--coverage-watermark requires llvm-cov from LLVM 15+");
+            }
+        }
+
         let workspace_members = WorkspaceMembers::new(
             &ws,
             &unresolved_args.exclude_from_report,

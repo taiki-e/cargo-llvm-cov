@@ -147,7 +147,7 @@ OPTIONS:
 
             Regions with coverage of at least HIGH percent are shown in green, at least LOW
             percent in yellow, and the rest in red. This flag can only be used together with
-            --html or --open.
+            --html or --open and requires LLVM 15+ (Rust 1.65+).
 
         --no-cfg-coverage
             Unset cfg(coverage), which is enabled when code is built using cargo-llvm-cov

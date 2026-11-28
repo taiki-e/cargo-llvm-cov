@@ -375,6 +375,18 @@ impl ReportOptions {
                 specific_flag("--no-report", subcommand, &["test", "run", "nextest", ""])?;
             }
         }
+        if self.coverage_watermark.is_some() {
+            let flag = "--coverage-watermark";
+            if subcommands_without_report {
+                specific_flag(flag, subcommand, &["report", "test", "run", "nextest", ""])?;
+            }
+            if self.no_report {
+                conflicts(flag, "--no-report")?;
+            }
+            if !self.html && !self.open {
+                requires(flag, &["--html", "--open"])?;
+            }
+        }
         if subcommands_without_report || self.no_report {
             let Self {
                 no_report: _,
@@ -393,7 +405,7 @@ impl ReportOptions {
                 object: _,
                 no_default_ignore_filename_regex,
                 show_instantiations,
-                coverage_watermark,
+                coverage_watermark: _,
                 fail_under_functions,
                 fail_under_lines,
                 fail_under_file_lines,
@@ -420,7 +432,6 @@ impl ReportOptions {
                 ("--ignore-filename-regex", ignore_filename_regex.is_some()),
                 ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
                 ("--show-instantiations", *show_instantiations),
-                ("--coverage-watermark", coverage_watermark.is_some()),
                 ("--fail-under-functions", fail_under_functions.is_some()),
                 ("--fail-under-lines", fail_under_lines.is_some()),
                 ("--fail-under-file-lines", fail_under_file_lines.is_some()),
