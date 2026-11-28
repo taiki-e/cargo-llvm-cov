@@ -92,6 +92,11 @@ OPTIONS:
         --show-instantiations
             Show instantiations in report
 
+        --include-examples
+            Include source files under the `examples` directory in the report,
+            which are excluded by default. Test entry files
+            (`tests.rs`/`*_tests.rs`) remain excluded.
+
         --coverage-watermark <HIGH,LOW>
             Set the coverage watermarks (percentages) used for the colors of the html report
 
