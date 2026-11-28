@@ -54,8 +54,6 @@ OPTIONS:
         --remap-path-prefix
             Use --remap-path-prefix for workspace root
 
-            Note that this does not fully compatible with doctest.
-
         --include-ffi
             Include coverage of C/C++ code linked to Rust library/binary
 
