@@ -216,6 +216,11 @@ fn issue520() {
     if RUSTC_MINOR_VERSION < 100 {
         return; // build-dir v2 layout stabilized in Rust 1.100
     }
+    if build_context::HOST == "aarch64-pc-windows-msvc" {
+        // issue520 test crate has build script but coverage is not supported yet on this host.
+        // TODO: Using --coverage-target-only on aarch64-pc-windows-msvc is better approach here.
+        return;
+    }
     let model = "issue520";
     let workspace_root = test_project(model);
     let output_path = fixtures_dir().join("coverage-reports").join(model).join("report.txt");
