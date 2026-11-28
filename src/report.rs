@@ -264,19 +264,14 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
                 if let (Some(stem), Some(parent)) = (p.file_stem(), p.parent()) {
                     if parent.starts_with(&build_dir) {
                         if p.is_dir() && p.file_name().is_some_and(|f| f == "out") {
-                            let is_v2_layout = parent.join("fingerprint").exists();
-                            if is_v2_layout {
-                                // In the v2 layout, the `<target>/debug/$build-unit/out` dir is a
-                                // generic directory that may be the $OUT_DIR for build script
-                                // execution units or the compilation output.
-                                // We check this by seeing if a `run` directory is present which
-                                // indicates this is a build script run
-                                if parent.join("run").exists() {
-                                    return false;
-                                }
-                            } else {
+                            if !is_v2_layout_unit_dir(parent, build_dir.as_std_path()) {
                                 // In the v1 layout, `out` is always the build script $OUT_DIR
                                 // which we don't care about.
+                                return false;
+                            }
+                            // In the v2 layout, `out` is generic. A `run` dir marks the
+                            // build script execution unit.
+                            if parent.join("run").exists() {
                                 return false;
                             }
                         }
@@ -576,6 +571,13 @@ fn object_files(cx: &Context) -> Result<Vec<OsString>> {
         );
     }
     Ok(files)
+}
+
+/// Returns `true` when `unit_dir` is a v2 build-dir layout unit dir,
+/// `build/<unit>/<hash>`. Path shape, not the `fingerprint` sibling, since
+/// nextest archives extract `out` dirs without it.
+fn is_v2_layout_unit_dir(unit_dir: &Path, build_dir: &Path) -> bool {
+    unit_dir.parent().and_then(Path::parent) == Some(build_dir)
 }
 
 fn pkg_hash_re(cx: &Context) -> Result<RegexVec> {
@@ -1085,6 +1087,8 @@ fn resolve_excluded_paths(cx: &Context) -> Vec<Utf8PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use cargo_llvm_cov::json::UncoveredLines;
 
     #[test]
@@ -1107,6 +1111,31 @@ mod tests {
         m.get_mut("f").unwrap().extend_from_slice(&[3, 5, 7, 8]);
         super::show_missing_lines(&mut o, &m).unwrap();
         assert_eq!(str::from_utf8(&o).unwrap(), "Uncovered Lines:\nf: 1-3, 5, 7-8\n");
+    }
+
+    #[test]
+    fn v2_layout_unit_dir() {
+        let build_dir = Path::new("target/debug/build");
+        // v2 unit dirs are two components below `build/`.
+        assert!(super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro/abc123"),
+            build_dir
+        ));
+        // v1 build-script dirs are one component below `build/`.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro-abc123"),
+            build_dir
+        ));
+        // Nested dirs inside a build-script $OUT_DIR are not unit dirs.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/build/repro-abc123/out/nested"),
+            build_dir
+        ));
+        // Dirs outside `build/` are not unit dirs.
+        assert!(!super::is_v2_layout_unit_dir(
+            Path::new("target/debug/incremental/repro-abc123"),
+            build_dir
+        ));
     }
 
     #[test]

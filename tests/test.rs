@@ -240,6 +240,51 @@ fn issue361() {
     run("issue361", "issue361", &["--package", "crate-b"], &[]);
 }
 
+// https://github.com/taiki-e/cargo-llvm-cov/issues/520
+// A unit dir extracted without `fingerprint`/`run` must still be detected as the v2 layout.
+#[test]
+fn issue520() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // build-dir v2 layout stabilized in Rust 1.100
+    }
+    if build_context::HOST == "aarch64-pc-windows-msvc" {
+        // issue520 test crate has build script but coverage is not supported yet on this host.
+        // TODO: Using --coverage-target-only on aarch64-pc-windows-msvc is better approach here.
+        return;
+    }
+    let model = "issue520";
+    let workspace_root = test_project(model);
+    let output_path = fixtures_dir().join("coverage-reports").join(model).join("report.txt");
+    fs::create_dir_all(output_path.parent().unwrap()).unwrap();
+    let expected = &fs::read_to_string(&output_path).unwrap_or_default();
+    cargo_llvm_cov("")
+        .args(["--color", "never", "--output-path"])
+        .arg(&output_path)
+        .arg("--remap-path-prefix")
+        .current_dir(workspace_root.path())
+        .env("CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT", "true")
+        .assert_success();
+
+    // Simulate a nextest archive extraction by dropping the layout marker dirs.
+    let build_dir = workspace_root.path().join("target/llvm-cov-target/debug/build");
+    for unit in fs::read_dir(&build_dir).unwrap().filter_map(Result::ok) {
+        for hash_dir in fs::read_dir(unit.path()).unwrap().filter_map(Result::ok) {
+            let _ = fs::remove_dir_all(hash_dir.path().join("fingerprint"));
+            let _ = fs::remove_dir(hash_dir.path().join("run"));
+        }
+    }
+
+    cargo_llvm_cov("report")
+        .args(["--color", "never", "--output-path"])
+        .arg(&output_path)
+        .arg("--remap-path-prefix")
+        .current_dir(workspace_root.path())
+        .assert_success();
+
+    normalize_output(&output_path, &[]);
+    assert_output(&output_path, expected);
+}
+
 #[test]
 fn no_coverage() {
     if !build_context::RUSTC_NIGHTLY {
