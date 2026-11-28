@@ -4,7 +4,6 @@
 camino
 demangle
 lexopt
-rustversion
 ruzstd
 termcolor
 trybuild

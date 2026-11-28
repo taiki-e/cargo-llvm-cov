@@ -1,6 +1,6 @@
 [package]
 name = "cargo-llvm-cov"
-version = "0.9.1" #publish:version
+version = "0.9.2" #publish:version
 edition = "2021"
 # NB: Sync with the MSRV in "From source" section in README.md.
 rust-version = "1.87" # For ruzstd
@@ -45,9 +45,8 @@ walkdir = "2.2.3"
 [dev-dependencies]
 build-context = "0.1"
 fs-err = "3"
-rustversion = "1"
 tempfile = { version = "3", default-features = false }
-test-helper = { features = ["cli", "doc", "git"], git = "https://github.com/taiki-e/test-helper.git", rev = "b931ac1a34794aede5b019c613e50157a35a7ec4" }
+taiki-e-test-helper = { version = "0.1", features = ["cli", "doc", "git"] }
 
 [lints]
 workspace = true

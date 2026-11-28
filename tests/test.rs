@@ -11,6 +11,7 @@ use std::{
     process::Command,
 };
 
+use build_context::RUSTC_MINOR_VERSION;
 use cargo_config2::Flags;
 use fs_err as fs;
 use test_helper::cli::CommandExt as _;
@@ -28,7 +29,7 @@ fn test_set() -> Vec<(&'static str, &'static [&'static str])> {
         // TODO: test Cobertura output
         ("codecov.json", &["--codecov"]),
     ];
-    if rustversion::cfg!(since(1.95)) {
+    if RUSTC_MINOR_VERSION >= 95 {
         // LLVM 22 (1.95) bumped llvm.coverage.json.export version.
         set.push(("json", &["--json", "--summary-only"]));
         // TODO: full JSON output is unstable between platform.
@@ -46,10 +47,11 @@ fn run(model: &str, name: &str, args: &[&str], envs: &[(&str, &str)]) {
 // TODO:
 // - add tests for non-crates.io dependencies
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn real1() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     run("real1", "workspace_root", &[], &[]);
     run("real1", "all", &["--all"], &[]);
     run("real1", "manifest_path", &["--manifest-path", "member1/member2/Cargo.toml"], &[]);
@@ -57,10 +59,11 @@ fn real1() {
     run("real1", "exclude", &["--all", "--exclude", "crate1"], &[]);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn virtual1() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     run("virtual1", "workspace_root", &[], &[]);
     run("virtual1", "package1", &["--package", "member1"], &[]);
     run("virtual1", "package2", &["--package", "member1", "--package", "member2"], &[]);
@@ -86,20 +89,22 @@ fn virtual1() {
     run("virtual1", "exclude-from-test2", &["--workspace", "--exclude-from-test", "member2"], &[]);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn no_test() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     run("no_test", "no_test", &[], &[]);
     if !(cfg!(windows) && cfg!(target_env = "msvc")) {
         run("no_test", "link_dead_code", &[], &[("RUSTFLAGS", "-C link-dead-code")]);
     }
 }
 
-// 1.100 changed report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn bin_crate() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // 1.100 changed report generation
+    }
     run("bin_crate", "bin_crate", &[], &[]);
 
     let model = "bin_crate";
@@ -109,26 +114,29 @@ fn bin_crate() {
     }
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn instantiations() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     // TODO: fix https://github.com/taiki-e/cargo-llvm-cov/issues/43
     run("instantiations", "instantiations", &[], &[]);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn cargo_config() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     run("cargo_config", "cargo_config", &[], &[]);
     run("cargo_config_toml", "cargo_config_toml", &[], &[]);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn trybuild() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     if build_context::HOST == "aarch64-pc-windows-msvc" {
         // coverage is not supported yet on this host.
         return;
@@ -137,10 +145,11 @@ fn trybuild() {
     run("trybuild", "trybuild_target", &["--test", "ui", "--target", build_context::TARGET], &[]);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn ui_test() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     if build_context::HOST == "aarch64-pc-windows-msvc" {
         // coverage is not supported yet on this host.
         return;
@@ -153,18 +162,19 @@ fn ui_test() {
     run("ui_test", "ui_test_target", &["--test", "ui", "--target", build_context::TARGET], &[]);
 }
 
-// build-dir requires Cargo 1.91.
-#[rustversion::attr(before(1.91), ignore)]
 #[test]
 fn build_dir() {
+    if RUSTC_MINOR_VERSION < 91 {
+        return; // build-dir requires Cargo 1.91.
+    }
     run("build_dir", "build_dir", &[], &[]);
 }
 
-// https://github.com/rust-lang/cargo/issues/15010
-// build-dir v2 layout is not yet stable
-#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn build_dir_layout_v2() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // build-dir v2 layout stabilized in Rust 1.100
+    }
     run("real1", "workspace_root", &[], &[("CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT", "true")]);
     run("real1", "all", &["--all"], &[("CARGO_UNSTABLE_BUILD_DIR_NEW_LAYOUT", "true")]);
     run("real1", "manifest_path", &["--manifest-path", "member1/member2/Cargo.toml"], &[(
@@ -182,26 +192,30 @@ fn build_dir_layout_v2() {
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/303
-// 1.100 changed report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn issue303() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // 1.100 changed report generation
+    }
     run("issue303", "issue303", &["--manifest-path", "one/Cargo.toml", "--workspace"], &[]);
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/361
-// 1.100 changed report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.100), ignore)]
 #[test]
 fn issue361() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // 1.88 changed report generation
+    }
     run("issue361", "issue361", &["--package", "crate-b"], &[]);
 }
 
 // https://github.com/taiki-e/cargo-llvm-cov/issues/520
 // A unit dir extracted without `fingerprint`/`run` must still be detected as the v2 layout.
-#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn issue520() {
+    if RUSTC_MINOR_VERSION < 100 {
+        return; // build-dir v2 layout stabilized in Rust 1.100
+    }
     let model = "issue520";
     let workspace_root = test_project(model);
     let output_path = fixtures_dir().join("coverage-reports").join(model).join("report.txt");
@@ -235,10 +249,11 @@ fn issue520() {
     assert_output(&output_path, expected);
 }
 
-// feature(coverage_attribute) requires nightly
-#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn no_coverage() {
+    if !build_context::RUSTC_NIGHTLY {
+        return; // feature(coverage_attribute) requires nightly
+    }
     let model = "no_coverage";
     for (extension, args2) in test_set() {
         // TODO: On windows, the order of the instantiations in the generated coverage report will be different.
@@ -258,12 +273,12 @@ fn no_coverage() {
     }
 }
 
-// The order of the instantiations in the generated coverage report will be different depending on the version.
-#[rustversion::attr(not(nightly), ignore)]
 #[test]
 fn merge() {
-    // The order of the instantiations in the generated coverage report will be different depending on the platform.
-    if !cfg!(any(all(target_arch = "aarch64", target_os = "macos"))) {
+    // The order of the instantiations in the generated coverage report will be different depending on the version and the platform.
+    if !build_context::RUSTC_NIGHTLY
+        || !cfg!(any(all(target_arch = "aarch64", target_os = "macos")))
+    {
         return;
     }
     let output_dir = fixtures_dir().join("coverage-reports").join("merge");
@@ -314,10 +329,11 @@ fn merge_with_failure_mode(output_dir: &Path, failure_mode_all: bool) {
     }
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn clean_ws() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     let model = "merge";
     let name = "clean_ws";
     let output_dir = fixtures_dir().join("coverage-reports").join(model);
@@ -720,10 +736,11 @@ fn update_readme() {
     test_helper::doc::sync_command_output_to_markdown(path, "readme-long-help", command, new);
 }
 
-// 1.88 fixed bug in report generation, so the latest report is not the same as the old report.
-#[rustversion::attr(before(1.88), ignore)]
 #[test]
 fn workspace_with_bin() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
     let model = "workspace-with-bin";
     let workspace_root = test_project(model);
     let output_dir = fixtures_dir().join("coverage-reports").join(model);

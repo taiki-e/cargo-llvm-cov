@@ -32,21 +32,28 @@ concurrency:
 
 jobs:
   tidy:
-    uses: taiki-e/github-actions/.github/workflows/tidy.yml@07c8b42e7ad077d40127201ac62770c6eb31893e # 2026.11.1
+    uses: taiki-e/github-actions/.github/workflows/tidy.yml@64535e607ea2bc43571fe978adaf5dbe191a1926 # 2026.11.26
     permissions:
       security-events: write # for github/codeql-action/*
     with:
       check-external-types: false # TODO
       docs: false
+  codeql:
+    needs: tidy
+    uses: taiki-e/github-actions/.github/workflows/codeql.yml@64535e607ea2bc43571fe978adaf5dbe191a1926 # 2026.11.26
+    permissions:
+      security-events: write # for github/codeql-action/*
+    with:
+      language: rust
   miri:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@07c8b42e7ad077d40127201ac62770c6eb31893e # 2026.11.1
+    uses: taiki-e/github-actions/.github/workflows/rust-miri.yml@64535e607ea2bc43571fe978adaf5dbe191a1926 # 2026.11.26
   msrv:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@07c8b42e7ad077d40127201ac62770c6eb31893e # 2026.11.1
+    uses: taiki-e/github-actions/.github/workflows/rust-msrv.yml@64535e607ea2bc43571fe978adaf5dbe191a1926 # 2026.11.26
   release-dry-run:
     needs: tidy
-    uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@07c8b42e7ad077d40127201ac62770c6eb31893e # 2026.11.1
+    uses: taiki-e/github-actions/.github/workflows/rust-release-dry-run.yml@64535e607ea2bc43571fe978adaf5dbe191a1926 # 2026.11.26
 
   test:
     needs: tidy
