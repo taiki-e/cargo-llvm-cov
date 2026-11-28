@@ -452,6 +452,12 @@ fn invalid_arg() {
     for subcommand in
         ["", "test", "run", "report", "clean", "show-env", "nextest", "nextest-archive"]
     {
+        if subcommand != "report" {
+            cargo_llvm_cov(subcommand)
+                .arg("--object=path")
+                .assert_failure()
+                .stderr_contains("--object is specific to report");
+        }
         if subcommand != "show-env" {
             for flag in ["--sh", "--pwsh", "--cmd", "--csh", "--fish", "--nu", "--xonsh"] {
                 cargo_llvm_cov(subcommand)

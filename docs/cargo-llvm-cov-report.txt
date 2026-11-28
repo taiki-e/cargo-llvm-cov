@@ -88,9 +88,6 @@ OPTIONS:
 
         --object <PATH>
             Add an object file (binary) to the coverage report.
-            Can be specified multiple times. Useful for including binaries that are
-            not part of the current workspace (e.g. examples or external test crates),
-            which would otherwise be filtered out by the automatic object-file detection.
 
         --show-instantiations
             Show instantiations in report
