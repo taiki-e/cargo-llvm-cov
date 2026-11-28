@@ -326,6 +326,8 @@ pub(crate) struct ReportOptions {
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
     pub(crate) show_instantiations: bool,
+    /// Set the coverage watermarks (percentages, formatted as `HIGH,LOW`) for the html report.
+    pub(crate) coverage_watermark: Option<String>,
     /// Exit with a status of 1 if the total function coverage is less than MIN percent.
     pub(crate) fail_under_functions: Option<f64>,
     /// Exit with a status of 1 if the total line coverage is less than MIN percent.
@@ -391,6 +393,7 @@ impl ReportOptions {
                 object: _,
                 no_default_ignore_filename_regex,
                 show_instantiations,
+                coverage_watermark,
                 fail_under_functions,
                 fail_under_lines,
                 fail_under_file_lines,
@@ -417,6 +420,7 @@ impl ReportOptions {
                 ("--ignore-filename-regex", ignore_filename_regex.is_some()),
                 ("--no-default-ignore-filename-regex", *no_default_ignore_filename_regex),
                 ("--show-instantiations", *show_instantiations),
+                ("--coverage-watermark", coverage_watermark.is_some()),
                 ("--fail-under-functions", fail_under_functions.is_some()),
                 ("--fail-under-lines", fail_under_lines.is_some()),
                 ("--fail-under-file-lines", fail_under_file_lines.is_some()),
@@ -1146,6 +1150,7 @@ impl Args {
                     parse_flag!(report.no_default_ignore_filename_regex);
                 }
                 Long("show-instantiations") => parse_flag!(report.show_instantiations),
+                Long("coverage-watermark") => parse_opt!(report.coverage_watermark),
                 Long("hide-instantiations") => {
                     // The following warning is a hint, so it should not be promoted to an error.
                     let _guard = term::warn::ignore();

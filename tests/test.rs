@@ -123,6 +123,23 @@ fn instantiations() {
     run("instantiations", "instantiations", &[], &[]);
 }
 
+// `--coverage-watermark` only changes the colors in the html report, so there is nothing stable
+// to snapshot. Just check that the html report is still generated when the flag is passed.
+#[test]
+fn coverage_watermark() {
+    if RUSTC_MINOR_VERSION < 88 {
+        return; // 1.88 changed report generation
+    }
+    let workspace_root = test_project("real1");
+    let output_dir = tempfile::tempdir().unwrap();
+    cargo_llvm_cov("test")
+        .args(["--html", "--coverage-watermark", "70,40", "--output-dir"])
+        .arg(output_dir.path())
+        .current_dir(workspace_root.path())
+        .assert_success();
+    assert!(output_dir.path().join("html").join("index.html").exists());
+}
+
 #[test]
 fn cargo_config() {
     if RUSTC_MINOR_VERSION < 88 {

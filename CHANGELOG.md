@@ -12,6 +12,8 @@ Note: In this file, do not use the hard wrap in the middle of a sentence for com
 
 ## [Unreleased]
 
+- Add `--coverage-watermark` option to set the coverage color thresholds of the html report.
+
 ## [0.9.2] - 2026-11-20
 
 - Add support for `@argfile` arguments ([#533](https://github.com/taiki-e/cargo-llvm-cov/pull/533), thanks @davidkna)
