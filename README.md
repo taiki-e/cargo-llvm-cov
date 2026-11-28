@@ -510,6 +510,8 @@ cargo build # Build rust binaries with instrumentation.
 cargo llvm-cov report --lcov # Generate report without tests.
 ```
 
+To include additional instrumented binaries in the report, pass `--object <PATH>` to `cargo llvm-cov report` once per binary.
+
 > [!CAUTION]
 > cargo-llvm-cov subcommands other than `report` and `clean` may not work correctly in the context where environment variables are set by `show-env`; consider using normal `cargo`/`cargo-nextest`/etc. commands.
 

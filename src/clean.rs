@@ -188,7 +188,7 @@ fn clean_ui_test_artifacts(ws: &Workspace, verbose: bool) -> Result<()> {
 
 fn rm_rf(path: impl AsRef<Path>, verbose: bool) -> Result<()> {
     let path = path.as_ref();
-    // Using std::fs instead of fs-err is okay here since we ignore error contents
+    // Using std::fs instead of crate::fs is okay here since we ignore error contents
     #[allow(clippy::disallowed_methods)]
     let m = std::fs::symlink_metadata(path);
     if m.as_ref().is_ok_and(fs::Metadata::is_dir) {

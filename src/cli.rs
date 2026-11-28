@@ -2,7 +2,7 @@
 
 use std::{ffi::OsString, io, mem, str::FromStr};
 
-use anyhow::{Error, Result, bail, format_err};
+use anyhow::{Context as _, Error, Result, bail, format_err};
 use camino::{Utf8Path, Utf8PathBuf};
 use cargo_config2::Color;
 use lexopt::{
@@ -320,6 +320,8 @@ pub(crate) struct ReportOptions {
     pub(crate) failure_mode: Option<String>,
     /// Skip source code files with file paths that match the given regular expression.
     pub(crate) ignore_filename_regex: Option<String>,
+    /// Add an object file (binary) to the coverage report.
+    pub(crate) object: Vec<Utf8PathBuf>,
     // For debugging (unstable)
     pub(crate) no_default_ignore_filename_regex: bool,
     /// Show instantiations in report
@@ -355,6 +357,9 @@ impl ReportOptions {
 
     fn validate(&self, subcommand: Subcommand) -> Result<()> {
         // Handle options specific to certain subcommands.
+        if !self.object.is_empty() && !matches!(subcommand, Subcommand::Report { .. }) {
+            specific_flag("--object", subcommand, &["report"])?;
+        }
         let (subcommands_without_report, no_report_incompat) = match subcommand {
             // subcommands without generate_report in main.rs.
             Subcommand::Clean | Subcommand::ShowEnv | Subcommand::NextestArchive => (true, true),
@@ -385,6 +390,7 @@ impl ReportOptions {
                 output_dir,
                 failure_mode,
                 ignore_filename_regex,
+                object: _,
                 no_default_ignore_filename_regex,
                 show_instantiations,
                 coverage_watermark,
@@ -839,16 +845,47 @@ pub(crate) fn merge_config_and_args(
 
 pub(crate) const FIRST_SUBCMD: &str = "llvm-cov";
 
+/// Expands `@path` arguments to the contents of the file, one argument per line,
+/// until `--` is encountered (including in an argument file).
+///
+/// https://doc.rust-lang.org/rustc/command-line-arguments.html#path-load-command-line-flags-from-a-path
+pub(crate) fn expand_argfiles(args: impl IntoIterator<Item = OsString>) -> Result<Vec<OsString>> {
+    let mut expanded = vec![];
+    let mut passthrough = false;
+    for arg in args {
+        if arg == "--" {
+            passthrough = true;
+        }
+        if passthrough {
+            expanded.push(arg);
+            continue;
+        }
+        match arg.to_str().and_then(|arg| arg.strip_prefix('@')) {
+            Some(path) if path.starts_with("shell:") => {
+                warn!("@shell: argument files are not supported");
+                expanded.push(arg);
+            }
+            Some(path) => {
+                #[allow(clippy::disallowed_methods)] // we have own error message.
+                let contents = std::fs::read_to_string(path)
+                    .with_context(|| format!("failed to read argument file {path:?}"))?;
+                passthrough = contents.lines().any(|arg| arg == "--");
+                expanded.extend(contents.lines().map(OsString::from));
+            }
+            None => expanded.push(arg),
+        }
+    }
+    Ok(expanded)
+}
+
 impl Args {
     pub(crate) fn parse() -> Result<Option<(Self, UnresolvedArgs)>> {
         // rustc/cargo args must be valid Unicode
         // https://github.com/rust-lang/rust/blob/1.84.0/compiler/rustc_driver_impl/src/args.rs#L121
         // TODO: https://github.com/rust-lang/cargo/pull/11118
-        fn handle_args(
-            args: impl IntoIterator<Item = impl Into<OsString>>,
-        ) -> impl Iterator<Item = Result<String>> {
+        fn handle_args(args: Vec<OsString>) -> impl Iterator<Item = Result<String>> {
             args.into_iter().enumerate().map(|(i, arg)| {
-                arg.into().into_string().map_err(|arg| {
+                arg.into_string().map_err(|arg| {
                     #[allow(clippy::unnecessary_debug_formatting)]
                     {
                         format_err!("argument {} is not valid Unicode: {arg:?}", i + 1)
@@ -857,21 +894,18 @@ impl Args {
             })
         }
 
-        let mut raw_args = handle_args(env::args_os());
-        raw_args.next(); // cargo
+        let all_args_raw = env::args_os().skip(1); // cargo
+        let expanded_args = expand_argfiles(all_args_raw)?;
+        let mut raw_args = handle_args(expanded_args);
         match raw_args.next().transpose()? {
             Some(arg) if arg == FIRST_SUBCMD => {}
             Some(arg) => bail!("expected subcommand '{FIRST_SUBCMD}', found argument '{arg}'"),
             None => bail!("expected subcommand '{FIRST_SUBCMD}'"),
         }
-        let mut args = vec![];
-        for arg in &mut raw_args {
-            let arg = arg?;
-            if arg == "--" {
-                break;
-            }
-            args.push(arg);
-        }
+        let args = raw_args
+            .by_ref()
+            .take_while(|arg| !matches!(arg, Ok(arg) if arg == "--"))
+            .collect::<Result<Vec<_>>>()?;
         let rest = raw_args.collect::<Result<Vec<_>>>()?;
 
         let mut cargo_args = vec![];
@@ -1105,6 +1139,7 @@ impl Args {
                 Long("output-dir") => parse_opt!(report.output_dir),
                 Long("failure-mode") => parse_opt!(report.failure_mode),
                 Long("ignore-filename-regex") => parse_opt!(report.ignore_filename_regex),
+                Long("object") => parse_opt!(report.object),
                 Long(
                     flag @ ("no-default-ignore-filename-regex"
                     | "disable-default-ignore-filename-regex"),
@@ -1531,6 +1566,7 @@ impl Args {
             ("--ignore-filename-regex", report.ignore_filename_regex.as_deref() == Some("")),
             ("--output-path", report.output_path.as_deref() == Some(Utf8Path::new(""))),
             ("--output-dir", report.output_dir.as_deref() == Some(Utf8Path::new(""))),
+            ("--object", report.object.iter().any(|path| path.as_str().is_empty())),
         ] {
             if is_empty {
                 bail!("empty string is not allowed in {flag}")
