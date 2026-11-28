@@ -177,6 +177,7 @@ jobs:
                 retry rustup +1.60 target add "${TARGET}"
               fi
               pushd -- easytime >/dev/null
+              cargo clean
               cargo +1.60 llvm-cov test --fail-under-lines 30
               popd >/dev/null
               ;;
